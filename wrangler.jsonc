@@ -38,7 +38,6 @@
     {
       "binding": "DB",
       "database_name": "durable-mmo-auth",
-      "database_id": "REPLACE_WITH_YOUR_D1_ID",
       "migrations_dir": "migrations"
     }
   ],
@@ -53,7 +52,7 @@
     "NPC_AI_MODE": "on",
     "AI_DAILY_NEURONS": "9000",
     // Public Turnstile site key. The secret goes in: wrangler secret put TURNSTILE_SECRET_KEY
-    "TURNSTILE_SITE_KEY": "REPLACE_WITH_YOUR_TURNSTILE_SITE_KEY"
+    "TURNSTILE_SITE_KEY": ""
   },
   // Daily guest cleanup (src/worker/cron.ts).
   "triggers": { "crons": ["17 4 * * *"] },

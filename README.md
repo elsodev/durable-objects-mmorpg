@@ -80,15 +80,23 @@ BASE_URL=http://localhost:8796 npm run e2e
 
 ## Deploy to Cloudflare
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/elsodev/durable-objects-mmorpg)
+
+The button forks this repo into your GitHub account, creates the D1 database, the R2 bucket and the Durable Objects, builds the client, deploys the Worker and applies the D1 migrations. It asks you for `BETTER_AUTH_SECRET` (32+ random characters, e.g. `openssl rand -base64 32`). After the first deploy, open the Worker's settings in the Cloudflare dashboard and add:
+
+- `BETTER_AUTH_URL`: your Worker's public URL, e.g. `https://durable-mmo.<you>.workers.dev`.
+- Turnstile: `TURNSTILE_SITE_KEY` (variable) and `TURNSTILE_SECRET_KEY` (secret), or `CAPTCHA_DISABLED=1` to run without a captcha.
+
+### Deploy by hand
+
 ```sh
 npx wrangler login
-npx wrangler d1 create durable-mmo-auth          # copy the database_id into wrangler.jsonc (both d1_databases entries)
+npx wrangler d1 create durable-mmo-auth          # optional: wrangler deploy creates it if missing
 npx wrangler r2 bucket create durable-mmo-files
 npx wrangler secret put BETTER_AUTH_SECRET        # 32+ random characters
 npx wrangler secret put BETTER_AUTH_URL           # your public origin, e.g. https://durable-mmo.example.workers.dev
 npx wrangler secret put TURNSTILE_SECRET_KEY      # from the Turnstile dashboard
-npm run db:migrate:remote
-npm run deploy                                    # vite build, then wrangler deploy
+npm run deploy                                    # vite build, wrangler deploy, then remote D1 migrations
 ```
 
 Set `TURNSTILE_SITE_KEY` in `wrangler.jsonc` → `vars` before deploying. `BETTER_AUTH_URL` can be a var instead of a secret.
@@ -232,4 +240,8 @@ Assets keep their own licenses as listed in those files.
 
 ## License
 
-License: TBD by the owner.
+The code is licensed under the **Apache License 2.0** (see [LICENSE](LICENSE)). Copyright 2026 Elson Tan.
+
+You may copy, modify and redistribute it, including for commercial use, as long as you keep the [NOTICE](NOTICE) file and credit the original repository: **https://github.com/elsodev/durable-objects-mmorpg**.
+
+Art, music and sound effects in `src/client/public/assets/` are not covered by the Apache License. They keep their own licenses, as listed in the Credits section above.

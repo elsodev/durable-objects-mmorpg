@@ -1,0 +1,13 @@
+DurableMMO
+Copyright 2026 Elson Tan
+
+Original source: https://github.com/elsodev/durable-objects-mmorpg
+
+This product includes software developed by Elson Tan as part of DurableMMO.
+Any redistribution or derivative work, including commercial use, must keep
+this NOTICE file and give visible credit to the original repository:
+https://github.com/elsodev/durable-objects-mmorpg
+
+Art, music and sound effects under src/client/public/assets/ are NOT covered by
+the Apache License. They keep their own licenses (CC0, CC-BY, CC-BY-SA, OGA-BY,
+GPL); see the CREDITS files in that folder and the Credits section of README.md.
