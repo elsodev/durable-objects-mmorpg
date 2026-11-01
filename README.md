@@ -135,7 +135,7 @@ scripts/      e2e.mjs (Playwright)
 
 ## Credits
 
-DurableMMO stands on the work of many generous artists, musicians and open-source projects. Thank you all. The in-game **Credits** button, on the start screen and in the HUD menu, lists them too.
+DurableMMO's art, music and sound come from many generous creators. Thank you all. The in-game **Credits** button, on the start screen and in the HUD menu, lists them too.
 
 ### Theme song and music
 
@@ -210,24 +210,6 @@ We took art and audio from these repositories. Each file's exact source is in th
 | https://github.com/bodangren/advantage-forge | MedicineStorm's weapon swings |
 | https://github.com/ARKOUDAKII/EternalRain | Bat screeches |
 | https://github.com/VoxeLibre/VoxeLibre | Spider and bat sounds |
-
-### Open-source software
-
-| Project | Repository |
-|---|---|
-| PixiJS | https://github.com/pixijs/pixijs |
-| Better Auth | https://github.com/better-auth/better-auth |
-| Cloudflare Agents and Project Think (`agents`, `@cloudflare/think`) | https://github.com/cloudflare/agents |
-| Cloudflare Workers SDK (wrangler) | https://github.com/cloudflare/workers-sdk |
-| Vercel AI SDK | https://github.com/vercel/ai |
-| Zod | https://github.com/colinhacks/zod |
-| TypeSafe AI SDK | `@typesafe-ai/sdk` |
-| Vite | https://github.com/vitejs/vite |
-| Vitest | https://github.com/vitest-dev/vitest |
-| Playwright | https://github.com/microsoft/playwright |
-| TypeScript | https://github.com/microsoft/TypeScript |
-
-NPC dialogue runs on Meta's Llama 4 Scout through Cloudflare Workers AI.
 
 ### Full per-file credits
 
