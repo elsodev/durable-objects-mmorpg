@@ -1,0 +1,21 @@
+/* Drag and drop between bag slots (ui/slot-drag.ts). */
+.dm-drag-ghost {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 1000;
+  filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.35));
+  transform: scale(1.1) rotate(-6deg);
+}
+body.dm-dragging,
+body.dm-dragging * { cursor: grabbing !important; }
+[data-bag-slot].is-dragging { opacity: 0.45; }
+[data-bag-slot].is-drop-target {
+  outline: 3px solid var(--dm-accent, #f5c84c) !important;
+  outline-offset: -3px;
+  filter: brightness(1.12);
+}
+[data-bag-slot] { touch-action: none; }

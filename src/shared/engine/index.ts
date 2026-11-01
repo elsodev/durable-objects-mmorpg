@@ -6,6 +6,7 @@
 //   collision.ts  grid building + body fit test
 //   movement.ts   held-direction / point-to-point movement with wall sliding
 //   path.ts       A* pathfinding
+//   crowd.ts      other characters as soft obstacles
 //   geometry.ts   footprints, facing, exits, rect helpers
 //   inventory.ts  stacking add/remove/count
 //   farming.ts    day index, crop growth, tile mutations
@@ -19,43 +20,57 @@ export const NPC_SPEED = 2;
 export { buildCollision, setBlocked, canStand, isBlocked, type CollisionGrid } from "./collision";
 export { moveGoal, stepDirection, stepToward, ARRIVE_DIST, type MoveResult } from "./movement";
 export { findPath, MAX_EXPANSIONS } from "./path";
+export { BODY_GAP, bumps, withPeople } from "./crowd";
 export {
   dist,
   exitAt,
   facingTile,
   facingFor,
+  facingToTile,
   footprint,
   objectRect,
   pointInRect,
   rectsOverlap,
   type Rect,
 } from "./geometry";
-export { addItem, canAdd, countItem, removeFromSlot, removeItem, COINS } from "./inventory";
+export { addItem, canAdd, countItem, gridOf, moveSlot, removeFromSlot, removeItem, sameStack, COINS, type MoveResult as SlotMoveResult } from "./inventory";
 export {
+  CROP_DEATH_DAYS,
+  STAGE_NAMES,
+  clearDeadCrop,
   cropDays,
+  cropLook,
   cropView,
+  growthStage,
   dayIndex,
   grownDays,
   harvestTile,
   harvestable,
   isFarmable,
+  isWaterSource,
   passDay,
   plantTile,
   tillTile,
   waterTile,
+  type CropLook,
   type CropView,
+  type GrowthStage,
 } from "./farming";
-export { canPlace, type PlaceResult } from "./placement";
+export { canPlace, wallFaceRow, MAX_WALL_DROP, type PlaceResult } from "./placement";
 export {
-  MONSTER_ATTACK_COOLDOWN_MS,
-  MONSTER_ATTACK_RANGE,
-  MONSTER_RESPAWN_MS,
+  MONSTER_AI,
   MONSTER_STATS,
-  rollDrops,
+  newMonster,
+  provoke,
+  rollMonsterDrops,
   stepMonster,
+  type MonsterMode,
   type MonsterState,
   type MonsterStats,
+  type MonsterType,
 } from "./monsters";
+export * from "./combat";
+export * from "./spawning";
 export {
   GAME_HOUR_MS,
   GAME_MINUTE_MS,
@@ -71,6 +86,7 @@ export {
   daylightTint,
   farmNow,
   formatClock,
+  interiorTint,
   lampStrength,
   newClock,
   nextMorning,
@@ -79,6 +95,7 @@ export {
 } from "./homeclock";
 export {
   CROW_CHANCE,
+  CROW_FULL_CROPS,
   MAX_STAMINA,
   MAX_WATER,
   PASS_OUT_STAMINA,
@@ -89,14 +106,28 @@ export {
   crowTargets,
   eatGain,
   harvestCrop,
-  harvestYield,
   passOutPenalty,
   protectedByScarecrow,
   regrowDays,
   rollFarmDay,
-  rollQuality,
   scarecrowsOf,
   staminaCost,
   type CropLoss,
   type FarmDayResult,
 } from "./homeday";
+export {
+  CROP_YIELD,
+  cropYield,
+  farmingLevel,
+  fertilizerGoldBonus,
+  harvestRand,
+  qualityOdds,
+  rockRand,
+  rollCount,
+  rollHarvest,
+  rollQuality,
+  type CropYield,
+  type HarvestRoll,
+  type Quality,
+} from "./harvest";
+export { SWING_TOTAL_MS, TOOL_TIMING, impactDelayMs, toolTiming, type ToolTiming } from "./toolTiming";

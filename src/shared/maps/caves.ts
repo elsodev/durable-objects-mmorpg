@@ -41,7 +41,7 @@ export function buildCaves(): MapData {
 
   // ---- exits & spawns ----
   b.exit({ x: 0, y: 27, w: 1, h: 2 }, "village", "from_caves");
-  b.spawn("from_village", 3, 27);
+  b.spawn("from_village", 3, 28); // two rows below the sign: its label clears your name tag
   b.spawn("default", 6, 28);
   b.prop("sign_post", 3, 26, { id: "sign_village", label: "← Village" });
 

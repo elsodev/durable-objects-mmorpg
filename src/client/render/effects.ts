@@ -1,11 +1,19 @@
-// Ambient light/tint (screen layer), floating text and pooled particle bursts (overlay layer).
+// Ambient light/tint (screen layer), floating text, pooled particle bursts and timed one-shots
+// (water ripples, the watering-can meter, items tossed into the shipping bin) on the overlay layer.
 // Simulation lives in effects-sim.ts; this file only mirrors it onto Pixi display objects.
-import { Container, Point, Sprite, Text, Texture } from "pixi.js";
+import { Container, Graphics, Point, Sprite, Text, Texture } from "pixi.js";
 import type { CreateEffects, Effects, Layers } from "../contracts";
 import { TILE } from "../contracts";
 import type { MapData, Vec2 } from "../../shared/types";
 import {
   AMBIENT,
+  METER_LIFE,
+  RIPPLE_LIFE,
+  TOSS_LIFE,
+  arcPoint,
+  meterAt,
+  rippleRing,
+  tossScale,
   FLOAT_COLORS,
   FloatTexts,
   FootstepTracker,
@@ -172,6 +180,9 @@ class AmbientLayer {
   }
 }
 
+/** Screen px kept clear at the top for the HUD's menu bar (it ends near 62 px). */
+const FLOAT_SAFE_TOP = 72;
+
 class FloatTextLayer {
   readonly root = new Container({ label: "fx-float" });
   private sim = new FloatTexts(24);
@@ -216,7 +227,12 @@ class FloatTextLayer {
   }
 
   private sync(e: FloatEntry, t: Text): void {
-    t.position.set(Math.round(e.x), Math.round(e.y + e.dy));
+    const y = Math.round(e.y + e.dy);
+    t.position.set(Math.round(e.x), y);
+    // Near the top of the map the text would rise under the HUD's top bar: hold it just below.
+    const m = this.root.worldTransform;
+    const top = m.ty + m.d * (y - t.height);
+    if (m.d > 0 && top < FLOAT_SAFE_TOP) t.position.y = Math.round(y + (FLOAT_SAFE_TOP - top) / m.d);
     t.alpha = e.alpha;
     t.scale.set(e.scale);
   }
@@ -294,10 +310,133 @@ class ParticleLayer {
   }
 }
 
+interface OneShot {
+  age: number;
+  life: number;
+  node: Container;
+  /** Draws the shot at `t` (0..1 of its life). */
+  step(t: number, you: Vec2 | null): void;
+  done?(): void;
+}
+
+const RIPPLE_COLOR = 0xdff4ff;
+const METER_W = 0.9; // tiles
+const METER_H = 6; // px
+/** Above a standing character's head (feet anchor, ~2 tiles tall). */
+const METER_Y = -2.15;
+
+/** Short-lived animations driven by Effects.update, so they pause with the game loop. */
+class OneShotLayer {
+  readonly root = new Container({ label: "fx-oneshots" });
+  private shots: OneShot[] = [];
+
+  constructor(private layers: Layers) {
+    this.root.eventMode = "none";
+    layers.overlay.addChild(this.root);
+  }
+
+  /** `sortY` (tiles) puts the shot in the y-sorted layer instead of above everything. */
+  private add(shot: OneShot, sortY?: number): void {
+    if (sortY === undefined) this.root.addChild(shot.node);
+    else {
+      shot.node.zIndex = sortY * TILE;
+      this.layers.sorted.addChild(shot.node);
+    }
+    this.shots.push(shot);
+    shot.step(0, null);
+  }
+
+  /** Two expanding rings on the water, the second a beat later. */
+  ripple(at: Vec2, sortY?: number): void {
+    for (const delay of [0, 0.22]) {
+      const g = new Graphics();
+      g.position.set(at.x * TILE, at.y * TILE);
+      g.visible = delay === 0;
+      this.add({
+        age: -delay,
+        life: RIPPLE_LIFE,
+        node: g,
+        step(t) {
+          g.visible = t >= 0;
+          if (t < 0) return;
+          const r = rippleRing(t);
+          g.clear()
+            .ellipse(0, 0, r.radius * TILE, r.radius * TILE * 0.5)
+            .stroke({ color: RIPPLE_COLOR, width: 2, alpha: r.alpha });
+        },
+      }, sortY);
+    }
+  }
+
+  /** The watering-can meter over your head, filling from `from` to `to` (0..1). */
+  meter(from: number, to: number): void {
+    const node = new Container();
+    const w = METER_W * TILE;
+    const back = new Graphics().roundRect(-w / 2 - 2, -2, w + 4, METER_H + 4, 3).fill({ color: 0x1b1a24, alpha: 0.8 });
+    const fill = new Graphics();
+    node.addChild(back, fill);
+    this.add({
+      age: 0,
+      life: METER_LIFE,
+      node,
+      step(t, you) {
+        if (you) node.position.set(Math.round(you.x * TILE), Math.round((you.y + METER_Y) * TILE));
+        const m = meterAt(t * METER_LIFE, from, to);
+        node.alpha = m.alpha;
+        fill.clear().rect(-w / 2, 0, Math.max(1, Math.round(w * m.level)), METER_H).fill({ color: 0x4fa3d9 });
+      },
+    });
+  }
+
+  /** An item icon thrown in an arc from `from` to `to`, shrinking as it drops in; `onLand` at the end. */
+  toss(from: Vec2, to: Vec2, texture: Texture, onLand?: () => void): void {
+    const s = new Sprite(texture);
+    s.anchor.set(0.5);
+    const size = TILE * 0.7;
+    const base = size / Math.max(1, texture.width, texture.height);
+    const a = { x: from.x * TILE, y: from.y * TILE };
+    const b = { x: to.x * TILE, y: to.y * TILE };
+    this.add({
+      age: 0,
+      life: TOSS_LIFE,
+      node: s,
+      step(t) {
+        const p = arcPoint(a, b, t, TILE * 1.1);
+        s.position.set(Math.round(p.x), Math.round(p.y));
+        s.scale.set(base * tossScale(t));
+        s.rotation = (t - 0.5) * 0.5;
+      },
+      done: onLand,
+    });
+  }
+
+  update(dt: number, you: Vec2 | null): void {
+    if (this.shots.length === 0) return;
+    const keep: OneShot[] = [];
+    for (const s of this.shots) {
+      s.age += dt;
+      if (s.age >= s.life) {
+        s.node.destroy({ children: true });
+        s.done?.();
+        continue;
+      }
+      s.step(s.age / s.life, you);
+      keep.push(s);
+    }
+    this.shots = keep;
+  }
+
+  destroy(): void {
+    this.shots = [];
+    this.root.destroy({ children: true });
+  }
+}
+
 export const createEffects: CreateEffects = (layers, viewport): Effects => {
   const ambient = new AmbientLayer(layers);
   const particles = new ParticleLayer(layers);
   const floats = new FloatTextLayer(layers);
+  const shots = new OneShotLayer(layers);
   const steps = new FootstepTracker();
   let destroyed = false;
 
@@ -315,6 +454,18 @@ export const createEffects: CreateEffects = (layers, viewport): Effects => {
       if (destroyed) return;
       particles.burst(at.x * TILE, at.y * TILE, kind);
     },
+    ripple(at, sortY) {
+      if (destroyed) return;
+      shots.ripple(at, sortY);
+    },
+    meter(from, to) {
+      if (destroyed) return;
+      shots.meter(from, to);
+    },
+    toss(from, to, texture, onLand) {
+      if (destroyed) return onLand?.();
+      shots.toss(from, to, texture, onLand);
+    },
     update(dtMs, you) {
       if (destroyed) return;
       // Clamp so a backgrounded tab doesn't fast-forward every effect at once.
@@ -323,12 +474,14 @@ export const createEffects: CreateEffects = (layers, viewport): Effects => {
       if (steps.update(dt, you) && you && ambient.current() !== "indoor") particles.burst(you.x * TILE, you.y * TILE, "dust", 0.35);
       particles.update(dt);
       floats.update(dt);
+      shots.update(dt, you);
       ambient.update(dt, you, w, h);
     },
     destroy() {
       if (destroyed) return;
       destroyed = true;
       floats.destroy();
+      shots.destroy();
       particles.destroy();
       ambient.destroy();
     },

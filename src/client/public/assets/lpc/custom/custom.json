@@ -832,6 +832,42 @@
    "ms": 130,
    "hold": true,
    "source": "generator hurt animation"
+  },
+  "eat": {
+   "frameSize": 64,
+   "frames": [
+    "thrust,2",
+    "thrust,2",
+    "thrust,3",
+    "thrust,3",
+    "thrust,3",
+    "thrust,7",
+    "thrust,3",
+    "thrust,7",
+    "thrust,3",
+    "thrust,7",
+    "thrust,3",
+    "thrust,7"
+   ],
+   "ms": 150,
+   "source": "generator thrust frames 2, 3 and 7 (hand raised to the mouth, then chewing)"
+  },
+  "hold_up": {
+   "frameSize": 64,
+   "frames": [
+    "thrust,2",
+    "thrust,7",
+    "thrust,7",
+    "thrust,7",
+    "thrust,7",
+    "thrust,7",
+    "thrust,7",
+    "thrust,7",
+    "thrust,7",
+    "thrust,7"
+   ],
+   "ms": 250,
+   "source": "generator thrust frames 2 and 7 (both hands up at the chest, item drawn above the head)"
   }
  },
  "tools": {

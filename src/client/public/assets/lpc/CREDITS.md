@@ -360,6 +360,23 @@ Derived: Terrain/tilled_soil.png dry block composited with the sheet's wet overl
 - Source: https://github.com/LiberatedPixelCup/RPG_Maker_MZ_LPC_Starter_Kit (LPC/img/tilesets/LPC/Final Attributions/Individual Assets/Daniel Eddeland (Daneeklu)/); https://opengameart.org/content/lpc-farming-tilesets-magic-animations-and-ui-elements
 - Notes: LPC farming tileset (crops with growth stages, food, fish, boats, market displays).
 
+### crops/crop_stages.png
+- Authors: bluecarrot16, Daniel Eddeland (Daneeklu), Joshua Taylor, Richard Kettering (Jetrel); commissioned by castelonia. Wilted, dead and derived frames edited by the DurableMMO project.
+- License: **CC-BY-SA 3.0+ / GPL 3.0+** (the whole sheet; our edits are released under the same licenses)
+- Source: "[LPC] Crops" (v2) by bluecarrot16, https://opengameart.org/content/lpc-crops (crops.png, fetched from a mirror of the release zip with its CREDITS-crops.txt), based on https://opengameart.org/content/lpc-farming-tilesets-magic-animations-and-ui-elements (Daniel Eddeland), https://opengameart.org/content/fruit-and-veggie-inventory (Joshua Taylor) and https://opengameart.org/content/rpg-item-set (Jetrel).
+- Layout: one row per crop, 32x64 cells: seedling, small, medium, ready, wilted seedling, wilted small, wilted medium, dead. Rows: turnip, carrot, strawberry, pumpkin, radish, potato, beet, lettuce, onion, green bean, tomato, bell pepper, eggplant, cabbage, cauliflower, corn, blueberry, grape, watermelon, pineapple, golden melon, starfruit, moonberry.
+- Original frames: the set's own growth stages for turnips, carrots, radishes, russet potatoes, beets, romaine lettuce, yellow onion, green beans, tomatoes, green bell pepper, eggplant, green cabbage, cauliflower, corn, red grapes and pineapple (all four stages), and the strawberry bush, blueberry bush, pumpkin and watermelon vines (small, medium, ready).
+- Derived (our edits): the strawberry, blueberry and moonberry seedlings are the young bush scaled to 60%; the pumpkin, watermelon and golden melon seedlings are the set's zucchini sprout (a Daneeklu cucurbit sprout); gourd and melon vine frames are shifted down a few pixels to sit on the soil. Rare crops are recolours: golden melon is the honeydew melon vine with its fruit turned gold, starfruit is the coffee tree with its cherries turned to golden fruit, and moonberry is the blueberry bush with silver-violet berries. Every wilted frame is the matching stage drooped (squashed toward its base, outer leaves bent down) and recoloured toward dry brown; the dead frame is the small stage drooped further and recoloured brown-grey.
+
+
+## icons/ (crops)
+
+### icons/crop_items.png
+- Authors: Caeless and Daniel Eddeland (Daneeklu) (veggies_shadowless); BlueCarrot16 and Eliza Wyatt (DeathsDarling) (Fruit B, Vegetables C, grain piles). Composition and recolours by the DurableMMO project.
+- License: **CC-BY-SA 3.0 / GPL 3.0** (the sheet mixes CC-BY-SA art with OGA-BY art; the OGA-BY parts stay OGA-BY 3.0 on their own)
+- Source: icons/veggies_shadowless.png (see above: https://github.com/LiberatedPixelCup/RPG_Maker_MZ_LPC_Starter_Kit, https://opengameart.org/content/lpc-farming-tilesets-magic-animations-and-ui-elements); https://github.com/ElizaWy/LPC (Objects/Small Items/Food/Fruit B.png, Vegetables C.png, Grains, Grasses.png); https://opengameart.org/content/lpc-food
+- Layout: row 0 crop icons, row 1 seed icons, one column per new crop (radish ... moonberry, same order as crop_stages.png rows 5-23); the last cell of row 0 is the turnip icon.
+- Derived (our edits): every seed icon is a grain-pile seed heap with the crop's icon shrunk to a corner badge. The golden melon icon is the honeydew recoloured gold, the moonberry icon is the blueberries recoloured silver-violet, and the turnip icon is the radish recoloured with a purple top and cream root.
 
 ## plants/
 
@@ -534,6 +551,18 @@ Derived: stone altar + statue from decorations-medieval (Statues & Fountains Col
 
 ## ores/
 
+### ores/ore_diamond.png
+- Authors: BlueCarrot16, Eliza Wyatt (DeathsDarling); recoloured for DurableMMO
+- License: **OGA-BY 3.0**
+- Source: https://github.com/ElizaWy/LPC (Objects/Small Items/Ores & Ingots/Ore, Silver.png); https://opengameart.org/content/lpc-ore-and-forge
+- Notes: Original by BlueCarrot16; recolored by Eliza Wyatt. Recoloured again here (darker slate rock, brilliant white-blue crystals) for the diamond rock and the diamond icon. No LPC diamond sprite exists.
+
+### ores/ore_gold.png
+- Authors: BlueCarrot16, Eliza Wyatt (DeathsDarling)
+- License: **OGA-BY 3.0**
+- Source: https://github.com/ElizaWy/LPC (Objects/Small Items/Ores & Ingots/Ore, Gold.png); https://opengameart.org/content/lpc-ore-and-forge
+- Notes: Original by BlueCarrot16; recolored by Eliza Wyatt. Gold rock and gold ore icon.
+
 ### ores/ore_copper.png
 - Authors: BlueCarrot16, Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**
@@ -582,11 +611,11 @@ Derived: stone altar + statue from decorations-medieval (Statues & Fountains Col
 
 ## furniture/
 
-### furniture/beds_single_c.png
+### furniture/bed_single.png
 - Authors: Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**
-- Source: https://github.com/ElizaWy/LPC (Objects/Furniture/); https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles; https://opengameart.org/content/lpc-modified-base-tiles; https://opengameart.org/content/lpc-upholstery; https://opengameart.org/content/lpc-dungeon-elements; https://opengameart.org/content/lpc-interior-castle-tiles
-- Notes: Per-file entries in ElizaWy/LPC Objects/Furniture/**/Credits.txt (Barrel, Chest, Ladder, Lighting: Sharm + Eliza Wyatt; Crate, Swirling Vine rug: Eliza Wyatt; Chair Dining, Single Beds: Sharm + BlueCarrot16 + Eliza Wyatt; Tables Rough Wood: Sharm + Eliza Wyatt; Planter: Sharm).
+- Source: https://github.com/ElizaWy/LPC (Objects/Furniture/Beds/Single Beds B.png); https://opengameart.org/content/lpc-upholstery
+- Notes: The blue single bed's front, back, left and right views cropped from Single Beds B into one strip (Single Beds: Sharm + BlueCarrot16 + Eliza Wyatt, per ElizaWy/LPC Objects/Furniture/Beds/Credits.txt).
 
 ### furniture/chair_dining_a.png
 - Authors: Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling)

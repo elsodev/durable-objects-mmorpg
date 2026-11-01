@@ -6,6 +6,7 @@
     "types": ["@cloudflare/workers-types"]
   },
   "include": ["src/worker", "src/shared", "test"],
-  // Client-module tests import DOM code; they are checked by tsconfig.client.json.
-  "exclude": ["test/fe-*.test.ts"]
+  // Client-module tests import DOM code; they are checked by tsconfig.client.json. The
+  // prediction sim runs client and server code together, so only the merged tsconfig.json checks it.
+  "exclude": ["test/fe-*.test.ts", "test/prediction-sim.test.ts"]
 }

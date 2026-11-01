@@ -1,5 +1,6 @@
 // Worker entry.
-// Routes: /api/auth/* (Better Auth), /api/config, /api/me, /api/uploads, /api/friends, /api/name-check,
+// Routes: /api/auth/* (Better Auth), /api/config, /api/me, /api/uploads, /api/friends, /api/mutes,
+// /api/players/:id/card, /api/name-check,
 // /api/home/* (visits), /files/*, /ws/:zone (WebSocket -> DO), /ws/visit/:ownerId (visitor WebSocket ->
 // owner's HomeRoom), /ws/social (SocialRoom), static assets.
 import { isUsableAuthSecret, type Env } from "./env";
@@ -10,6 +11,8 @@ import { handleUpload, serveFile } from "./http/files";
 import { errorJson, json } from "./http/util";
 import { forwardWs } from "./http/ws";
 import { handleFriends, isFriendsPath } from "./friends/routes";
+import { handleMutes, isMutesPath } from "./mutes/routes";
+import { handlePlayerCard, isPlayersPath } from "./players/card";
 import { parseWsZone } from "./http/zone-route";
 import { handleHomeApi, isHomeApiPath } from "./visit/routes";
 import { forwardVisit, parseVisitPath } from "./visit/ws";
@@ -76,6 +79,8 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (pathname === "/api/uploads") return handleUpload(request, env, await getAuthUser(auth, request.headers));
   if (isFriendsPath(pathname)) return handleFriends(request, env, await getAuthUser(auth, request.headers));
   if (isHomeApiPath(pathname)) return handleHomeApi(request, env, await getAuthUser(auth, request.headers));
+  if (isMutesPath(pathname)) return handleMutes(request, env, await getAuthUser(auth, request.headers));
+  if (isPlayersPath(pathname)) return handlePlayerCard(request, env, await getAuthUser(auth, request.headers));
 
   return errorJson(404, "not found");
 }

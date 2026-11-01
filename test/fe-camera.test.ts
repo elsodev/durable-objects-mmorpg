@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Layers } from "../src/client/contracts";
 import { TILE } from "../src/client/contracts";
-import { approach, clampAxis, createCamera, offsetFor, viewRect } from "../src/client/render/camera";
+import { approach, clampAxis, createCamera, offsetFor, pixelLocked, viewRect } from "../src/client/render/camera";
 
 function fakeLayers() {
   const pos = () => ({ x: 0, y: 0, set(x: number, y: number) { this.x = x; this.y = y; } });
@@ -34,6 +34,18 @@ describe("camera math", () => {
   it("produces integer offsets", () => {
     const o = offsetFor({ x: 100.4, y: 33.6 }, { w: 801, h: 600 });
     expect(Number.isInteger(o.x) && Number.isInteger(o.y)).toBe(true);
+  });
+
+  it("keeps a walking target at a fixed screen pixel while the camera trails it", () => {
+    let center = 0;
+    const seen = new Set<number>();
+    for (let i = 0; i < 400; i++) {
+      const target = i * 1.37; // ~4.5 tiles/s at 60 fps, never pixel aligned
+      center = approach(center, target, 1000 / 60);
+      const off = offsetFor({ x: pixelLocked(center, target), y: 0 }, { w: 801, h: 600 });
+      if (i > 60) seen.add(Math.round(target) + off.x); // sprite px (roundPixels) + world offset
+    }
+    expect(seen.size).toBe(1);
   });
 
   it("view rect covers the viewport plus margin, clipped to bounds", () => {

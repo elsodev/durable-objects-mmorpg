@@ -35,6 +35,11 @@ export const KEY_MAP: Readonly<Record<string, string>> = {
   tool_water: "water",
   tool_pickaxe: "pick_hit",
   tool_sword: "sword_swing",
+  tool_axe: "pick_swing",
+  /** Wrong tool: it bounces off. */
+  tool_clunk: "pick_hit",
+  tree_chop: "hoe",
+  tree_fall: "place",
   door: "zone_change",
   loot: "coins",
   interact: "ui_click",

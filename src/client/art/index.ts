@@ -3,9 +3,11 @@
 // game always renders, even with no art pack at all.
 import { Assets, Graphics, Texture, groupD8, type Application, type TextureSource } from "pixi.js";
 import { SCALE, type Art, type CharacterArt, type LoadArt, type Placeholders, type ShadowSize, type SpriteArt } from "../contracts";
-import { Ground, type Facing, type ItemId } from "../../shared/types";
+import { Ground, type Facing, type ItemId, type RockOre } from "../../shared/types";
+import type { CropLook } from "../../shared/engine";
+import { getItem } from "../../shared/items";
 import type { BlobSet, GroundBlob, GroundEdgeArt } from "../render/ground";
-import type { Catalog, CharacterEntry, DirRows, RectTuple, SpriteEntry } from "./catalog-types";
+import type { Catalog, CharacterEntry, DirRows, PointTuple, RectTuple, SpriteEntry } from "./catalog-types";
 import { PROCEDURAL_INTERIOR_PROPS } from "./draw/interior";
 import { fitIcon, opaqueBox } from "./icon-fit";
 import { FENCE_TILE, fenceParts } from "../render/fence";
@@ -14,6 +16,7 @@ import {
   asPoint,
   asRect,
   collectFiles,
+  cropRect,
   furnitureView,
   hashXY,
   normAnchor,
@@ -22,6 +25,7 @@ import {
   rectFits,
   rowRects,
   shadowRect,
+  viewAnchorPx,
 } from "./slice";
 
 const FACINGS: Facing[] = ["up", "left", "down", "right"];
@@ -39,7 +43,7 @@ const TERRAIN_KEY: Partial<Record<Ground, string>> = {
 };
 
 /** Map prop types the pack names differently. */
-const PROP_ALIASES: Record<string, string> = { herb_patch: "herb_plant", tree: "tree_oak" };
+const PROP_ALIASES: Record<string, string> = { herb_patch: "herb_plant", tree: "tree_oak", home_house: "cottage" };
 /**
  * Props always drawn by placeholders.ts. The pack's "cottage" is a house seen from OUTSIDE (front
  * door, gable roof), but the home map uses this prop as the cottage's north wall seen from inside.
@@ -125,11 +129,11 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
     return tex;
   };
 
-  const spriteFrom = (entry: SpriteEntry | undefined, rect: RectTuple | null, mirror = false): SpriteArt | null => {
+  const spriteFrom = (entry: SpriteEntry | undefined, rect: RectTuple | null, mirror = false, anchorPx?: PointTuple): SpriteArt | null => {
     if (!entry || !rect) return null;
     const texture = slice(entry.file, rect, mirror);
     if (!texture) return null;
-    const a = normAnchor(entry.anchor, rect[2], rect[3]);
+    const a = normAnchor(anchorPx ?? entry.anchor, rect[2], rect[3]);
     const art: SpriteArt = { texture, anchor: mirror ? { x: 1 - a.x, y: a.y } : a };
     if (typeof entry.shadow === "string" && entry.shadow in SHADOW_SIZE) art.shadow = entry.shadow as ShadowSize;
     return art;
@@ -214,6 +218,13 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
         art.frames = frames as Texture[];
         art.texture = art.frames[0]!;
       }
+    } else if (e.frames && typeof e.frames === "object") {
+      const named = e.frames as Record<string, unknown>;
+      const lid = ["closed", "opening", "open"].map((k) => slice(e.file, asRect(named[k])));
+      if (lid.every((t) => t)) {
+        art.open = lid as Texture[];
+        art.texture = art.open[0]!;
+      }
     }
     const anchorPx = asPoint(e.anchor) ?? [rect[2] / 2, rect[3]];
     const front = asRect(e.frontOverlay);
@@ -237,7 +248,7 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
       const alias = PROP_ALIASES[type];
       const e = PROCEDURAL_PROPS.has(type)
         ? undefined
-        : cat.props?.[type] ?? cat.buildings?.[type] ?? cat.plants?.[type] ?? (alias ? cat.plants?.[alias] : undefined);
+        : cat.props?.[type] ?? cat.buildings?.[type] ?? cat.plants?.[type] ?? (alias ? cat.plants?.[alias] ?? cat.buildings?.[alias] : undefined);
       art = (e && buildProp(e)) || fb().prop(type);
       propCache.set(type, art);
     }
@@ -255,32 +266,55 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
   };
 
   const cropArt = memo<string>((k) => {
-    const [cropId, s] = k.split("|") as [string, string];
+    const [cropId, s, l] = k.split("|") as [string, string, CropLook];
     const stage = Number(s) as 0 | 1 | 2 | 3;
     const e = cat.crops?.[cropId.replace(/^seed_/, "")];
-    const rect = Array.isArray(e?.stages) ? asRect(e.stages[stage]) : null;
-    return (e && spriteFrom({ ...e, rect: rect ?? undefined }, rect)) || fb().crop(cropId, stage);
+    const rect = e ? cropRect(e, stage, l) : null;
+    return (e && rect && spriteFrom({ ...e, rect }, rect)) || fb().crop(cropId, stage, l);
   });
 
-  const rockArt = memo<"stone" | "copper" | "iron" | "gem">((ore) => {
+  const rockArt = memo<RockOre>((ore) => {
     const e = cat.ores?.[`rock_${ore}`];
     return (e && spriteFrom(e, asRect(e.rect))) || fb().rock(ore);
   });
 
+  /** Furniture art: the pack's furniture entry, else the interior kit prop of the same name. */
+  const furnitureEntry = (item: ItemId): SpriteEntry | undefined =>
+    (Object.hasOwn(cat.furniture ?? {}, item) ? cat.furniture![item] : undefined) ??
+    (Object.hasOwn(cat.props ?? {}, item) ? cat.props![item] : undefined);
   const furnitureArt = memo<string>((k) => {
     const [item, r] = k.split("|") as [string, string];
     const rotation = Number(r) as 0 | 1 | 2 | 3;
-    const e = cat.furniture?.[item];
+    const e = furnitureEntry(item);
     const view = e ? furnitureView(e, rotation) : null;
-    return (e && view && spriteFrom(e, view.rect, view.mirror)) || fb().furniture(item, rotation);
+    const base = e ? asRect(e.rect) : null;
+    // A view with its own feet point uses it; other turned views keep the front's offset.
+    const anchorPx = view?.anchor ?? (view && base ? viewAnchorPx(base, asPoint(e?.anchor), view.rect) : undefined);
+    return (e && view && spriteFrom(e, view.rect, view.mirror, anchorPx)) || fb().furniture(item, rotation);
   });
+
+  // Silver and gold crops have no art of their own: the crop's icon, plus the pack's badge in slots.
+  const qualityOf = (item: ItemId): { base: ItemId; badge: Texture | null } | null => {
+    const def = getItem(item);
+    if (!def?.base || !def.quality || cat.icons?.[item] || !cat.icons?.[def.base]) return null;
+    const b = cat.icons?.[def.quality === 2 ? "quality_gold" : "quality_silver"];
+    return { base: def.base, badge: b ? slice(b.file, asRect(b.rect)) : null };
+  };
 
   const iconCache = new Map<ItemId, Texture>();
   const icon = (item: ItemId): Texture => {
     let tex = iconCache.get(item);
     if (!tex) {
+      const q = qualityOf(item);
+      if (q) {
+        tex = icon(q.base);
+        iconCache.set(item, tex);
+        return tex;
+      }
       const e = cat.icons?.[item];
-      tex = (e && slice(e.file, asRect(e.rect))) || fb().icon(item);
+      const f = !e && getItem(item)?.kind === "furniture" ? furnitureEntry(item) : undefined;
+      // Furniture has no pack icon: its front sprite stands in (iconUrl crops and fits it).
+      tex = (e && slice(e.file, asRect(e.rect))) || (f && slice(f.file, asRect(f.rect))) || fb().icon(item);
       iconCache.set(item, tex);
     }
     return tex;
@@ -291,7 +325,11 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
     let url = urlCache.get(item);
     if (url === undefined) {
       // Missing from the pack: draw the placeholder straight to a 2D canvas (no GPU readback).
-      url = (!cat.icons?.[item] && placeholderIconUrl(item)) || textureToDataUrl(app, icon(item));
+      const sprite = !cat.icons?.[item] && getItem(item)?.kind === "furniture" && furnitureEntry(item);
+      const q = qualityOf(item);
+      url = q
+        ? textureToDataUrl(app, icon(q.base), q.badge)
+        : (!cat.icons?.[item] && !sprite && placeholderIconUrl(item)) || textureToDataUrl(app, icon(item));
       urlCache.set(item, url);
     }
     return url;
@@ -376,7 +414,7 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
     wallBorder,
     prop,
     character,
-    crop: (c, stage) => cropArt(`${c}|${stage}`),
+    crop: (c, stage, look = "normal") => cropArt(`${c}|${stage}|${look}`),
     rock: rockArt,
     furniture: (item, rotation) => furnitureArt(`${item}|${rotation}`),
     icon,
@@ -410,7 +448,16 @@ const BLANK_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC
 const ICON_PX = 32;
 
 /** Crops a copied icon cell to its sprite and scales it up by a whole factor (see icon-fit.ts). */
-function fitToIconCell(src: HTMLCanvasElement, srcCtx: CanvasRenderingContext2D): string | null {
+/** Draws a quality badge over the bottom-left quarter of an icon cell. */
+function drawBadge(ctx: CanvasRenderingContext2D, badge: Texture | null | undefined, size: number): void {
+  const res = badge?.source.resource as CanvasImageSource | undefined;
+  if (!badge || !res) return;
+  const { x, y, width, height } = badge.frame;
+  const s = Math.round(size / 2);
+  ctx.drawImage(res, x, y, width, height, 0, size - s, s, s);
+}
+
+function fitToIconCell(src: HTMLCanvasElement, srcCtx: CanvasRenderingContext2D, badge?: Texture | null): string | null {
   const box = opaqueBox(srcCtx.getImageData(0, 0, src.width, src.height).data, src.width, src.height);
   if (!box) return null;
   const fit = fitIcon(box, ICON_PX);
@@ -421,11 +468,12 @@ function fitToIconCell(src: HTMLCanvasElement, srcCtx: CanvasRenderingContext2D)
   if (!ctx) return null;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(src, box.x, box.y, box.w, box.h, fit.x, fit.y, fit.w, fit.h);
+  drawBadge(ctx, badge, ICON_PX);
   return out.toDataURL("image/png");
 }
 
 /** Image-backed textures are copied with a 2D canvas (no GPU readback); generated ones via extract. */
-function textureToDataUrl(app: Application, tex: Texture): string {
+function textureToDataUrl(app: Application, tex: Texture, badge?: Texture | null): string {
   try {
     const res = tex.source.resource as unknown;
     const drawable =
@@ -441,7 +489,10 @@ function textureToDataUrl(app: Application, tex: Texture): string {
       if (ctx) {
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(res as CanvasImageSource, x, y, width, height, 0, 0, width, height);
-        return fitToIconCell(canvas, ctx) ?? canvas.toDataURL("image/png");
+        const fitted = fitToIconCell(canvas, ctx, badge);
+        if (fitted) return fitted;
+        drawBadge(ctx, badge, Math.min(width, height));
+        return canvas.toDataURL("image/png");
       }
     }
     return app.renderer.extract.canvas(tex).toDataURL?.("image/png") ?? BLANK_PNG;

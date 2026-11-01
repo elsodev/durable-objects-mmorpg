@@ -35,6 +35,7 @@ import { giftReply, scriptedReply, twoSentences } from "./scripted";
 import { npcTools, TOOL_NAMES, validateIntents } from "./tools";
 import type { ConverseRequest, ConverseResult, GiftRequest, GiftResult, NpcIntent } from "./types";
 import { parsePairName } from "./pair";
+import { cleanSituation, renderSituation, type Situation } from "../dialogue";
 import { searchQuery } from "./search";
 
 /** Hard stop for one model turn; NpcRunner's own 6 s timeout sits above it. */
@@ -68,6 +69,8 @@ export class NpcAgent extends Think<Env> {
   private pending: ({ kind: string } & Record<string, unknown>)[] = [];
   private mem: PairMemory | null = null;
   private recalled: string[] = [];
+  /** This turn's situation (date, place, hearts), rendered into the "situation" block. */
+  private situation: Situation | null = null;
 
   private pair(): { npcId: NpcId; userId: string } {
     const p = parsePairName(this.name);
@@ -99,6 +102,11 @@ export class NpcAgent extends Think<Env> {
         provider: { get: async () => (this.mem ? renderPlayerBlock(this.mem, this.recalled) : "") },
       },
       { label: "world", description: "News in the valley. Read-only.", provider: { get: async () => renderWorldBlock(this.mem?.world ?? []) } },
+      {
+        label: "situation",
+        description: "Today's date, the time, where you are, how close you are to this visitor, and the tone to take. Read-only.",
+        provider: { get: async () => (this.situation ? renderSituation(this.situation) : "") },
+      },
     ];
   }
 
@@ -145,11 +153,12 @@ export class NpcAgent extends Think<Env> {
       setWorld(mem, req.context.world);
       for (const f of extractFacts(req.text)) addFact(mem, f.kind, f.value, now);
       if (req.context.gave) recordFavour(mem, req.context.gave.item, req.context.gave.qty, now);
+      this.situation = cleanSituation(req.context.situation);
 
       let result: ConverseResult | null = null;
       if (req.ai && this.aiAvailable()) result = await this.modelTurn(npcId, userId, mem, req).catch(() => null);
       if (!result) {
-        const reply = scriptedReply(npcId, mem, req.context.intent, req.context.interact, Math.random);
+        const reply = scriptedReply(npcId, mem, req.context.intent, req.context.interact, Math.random, this.situation ?? undefined);
         await this.log(turnInput(req.playerName, req.text), reply);
         result = { reply, intents: [], source: "scripted" };
       }

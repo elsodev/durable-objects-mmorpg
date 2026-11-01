@@ -11,7 +11,8 @@ import { sleepCountdownFor } from "../src/worker/visit/visitors";
 import { HomeRoom, SLEEP_COUNTDOWN_MS } from "../src/worker/home";
 import { H_VISIT_OWNER, H_VISIT_RETURN } from "../src/worker/env";
 import { stripIdentityHeaders } from "../src/worker/http/util";
-import { dayIndex, farmNow, objectRect } from "../src/shared/engine";
+import { dayIndex, farmNow, isFarmable, objectRect } from "../src/shared/engine";
+import { getMap } from "../src/shared/maps";
 import { decodeClient, type ClientMsg } from "../src/shared/protocol";
 import {
   countLabel,
@@ -179,6 +180,7 @@ describe("visitor permission matrix", () => {
     unship: { t: "unship" },
     giftNpc: { t: "giftNpc", npc: "n", slot: 0 },
     emote: { t: "emote", code: EMOTE_CODE },
+    moveSlot: { t: "moveSlot", from: 0, to: 1 },
   };
 
   it("allows only walking, chat, ping and harvest-use", () => {
@@ -196,7 +198,7 @@ describe("visitor permission matrix", () => {
     const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
     const denied = Object.values(samples).filter((m) => "deny" in VISITOR_RULES[m.t]);
     expect(denied.map((m) => m.t).sort()).toEqual(
-      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "pickup", "place", "sell", "setLook", "sleep", "unship"].sort(),
+      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "pickup", "place", "sell", "setLook", "sleep", "unship", "moveSlot"].sort(),
     );
     for (const m of denied) {
       const msg = m.t === "setLook" ? { t: "setLook", look: { body: "x" } } : m;
@@ -259,17 +261,40 @@ describe("harvest credit", () => {
     const { owner, guest } = await aliceHostsBasil();
     const room = r.room("alice") as any;
     const tile = ripeCropFor(room);
-    const turnipsBefore = room.save.inventory.slots.filter((s: any) => /^turnip(_silver|_gold)?$/.test(s.item)).reduce((n: number, s: any) => n + s.qty, 0);
+    const turnipsBefore = room.save.inventory.slots.filter((s: any) => s && /^turnip(_silver|_gold)?$/.test(s.item)).reduce((n: number, s: any) => n + s.qty, 0);
     guest.sent = [];
     await sendMsg(r, "alice", guest, { t: "use", slot: 5, x: tile.x, y: tile.y });
     expect(tile.crop).toBeNull();
-    const turnipsAfter = room.save.inventory.slots.filter((s: any) => /^turnip(_silver|_gold)?$/.test(s.item)).reduce((n: number, s: any) => n + s.qty, 0);
+    const turnipsAfter = room.save.inventory.slots.filter((s: any) => s && /^turnip(_silver|_gold)?$/.test(s.item)).reduce((n: number, s: any) => n + s.qty, 0);
     expect(turnipsAfter).toBe(turnipsBefore + 1);
     expect(owner.of("inventory")).toHaveLength(1);
     expect(guest.of("inventory")).toHaveLength(0); // visitors never see the owner's bag
     expect(guest.of("farm")).toHaveLength(1);
     vi.advanceTimersByTime(2500);
     expect(owner.of("notice").map((n) => n.text)).toContain("Basil helped harvest 1 turnip");
+  });
+
+  it("stamps the owner's tool results with the swing's impact, so watchers see them land mid-swing", async () => {
+    const { owner, guest } = await aliceHostsBasil();
+    const room = r.room("alice") as any;
+    const home = getMap("home");
+    let spot = { x: 0, y: 0 };
+    for (let y = 1; y < home.height && !spot.x; y++) {
+      for (let x = 0; x < home.width; x++) {
+        if (isFarmable(home, x, y, room.objects.home) && !home.rocks?.some((k) => k.x === x && k.y === y)) {
+          spot = { x, y };
+          break;
+        }
+      }
+    }
+    room.player.entity.x = spot.x + 0.5;
+    room.player.entity.y = spot.y - 0.5;
+    guest.sent = [];
+    await sendMsg(r, "alice", owner, { t: "use", slot: 0, x: spot.x, y: spot.y });
+    const farm = guest.last("farm");
+    expect(farm.tiles[0]).toMatchObject({ ...spot, crop: null });
+    expect(farm.by).toBe("p:alice");
+    expect(farm.impactAt - Date.now()).toBe(230); // facing down
   });
 
   it("with the owner's bag full the crop goes to the owner's shipping bin", async () => {
@@ -622,8 +647,9 @@ describe("at home together", () => {
   it("sleeping with visitors over runs a 5 s countdown everyone sees", async () => {
     const { owner, guest } = await aliceHostsBasil();
     const room = r.room("alice") as any;
-    const bed = room.objects.find((o: any) => o.item === "bed_simple");
+    const bed = room.objects.home_in.find((o: any) => o.item === "bed_simple");
     const rect = objectRect(bed.item, bed.x, bed.y, bed.rotation);
+    room.player.map = "home_in"; // the bed is inside the house
     room.player.entity.x = rect.x + rect.w + 0.5;
     room.player.entity.y = rect.y + rect.h - 0.5;
     const day = room.clock.day;
@@ -644,8 +670,9 @@ describe("at home together", () => {
   it("sleeping alone ends the day at once", async () => {
     const owner = await connectOwner(r, "alice", "Alice");
     const room = r.room("alice") as any;
-    const bed = room.objects.find((o: any) => o.item === "bed_simple");
+    const bed = room.objects.home_in.find((o: any) => o.item === "bed_simple");
     const rect = objectRect(bed.item, bed.x, bed.y, bed.rotation);
+    room.player.map = "home_in"; // the bed is inside the house
     room.player.entity.x = rect.x + rect.w + 0.5;
     room.player.entity.y = rect.y + rect.h - 0.5;
     const day = room.clock.day;

@@ -32,6 +32,11 @@ export function creditHarvest(inv: Inventory, bin: BinEntry[], item: ItemId): Ha
   return "bin";
 }
 
+/** "+1 Gold Turnip, +2 Turnip" for a harvest's stacks. */
+export function harvestText(items: readonly { item: ItemId; qty: number }[]): string {
+  return items.map((i) => `+${i.qty} ${getItem(i.item)?.name ?? i.item}`).join(", ");
+}
+
 /** Batches "Basil helped harvest 3 turnips" so a busy helper doesn't flood the owner with toasts. */
 export class HarvestTally {
   private pending = new Map<string, { who: string; item: ItemId; qty: number; bin: number; since: number }>();

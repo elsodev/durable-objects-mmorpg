@@ -1,5 +1,5 @@
 // "Enter Town Hall" plate over a building door while you stand near it (and "Exit to Village"
-// inside, by the way out). The text comes from shared map data only.
+// inside, by the way out; "Enter House" / "Exit to Yard" at home). The text comes from shared map data only.
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import { TILE, type Layers } from "../contracts";
 import { doorFor } from "../../shared/maps/interiors/doors";
@@ -21,7 +21,8 @@ export function doorHintAt(map: MapData, pos: Vec2): DoorHint | null {
   let bestD = HINT_RANGE;
   for (const e of map.exits) {
     let text: string | null = null;
-    if (isInteriorZone(e.to)) text = `Enter ${doorFor(e.to).name}`;
+    if (e.map) text = e.map === "home_in" ? "Enter House" : "Exit to Yard";
+    else if (isInteriorZone(e.to)) text = `Enter ${doorFor(e.to).name}`;
     else if (isInteriorZone(map.zone) && e.to === "village") text = "Exit to Village";
     if (!text) continue;
     const dx = Math.max(e.x - pos.x, 0, pos.x - (e.x + e.w));

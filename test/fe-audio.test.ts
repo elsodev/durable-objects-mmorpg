@@ -187,3 +187,27 @@ describe("combat and monster sfx in audio.json", () => {
     expect(resolveSfxKey("slime_idle", old)).toBeNull();
   });
 });
+
+describe("shipped audio manifest", () => {
+  it("points at files that exist and are credited, with soft drawer sounds for panels", async () => {
+    // Client tsconfig has no Node types; same dynamic import as fe-ui-credits.test.ts.
+    const fs = (await import(/* @vite-ignore */ ["node", "fs"].join(":"))) as {
+      readFileSync(p: string, enc: "utf8"): string;
+      existsSync(p: string): boolean;
+    };
+    const dir = "src/client/public/assets/audio/";
+    const manifest = JSON.parse(fs.readFileSync(`${dir}audio.json`, "utf8")) as {
+      sfx: Record<string, { files: string[]; volume: number }>;
+    };
+    const credits = fs.readFileSync(`${dir}CREDITS.md`, "utf8");
+    for (const [key, entry] of Object.entries(manifest.sfx)) {
+      for (const f of entry.files) {
+        expect(fs.existsSync(`${dir}${f}`), `${key}: ${f}`).toBe(true);
+        expect(credits, `${key}: ${f} credited`).toContain(`| \`${f}\``);
+      }
+    }
+    expect(manifest.sfx.ui_open!.files).toEqual(["sfx/ui_drawer_open_0.ogg"]);
+    expect(manifest.sfx.ui_close!.files).toEqual(["sfx/ui_drawer_close_0.ogg"]);
+    expect(manifest.sfx.ui_open!.volume).toBeLessThanOrEqual(0.3);
+  });
+});

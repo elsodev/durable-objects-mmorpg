@@ -9,6 +9,7 @@ import {
   propFeet,
   shadowSize,
   type HitEntry,
+  lidBump,
 } from "../src/client/render/props-geom";
 
 const stall: MapProp = { id: "stall_seeds", type: "market_stall", x: 42, y: 18, w: 3, h: 2 };
@@ -68,5 +69,15 @@ describe("fe-props geometry", () => {
     expect(ids).toEqual(expect.arrayContaining(["stall_seeds", "stall_produce", "stall_goods", "notice_board", "fountain", "well"]));
     expect(village.some((p) => p.type === "tree" && INTERACTABLE_TYPES.has(p.type))).toBe(false);
     expect(getMap("home").props.some((p) => p.id === "shipping_bin" && INTERACTABLE_TYPES.has(p.type))).toBe(true);
+  });
+});
+
+describe("lidBump", () => {
+  it("rests at both ends and squashes in between", () => {
+    expect(lidBump(0)).toEqual({ x: 1, y: 1 });
+    expect(lidBump(1)).toEqual({ x: 1, y: 1 });
+    const s = lidBump(0.2);
+    expect(s.y).toBeLessThan(1);
+    expect(s.x).toBeGreaterThan(1);
   });
 });

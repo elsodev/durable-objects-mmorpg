@@ -1,7 +1,8 @@
 // Scripted replies from the bible plus this pair's memory: what NPCs say with AI off, on timeouts,
 // and whenever the budget says no. Deterministic given `rand`.
 import type { ItemId } from "../../../shared/types";
-import { giftTaste, NPC_BIBLE, type GiftTaste, type NpcId } from "../bible";
+import { giftTaste, NPC_BIBLE, NPC_DIALOGUE, type GiftTaste, type NpcId } from "../bible";
+import { pickLineKey, type Situation } from "../dialogue";
 import { getNpc } from "../catalog";
 import type { Intent } from "../brain";
 import { clampLine, pickLine, safeName } from "../text";
@@ -43,17 +44,32 @@ export function factForRecall(f: Fact): string | null {
 const FACT_RECALL = ["I remember you {fact}, {name}.", "You told me you {fact}, {name}. I haven't forgotten."];
 
 /**
- * A reply in the NPC's voice. `mem` is the memory BEFORE this talk is counted, so talks === 0
- * means a first meeting. Greetings use memory (name, last gift, a fact); other intents use the
- * catalog lines for that intent.
+ * The situation-keyed greeting for today (birthday, hearts band, weekday, season), or null when
+ * only the default applies. Keys are tried in pickLineKey's priority order.
  */
-export function scriptedReply(id: NpcId, mem: PairMemory, intent: Intent, interact: boolean, rand: () => number): string {
+export function keyedGreeting(id: NpcId, sit: Situation | undefined): { key: string; lines: readonly string[] } | null {
+  if (!sit) return null;
+  const table = NPC_DIALOGUE[id];
+  const key = pickLineKey(table, sit);
+  if (!key || key === "default") return null;
+  return { key, lines: table[key]! };
+}
+
+/**
+ * A reply in the NPC's voice. `mem` is the memory BEFORE this talk is counted, so talks === 0
+ * means a first meeting. Greetings pick by situation key first (a birthday always wins; hearts,
+ * weekday and season lines take turns with the memory lines), then memory (name, last gift, a
+ * fact); other intents use the catalog lines for that intent.
+ */
+export function scriptedReply(id: NpcId, mem: PairMemory, intent: Intent, interact: boolean, rand: () => number, sit?: Situation): string {
   const def = getNpc(id);
   const lines = NPC_BIBLE[id].memoryLines;
   const name = mem.playerName;
   const greeting = interact || intent === "greet";
   if (greeting && mem.talks === 0) return clampLine(fillTemplate(pick(lines.firstMeet, rand), { name }));
   if (greeting) {
+    const keyed = keyedGreeting(id, sit);
+    if (keyed && (keyed.key === "birthday" || mem.talks % 2 === 0)) return clampLine(fillTemplate(pick(keyed.lines, rand), { name }));
     const gift = lastGift(mem);
     // Alternate so returning players hear about their gift every other visit, not every time.
     if (gift && mem.talks % 2 === 1) return clampLine(fillTemplate(pick(lines.rememberGift, rand), { name, lastGift: itemName(gift.item) }));
@@ -68,7 +84,16 @@ export function scriptedReply(id: NpcId, mem: PairMemory, intent: Intent, intera
 export function giftReply(id: NpcId, item: ItemId, playerName: string, rand: () => number): { reply: string; taste: GiftTaste } {
   const taste = giftTaste(id, item);
   const lines = NPC_BIBLE[id].memoryLines;
-  const pool = taste === "loved" ? lines.giftLoved : taste === "liked" ? lines.giftLiked : taste === "disliked" ? lines.giftDisliked : lines.giftNeutral;
+  const pool =
+    taste === "loved"
+      ? lines.giftLoved
+      : taste === "liked"
+        ? lines.giftLiked
+        : taste === "hated"
+          ? (lines.giftHated ?? lines.giftDisliked)
+          : taste === "disliked"
+            ? lines.giftDisliked
+            : lines.giftNeutral;
   return { reply: clampLine(fillTemplate(pick(pool, rand), { name: playerName, item: itemName(item) })), taste };
 }
 

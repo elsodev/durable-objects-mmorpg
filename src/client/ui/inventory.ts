@@ -83,6 +83,7 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
     btn.addEventListener("focus", () => showTip(i, btn));
     btn.addEventListener("mouseleave", hideTip);
     btn.addEventListener("blur", hideTip);
+    opts.drag?.attach(btn, i);
     add(grid, btn);
     slotEls.push({ btn, img, qty });
   }
@@ -128,14 +129,15 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
         img.hidden = false;
         qty.textContent = slot.qty > 1 ? String(slot.qty) : "";
         btn.classList.remove("is-empty");
-        btn.disabled = false;
+        btn.removeAttribute("aria-disabled");
         btn.setAttribute("aria-label", slot.qty > 1 ? `${name}, ${slot.qty}` : name);
       } else {
         img.removeAttribute("src");
         img.hidden = true;
         qty.textContent = "";
         btn.classList.add("is-empty");
-        btn.disabled = true;
+        // Not `disabled`: an empty slot is still a drop target.
+        btn.setAttribute("aria-disabled", "true");
         btn.setAttribute("aria-label", "Empty slot");
       }
     }

@@ -12,6 +12,7 @@ import { errorJson, json } from "../http/util";
 import { originAllowed } from "../http/origin";
 import { readJson } from "../friends/routes";
 import { findUsersByName } from "../friends/store";
+import { isMutedBy } from "../mutes/store";
 import { socialAdapter } from "../social-adapter";
 import { cleanFriendName, FRIEND_NAME_HINT, isUserId } from "../../shared/friends";
 import type { InviteResult, RespondResult, VisitNotice } from "../../shared/visits";
@@ -74,9 +75,12 @@ export async function handleHomeApi(request: Request, env: VisitEnv, user: AuthU
     const r = await mine.createInvite(user.id, user.name, { id: target.id, name: target.name }, now);
     if (!r.ok) return errorJson(r.status, r.reason);
     const expiresAt = r.invite.expiresAt ?? now;
-    await homeOf(env, target.id).addInvite(user.id, user.name, expiresAt);
-    const notice: VisitNotice = { t: "invite", fromId: user.id, fromName: user.name, expiresAt };
-    await social.notify(target.id, notice);
+    // A player who muted you never gets your invites; you see it sent, as with anyone (mute is silent).
+    if (!(await isMutedBy(env.DB, target.id, user.id))) {
+      await homeOf(env, target.id).addInvite(user.id, user.name, expiresAt);
+      const notice: VisitNotice = { t: "invite", fromId: user.id, fromName: user.name, expiresAt };
+      await social.notify(target.id, notice);
+    }
     const result: InviteResult = { status: "invited", user: { userId: target.id, name: target.name }, expiresAt };
     return json(result, 201);
   }

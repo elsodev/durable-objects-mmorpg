@@ -38,6 +38,18 @@ export interface Env {
   TYPESAFE_API_KEY?: string;
   /** "local" only in `wrangler dev --env local`: relaxes the WS origin check and the captcha requirement. */
   DMMO_ENV?: string;
+  /**
+   * Drop-rate multipliers (0..10, parsed by shared/engine/dropRate.ts parseDropRates). DROP_RATE
+   * scales every chance drop; the others override it for one category, DROP_RATE_RARE for rare items.
+   */
+  DROP_RATE?: string;
+  DROP_RATE_MONSTER?: string;
+  DROP_RATE_ROCK?: string;
+  DROP_RATE_CHEST?: string;
+  DROP_RATE_FORAGE?: string;
+  DROP_RATE_GIFT?: string;
+  DROP_RATE_HARVEST?: string;
+  DROP_RATE_RARE?: string;
   /** "1" deliberately runs a non-local deploy without Turnstile (otherwise sign-up/sign-in fail closed). */
   CAPTCHA_DISABLED?: string;
 }

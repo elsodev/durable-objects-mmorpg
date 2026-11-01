@@ -21,16 +21,39 @@
 // keeps both); it can walk, chat and help harvest ready crops for the owner, nothing else.
 import { DurableObject } from "cloudflare:workers";
 import { devToolsEnabled, H_VISIT_LOOK, H_VISIT_OWNER, H_VISIT_RETURN, H_VISIT_SPRITE, type Env } from "./env";
-import type { Inventory, Look, ZoneId } from "../shared/types";
-import { Ground, TICK_MS, type EntityState, type FarmTile, type MapExit, type PlacedObject } from "../shared/types";
+import type { HomeMapId, Inventory, Look, ZoneId } from "../shared/types";
+import { TICK_MS, type EntityState, type FarmTile, type MapExit, type PlacedObject, type RockOre, type Vec2 } from "../shared/types";
+import { parseDropRates, type DropRates } from "../shared/engine/dropRate";
 import type { DaySummary, HomeServerMsg } from "../shared/home";
-import { decodeClient, type ClientMsg, type ServerMsg } from "../shared/protocol";
+import { decodeClient, type ClientMsg, type ImpactStamp, type ServerMsg } from "../shared/protocol";
 import { cleanChat, safeSpawnName } from "../shared/validate";
-import { getItem, starterInventory, type ItemDef } from "../shared/items";
+import { getItem, isShippable, starterInventory, type ItemDef } from "../shared/items";
+import { isRareCrop } from "../shared/seeds";
 import { getMap } from "../shared/maps";
+import { bumpStat, cleanStats, mergeStats, type PlayerStats, type StatKey } from "../shared/players";
+import type { CardPeek } from "./players/card";
+import {
+  allObjects,
+  doorArrival,
+  doorTarget,
+  emptyObjects,
+  entitiesOn,
+  HOME_MAPS,
+  HOME_OUT,
+  homeMap,
+  onMap,
+  resolveHomeArrival,
+  standOn,
+  SubMaps,
+  toMap,
+  type HomeObjects,
+} from "./home/submaps";
+import { HOME_FAINT_SPAWN } from "../shared/maps/home";
+import { BED_ID, BED_ITEM, ensureBed, HOME_LAYOUT, mapForItem, migrateObjects, validateObjects } from "./home/migrate";
+import { addNote, addParcel, emptyMail, mailMsg, sanitizeMail, takeParcels, type MailState } from "./home/mailbox";
+import { MAILBOX_ID, MAILBOX_TAKE } from "../shared/mail";
 import {
   addItem,
-  buildCollision,
   canAdd,
   canPlace,
   canStand,
@@ -42,21 +65,31 @@ import {
   dayEndsAt,
   dayOver,
   eatGain,
+  facingFor,
+  facingToTile,
   farmNow,
+  farmingLevel,
+  harvestable,
   harvestCrop,
-  harvestYield,
+  clearDeadCrop,
+  harvestRand,
+  impactDelayMs,
   isFarmable,
+  isWaterSource,
   MAX_STAMINA,
   MAX_WATER,
   objectRect,
   plantTile,
+  rockRand,
+  rollHarvest,
   staminaCost,
+  type HarvestRoll,
   type HomeClock,
   pointInRect,
   removeFromSlot,
+  moveSlot,
   tillTile,
   waterTile,
-  type CollisionGrid,
 } from "../shared/engine";
 import {
   cleanName,
@@ -70,10 +103,25 @@ import {
 } from "./game/identity";
 import { clampHp, cloneInventory, isZoneId, objSeqFor, sanitizeFarm, sanitizeInventory, sanitizeObjects } from "./game/sanitize";
 import { Motion } from "./game/motion";
+import { bondList } from "./game/bonds";
+import { sanitizeBonds, type Bonds } from "../shared/hearts";
 import { canChangeLook, savedLook, shownLook } from "./game/look";
-import { EntityDiffer } from "./game/diff";
 import { RockField } from "./game/rockField";
-import { canMine, rockDrops } from "./game/rocks";
+import { rockDrops } from "./game/rocks";
+import { TreeField } from "./game/treeField";
+import {
+  classifyTarget,
+  facingToward,
+  HitTracker,
+  hitsNeeded,
+  isSwingTool,
+  resolveToolUse,
+  rollDrops,
+  STUMP_RULE,
+  toolKeyOf,
+  TREE_RULES,
+  type ToolTarget,
+} from "../shared/engine/toolRules";
 import { binPayout, sanitizeBin, shipSlot, unshipLast, type BinEntry } from "./game/shipping";
 import { endHomeDay, type DayEndKind } from "./game/homeDay";
 import { sanitizeClock } from "./game/homeState";
@@ -81,7 +129,7 @@ import { reportPresence, reportStat } from "./social/hooks";
 import { EMOTE_MIN_INTERVAL_MS } from "../shared/emotes";
 import { distToRect, inToolReach, PROP_REACH } from "./game/range";
 import { CLOSE_ABUSE, SocketLimiter } from "./game/rateLimit";
-import { resolveSpawn, sanitizeTransfer, type PendingTransfer } from "./game/spawn";
+import { sanitizeTransfer, type PendingTransfer } from "./game/spawn";
 import { CLOSE_SESSION_ENDED, recheckDue, sessionStillValid } from "./game/session";
 import { stripControls } from "./npc/text";
 import { ChatGuards } from "./game/chat";
@@ -102,7 +150,7 @@ import {
   type Invite,
 } from "./visit/invites";
 import { visitorVerdict } from "./visit/permissions";
-import { canCredit, creditHarvest, HarvestTally } from "./visit/harvest";
+import { canCredit, creditHarvest, harvestText, HarvestTally } from "./visit/harvest";
 import { sleepCountdownFor, VisitorSet, type VisitAttachment, type Visitor } from "./visit/visitors";
 import { HOME_COMMAND_NOTICE, INVITE_TTL_MS, MAX_VISITORS, parseHomeCommand, type InviteCheck, type InviteNotice, type VisitorEntry } from "../shared/visits";
 import {
@@ -127,11 +175,17 @@ export interface PlayerSave {
   zone?: ZoneId;
   x?: number;
   y?: number;
+  /** At home: which home map x/y are on (absent: the yard). */
+  homeMap?: HomeMapId;
   /** Session lease issued by loadPlayer; must be passed back to savePlayer. */
   lease?: string;
   /** Home simulation: stamina (0..100) and water left in the watering can. Absent = full. */
   stamina?: number;
   water?: number;
+  /** Lifetime counters for the player card (shared/players.ts). Absent = all zero. */
+  stats?: PlayerStats;
+  /** Friendship with each villager met (shared/hearts.ts); zones change it, the home shows it. */
+  bonds?: Bonds;
   /**
    * savePlayer: the exit just taken (recorded so the next join may use that spawn).
    * loadPlayer: the pending transfer, if any (consumed by the call).
@@ -142,10 +196,14 @@ export interface PlayerSave {
 export interface HomeExport {
   save: PlayerSave;
   farm: import("../shared/types").FarmTile[];
+  /** Yard furniture (older exports: every object, in the pre-house layout). */
   objects: import("../shared/types").PlacedObject[];
+  /** Furniture inside the house; absent in exports from before the house. */
+  objectsIn?: import("../shared/types").PlacedObject[];
 }
 
-const HOME_MAP = getMap("home");
+/** The yard (exits, farm, rocks, shipping bin, mailbox). The house inside is HOME_IN (./home/submaps). */
+const HOME_MAP = HOME_OUT;
 const USE_COOLDOWN_MS = 200;
 /** Decorating works from across the room, not across the map. */
 const PLACE_REACH = 10;
@@ -154,8 +212,8 @@ const BUILD_COOLDOWN_MS = 200;
 /** A broken rock the player is standing on retries its respawn this much later. */
 const ROCK_RETRY_MS = 5000;
 const GUEST_REASON = "Create a free account to visit Mossbrook village.";
-/** Every home has a bed; this one can be moved but not picked up. */
-const DEFAULT_BED: PlacedObject = { id: "bed", item: "bed_simple", x: 4, y: 6, rotation: 0 };
+/** Pieces one mailGift call may post. */
+const MAX_MAILED_GIFTS = 5;
 /** How close (tiles) you must stand to a bed to sleep. */
 const BED_REACH = 2.5;
 export { SLEEP_COUNTDOWN_MS };
@@ -172,6 +230,8 @@ export interface PlayerPeek {
 
 interface HPlayer {
   ws: WebSocket;
+  /** The home map the owner stands on. */
+  map: HomeMapId;
   guest: boolean;
   entity: EntityState;
   motion: Motion;
@@ -195,13 +255,18 @@ export class HomeRoom extends DurableObject<Env> {
   private save: Omit<PlayerSave, "lease"> | null = null;
   private lease: string | null = null;
   private farm: FarmTile[] = [];
-  private objects: PlacedObject[] = [];
+  /** Placed furniture per home map. */
+  private objects: HomeObjects = emptyObjects();
   private objSeq = 0;
   private transfer: PendingTransfer | null = null;
   private rocks = new RockField(HOME_MAP);
-  private grid: CollisionGrid = buildCollision(HOME_MAP);
+  /** Collision grids and entity differs of the yard and the house. */
+  private maps = new SubMaps(this.objects);
+  private trees = new TreeField(HOME_MAP);
+  /** Hit progress on rocks, trees and stumps (not persisted: it fades anyway). */
+  private hits = new HitTracker();
   private player: HPlayer | null = null;
-  private differ = new EntityDiffer();
+  private mail: MailState = emptyMail();
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastTick = 0;
   private clock: HomeClock = { day: 1, startAt: 0 };
@@ -220,8 +285,12 @@ export class HomeRoom extends DurableObject<Env> {
   private tally = new HarvestTally();
   private chatGuards = new ChatGuards();
 
+  /** Drop-rate multipliers from env (DROP_RATE*), read once per instance. */
+  private readonly rates: DropRates;
+
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    this.rates = parseDropRates(env as unknown as Record<string, unknown>);
     ctx.blockConcurrencyWhile(async () => {
       await this.loadState();
       const sockets = ctx.getWebSockets();
@@ -240,14 +309,16 @@ export class HomeRoom extends DurableObject<Env> {
         }
         const pos = att.x !== undefined && att.y !== undefined ? { x: att.x, y: att.y } : null;
         // authCheckedAt 0: re-check the session on the first message after a wake.
-        this.player = this.makePlayer(ws, att, pos, 0);
+        this.player = this.makePlayer(ws, att, pos, 0, att.homeMap ?? "home");
       }
       const now = Date.now();
       for (const ws of sockets) {
         const att = readAttachment(ws);
         if (!att?.visit) continue;
-        const pos = { x: att.x ?? HOME_MAP.spawns.default.x, y: att.y ?? HOME_MAP.spawns.default.y };
+        const map: HomeMapId = att.homeMap ?? "home";
+        const pos = standOn(this.maps.grids[map], map, att.x !== undefined && att.y !== undefined ? { x: att.x, y: att.y } : null);
         const v = this.visitors.add(ws, att as SocketAttachment & { visit: VisitAttachment }, pos, 0, now);
+        v.map = map;
         // Visitors only stay while their host is home and their invite still stands.
         if (!this.player || att.userId === this.owner || this.visitors.byUser(att.userId) !== v || !findInvite(this.invites, att.userId, now)) {
           this.visitors.sendHome(v, "The visit is over.");
@@ -272,6 +343,8 @@ export class HomeRoom extends DurableObject<Env> {
       "farm",
       "objects",
       "rocks",
+      "rockSpawns",
+      "trees",
       "objSeq",
       "transfer",
       "clock",
@@ -280,6 +353,9 @@ export class HomeRoom extends DurableObject<Env> {
       "inbox",
       "inviteTimes",
       "hostName",
+      "layout",
+      "homeObjects",
+      "mail",
     ]);
     const owner = got.get("owner");
     this.owner = typeof owner === "string" ? owner : null;
@@ -288,8 +364,9 @@ export class HomeRoom extends DurableObject<Env> {
     const lease = got.get("lease");
     this.lease = typeof lease === "string" ? lease : null;
     this.farm = sanitizeFarm(got.get("farm"));
-    this.objects = sanitizeObjects(got.get("objects"));
-    this.objSeq = objSeqFor(this.objects, got.get("objSeq"));
+    this.mail = sanitizeMail(got.get("mail"));
+    this.loadObjects(got.get("layout"), got.get("homeObjects"), got.get("objects"), Date.now());
+    this.objSeq = objSeqFor(allObjects(this.objects), got.get("objSeq"));
     this.transfer = sanitizeTransfer(got.get("transfer"));
     this.clock = sanitizeClock(got.get("clock"), Date.now());
     this.bin = sanitizeBin(got.get("bin"));
@@ -300,9 +377,49 @@ export class HomeRoom extends DurableObject<Env> {
     const hostName = got.get("hostName");
     this.hostName = typeof hostName === "string" ? hostName : null;
     if (this.save) this.ensureBed();
-    const unbroken = this.rocks.load(got.get("rocks") as Record<string, number> | undefined);
-    this.grid = buildCollision(HOME_MAP, { objects: this.objects, rocks: unbroken });
+    const unbroken = this.rocks.load(got.get("rocks") as Record<string, number> | undefined, got.get("rockSpawns"));
+    this.trees.load(got.get("trees"));
+    this.maps.rebuild(this.objects, unbroken, this.trees);
     await this.scheduleRockAlarm();
+  }
+
+  /**
+   * Furniture from storage. Saves from before the house keep one list ("objects") for the old
+   * single map: they are split between the yard and the house once (see home/migrate.ts), and
+   * whatever fits nowhere goes back to the owner.
+   */
+  private loadObjects(layout: unknown, perMap: unknown, legacy: unknown, now: number): void {
+    if (layout === HOME_LAYOUT) {
+      const o = (perMap ?? {}) as Partial<Record<HomeMapId, unknown>>;
+      this.objects = { home: sanitizeObjects(o.home), home_in: sanitizeObjects(o.home_in) };
+      return;
+    }
+    const old = sanitizeObjects(legacy);
+    const { objects, returned } = migrateObjects(old, this.farm);
+    this.objects = objects;
+    if (old.length > 0) {
+      this.giveBack(returned, now, "Your furniture moved into your new house.");
+      this.persist({ objects: true, save: returned.length > 0, mail: true });
+    }
+  }
+
+  /**
+   * Items that no longer have a place: into the bag, and into a mailbox parcel when the bag is
+   * full. The owner gets a letter saying what happened (`why`).
+   */
+  private giveBack(items: string[], now: number, why: string): void {
+    const names: string[] = [];
+    let parcel = false;
+    for (const item of items) {
+      if (!this.save || !addItem(this.save.inventory, item, 1)) {
+        addParcel(this.mail, item);
+        parcel = true;
+      }
+      names.push(getItem(item)?.name ?? item);
+    }
+    if (items.length === 0) return void addNote(this.mail, why, now);
+    const where = parcel ? "Some are waiting here in a parcel." : "They are back in your bag.";
+    addNote(this.mail, `${why} These didn't fit: ${names.join(", ")}. ${where}`, now);
   }
 
   /**
@@ -315,6 +432,8 @@ export class HomeRoom extends DurableObject<Env> {
       const next = Math.min(...this.rocks.broken.values());
       times.push(next <= now ? now + ROCK_RETRY_MS : next);
     }
+    const tree = this.trees.nextRegrow();
+    if (tree !== null) times.push(tree <= now ? now + ROCK_RETRY_MS : tree);
     if (this.player) times.push(Math.max(now + 1000, dayEndsAt(this.clock)));
     if (times.length > 0) await this.ctx.storage.setAlarm(Math.min(...times));
   }
@@ -322,29 +441,19 @@ export class HomeRoom extends DurableObject<Env> {
   async alarm(): Promise<void> {
     const now = Date.now();
     const p = this.player;
-    const restored = this.rocks.respawnDue(this.grid, now, this.entities());
-    for (const id of restored) this.toAll({ t: "rock", id, broken: false });
+    const restored = this.rocks.respawnDue(this.maps.grids.home, now, this.entities("home"));
+    for (const id of restored) this.toMap("home", { t: "rock", id, broken: false });
     if (restored.length > 0) this.persist({ rocks: true });
+    const regrown = this.trees.regrowDue(this.maps.grids.home, now, this.entities("home"));
+    for (const id of regrown) this.toMap("home", { t: "tree", id, stage: "tree", hits: 0 });
+    if (regrown.length > 0) this.persist({ trees: true });
     if (p && !p.leaving && dayOver(this.clock, now)) this.endDay("passout", now);
     await this.scheduleRockAlarm(now);
   }
 
-  /** Adds the default bed if this home has none (old saves, or a fresh home). */
+  /** Adds the bed inside the house if this home has none (old saves, or a fresh home). */
   private ensureBed(): void {
-    if (this.objects.some((o) => o.id === DEFAULT_BED.id)) return;
-    const interior = HOME_MAP.floorArea?.[0];
-    const spots = [{ x: DEFAULT_BED.x, y: DEFAULT_BED.y }];
-    if (interior) {
-      for (let y = interior.y; y < interior.y + interior.h; y++)
-        for (let x = interior.x; x < interior.x + interior.w; x++) spots.push({ x, y });
-    }
-    for (const at of spots) {
-      if (canPlace(HOME_MAP, this.objects, this.farm, DEFAULT_BED.item, at.x, at.y, 0).ok) {
-        this.objects.push({ ...DEFAULT_BED, ...at });
-        this.persist({ objects: true });
-        return;
-      }
-    }
+    if (ensureBed(this.objects)) this.persist({ objects: true });
   }
 
   private setTransfer(t: PendingTransfer | null): void {
@@ -360,7 +469,7 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   private rebuildGrid(): void {
-    this.grid = buildCollision(HOME_MAP, { objects: this.objects, rocks: this.rocks.unbroken() });
+    this.maps.rebuild(this.objects, this.rocks.unbroken(), this.trees);
   }
 
   private persist(keys: {
@@ -368,18 +477,26 @@ export class HomeRoom extends DurableObject<Env> {
     farm?: boolean;
     objects?: boolean;
     rocks?: boolean;
+    trees?: boolean;
     day?: boolean;
     invites?: boolean;
     inbox?: boolean;
+    mail?: boolean;
   }): void {
     const entries: Record<string, unknown> = {};
     if (keys.save && this.save) entries.save = this.save;
     if (keys.farm) entries.farm = this.farm;
     if (keys.objects) {
-      entries.objects = this.objects;
+      entries.homeObjects = this.objects;
+      entries.layout = HOME_LAYOUT;
       entries.objSeq = this.objSeq;
     }
-    if (keys.rocks) entries.rocks = this.rocks.record();
+    if (keys.mail) entries.mail = this.mail;
+    if (keys.rocks) {
+      entries.rocks = this.rocks.record();
+      entries.rockSpawns = this.rocks.spawnRecord();
+    }
+    if (keys.trees) entries.trees = this.trees.record();
     if (keys.day) {
       entries.clock = this.clock;
       entries.bin = this.bin;
@@ -416,6 +533,8 @@ export class HomeRoom extends DurableObject<Env> {
       };
       this.ensureBed();
       this.rebuildGrid();
+      addNote(this.mail, "Welcome to your new home! Plant on any patch of grass, ship crops in the bin, and rest in your bed inside. — Bram, Mayor of Mossbrook", Date.now());
+      this.persist({ mail: true, objects: true });
     } else if (name && cleanName(name) !== this.save.name) {
       this.save.name = cleanName(name);
     }
@@ -452,9 +571,14 @@ export class HomeRoom extends DurableObject<Env> {
     if (!this.save || !save.lease || save.lease !== this.lease) return false;
     this.save.inventory = sanitizeInventory(save.inventory);
     this.save.hp = clampHp(save.hp, this.save.maxHp);
+    // Zones spend stamina on mining and chopping too.
+    if (save.stamina !== undefined) this.save.stamina = clampStamina(save.stamina);
     // Zones only send a look the player changed there; never clear a saved one.
     const look = savedLook(save.look);
     if (look) this.save.look = look;
+    // Counters only grow: take the larger of each, so a late save can't roll one back.
+    if (save.stats !== undefined) this.save.stats = mergeStats(this.save.stats, save.stats);
+    if (save.bonds !== undefined) this.save.bonds = sanitizeBonds(save.bonds);
     if (isZoneId(save.zone) && Number.isFinite(save.x) && Number.isFinite(save.y)) {
       this.save.zone = save.zone;
       this.save.x = save.x;
@@ -472,7 +596,12 @@ export class HomeRoom extends DurableObject<Env> {
   async exportHome(ownerId: string): Promise<HomeExport | null> {
     if (this.owner === null || !this.save) return null;
     if (this.owner !== ownerId) throw new Error("not the owner of this home");
-    return { save: structuredClone(this.save), farm: structuredClone(this.farm), objects: structuredClone(this.objects) };
+    return {
+      save: structuredClone(this.save),
+      farm: structuredClone(this.farm),
+      objects: structuredClone(this.objects.home),
+      objectsIn: structuredClone(this.objects.home_in),
+    };
   }
 
   /** RPC (guest upgrade): import into a fresh home owned by newOwnerId; renames owner, keeps progress. */
@@ -488,15 +617,19 @@ export class HomeRoom extends DurableObject<Env> {
       maxHp: PLAYER_MAX_HP,
       sprite,
       zone: "home",
+      stats: cleanStats(src.stats),
     };
     const look = savedLook(src.look);
     if (look) this.save.look = look;
+    if (src.bonds !== undefined) this.save.bonds = sanitizeBonds(src.bonds);
     this.farm = sanitizeFarm(data?.farm).filter((t) => isFarmable(HOME_MAP, t.x, t.y));
-    this.objects = [];
-    for (const o of sanitizeObjects(data?.objects)) {
-      if (canPlace(HOME_MAP, this.objects, this.farm, o.item, o.x, o.y, o.rotation).ok) this.objects.push(o);
-    }
-    this.objSeq = objSeqFor(this.objects);
+    // Exports from before the house have one list in the old layout: migrate those.
+    const moved = Array.isArray(data?.objectsIn)
+      ? validateObjects({ home: sanitizeObjects(data.objects), home_in: sanitizeObjects(data.objectsIn) }, this.farm)
+      : migrateObjects(sanitizeObjects(data?.objects), this.farm);
+    this.objects = moved.objects;
+    for (const item of moved.returned) if (!addItem(this.save.inventory, item, 1)) addParcel(this.mail, item);
+    this.objSeq = objSeqFor(allObjects(this.objects));
     this.ensureBed();
     this.rebuildGrid();
     this.dropPlayer(CLOSE_REPLACED, "Your home moved to your new account.");
@@ -504,9 +637,13 @@ export class HomeRoom extends DurableObject<Env> {
     await this.ctx.storage.put({
       save: this.save,
       farm: this.farm,
-      objects: this.objects,
+      homeObjects: this.objects,
+      layout: HOME_LAYOUT,
       objSeq: this.objSeq,
       rocks: this.rocks.record(),
+      rockSpawns: this.rocks.spawnRecord(),
+      mail: this.mail,
+      trees: this.trees.record(),
     });
     await this.ctx.storage.delete("lease");
   }
@@ -523,7 +660,8 @@ export class HomeRoom extends DurableObject<Env> {
     this.save = null;
     this.lease = null;
     this.farm = [];
-    this.objects = [];
+    this.objects = emptyObjects();
+    this.mail = emptyMail();
     this.objSeq = 0;
     this.clock = sanitizeClock(null, Date.now());
     this.bin = [];
@@ -532,6 +670,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.inbox = [];
     this.inviteTimes = [];
     this.rocks.load(undefined);
+    this.trees.load(undefined);
     this.rebuildGrid();
   }
 
@@ -613,8 +752,13 @@ export class HomeRoom extends DurableObject<Env> {
     if (this.owner === null || this.owner !== ownerId) return;
     const inv = revokeInvite(this.invites, visitorId);
     if (!inv) return;
-    this.persist({ invites: true });
-    if (this.player) send(this.player.ws, { t: "notice", text: `${inv.name} can't come over right now.`, kind: "info" });
+    const text = `${inv.name} can't come over right now.`;
+    addNote(this.mail, text, Date.now());
+    this.persist({ invites: true, mail: true });
+    if (this.player) {
+      send(this.player.ws, { t: "notice", text, kind: "info" });
+      this.sendMail(this.player);
+    }
   }
 
   // ------------------------------------------------------------------ RPC: visits (this home's owner as guest)
@@ -627,7 +771,30 @@ export class HomeRoom extends DurableObject<Env> {
     this.inbox = addToInbox(this.inbox, n, now);
     this.persist({ inbox: true });
     // Already at home: show it right away (the social socket may be missing).
-    if (this.player) send(this.player.ws, { t: "invites", invites: [this.inbox[this.inbox.length - 1]!] });
+    if (this.player) {
+      send(this.player.ws, { t: "invites", invites: [this.inbox[this.inbox.length - 1]!] });
+      this.sendMail(this.player);
+    }
+  }
+
+  /**
+   * RPC (zones): a villager's furniture gift that didn't fit the owner's bag goes into a mailbox
+   * parcel, with a letter from them. Only furniture, a few pieces at a time.
+   */
+  async mailGift(ownerId: string, from: string, items: string[]): Promise<boolean> {
+    await this.assertOwner(ownerId, false);
+    // Villagers gift furniture and, now and then, a rare seed.
+    const gifts = (Array.isArray(items) ? items : [])
+      .filter((i) => typeof i === "string" && (getItem(i)?.kind === "furniture" || isRareCrop(i)))
+      .slice(0, MAX_MAILED_GIFTS);
+    if (gifts.length === 0) return false;
+    for (const item of gifts) addParcel(this.mail, item);
+    const who = cleanName(typeof from === "string" ? from : "A friend");
+    const names = gifts.map((i) => getItem(i)?.name ?? i).join(", ");
+    addNote(this.mail, `${who} wanted you to have this, but your bag was full: ${names}. It's waiting here in a parcel.`, Date.now());
+    this.persist({ mail: true });
+    if (this.player) this.sendMail(this.player);
+    return true;
   }
 
   /** RPC: invitations waiting for this home's owner (zones and the home send them after welcome). */
@@ -644,6 +811,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (next.length === this.inbox.length) return;
     this.inbox = next;
     this.persist({ inbox: true });
+    if (this.player) this.sendMail(this.player);
   }
 
   /**
@@ -659,6 +827,32 @@ export class HomeRoom extends DurableObject<Env> {
       sprite: save?.sprite ?? spriteForUser(userId),
       ...(save?.look ? { look: structuredClone(save.look) } : {}),
     };
+  }
+
+  /**
+   * RPC (player card route): this home's day and lifetime counters. Read-only and lease-free, and
+   * only numbers: never the inventory, the farm or where the player is.
+   */
+  async cardPeek(): Promise<CardPeek> {
+    if (!this.save) return { homeDay: null, stats: null };
+    return { homeDay: this.clock.day, stats: cleanStats(this.save.stats) };
+  }
+
+  /**
+   * Quality and yield of harvesting `tile` now, or null when nothing is ripe. Seeded by owner, home
+   * day and tile, so a retry (or a reconnect) gets the same roll.
+   */
+  private rollHarvestAt(tile: FarmTile, fnow: number): HarvestRoll | null {
+    const crop = harvestable(tile, fnow);
+    if (!crop) return null;
+    const level = farmingLevel(cleanStats(this.save?.stats).cropsHarvested);
+    return rollHarvest(crop, level, harvestRand(this.owner ?? "", this.clock.day, tile.x, tile.y), 0, this.rates);
+  }
+
+  /** Adds to one of the owner's lifetime counters (persisted with the next save write). */
+  private bumpStat(key: StatKey): void {
+    if (!this.save) return;
+    this.save.stats = bumpStat(cleanStats(this.save.stats), key);
   }
 
   // ------------------------------------------------------------------ connect
@@ -680,9 +874,15 @@ export class HomeRoom extends DurableObject<Env> {
     // A second tab of the owner replaces the first; visitors stay.
     this.dropPlayer(CLOSE_REPLACED, "Connected from another tab.", true);
 
-    // A named spawn needs a matching exit; otherwise resume the saved home position.
+    // A named spawn needs a matching exit; otherwise resume the saved home position (and map).
     const spawn = safeSpawnName(HOME_MAP.spawns, id.spawn);
-    const at = resolveSpawn(HOME_MAP.spawns, "home", spawn, save, this.takeTransfer(), Date.now());
+    const transfer = this.takeTransfer();
+    let arrival = resolveHomeArrival(spawn, save, transfer, Date.now());
+    // Fainted in a zone (it recorded that exit): wake up inside, by the bed.
+    if (spawn === HOME_FAINT_SPAWN && transfer?.to === "home" && transfer.spawn === HOME_FAINT_SPAWN) {
+      const bed = this.bedSide();
+      if (bed) arrival = { map: "home_in", at: bed };
+    }
     save.zone = "home";
     await this.ctx.storage.put({ save, clock: this.clock, bin: this.bin });
 
@@ -696,21 +896,16 @@ export class HomeRoom extends DurableObject<Env> {
       ...(id.sessionId ? { sid: id.sessionId } : {}),
     };
     server.serializeAttachment(att);
-    const p = this.makePlayer(server, att, at, Date.now());
+    const p = this.makePlayer(server, att, arrival.at, Date.now(), arrival.map);
     this.player = p;
     reportPresence(this.env, id.userId, "home", true);
     send(server, {
-      t: "welcome",
-      zone: "home",
-      you: p.entity.id,
-      entities: this.entities(),
-      inventory: save.inventory,
-      farm: this.farm,
-      objects: this.objects,
-      brokenRocks: this.rocks.brokenIds(),
+      ...this.welcomeFor(p, Date.now()),
       needsLook: !savedLook(save.look),
-      serverTime: Date.now(),
+      bonds: bondList(sanitizeBonds(save.bonds), Date.now()),
+      ...(devToolsEnabled(this.env) ? { devTools: true } : {}),
     });
+    this.sendMail(p);
     // A day that ended while the owner was away is settled now that home holds the lease again.
     if (dayOver(this.clock, Date.now())) this.endDay("away", Date.now());
     else {
@@ -775,18 +970,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.persist({ invites: true });
 
     const host = this.save!.name;
-    send(server, {
-      t: "welcome",
-      zone: "home",
-      you: v.entity.id,
-      entities: this.entities(),
-      inventory: VISITOR_INVENTORY,
-      farm: this.farm,
-      objects: this.objects,
-      brokenRocks: this.rocks.brokenIds(),
-      visit: { ownerId: this.owner, ownerName: host, returnTo: visit.returnTo },
-      serverTime: now,
-    });
+    send(server, this.welcomeFor(v, now));
     send(server, this.visitorHomeState(now));
     if (this.sleepAt !== null) send(server, { t: "sleeping", host, endsAt: this.sleepAt });
     send(server, { t: "notice", text: `Welcome to ${host}'s home! You can help harvest ripe crops.`, kind: "info" });
@@ -796,8 +980,72 @@ export class HomeRoom extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  private entities(): EntityState[] {
-    return this.player ? [this.player.entity, ...this.visitors.entities()] : this.visitors.entities();
+  /** Everyone at home, on either map. */
+  private present(): (HPlayer | Visitor)[] {
+    return this.player ? [this.player, ...this.visitors.all()] : this.visitors.all();
+  }
+
+  /** Entities on one home map (default: the yard). */
+  private entities(map: HomeMapId = "home"): EntityState[] {
+    return entitiesOn(this.present(), map);
+  }
+
+  /** Everyone on one home map. */
+  private toMap(map: HomeMapId, msg: ServerMsg): void {
+    toMap(this.present(), map, msg);
+  }
+
+  /**
+   * The welcome for `who`'s current home map: its entities and furniture, and the farm and rocks
+   * (and trees) in the yard only (the house has none, and must not draw them on its floor).
+   */
+  private welcomeFor(who: HPlayer | Visitor, now: number): Extract<ServerMsg, { t: "welcome" }> {
+    const yard = who.map === "home";
+    const isVisitor = who !== this.player;
+    const visit = isVisitor ? (who as Visitor) : null;
+    return {
+      t: "welcome",
+      zone: "home",
+      homeMap: who.map,
+      you: who.entity.id,
+      entities: this.entities(who.map),
+      inventory: isVisitor ? VISITOR_INVENTORY : this.save!.inventory,
+      farm: yard ? this.farm : [],
+      objects: this.objects[who.map],
+      brokenRocks: yard ? this.rocks.brokenIds() : [],
+      trees: yard ? this.trees.stages() : [],
+      ...(visit ? { visit: { ownerId: this.owner!, ownerName: this.save!.name, returnTo: visit.returnTo } } : {}),
+      serverTime: now,
+    };
+  }
+
+  /**
+   * Walks `who` through a house door onto `to` without a reconnect: a fresh welcome for that map
+   * on the same socket. The socket attachment records the map so a woken home puts them back.
+   */
+  private switchMap(who: HPlayer | Visitor, to: HomeMapId, at: Vec2, now: number): void {
+    who.motion.stop();
+    who.map = to;
+    who.entity.x = at.x;
+    who.entity.y = at.y;
+    who.entity.moving = false;
+    who.entity.facing = to === "home_in" ? "up" : "down";
+    delete who.entity.act;
+    const att = readAttachment(who.ws);
+    if (att) {
+      try {
+        who.ws.serializeAttachment({ ...att, homeMap: to, x: at.x, y: at.y } satisfies SocketAttachment);
+      } catch {
+        // A closing socket can't take an attachment; it is about to go anyway.
+      }
+    }
+    send(who.ws, this.welcomeFor(who, now));
+    if (who === this.player && to === "home") this.sendMail(who);
+    this.startTick();
+  }
+
+  private sendMail(p: HPlayer, open = false): void {
+    send(p.ws, mailMsg(this.mail, liveInbox(this.inbox, Date.now()), open));
   }
 
   /** Everyone at home: the owner and any visitors. */
@@ -839,11 +1087,18 @@ export class HomeRoom extends DurableObject<Env> {
     this.flushTally(now, true);
   }
 
-  private makePlayer(ws: WebSocket, att: SocketAttachment, at: { x: number; y: number } | null, authCheckedAt: number): HPlayer {
+  private makePlayer(
+    ws: WebSocket,
+    att: SocketAttachment,
+    at: { x: number; y: number } | null,
+    authCheckedAt: number,
+    map: HomeMapId = "home",
+  ): HPlayer {
     const save = this.save!;
-    const pos = at && canStand(this.grid, at.x, at.y) ? at : HOME_MAP.spawns.default;
+    const pos = standOn(this.maps.grids[map], map, at);
     return {
       ws,
+      map,
       guest: att.guest,
       entity: {
         id: att.entityId,
@@ -898,6 +1153,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.save.zone = "home";
     this.save.x = p.entity.x;
     this.save.y = p.entity.y;
+    this.save.homeMap = p.map;
     this.persist({ save: true });
   }
 
@@ -991,36 +1247,48 @@ export class HomeRoom extends DurableObject<Env> {
     const p = this.player;
     if (!p) return this.stopTick();
     const now = Date.now();
-    const dt = Math.min(250, Math.max(0, now - this.lastTick));
     this.lastTick = now;
 
     if (this.sleepAt !== null && now >= this.sleepAt) this.endDay("sleep", now);
-    const ack = p.motion.step(p.entity, this.grid, dt);
-    const exit = this.sleepAt === null ? exitAt(HOME_MAP, p.entity.x, p.entity.y) : null;
-    if (exit) this.takeExit(p, exit);
+    const acks = new Map<HPlayer | Visitor, number | undefined>();
+    acks.set(p, p.motion.step(p.entity, this.maps.grids[p.map], now));
+    const exit = this.sleepAt === null ? exitAt(homeMap(p.map), p.entity.x, p.entity.y) : null;
+    if (exit) this.takeExit(p, exit, now);
 
     if (p.leaving) return;
-    const acks = new Map<Visitor, number | undefined>();
     for (const v of this.visitors.all()) {
-      const a = v.motion.step(v.entity, this.grid, dt);
-      // The only way out for a visitor is home: any exit ends the visit.
-      if (exitAt(HOME_MAP, v.entity.x, v.entity.y)) this.endVisit(v, "See you next time!");
-      else acks.set(v, a);
+      const a = v.motion.step(v.entity, this.maps.grids[v.map], now);
+      const vexit = exitAt(homeMap(v.map), v.entity.x, v.entity.y);
+      const door = vexit ? doorTarget(vexit) : null;
+      if (vexit && door) this.switchMap(v, door, doorArrival(door, vexit.spawn, this.maps.grids[door]), now);
+      // The only way out for a visitor is home: any other exit ends the visit.
+      else if (vexit) {
+        this.endVisit(v, "See you next time!");
+        continue;
+      }
+      acks.set(v, a);
     }
     this.flushTally(now);
 
-    const { upd, del } = this.differ.diff(this.entities());
-    const changed = upd.length > 0 || del.length > 0;
-    const sendTick = (ws: WebSocket, a: number | undefined): void => {
-      const msg: ServerMsg = { t: "tick", at: now, upd, del };
-      if (a !== undefined) msg.ack = a;
-      send(ws, msg);
-    };
-    if (changed || ack !== p.lastAck) sendTick(p.ws, ack);
-    p.lastAck = ack;
-    for (const [v, a] of acks) {
-      if (changed || a !== v.lastAck) sendTick(v.ws, a);
-      v.lastAck = a;
+    // Each home map has its own entity list: people only see (and get ticks for) their own map.
+    let changed = false;
+    const people = this.present();
+    for (const map of HOME_MAPS) {
+      const { upd, del } = this.maps.diff(map, people);
+      const mapChanged = upd.length > 0 || del.length > 0;
+      changed ||= mapChanged;
+      for (const who of onMap(people, map)) {
+        const a = acks.get(who);
+        if (mapChanged || a !== who.lastAck) {
+          const msg: ServerMsg = { t: "tick", at: now, upd, del };
+          if (a !== undefined) {
+            msg.ack = a;
+            msg.ackMs = who.motion.ackMs(now);
+          }
+          send(who.ws, msg);
+        }
+        who.lastAck = a;
+      }
     }
     // Nothing moves and nothing is timed (rocks use an alarm): let the home hibernate until input.
     const still = (m: Motion, e: EntityState) => m.idle && !e.moving;
@@ -1039,11 +1307,17 @@ export class HomeRoom extends DurableObject<Env> {
   private flushTally(now: number, force = false): void {
     if (this.tally.size === 0) return;
     const lines = this.tally.flush(now, force);
+    for (const text of lines) addNote(this.mail, text, now);
+    if (lines.length > 0) this.persist({ mail: true });
     if (this.player) for (const text of lines) send(this.player.ws, { t: "notice", text, kind: "loot" });
+    if (this.player && lines.length > 0) this.sendMail(this.player);
   }
 
-  private takeExit(p: HPlayer, exit: MapExit): void {
+  private takeExit(p: HPlayer, exit: MapExit, now = Date.now()): void {
     p.motion.stop();
+    // House doors: switch home maps on this connection (guests may roam both).
+    const door = doorTarget(exit);
+    if (door) return this.switchMap(p, door, doorArrival(door, exit.spawn, this.maps.grids[door]), now);
     if (p.guest) {
       // Guests stay home: step them back off the exit and show the sign-up prompt.
       const back = HOME_MAP.spawns[safeSpawnName(HOME_MAP.spawns, "from_village")];
@@ -1059,6 +1333,7 @@ export class HomeRoom extends DurableObject<Env> {
       this.save.zone = exit.to;
       this.save.x = pos.x;
       this.save.y = pos.y;
+      delete this.save.homeMap;
       this.persist({ save: true });
     }
     this.setTransfer({ to: exit.to, spawn, at: Date.now() });
@@ -1089,11 +1364,11 @@ export class HomeRoom extends DurableObject<Env> {
   private handle(p: HPlayer, msg: ClientMsg, now: number): void {
     switch (msg.t) {
       case "move":
-        p.motion.onMove(msg.dx, msg.dy, msg.seq);
+        p.motion.onMove(p.entity, this.maps.grids[p.map], msg.dx, msg.dy, msg.seq, now);
         this.startTick();
         return;
       case "moveTo":
-        if (!p.motion.onMoveTo(this.grid, p.entity, msg.x, msg.y, msg.seq, now)) this.reject(p, msg, "Can't walk there.");
+        if (!p.motion.onMoveTo(this.maps.grids[p.map], p.entity, msg.x, msg.y, msg.seq, now)) this.reject(p, msg, "Can't walk there.");
         this.startTick();
         return;
       case "chat": {
@@ -1132,6 +1407,12 @@ export class HomeRoom extends DurableObject<Env> {
         return this.onSleep(p, now);
       case "unship":
         return this.onUnship(p, msg);
+      case "moveSlot":
+        if (!moveSlot(this.save!.inventory, msg.from, msg.to, msg.qty)) {
+          this.reject(p, msg, "Can't move that there.");
+          return send(p.ws, { t: "inventory", inventory: this.save!.inventory });
+        }
+        return this.inventoryChanged(p);
     }
   }
 
@@ -1178,11 +1459,11 @@ export class HomeRoom extends DurableObject<Env> {
     if ("deny" in verdict) return this.reject(v, msg, verdict.deny);
     switch (msg.t) {
       case "move":
-        v.motion.onMove(msg.dx, msg.dy, msg.seq);
+        v.motion.onMove(v.entity, this.maps.grids[v.map], msg.dx, msg.dy, msg.seq, now);
         this.startTick();
         return;
       case "moveTo":
-        if (!v.motion.onMoveTo(this.grid, v.entity, msg.x, msg.y, msg.seq, now)) this.reject(v, msg, "Can't walk there.");
+        if (!v.motion.onMoveTo(this.maps.grids[v.map], v.entity, msg.x, msg.y, msg.seq, now)) this.reject(v, msg, "Can't walk there.");
         this.startTick();
         return;
       case "chat":
@@ -1208,30 +1489,52 @@ export class HomeRoom extends DurableObject<Env> {
     v.lastUse = now;
     const save = this.save;
     if (!save || !this.player) return this.reject(v, msg, "Nothing to do here.");
+    if (v.map !== "home") return this.reject(v, msg, "Crops grow outside. Head out to help harvest.");
     if (!inToolReach(v.entity, msg.x, msg.y)) return this.reject(v, msg, "Too far away.");
     const tile = this.farm.find((t) => t.x === msg.x && t.y === msg.y);
     const fnow = farmNow(this.clock.day);
-    const ready = tile ? harvestYield(tile, fnow, Math.random) : null;
-    if (!tile || !ready) return this.reject(v, msg, "Visitors can only help harvest ripe crops.");
-    if (!canCredit(save.inventory, this.bin, ready)) {
+    const roll = tile ? this.rollHarvestAt(tile, fnow) : null;
+    if (!tile || !roll) return this.reject(v, msg, "Visitors can only help harvest ripe crops.");
+    const first = roll.items[0]!.item;
+    if (!canCredit(save.inventory, this.bin, first)) {
       return this.reject(v, msg, `${save.name}'s bag and shipping bin are both full.`);
     }
     harvestCrop(tile, fnow);
-    const credit = creditHarvest(save.inventory, this.bin, ready)!;
+    // The owner's level sets the odds; every crop picked still counts toward it.
+    this.bumpStat("cropsHarvested");
+    let toBag = false;
+    let toBin = false;
+    for (const { item, qty } of roll.items) {
+      for (let i = 0; i < qty; i++) {
+        const credit = creditHarvest(save.inventory, this.bin, item);
+        if (!credit) break;
+        if (credit === "bag") toBag = true;
+        else toBin = true;
+        this.tally.add(v.name, item, credit, now);
+      }
+    }
+    v.entity.facing = facingToTile(v.entity, msg.x, msg.y);
     v.entity.act = { k: "harvest", at: now };
-    this.toAll({ t: "farm", tiles: [tile] });
-    if (credit === "bag") send(this.player.ws, { t: "inventory", inventory: save.inventory });
-    else this.sendBin(this.player);
-    this.persist({ farm: true, save: credit === "bag", day: credit === "bin" });
-    this.tally.add(v.name, ready, credit, now);
-    send(v.ws, { t: "notice", text: `+1 ${getItem(ready)?.name ?? ready} for ${save.name}`, kind: "loot" });
+    this.toMap("home", { t: "farm", tiles: [tile] });
+    if (toBag) send(this.player.ws, { t: "inventory", inventory: save.inventory });
+    if (toBin) this.sendBin(this.player);
+    this.persist({ farm: true, save: true, day: toBin });
+    send(v.ws, { t: "notice", text: `${harvestText(roll.items)} for ${save.name}`, kind: "loot" });
     this.startTick();
   }
 
-  /** Local dev only (see devToolsEnabled): "/day" ends the day now, "/time 21" sets the clock. */
+  /** Local dev only (see devToolsEnabled): "/day" ends the day now, "/time 21" sets the clock, "/give item 3" fills the bag. */
   private devCommand(p: HPlayer, text: string, now: number): boolean {
     if (text === "/day") {
       this.endDay("sleep", now);
+      return true;
+    }
+    const give = /^\/give ([a-z_]{1,32})(?: (\d{1,2}))?$/.exec(text);
+    if (give) {
+      const item = give[1]!;
+      if (!getItem(item) || !addItem(this.save!.inventory, item, Number(give[2] ?? 1))) {
+        send(p.ws, { t: "notice", text: "Usage: /give item_id [qty] (with room in the bag)", kind: "error" });
+      } else this.inventoryChanged(p);
       return true;
     }
     const m = /^\/time (\d{1,2})(?::(\d{2}))?$/.exec(text);
@@ -1287,9 +1590,11 @@ export class HomeRoom extends DurableObject<Env> {
     return sleepCountdownFor(this.visitors.size);
   }
 
+  /** The bed is inside the house. */
   private nearBed(p: HPlayer): boolean {
-    return this.objects.some(
-      (o) => o.item === "bed_simple" && distToRect(p.entity, objectRect(o.item, o.x, o.y, o.rotation)) <= BED_REACH,
+    if (p.map !== "home_in") return false;
+    return this.objects.home_in.some(
+      (o) => o.item === BED_ITEM && distToRect(p.entity, objectRect(o.item, o.x, o.y, o.rotation)) <= BED_REACH,
     );
   }
 
@@ -1312,7 +1617,8 @@ export class HomeRoom extends DurableObject<Env> {
     const save = this.save;
     if (!save) return;
     this.sleepAt = null;
-    const st = { clock: this.clock, farm: this.farm, objects: this.objects, bin: this.bin };
+    // Only yard things (scarecrows) matter to the farm roll.
+    const st = { clock: this.clock, farm: this.farm, objects: this.objects.home, bin: this.bin };
     // Server-wide "crops shipped today" counts what the bin actually pays out (unshipping can undo a shipment).
     const cropsShipped = this.bin.reduce((n, e) => n + (getItem(e.item)?.kind === "crop" ? e.qty : 0), 0);
     const res = endHomeDay(st, kind, save.inventory.coins, now, Math.random);
@@ -1323,40 +1629,50 @@ export class HomeRoom extends DurableObject<Env> {
     save.inventory.coins = Math.max(0, save.inventory.coins + res.coinsDelta);
     save.stamina = res.stamina;
     const p = this.player;
-    if (p && kind !== "away") this.wakeByBed(p);
+    if (p && kind !== "away") this.wakeByBed(p, now);
     this.persist({ save: true, farm: true, day: true });
     if (p) this.sendMorning(p, res.summary);
     void this.scheduleRockAlarm(now);
   }
 
   private sendMorning(p: HPlayer, summary: DaySummary): void {
-    this.toVisitors({ t: "farmAll", tiles: this.farm });
+    // The farm is only drawn in the yard; people inside get it with the yard's welcome.
+    for (const v of onMap(this.visitors.all(), "home")) send(v.ws, { t: "farmAll", tiles: this.farm });
     this.toVisitors(this.visitorHomeState());
     this.toVisitors({ t: "notice", text: `A new day begins at ${this.save!.name}'s home.`, kind: "info" });
-    send(p.ws, { t: "farmAll", tiles: this.farm });
+    if (p.map === "home") send(p.ws, { t: "farmAll", tiles: this.farm });
     send(p.ws, { t: "inventory", inventory: this.save!.inventory });
     this.sendHomeState(p);
     this.sendBin(p);
     send(p.ws, { t: "daySummary", summary });
   }
 
-  /** Mornings start next to the bed. */
-  private wakeByBed(p: HPlayer): void {
-    const bed = this.objects.find((o) => o.id === DEFAULT_BED.id) ?? this.objects.find((o) => o.item === "bed_simple");
+  /** Mornings start next to the bed, inside the house (passing out in the yard carries you in). */
+  private wakeByBed(p: HPlayer, now: number): void {
     p.motion.stop();
-    if (!bed) return;
+    const grid = this.maps.grids.home_in;
+    const at = this.bedSide();
+    if (p.map !== "home_in") return this.switchMap(p, "home_in", standOn(grid, "home_in", at ?? null), now);
+    if (at) {
+      p.entity.x = at.x;
+      p.entity.y = at.y;
+      p.entity.facing = "down";
+    }
+  }
+
+  /** A free spot beside the bed inside the house, if there is one. */
+  private bedSide(): Vec2 | undefined {
+    const inside = this.objects.home_in;
+    const bed = inside.find((o) => o.id === BED_ID) ?? inside.find((o) => o.item === BED_ITEM);
+    if (!bed) return undefined;
+    const grid = this.maps.grids.home_in;
     const r = objectRect(bed.item, bed.x, bed.y, bed.rotation);
     const spots = [
       { x: r.x + r.w + 0.5, y: r.y + r.h - 0.5 },
       { x: r.x - 0.5, y: r.y + r.h - 0.5 },
       { x: r.x + 0.5, y: r.y + r.h + 0.5 },
     ];
-    const at = spots.find((s) => canStand(this.grid, s.x, s.y));
-    if (at) {
-      p.entity.x = at.x;
-      p.entity.y = at.y;
-      p.entity.facing = "down";
-    }
+    return spots.find((s) => canStand(grid, s.x, s.y));
   }
 
   private stamina(): number {
@@ -1392,14 +1708,14 @@ export class HomeRoom extends DurableObject<Env> {
     if (gain <= 0) return this.reject(p, msg, "You're not hungry.");
     if (!removeFromSlot(inv, msg.slot, 1)) return this.reject(p, msg, "Nothing in that slot.");
     this.save!.stamina = this.stamina() + gain;
-    this.act(p, "eat", now);
+    this.act(p, "eat", now, def.id);
     this.sendHomeState(p);
     this.inventoryChanged(p, `Ate ${def.name} (+${gain} stamina)`);
   }
 
   private onUnship(p: HPlayer, msg: Extract<ClientMsg, { t: "unship" }>): void {
     const bin = HOME_MAP.props.find((pr) => pr.type === "shipping_bin");
-    if (!bin || distToRect(p.entity, bin) > PROP_REACH + 1) return this.reject(p, msg, "Walk up to the shipping bin.");
+    if (!bin || p.map !== "home" || distToRect(p.entity, bin) > PROP_REACH + 1) return this.reject(p, msg, "Walk up to the shipping bin.");
     const r = unshipLast(this.save!.inventory, this.bin);
     if (!r.ok) return this.reject(p, msg, r.reason);
     this.persist({ day: true });
@@ -1407,10 +1723,17 @@ export class HomeRoom extends DurableObject<Env> {
     this.inventoryChanged(p, r.text);
   }
 
-  /** Watering can refills on water tiles and at the well. */
+  /** Watering can refills on water tiles and at the well (shared with the client's refill cue). */
   private isWaterSource(x: number, y: number): boolean {
-    if (x >= 0 && y >= 0 && x < HOME_MAP.width && y < HOME_MAP.height && HOME_MAP.ground[y * HOME_MAP.width + x] === Ground.Water) return true;
-    return HOME_MAP.props.some((pr) => pr.type === "well" && pointInRect(pr, x, y));
+    return isWaterSource(HOME_MAP, x, y);
+  }
+
+  /** Turn toward the tile being worked, so tool swings and the refill face the target. */
+  private faceTile(p: HPlayer, x: number, y: number): void {
+    const dx = x + 0.5 - p.entity.x;
+    const dy = y + 0.5 - p.entity.y;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+    p.entity.facing = facingFor(dx, dy, p.entity.facing);
   }
 
   /** Guests may dress up too; the look lives in the save and shows on the entity next tick. */
@@ -1423,6 +1746,23 @@ export class HomeRoom extends DurableObject<Env> {
     this.persist({ save: true });
   }
 
+  /** What is on a tile, for the tool rules (shared/engine/toolRules.ts). */
+  private targetAt(x: number, y: number, fnow: number): ToolTarget {
+    const rock = this.rocks.at(x, y);
+    const tree = this.trees.at(x, y);
+    return classifyTarget(
+      {
+        rock: rock?.ore ?? null,
+        tree: tree ? { stage: tree.stage, size: tree.size } : null,
+        soil: this.farm.find((t) => t.x === x && t.y === y) ?? null,
+        water: this.isWaterSource(x, y),
+        bin: HOME_MAP.props.some((pr) => pr.type === "shipping_bin" && pointInRect(pr, x, y)),
+        farmable: isFarmable(HOME_MAP, x, y, this.objects.home),
+      },
+      fnow,
+    );
+  }
+
   private onUse(p: HPlayer, msg: Extract<ClientMsg, { t: "use" }>, now: number): void {
     if (now - p.lastUse < USE_COOLDOWN_MS) return this.reject(p, msg, "Too fast.");
     p.lastUse = now;
@@ -1432,99 +1772,159 @@ export class HomeRoom extends DurableObject<Env> {
     const def = slot ? getItem(slot.item) : undefined;
     if (!slot || !def) return this.reject(p, msg, "Nothing in that slot.");
     p.lastSlot = msg.slot;
+    const key = toolKeyOf(def.id);
+    // A tool swings toward the tile whether or not it does anything there.
+    if (isSwingTool(key)) {
+      p.entity.facing = facingToward(p.entity, msg, p.entity.facing);
+      this.act(p, key, now, def.id);
+    }
     if (!inToolReach(p.entity, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
+    // Tools work in the yard; inside the house there is nothing to till, water or break.
+    if (p.map !== "home") return this.reject(p, msg, "Nothing to do here.");
+    // Swing at the tile that was clicked, not wherever the player happened to face.
+    this.faceTile(p, msg.x, msg.y);
     // Farm functions run on the home day, not on real time (see homeclock.farmNow).
     const fnow = farmNow(this.clock.day);
-
-    if (def.tool === "pickaxe") {
-      const rock = this.rocks.at(msg.x, msg.y);
-      if (rock) return this.mine(p, msg, rock, def, now);
+    const target = this.targetAt(msg.x, msg.y, fnow);
+    const out = resolveToolUse(key, target, { farm: true, power: def.power });
+    if (!out.ok) {
+      if (out.reason) this.reject(p, msg, out.reason);
+      return;
     }
-
-    if (def.tool === "water" && this.isWaterSource(msg.x, msg.y)) {
-      if (clampWater(save.water) >= MAX_WATER) return this.reject(p, msg, "Your watering can is already full.");
-      save.water = MAX_WATER;
-      this.act(p, "water", now, def.id);
-      this.sendHomeState(p);
-      send(p.ws, { t: "notice", text: "Watering can refilled", kind: "info" });
-      return this.persist({ save: true });
-    }
-
+    // The result is applied now; `impactAt` lets every client show it when the swing lands.
+    const stamp = { by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
     const tile = this.farm.find((t) => t.x === msg.x && t.y === msg.y);
-    if (tile) {
-      const ready = harvestYield(tile, fnow, Math.random);
-      if (ready) {
-        if (!canAdd(inv, ready, 1)) return this.reject(p, msg, "Your bag is full.");
+    switch (out.effect) {
+      case "harvest": {
+        const roll = tile ? this.rollHarvestAt(tile, fnow) : null;
+        if (!tile || !roll) return this.reject(p, msg, "Nothing to harvest.");
+        const trial = cloneInventory(inv);
+        if (!roll.items.every((it) => addItem(trial, it.item, it.qty))) return this.reject(p, msg, "Your bag is full.");
         harvestCrop(tile, fnow);
-        addItem(inv, ready, 1);
+        save.inventory = trial;
         this.act(p, "harvest", now);
-        reportStat(this.env, "crops_harvested", 1);
-        this.toAll({ t: "farm", tiles: [tile] });
-        this.persist({ farm: true });
-        return this.inventoryChanged(p, `+1 ${getItem(ready)?.name ?? ready}`);
+        reportStat(this.env, "crops_harvested", roll.count);
+        this.bumpStat("cropsHarvested");
+        this.toMap("home", { t: "farm", tiles: [tile] });
+        this.persist({ farm: true, save: true });
+        return this.inventoryChanged(p, harvestText(roll.items));
       }
-      if (def.tool === "water") {
-        if (!tile.crop) return this.reject(p, msg, "Nothing to water.");
+      case "clear":
+        if (!tile || !clearDeadCrop(tile)) return this.reject(p, msg, "Nothing to clear.");
+        if (!isSwingTool(key)) this.act(p, "harvest", now);
+        this.toMap("home", { t: "farm", tiles: [tile], ...stamp });
+        return this.persist({ farm: true });
+      case "refill":
+        if (clampWater(save.water) >= MAX_WATER) return this.reject(p, msg, "Your watering can is already full.");
+        save.water = MAX_WATER;
+        this.sendHomeState(p);
+        send(p.ws, { t: "notice", text: "Watering can refilled", kind: "info" });
+        return this.persist({ save: true });
+      case "water":
+        if (!tile) return this.reject(p, msg, "Nothing to water.");
         if (tile.lastWateredDay === this.clock.day) return this.reject(p, msg, "Already watered today.");
         if (clampWater(save.water) <= 0) return this.reject(p, msg, "Your watering can is empty. Refill it at the well or pond.");
         if (!this.spendStamina(p, msg, def)) return;
         if (!waterTile(tile, fnow)) return this.reject(p, msg, "Already watered today.");
         save.water = clampWater(save.water) - 1;
-        this.act(p, "water", now, def.id);
-        this.toAll({ t: "farm", tiles: [tile] });
+        this.toMap("home", { t: "farm", tiles: [tile], ...stamp });
+        this.sendHomeState(p);
+        return this.persist({ farm: true, save: true });
+      case "plant":
+        if (!tile || !plantTile(tile, def.id, fnow)) return this.reject(p, msg, "Something is already growing here.");
+        removeFromSlot(inv, msg.slot, 1);
+        this.act(p, "plant", now);
+        this.toMap("home", { t: "farm", tiles: [tile] });
+        this.persist({ farm: true });
+        return this.inventoryChanged(p);
+      case "till": {
+        if (!this.spendStamina(p, msg, def)) return;
+        const t = tillTile(msg.x, msg.y);
+        this.farm.push(t);
+        this.toMap("home", { t: "farm", tiles: [t], ...stamp });
         this.sendHomeState(p);
         return this.persist({ farm: true, save: true });
       }
-      if (def.kind === "seed") {
-        if (!plantTile(tile, def.id, fnow)) return this.reject(p, msg, "Something is already growing here.");
-        tile.dryDays = 0;
-        removeFromSlot(inv, msg.slot, 1);
-        this.act(p, "plant", now);
-        this.toAll({ t: "farm", tiles: [tile] });
-        this.persist({ farm: true });
-        return this.inventoryChanged(p);
+      case "hitRock": {
+        const rock = this.rocks.at(msg.x, msg.y);
+        return rock ? this.mine(p, msg, rock, target, def, now, stamp) : undefined;
       }
-      return this.reject(p, msg, def.tool === "hoe" ? "Already tilled." : "Nothing to do here.");
+      case "hitTree":
+      case "hitStump":
+        return this.chop(p, msg, target, def, now, stamp);
+      case "ship":
+        return this.ship(p, msg, msg.slot);
+      case "hitMonster":
+        return; // no monsters at home
     }
-
-    if (def.tool === "hoe") {
-      const blocked = this.rocks.at(msg.x, msg.y) !== null;
-      if (blocked || !isFarmable(HOME_MAP, msg.x, msg.y, this.objects)) return this.reject(p, msg, "You can't till here.");
-      if (!this.spendStamina(p, msg, def)) return;
-      const t = tillTile(msg.x, msg.y);
-      this.farm.push(t);
-      this.act(p, "hoe", now, def.id);
-      this.toAll({ t: "farm", tiles: [t] });
-      this.sendHomeState(p);
-      return this.persist({ farm: true, save: true });
-    }
-
-    const bin = HOME_MAP.props.find((pr) => pr.type === "shipping_bin" && pointInRect(pr, msg.x, msg.y));
-    if (bin && !def.tool) return this.ship(p, msg, msg.slot);
-    this.reject(p, msg, "Nothing to do here.");
   }
 
   private mine(
     p: HPlayer,
     msg: Extract<ClientMsg, { t: "use" }>,
-    rock: { id: string; x: number; y: number; ore: "stone" | "copper" | "iron" | "gem" },
+    rock: { id: string; x: number; y: number; ore: RockOre },
+    target: ToolTarget,
     def: ItemDef,
     now: number,
+    stamp: ImpactStamp,
   ): void {
-    if (!canMine(rock.ore, def.power ?? 1)) return this.reject(p, msg, "You need a stronger pickaxe.");
     const save = this.save!;
-    const drops = rockDrops(rock.ore, Math.random);
+    const need = hitsNeeded(target);
+    // The last hit must fit the haul, so check the bag before counting it.
+    const left = need - this.hits.progress(rock.id, now);
+    const drops = left <= 1 ? rockDrops(rock.ore, rockRand(this.owner ?? "", rock.id, this.rocks.spawnOf(rock.id)), this.rates) : [];
     const trial = cloneInventory(save.inventory);
-    if (!drops.every((d) => addItem(trial, d.item, d.qty))) return this.reject(p, msg, "Your bag is full.");
+    if (left <= 1 && !drops.every((d) => addItem(trial, d.item, d.qty))) return this.reject(p, msg, "Your bag is full.");
     if (!this.spendStamina(p, msg, def)) return;
+    const hit = this.hits.hit(rock.id, need, now);
+    if (!hit.done) {
+      this.toMap("home", { t: "rock", id: rock.id, broken: false, hits: hit.hits, need, ...stamp });
+      return this.sendHomeState(p);
+    }
     save.inventory = trial;
-    this.act(p, "pickaxe", now, def.id);
+    this.bumpStat("oresMined");
     this.sendHomeState(p);
-    this.rocks.breakRock(rock, this.grid, now);
-    this.toAll({ t: "rock", id: rock.id, broken: true });
+    this.rocks.breakRock(rock, this.maps.grids.home, now);
+    this.toMap("home", { t: "rock", id: rock.id, broken: true, hits: hit.hits, need, drops: drops.map((d) => d.item), ...stamp });
     this.persist({ rocks: true });
     void this.scheduleRockAlarm(now);
     this.inventoryChanged(p, drops.map((d) => `+${d.qty} ${getItem(d.item)?.name ?? d.item}`).join(", "));
+  }
+
+  /** An axe hit on a standing tree (fells it to a stump) or a stump (clears it). */
+  private chop(p: HPlayer, msg: Extract<ClientMsg, { t: "use" }>, target: ToolTarget, def: ItemDef, now: number, stamp: ImpactStamp): void {
+    const found = this.trees.at(msg.x, msg.y);
+    if (!found) return;
+    const save = this.save!;
+    const { tree, stage, size } = found;
+    const need = hitsNeeded(target);
+    const key = `${tree.id}:${stage}`;
+    const left = need - this.hits.progress(key, now);
+    const drops = left <= 1 ? rollDrops(stage === "tree" ? TREE_RULES[size].drops : STUMP_RULE.drops, Math.random, this.rates) : [];
+    // A full bag doesn't stop the axe: wood that doesn't fit goes to the mailbox (no ground items at home).
+    const trial = cloneInventory(save.inventory);
+    const posted = drops.filter((d) => !addItem(trial, d.item, d.qty));
+    if (!this.spendStamina(p, msg, def)) return;
+    const hit = this.hits.hit(key, need, now);
+    if (!hit.done) {
+      this.toMap("home", { t: "tree", id: tree.id, stage, hits: hit.hits, need, ...stamp });
+      return this.sendHomeState(p);
+    }
+    save.inventory = trial;
+    if (stage === "tree") this.trees.fell(tree, now);
+    else this.trees.clearStump(tree, this.maps.grids.home);
+    const next = stage === "tree" ? "stump" : "gone";
+    this.toMap("home", { t: "tree", id: tree.id, stage: next, hits: hit.hits, need, drops: drops.map((d) => d.item), ...stamp });
+    this.sendHomeState(p);
+    for (const d of posted) addParcel(this.mail, d.item, d.qty);
+    this.persist({ trees: true, save: true, ...(posted.length ? { mail: true } : {}) });
+    void this.scheduleRockAlarm(now);
+    const got = drops.filter((d) => !posted.includes(d));
+    this.inventoryChanged(p, got.map((d) => `+${d.qty} ${getItem(d.item)?.name ?? d.item}`).join(", ") || undefined);
+    if (posted.length) {
+      this.sendMail(p);
+      send(p.ws, { t: "notice", text: "Your bag is full, so the wood went to your mailbox.", kind: "info" });
+    }
   }
 
   /** Puts a whole stack in the shipping bin; it is paid at the end of the day. */
@@ -1536,18 +1936,38 @@ export class HomeRoom extends DurableObject<Env> {
     this.inventoryChanged(p, r.text);
   }
 
-  /** Targets: "shipping_bin" (sells the last used slot) or "shipping_bin:<slot>". */
+  /**
+   * Targets: "shipping_bin" (sells the last used slot) or "shipping_bin:<slot>"; "mailbox"
+   * (opens it) or "mailbox:take" (parcels into the bag).
+   */
   private onInteract(p: HPlayer, target: string): void {
     const [propId, slotStr] = target.split(":");
-    const prop = HOME_MAP.props.find((pr) => pr.id === propId);
+    const prop = homeMap(p.map).props.find((pr) => pr.id === propId);
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
+    if (prop.id === MAILBOX_ID) return this.onMailbox(p, target === MAILBOX_TAKE);
     if (prop.type !== "shipping_bin") return;
     const slot = slotStr !== undefined && /^\d{1,2}$/.test(slotStr) ? Number(slotStr) : p.lastSlot;
     const item = slot === null ? undefined : this.save!.inventory.slots[slot];
     const def = item ? getItem(item.item) : undefined;
     // Holding something shippable ships it; anything else just opens the bin.
-    if (slot === null || !def || def.sell <= 0 || def.kind === "tool") return this.sendBin(p, true);
+    if (slot === null || !def || !isShippable(def.id)) return this.sendBin(p, true);
     this.ship(p, { t: "interact", target }, slot);
+  }
+
+  /** Opening the mailbox marks everything in it read; "take" moves parcels into the bag. */
+  private onMailbox(p: HPlayer, take: boolean): void {
+    if (take) {
+      const got = takeParcels(this.mail, this.save!.inventory);
+      if (got.length === 0) send(p.ws, { t: "notice", text: this.mail.parcels.length ? "Your bag is full." : "The mailbox is empty.", kind: "error" });
+      else {
+        // Lift the parcel's first item over your head, like any gift that arrives.
+        this.act(p, "holdUp", Date.now(), got[0]!.item);
+        this.inventoryChanged(p, got.map((g) => `+${g.qty} ${getItem(g.item)?.name ?? g.item}`).join(", "));
+      }
+    }
+    this.mail.readAt = Date.now();
+    this.persist({ mail: true });
+    this.sendMail(p, true);
   }
 
   private inPlaceReach(p: HPlayer, x: number, y: number): boolean {
@@ -1556,7 +1976,7 @@ export class HomeRoom extends DurableObject<Env> {
 
   private objectsChanged(p: HPlayer, upd: PlacedObject[], del: string[]): void {
     this.rebuildGrid();
-    this.toAll({ t: "objects", upd, del });
+    this.toMap(p.map, { t: "objects", upd, del });
     this.persist({ objects: true });
   }
 
@@ -1565,38 +1985,49 @@ export class HomeRoom extends DurableObject<Env> {
     const slot = inv.slots[msg.slot];
     if (!slot) return this.reject(p, msg, "Nothing in that slot.");
     if (!this.inPlaceReach(p, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
-    const ok = canPlace(HOME_MAP, this.objects, this.farm, slot.item, msg.x, msg.y, msg.rotation, { occupied: this.entities() });
+    if (getItem(slot.item)?.kind === "furniture" && mapForItem(slot.item) !== p.map) {
+      return this.reject(p, msg, p.map === "home" ? "This goes indoors." : "This goes outdoors.");
+    }
+    const ok = this.canPlaceHere(p, slot.item, msg.x, msg.y, msg.rotation);
     if (!ok.ok) return this.reject(p, msg, ok.reason);
     const item = slot.item;
     if (!removeFromSlot(inv, msg.slot, 1)) return this.reject(p, msg, "Nothing in that slot.");
     const obj: PlacedObject = { id: `o${++this.objSeq}`, item, x: msg.x, y: msg.y, rotation: msg.rotation };
-    this.objects.push(obj);
+    this.objects[p.map].push(obj);
     this.objectsChanged(p, [obj], []);
     this.inventoryChanged(p);
   }
 
+  /** Placement on the owner's current map: furniture, people and (in the yard) farm tiles. */
+  private canPlaceHere(p: HPlayer, item: string, x: number, y: number, rotation: 0 | 1 | 2 | 3, ignoreId?: string) {
+    const farm = p.map === "home" ? this.farm : [];
+    return canPlace(homeMap(p.map), this.objects[p.map], farm, item, x, y, rotation, {
+      ...(ignoreId ? { ignoreId } : {}),
+      occupied: this.entities(p.map),
+    });
+  }
+
   private onMoveObject(p: HPlayer, msg: Extract<ClientMsg, { t: "moveObject" }>): void {
-    const obj = this.objects.find((o) => o.id === msg.id);
+    // Furniture moves within the map it is on.
+    const obj = this.objects[p.map].find((o) => o.id === msg.id);
     if (!obj) return this.reject(p, msg, "That isn't here any more.");
     if (!this.inPlaceReach(p, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
-    const ok = canPlace(HOME_MAP, this.objects, this.farm, obj.item, msg.x, msg.y, msg.rotation, {
-      ignoreId: obj.id,
-      occupied: this.entities(),
-    });
+    const ok = this.canPlaceHere(p, obj.item, msg.x, msg.y, msg.rotation, obj.id);
     if (!ok.ok) return this.reject(p, msg, ok.reason);
     Object.assign(obj, { x: msg.x, y: msg.y, rotation: msg.rotation });
     this.objectsChanged(p, [obj], []);
   }
 
   private onPickup(p: HPlayer, msg: Extract<ClientMsg, { t: "pickup" }>): void {
-    const i = this.objects.findIndex((o) => o.id === msg.id);
+    const list = this.objects[p.map];
+    const i = list.findIndex((o) => o.id === msg.id);
     if (i < 0) return this.reject(p, msg, "That isn't here any more.");
-    const obj = this.objects[i];
-    if (obj.id === DEFAULT_BED.id) return this.reject(p, msg, "Your bed stays. You can move it instead.");
+    const obj = list[i];
+    if (obj.id === BED_ID) return this.reject(p, msg, "Your bed stays. You can move it instead.");
     if (!this.inPlaceReach(p, obj.x, obj.y)) return this.reject(p, msg, "Too far away.");
     const inv = this.save!.inventory;
     if (!addItem(inv, obj.item, 1)) return this.reject(p, msg, "Your bag is full.");
-    this.objects.splice(i, 1);
+    list.splice(i, 1);
     this.objectsChanged(p, [], [obj.id]);
     this.inventoryChanged(p);
   }

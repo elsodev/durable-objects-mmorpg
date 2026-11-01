@@ -4,9 +4,16 @@ import {
   FLOAT_LIFE,
   FloatTexts,
   FootstepTracker,
+  METER_FILL,
+  METER_LIFE,
   ParticlePool,
+  arcPoint,
+  easeOutCubic,
   flicker,
+  meterAt,
+  rippleRing,
   sanitizeFloat,
+  tossScale,
 } from "../src/client/render/effects-sim";
 
 function seeded(seed = 1) {
@@ -107,5 +114,42 @@ describe("ambient", () => {
     expect(AMBIENT.cave.light).toBeGreaterThan(0);
     expect(AMBIENT.indoor.light).toBe(0);
     for (let t = 0; t < 10; t += 0.37) expect(Math.abs(flicker(t) - 1)).toBeLessThan(0.05);
+  });
+});
+
+describe("one-shot curves", () => {
+  it("arcPoint starts and ends on its points and peaks halfway", () => {
+    const a = { x: 0, y: 100 };
+    const b = { x: 40, y: 80 };
+    expect(arcPoint(a, b, 0, 30)).toEqual(a);
+    expect(arcPoint(a, b, 1, 30)).toEqual(b);
+    const mid = arcPoint(a, b, 0.5, 30);
+    expect(mid.x).toBe(20);
+    expect(mid.y).toBe(90 - 30);
+    expect(arcPoint(a, b, 2, 30)).toEqual(b);
+  });
+
+  it("tossScale keeps full size, then shrinks into the bin", () => {
+    expect(tossScale(0)).toBe(1);
+    expect(tossScale(0.5)).toBe(1);
+    expect(tossScale(1)).toBeCloseTo(0.3);
+    expect(tossScale(0.8)).toBeLessThan(1);
+  });
+
+  it("rippleRing grows and fades out", () => {
+    const a = rippleRing(0);
+    const b = rippleRing(1);
+    expect(b.radius).toBeGreaterThan(a.radius);
+    expect(a.alpha).toBeGreaterThan(0);
+    expect(b.alpha).toBe(0);
+  });
+
+  it("meterAt fills from `from` to `to`, then fades by the end of its life", () => {
+    expect(meterAt(0, 0.25, 1).level).toBeCloseTo(0.25);
+    expect(meterAt(METER_FILL, 0.25, 1).level).toBeCloseTo(1);
+    expect(meterAt(0.3, 0.25, 1).alpha).toBe(1);
+    expect(meterAt(METER_LIFE, 0.25, 1).alpha).toBe(0);
+    expect(easeOutCubic(0)).toBe(0);
+    expect(easeOutCubic(1)).toBe(1);
   });
 });

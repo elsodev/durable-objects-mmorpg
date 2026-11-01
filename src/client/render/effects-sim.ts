@@ -1,8 +1,9 @@
 // Pure simulation for render/effects.ts: pooled particles and floating text. No Pixi, no DOM,
 // randomness passed in, so it is testable and the renderer only mirrors slot state to sprites.
+import type { Vec2 } from "../../shared/types";
 
 export type BurstKind = "dust" | "hit" | "water" | "sparkle";
-export type FloatKind = "info" | "error" | "loot";
+export type FloatKind = "info" | "error" | "loot" | "love" | "damage" | "crit" | "miss" | "hurt";
 
 export interface Particle {
   active: boolean;
@@ -225,7 +226,16 @@ export const FLOAT_COLORS: Record<FloatKind, number> = {
   info: 0xf4f1de,
   error: 0xff6b6b,
   loot: 0xffd166,
+  love: 0xff7eb6,
+  // Combat: orange damage, yellow crits, grey misses, red when you're the one hurt.
+  damage: 0xff8200,
+  crit: 0xffe14d,
+  miss: 0xa8a8b0,
+  hurt: 0xff4a4a,
 };
+
+/** Crits read bigger. */
+export const FLOAT_SIZE: Partial<Record<FloatKind, number>> = { crit: 1.35, damage: 1.1, hurt: 1.1 };
 
 export const FLOAT_LIFE = 1.3; // s
 export const FLOAT_RISE = 48; // px over the whole life
@@ -293,7 +303,7 @@ export class FloatTexts {
       }
       // Ease-out rise, quick pop-in scale, fade over the last 40%.
       e.dy = -FLOAT_RISE * (1 - (1 - t) * (1 - t));
-      e.scale = t < 0.12 ? 0.7 + (t / 0.12) * 0.4 : t < 0.2 ? 1.1 - ((t - 0.12) / 0.08) * 0.1 : 1;
+      e.scale = (t < 0.12 ? 0.7 + (t / 0.12) * 0.4 : t < 0.2 ? 1.1 - ((t - 0.12) / 0.08) * 0.1 : 1) * (FLOAT_SIZE[e.kind] ?? 1);
       e.alpha = t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4;
     }
     return done;
@@ -359,4 +369,38 @@ export const AMBIENT: Record<"day" | "cave" | "indoor", AmbientLook> = {
 /** Gentle torch flicker for the cave light radius, deterministic in time. */
 export function flicker(t: number): number {
   return 1 + 0.025 * Math.sin(t * 7.3) + 0.015 * Math.sin(t * 17.1 + 1.3);
+}
+
+// ---------------------------------------------------------------- timed one-shots (refill, shipping)
+
+const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
+export const easeOutCubic = (t: number): number => 1 - Math.pow(1 - clamp01(t), 3);
+
+/** Point along a thrown item's arc: straight line from `a` to `b` plus a parabola `lift` high. */
+export function arcPoint(a: Vec2, b: Vec2, t: number, lift: number): Vec2 {
+  const u = clamp01(t);
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u - 4 * lift * u * (1 - u) };
+}
+
+export const TOSS_LIFE = 0.5; // s
+/** Shipped items keep their size, then shrink as they drop into the bin. */
+export function tossScale(t: number): number {
+  const u = clamp01(t);
+  return u < 0.6 ? 1 : 1 - 0.7 * ((u - 0.6) / 0.4);
+}
+
+export const RIPPLE_LIFE = 0.9; // s
+/** One ripple ring: radius (tiles) grows while it fades. */
+export function rippleRing(t: number): { radius: number; alpha: number } {
+  const u = clamp01(t);
+  return { radius: 0.12 + 0.55 * easeOutCubic(u), alpha: 0.85 * (1 - u) };
+}
+
+export const METER_LIFE = 1.3; // s
+export const METER_FILL = 0.65; // s
+/** Watering-can meter: fill level 0..1 and opacity at `age` seconds. */
+export function meterAt(age: number, from: number, to: number): { level: number; alpha: number } {
+  const level = from + (to - from) * easeOutCubic(age / METER_FILL);
+  const fade = age > METER_LIFE - 0.3 ? clamp01((METER_LIFE - age) / 0.3) : 1;
+  return { level: clamp01(level), alpha: fade };
 }

@@ -1,5 +1,5 @@
 // Home day clock. Each home keeps its own clock: a day starts at 6:00 and ends at 2:00 the next
-// morning (Stardew-like), at GAME_HOUR_MS real ms per game hour. Pure: callers pass `now`.
+// morning, at GAME_HOUR_MS real ms per game hour. Pure: callers pass `now`.
 import { DAY_MS } from "../types";
 
 /** Real milliseconds per game hour (~50 s, so a full day is about 17 real minutes). */
@@ -58,7 +58,7 @@ export function clockAtMinutes(c: HomeClock, minutes: number, now: number): Home
   return { day: c.day, startAt: now - (m - DAY_START_MIN) * GAME_MINUTE_MS };
 }
 
-/** "6:00 AM" .. "1:50 AM", in 10 minute steps like Stardew. */
+/** "6:00 AM" .. "1:50 AM", in 10 minute steps. */
 export function formatClock(minutes: number): string {
   const m = Math.floor(minutes / 10) * 10;
   const h24 = Math.floor(m / 60) % 24;
@@ -110,6 +110,29 @@ export function daylightTint(minutes: number): number {
     }
   }
   return TINT_KEYS[TINT_KEYS.length - 1][1];
+}
+
+/** Indoor tint keyframes: lamplit warmth that only dims (never goes blue) as the night deepens. */
+const INDOOR_KEYS: [number, number][] = [
+  [6 * 60, 0xf2e4d0],
+  [9 * 60, 0xffffff],
+  [17 * 60, 0xffffff],
+  [19 * 60 + 30, 0xf2d6b0], // lamps lit
+  [22 * 60, 0xc8a888],
+  [26 * 60, 0xa48a78], // late: dim, still warm
+];
+
+/** Inside the house: a warm interior light, dimmed at night (white = no tint). */
+export function interiorTint(minutes: number): number {
+  if (minutes <= INDOOR_KEYS[0][0]) return INDOOR_KEYS[0][1];
+  for (let i = 1; i < INDOOR_KEYS.length; i++) {
+    const [m1, c1] = INDOOR_KEYS[i];
+    if (minutes <= m1) {
+      const [m0, c0] = INDOOR_KEYS[i - 1];
+      return lerpRgb(c0, c1, (minutes - m0) / (m1 - m0));
+    }
+  }
+  return INDOOR_KEYS[INDOOR_KEYS.length - 1][1];
 }
 
 /** 0 by day, ramping to 1 between 18:30 and 21:00: how strongly lamps glow. */

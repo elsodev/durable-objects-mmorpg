@@ -42,6 +42,14 @@ function pickaxe(g: PixelGrid, head: Rgb): void {
   g.rect(18, 7, 4, 4, P.woodDark);
 }
 
+function axe(g: PixelGrid): void {
+  handle(g, 6, 28, 22, 8);
+  g.poly([[17, 4], [24, 5], [29, 11], [28, 17], [22, 13], [19, 10]], 0x9a9aa4);
+  g.line(24, 5, 29, 11, 0xd8dce4);
+  g.line(22, 13, 28, 17, shade(0x9a9aa4, -0.35));
+  g.rect(19, 7, 4, 4, P.woodDark);
+}
+
 function sword(g: PixelGrid, blade: Rgb): void {
   g.poly([[8, 22], [24, 6], [27, 5], [26, 8], [10, 24]], blade);
   g.line(9, 22, 25, 6, shade(blade, 0.4));
@@ -65,7 +73,55 @@ function seedPacket(g: PixelGrid, crop: string): void {
   g.hline(7, 27, 18, shade(0xe8dcc0, -0.2));
 }
 
-const CROP_COLOR: Record<string, Rgb> = { turnip: 0xf2ece0, carrot: 0xf0842a, strawberry: 0xd83030, pumpkin: 0xf08a24 };
+/** Placeholder looks for the larger crop list: body colour, then shape (round, long or cluster). */
+type CropShape = "round" | "long" | "cluster" | "leafy";
+const MORE_CROPS: Record<string, [Rgb, CropShape]> = {
+  radish: [0xd8344a, "round"],
+  lettuce: [0x8ccc4a, "leafy"],
+  potato: [0xb07a44, "round"],
+  beet: [0x8a2050, "round"],
+  onion: [0xd8a050, "round"],
+  bell_pepper: [0x3a9a2a, "round"],
+  green_bean: [0x5ab040, "long"],
+  tomato: [0xe0302a, "round"],
+  eggplant: [0x6a2a8a, "long"],
+  cabbage: [0x6aa84a, "leafy"],
+  cauliflower: [0xf0ead0, "leafy"],
+  blueberry: [0x3a4ac8, "cluster"],
+  corn: [0xf0d040, "long"],
+  grape: [0x7a2a8a, "cluster"],
+  watermelon: [0x2a7a2a, "round"],
+  pineapple: [0xc8902a, "long"],
+  moonberry: [0xc8b8f0, "cluster"],
+  golden_melon: [0xf0c030, "round"],
+  starfruit: [0xf8e048, "cluster"],
+};
+
+function moreCrop(g: PixelGrid, c: Rgb, shape: CropShape): void {
+  if (shape === "round") {
+    g.ball(16, 18, 10, 9, c, shade(c, -0.3), shade(c, 0.3));
+    leaf(g, 16, 10, -5, -4, 1.8);
+    leaf(g, 16, 10, 5, -4, 1.8);
+  } else if (shape === "long") {
+    g.poly([[9, 26], [7, 20], [17, 6], [23, 8], [24, 13], [14, 27]], c);
+    g.line(10, 22, 19, 9, shade(c, 0.35));
+    leaf(g, 21, 7, 4, -3, 1.6);
+  } else if (shape === "cluster") {
+    for (const [x, y] of [[12, 12], [20, 12], [16, 16], [11, 20], [21, 20], [16, 24]]) g.ball(x, y, 4, 4, c, shade(c, -0.3), shade(c, 0.35));
+    g.vline(16, 4, 6, 0x3a8a2a);
+  } else {
+    g.ball(16, 18, 12, 9, shade(c, -0.15), shade(c, -0.4), c);
+    g.ball(16, 18, 7, 6, c, shade(c, -0.25), shade(c, 0.35));
+  }
+}
+
+const CROP_COLOR: Record<string, Rgb> = {
+  turnip: 0xf2ece0,
+  carrot: 0xf0842a,
+  strawberry: 0xd83030,
+  pumpkin: 0xf08a24,
+  ...Object.fromEntries(Object.entries(MORE_CROPS).map(([k, [c]]) => [k, c])),
+};
 
 function turnip(g: PixelGrid): void {
   leaf(g, 16, 13, -7, -9, 2.5);
@@ -120,6 +176,21 @@ function gem(g: PixelGrid): void {
   crystal(g, 22, 28, 3.5, 13, 0xd070e0);
   crystal(g, 16, 28, 5, 23, 0x7fd8e8);
   g.px(14, 8, 0xffffff);
+}
+
+/** A cut stone: a crown of facets over a point, with a glint. */
+function diamond(g: PixelGrid): void {
+  const c = 0xd8f4ff;
+  g.poly([[6, 12], [11, 6], [21, 6], [26, 12], [16, 28]], c);
+  g.poly([[6, 12], [26, 12], [16, 28]], shade(c, -0.12));
+  g.poly([[16, 12], [26, 12], [16, 28]], shade(c, -0.28));
+  g.poly([[11, 6], [16, 12], [6, 12]], 0xffffff);
+  g.hline(7, 12, 19, shade(c, -0.35));
+  g.px(13, 8, 0xffffff);
+  g.px(24, 4, 0xffffff);
+  g.px(25, 5, 0xffffff);
+  g.px(23, 5, 0xffffff);
+  g.px(24, 6, 0xffffff);
 }
 
 function wood(g: PixelGrid): void {
@@ -198,6 +269,7 @@ const ICONS: Record<string, (g: PixelGrid) => void> = {
   watering_can: wateringCan,
   pickaxe: (g) => pickaxe(g, 0x8a8a92),
   pickaxe_iron: (g) => pickaxe(g, 0xb8c8dc),
+  axe,
   sword_wood: (g) => sword(g, P.woodLight),
   sword_copper: (g) => sword(g, P.copper),
   turnip,
@@ -207,7 +279,10 @@ const ICONS: Record<string, (g: PixelGrid) => void> = {
   stone: (g) => ore(g, P.stone, null),
   ore_copper: (g) => ore(g, 0x6a6460, P.copper),
   ore_iron: (g) => ore(g, 0x5e5c68, 0xc8d0dc),
+  ore_silver: (g) => ore(g, 0x5e5c68, 0xe8eef4),
+  ore_gold: (g) => ore(g, 0x6a6460, 0xf2c230),
   gem_crystal: gem,
+  gem_diamond: diamond,
   wood,
   slime_gel: slimeGel,
   bat_wing: batWing,
@@ -215,6 +290,7 @@ const ICONS: Record<string, (g: PixelGrid) => void> = {
   herb_mint: mint,
   mushroom,
   fish_trout: fish,
+  ...Object.fromEntries(Object.entries(MORE_CROPS).map(([k, [c, shape]]) => [k, (g: PixelGrid) => moreCrop(g, c, shape)])),
 };
 
 /** Quality crops: the normal crop's icon with a silver or gold star in the corner. */

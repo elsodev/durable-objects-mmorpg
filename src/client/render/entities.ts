@@ -6,7 +6,9 @@ import { SCALE, TILE } from "../contracts";
 import type { EntityState, Vec2 } from "../../shared/types";
 import { runActionHook } from "./action-anim";
 import { isSeated, seatedFallback, seatedZ, SIT_DROP_PX } from "./sit-pose";
-import { actionFrame, actionNameFor } from "./tool-actions";
+import { blinkVisible, deathSquash, knockbackDone, knockbackOffset, slimePose } from "../game/combat-fx-logic";
+import { actionFrame, actionNameFor, impactFrameOf, ITEM_POSE_ACTS, swingFrame } from "./tool-actions";
+import { toolTiming } from "../../shared/engine/toolTiming";
 import { bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFrame, type EntityProfile } from "./entityProfile";
 
 /**
@@ -22,6 +24,7 @@ const FADE_OUT_MS = 250;
 const FLASH_MS = 100;
 const POOL_MAX = 32;
 const MAX_DT = 100;
+const PRELOAD_ACTIONS = ["eat", "hold_up"] as const;
 
 type WithLook = EntityState & { look?: unknown };
 
@@ -46,6 +49,17 @@ interface Rec {
   actKey: string;
   actStart: number;
   actAnchored: boolean;
+  /** Predicted knockback slide playing (tiles) and how long ago it started. */
+  slide: Vec2 | null;
+  slideT: number;
+  /** Hurt blink: time into it and its length. */
+  blinkT: number;
+  blinkMs: number;
+  /** Time since death (-1 alive). */
+  deathT: number;
+  /** Monster pose act (slime crouch / leap) and when it was first seen. */
+  poseKey: string;
+  poseStart: number;
 }
 
 /** Soft drop shadow: stacked translucent ellipses fake a blurred edge without a filter. */
@@ -89,6 +103,9 @@ export const createEntityLayer = ((
     rec.body.anchor.set(rec.char.anchor.x, rec.char.anchor.y);
     rec.actAnchored = false;
     rec.shadow.scale.set(rec.profile.shadow);
+    // Eating and holding up a gift come from the server without warning: start loading those
+    // frames now so the first one isn't drawn as a plain idle pose.
+    if (s.kind === "player") for (const name of PRELOAD_ACTIONS) rec.char.action?.(name);
   }
 
   /** Draws the frame of the entity's current tool/harvest action, if one is playing. */
@@ -110,9 +127,17 @@ export const createEntityLayer = ((
     const name = actionNameFor(act);
     const art = name ? rec.char.action(name) : null;
     if (!art) return done();
-    const frames = art.frames[s.facing] ?? art.frames.down;
+    const facing = ITEM_POSE_ACTS.has(act.k) ? "down" : s.facing;
+    const frames = art.frames[facing] ?? art.frames.down;
     // Walking cancels a held pose; a swing still plays out.
-    const i = s.moving && art.hold ? -1 : actionFrame(now - rec.actStart, art.ms, frames.length, art.hold);
+    // Tool swings follow the shared timing, so the tool lands when the effect does.
+    const timing = toolTiming(act.k, s.facing);
+    const age = now - rec.actStart;
+    const i = s.moving && art.hold
+      ? -1
+      : timing
+        ? swingFrame(age, frames.length, impactFrameOf(act.k, frames.length), timing)
+        : actionFrame(age, art.ms, frames.length, art.hold);
     if (i < 0) return done();
     if (!rec.actAnchored) {
       rec.body.anchor.set(art.anchor.x, art.anchor.y);
@@ -150,6 +175,13 @@ export const createEntityLayer = ((
         actKey: "",
         actStart: 0,
         actAnchored: false,
+        slide: null,
+        slideT: 0,
+        blinkT: 0,
+        blinkMs: 0,
+        deathT: -1,
+        poseKey: "",
+        poseStart: 0,
       };
     }
     rec.id = s.id;
@@ -160,6 +192,12 @@ export const createEntityLayer = ((
     rec.clock = 0;
     rec.phaseMs = phaseOf(s.id) * 10_000;
     rec.flashMs = 0;
+    rec.slide = null;
+    rec.blinkMs = 0;
+    rec.deathT = -1;
+    rec.poseKey = s.act ? `${s.act.k}:${s.act.at}` : "";
+    rec.poseStart = -Infinity;
+    rec.body.alpha = 1;
     rec.removing = false;
     rec.body.filters = null;
     rec.root.alpha = 0;
@@ -198,10 +236,35 @@ export const createEntityLayer = ((
     } else if (!playAction(rec, s, now) && !runActionHook(rec.body, s, now) && rec.body.texture !== tex) rec.body.texture = tex;
 
     const t = rec.clock + rec.phaseMs;
-    const lift = (p.hover + bobOffset(p, t, s.moving)) * SCALE;
+    if (s.kind === "monster" && s.act) {
+      const key = `${s.act.k}:${s.act.at}`;
+      if (key !== rec.poseKey) {
+        rec.poseKey = key;
+        rec.poseStart = now;
+      }
+    }
+    const pose = s.kind === "monster" ? slimePose(s.act?.k, now - rec.poseStart) : { sx: 1, sy: 1, lift: 0 };
+    const lift = (p.hover + bobOffset(p, t, s.moving)) * SCALE + pose.lift * TILE;
     const sq = squashFactor(p, t, s.moving);
     rec.body.y = seated ? SIT_DROP_PX * SCALE : -lift;
-    rec.body.scale.set(SCALE / Math.sqrt(sq), SCALE * sq);
+    let sx = pose.sx;
+    let sy = pose.sy;
+    if (rec.deathT >= 0) {
+      rec.deathT += dt;
+      const d = deathSquash(rec.deathT);
+      sx *= d.sx;
+      sy *= d.sy;
+      rec.body.alpha = d.alpha;
+    }
+    rec.body.scale.set((SCALE / Math.sqrt(sq)) * sx, SCALE * sq * sy);
+    if (rec.blinkMs > 0 && rec.deathT < 0) {
+      rec.blinkT += dt;
+      rec.body.alpha = blinkVisible(rec.blinkT, rec.blinkMs) ? 1 : 0.15;
+      if (rec.blinkT >= rec.blinkMs) {
+        rec.blinkMs = 0;
+        rec.body.alpha = 1;
+      }
+    }
 
     // Higher off the ground = smaller, fainter shadow.
     const height = lift / (TILE * 0.75);
@@ -209,14 +272,24 @@ export const createEntityLayer = ((
     rec.shadow.alpha = 1 - Math.min(0.4, height * 0.3);
     rec.shadow.visible = !seated; // the chair has its own
 
-    const fx = s.x * TILE;
-    const fy = s.y * TILE;
+    let ox = 0;
+    let oy = 0;
+    if (rec.slide) {
+      rec.slideT += dt;
+      const o = knockbackOffset(rec.slideT, rec.slide);
+      ox = o.x;
+      oy = o.y;
+      if (knockbackDone(rec.slideT)) rec.slide = null;
+    }
+    const fx = (s.x + ox) * TILE;
+    const fy = (s.y + oy) * TILE;
     rec.root.position.set(fx, fy);
     rec.root.zIndex = seated ? seatedZ(s.y) : fy;
 
     const top = Math.min(p.head, c.anchor.y * tex.height) * SCALE;
     rec.head.x = fx;
-    rec.head.y = fy - lift - top;
+    // Seated bodies are drawn SIT_DROP_PX lower, so the name tag and bubbles follow them down.
+    rec.head.y = fy + rec.body.y - top;
 
     if (rec.flashMs > 0) {
       rec.flashMs -= dt;
@@ -275,6 +348,25 @@ export const createEntityLayer = ((
       rec.flashMs = FLASH_MS;
       flashFilters ??= [makeFlashFilter()];
       rec.body.filters = flashFilters;
+    },
+
+    nudge(id, slide) {
+      const rec = live.get(id);
+      if (!rec || rec.removing) return;
+      rec.slide = { x: slide.x, y: slide.y };
+      rec.slideT = 0;
+    },
+
+    blink(id, ms) {
+      const rec = live.get(id);
+      if (!rec || rec.removing) return;
+      rec.blinkT = 0;
+      rec.blinkMs = ms;
+    },
+
+    die(id) {
+      const rec = live.get(id);
+      if (rec && rec.deathT < 0) rec.deathT = 0;
     },
 
     destroy() {

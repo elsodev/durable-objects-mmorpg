@@ -33,22 +33,22 @@ describe("dayIndex", () => {
 
 describe("crop growth", () => {
   it("empty tilled tile", () => {
-    expect(cropView(tillTile(0, 0), day(0))).toEqual({ stage: 0, ready: false, wateredToday: false });
+    expect(cropView(tillTile(0, 0), day(0))).toEqual({ stage: 0, ready: false, wateredToday: false, wilted: false, dead: false });
   });
 
   it("turnip (2 days): watered day 0 and day 1 → ready on day 2", () => {
     const t = planted();
     expect(cropView(t, day(0)).stage).toBe(0);
     waterTile(t, day(0));
-    expect(cropView(t, day(0))).toEqual({ stage: 0, ready: false, wateredToday: true });
-    expect(cropView(t, day(1)).stage).toBe(2); // 1/2 grown
+    expect(cropView(t, day(0))).toEqual({ stage: 0, ready: false, wateredToday: true, wilted: false, dead: false });
+    expect(cropView(t, day(1)).stage).toBe(1); // 1/2 grown: small
     expect(cropView(t, day(1)).wateredToday).toBe(false);
     waterTile(t, day(1));
     expect(cropView(t, day(1)).ready).toBe(false); // today's water counts tomorrow
-    expect(cropView(t, day(2))).toEqual({ stage: 3, ready: true, wateredToday: false });
+    expect(cropView(t, day(2))).toEqual({ stage: 3, ready: true, wateredToday: false, wilted: false, dead: false });
   });
 
-  it("pauses (never dies) on unwatered days", () => {
+  it("pauses on unwatered days (cropView alone never kills: rollFarmDay does)", () => {
     const t = planted("seed_carrot"); // 3 days
     waterTile(t, day(0));
     // skip days 1..9
@@ -96,7 +96,29 @@ describe("crop growth", () => {
     expect(plantTile(t, "seed_turnip", day(0))).toBe(true);
     expect(t.crop).toBe("turnip");
     expect(plantTile(t, "seed_carrot", day(0))).toBe(false);
-    expect(waterTile(tillTile(0, 0), day(0))).toBe(false); // nothing to water
+  });
+
+  it("waters empty soil: the day is kept, and a seed planted that day counts it", () => {
+    const t = tillTile(0, 0);
+    expect(waterTile(t, day(0, 0.2))).toBe(true);
+    expect(waterTile(t, day(0, 0.3))).toBe(false); // once a day
+    expect(t).toMatchObject({ wateredDays: 0, lastWateredDay: dayIndex(day(0)) });
+    expect(cropView(t, day(0)).wateredToday).toBe(true); // drawn wet
+    expect(plantTile(t, "seed_turnip", day(0, 0.5))).toBe(true);
+    expect(t).toMatchObject({ wateredDays: 1, lastWateredDay: dayIndex(day(0)) });
+    expect(waterTile(t, day(0, 0.6))).toBe(false); // already watered today
+    expect(grownDays(t, day(0))).toBe(0);
+    expect(grownDays(t, day(1))).toBe(1); // grew overnight
+    waterTile(t, day(1));
+    expect(cropView(t, day(2)).ready).toBe(true);
+  });
+
+  it("soil watered on an earlier day doesn't count for a new seed", () => {
+    const t = tillTile(0, 0);
+    waterTile(t, day(0));
+    plantTile(t, "seed_turnip", day(1));
+    expect(t).toMatchObject({ wateredDays: 0, lastWateredDay: null });
+    expect(cropView(t, day(1)).wateredToday).toBe(false);
   });
 
   it("harvest returns crop only when ready and resets tile", () => {
@@ -105,7 +127,7 @@ describe("crop growth", () => {
     waterTile(t, day(0));
     waterTile(t, day(1));
     expect(harvestTile(t, day(2))).toBe("turnip");
-    expect(t).toEqual(tillTile(3, 3));
+    expect(t).toEqual({ ...tillTile(3, 3), dryDays: 0 });
   });
 });
 
@@ -127,6 +149,9 @@ describe("passDay (local dev clock)", () => {
   it("leaves empty tiles alone and doesn't grow unwatered crops", () => {
     const empty = tillTile(1, 1);
     expect(passDay(empty)).toBe(false);
+    waterTile(empty, day(0));
+    expect(passDay(empty)).toBe(true); // the damp soil dries
+    expect(cropView(empty, day(0)).wateredToday).toBe(false);
     const t = planted();
     passDay(t);
     expect(cropView(t, day(0)).stage).toBe(0);

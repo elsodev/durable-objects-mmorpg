@@ -123,14 +123,26 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
   let typing = false;
   let slot = 0;
   const wheelStep = createWheelStepper();
+  /** Build mode: the wheel turns the furniture ghost instead of changing the hotbar slot. */
+  let wheelRotates = false;
 
   const actions = emitter<InputAction>();
   const slots = emitter<number>();
   const clicks = emitter<PointerInfo>();
   const moves = emitter<PointerInfo>();
+  const dirs = emitter<{ dir: { dx: number; dy: number }; at: number }>();
+  let lastDir = { dx: 0, dy: 0 };
 
   const focusBlocked = () => isEditable(doc.activeElement);
   const blocked = () => typing || focusBlocked();
+
+  /** Reports a held-direction change right away, so movement doesn't wait for the next frame. */
+  const dirChanged = (at: number) => {
+    const d = blocked() ? { dx: 0, dy: 0 } : dirFromKeys(held);
+    if (d.dx === lastDir.dx && d.dy === lastDir.dy) return;
+    lastDir = d;
+    dirs.emit({ dir: d, at });
+  };
 
   const selectSlot = (s: number) => {
     slot = wrapSlot(s);
@@ -144,6 +156,7 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
     if (isMoveCode(code)) {
       held.add(code);
       e.preventDefault(); // arrows would scroll the page
+      dirChanged(e.timeStamp);
       return;
     }
     const s = slotForCode(code);
@@ -155,16 +168,21 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
     const a = actionForCode(code);
     if (a) {
       e.preventDefault();
-      if (!e.repeat) actions.emit(a);
+      // Shift+R turns furniture the other way.
+      if (!e.repeat) actions.emit(a === "rotate" && e.shiftKey ? "rotateBack" : a);
     }
   };
 
   // Always release, even while typing, so a key held while focusing chat doesn't stick.
   const onKeyUp = (e: KeyboardEvent) => {
     held.delete(e.code);
+    dirChanged(e.timeStamp);
   };
 
-  const clearHeld = () => held.clear();
+  const clearHeld = () => {
+    held.clear();
+    dirChanged(performance.now());
+  };
   const onVisibility = () => {
     if (doc.visibilityState === "hidden") clearHeld();
   };
@@ -196,7 +214,9 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
     const scale = e.deltaMode === 1 ? WHEEL_LINE_PX : e.deltaMode === 2 ? WHEEL_PAGE_PX : 1;
     const delta = (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * scale;
     const step = wheelStep(delta, e.timeStamp);
-    if (step !== 0) selectSlot(slot + step);
+    if (step === 0) return;
+    if (wheelRotates) actions.emit(step > 0 ? "rotate" : "rotateBack");
+    else selectSlot(slot + step);
   };
 
   win.addEventListener("keydown", onKeyDown);
@@ -221,6 +241,10 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
     setSlot(s) {
       slot = wrapSlot(s);
     },
+    setWheelRotates(on) {
+      wheelRotates = on;
+    },
+    onDir: (cb) => dirs.on((v) => cb(v.dir, v.at)),
     onAction: actions.on,
     onSlot: slots.on,
     onClick: clicks.on,
@@ -236,6 +260,7 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
       canvas.removeEventListener("contextmenu", onContextMenu);
       canvas.removeEventListener("wheel", onWheel);
       clearHeld();
+      dirs.clear();
       actions.clear();
       slots.clear();
       clicks.clear();

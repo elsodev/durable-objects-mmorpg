@@ -212,15 +212,29 @@ export function drawFurniture(item: string, rotation: Rotation): PixelGrid {
       scarecrow(g);
       break;
     default:
-      genericBox(g, hashStr(item));
+      genericBox(g, hashStr(item), getItem(item)?.placeOn === "wall");
   }
   g.outline("self");
   return g;
 }
 
-function genericBox(g: PixelGrid, h: number): void {
-  const c: Rgb = [P.wood, 0x8a6a9a, 0x5a8a7a, 0xa86a4a][h % 4];
-  g.box(2, 4, g.w - 4, g.h - 6, c);
-  g.rect(3, 5, g.w - 6, 4, shade(c, 0.25));
-  g.rect(g.w / 2 - 2, g.h / 2, 4, 4, P.gold);
+/**
+ * Fallback for pieces drawn only by the art pack: a cabinet (or, for wall pieces, a framed
+ * picture) in a colour from the id, with a small 3x3 emblem from the id's hash so each piece
+ * still looks different if the pack fails to load.
+ */
+function genericBox(g: PixelGrid, h: number, wall: boolean): void {
+  const c: Rgb = [P.wood, 0x8a6a9a, 0x5a8a7a, 0xa86a4a, 0x6a7ab0, 0xb08a40, 0x7a9a4a, 0x9a5a5a][h % 8]!;
+  if (wall) {
+    g.box(3, 6, g.w - 6, g.h - 10, P.woodDark);
+    g.rect(5, 8, g.w - 10, g.h - 14, shade(c, 0.35));
+  } else {
+    g.box(2, 4, g.w - 4, g.h - 6, c);
+    g.rect(3, 5, g.w - 6, 4, shade(c, 0.25));
+  }
+  const ex = Math.floor(g.w / 2) - 4;
+  const ey = Math.floor(g.h / 2) - 2;
+  for (let i = 0; i < 9; i++) {
+    if ((h >>> (3 + i)) & 1) g.rect(ex + (i % 3) * 3, ey + Math.floor(i / 3) * 3, 2, 2, P.gold);
+  }
 }

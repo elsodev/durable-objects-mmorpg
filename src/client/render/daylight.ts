@@ -4,7 +4,7 @@ import { Container, Sprite, Texture } from "pixi.js";
 import type { Layers } from "../contracts";
 import { TILE } from "../contracts";
 import type { Vec2 } from "../../shared/types";
-import { daylightTint, lampStrength } from "../../shared/engine/homeclock";
+import { daylightTint, interiorTint, lampStrength } from "../../shared/engine/homeclock";
 
 export interface Daylight {
   /** minutes: home clock (minutes after midnight); lights: glow centres in tile coords. */
@@ -32,7 +32,9 @@ function glowTexture(): Texture | null {
   return Texture.from(c, true);
 }
 
-export function createDaylight(layers: Layers): Daylight {
+/** `indoor`: inside the house the light is a warm interior glow that dims at night, not the sky. */
+export function createDaylight(layers: Layers, opts: { indoor?: boolean } = {}): Daylight {
+  const tintAt = opts.indoor ? interiorTint : daylightTint;
   const tint = new Sprite(Texture.WHITE);
   tint.blendMode = "multiply";
   tint.eventMode = "none";
@@ -48,7 +50,7 @@ export function createDaylight(layers: Layers): Daylight {
 
   return {
     update(minutes, lights, w, h, timeMs) {
-      tint.tint = daylightTint(minutes);
+      tint.tint = tintAt(minutes);
       tint.visible = tint.tint !== 0xffffff;
       tint.position.set(0, 0);
       tint.setSize(w, h);

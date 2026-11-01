@@ -87,6 +87,16 @@ export function standSpots(grid: CollisionGrid, seat: Seat, near?: Vec2): Vec2[]
   return spots;
 }
 
+/** Closest a sitter who gets up to talk may land to the speaker (a body's width), so they never overlap. */
+export const TALK_GAP = 0.9;
+
+/** Stand spots for getting up to talk to `speaker`: nearest them first, but never on top of them. */
+export function talkSpots(grid: CollisionGrid, seat: Seat, speaker: Vec2): Vec2[] {
+  const spots = standSpots(grid, seat, speaker);
+  const clear = spots.filter((p) => Math.hypot(p.x - speaker.x, p.y - speaker.y) >= TALK_GAP);
+  return clear.length > 0 ? clear : spots;
+}
+
 /** Puts an entity on the seat (pose + act). */
 export function sitDown(e: EntityState, seat: Seat, now: number): void {
   const p = seatPose(seat);

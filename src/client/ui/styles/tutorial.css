@@ -1,0 +1,119 @@
+/* Controls tutorial (ui/tutorial.ts) */
+.dm-tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: var(--dm-z-dialog);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--dm-overlay);
+  pointer-events: auto;
+  overflow-y: auto;
+}
+.dm-tutorial[hidden] {
+  display: none;
+}
+.dm-tutorial-card {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 18px 20px 16px;
+  animation: dm-tutorial-in 220ms ease-out;
+}
+.dm-tutorial-card .dm-title {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+.dm-tutorial-intro {
+  margin: 0 0 14px;
+  color: var(--dm-text-dim);
+}
+.dm-tutorial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px 20px;
+}
+.dm-tutorial-group {
+  background: var(--dm-panel-light);
+  border: 2px solid var(--dm-border-soft);
+  border-radius: var(--dm-radius);
+  padding: 8px 10px 6px;
+}
+.dm-tutorial-group-title {
+  margin: 0 0 6px;
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs-sm);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dm-moss-dark);
+}
+.dm-tutorial-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 14px;
+}
+.dm-tutorial-keys {
+  flex: 0 0 auto;
+  min-width: 112px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.dm-tutorial-sep {
+  color: var(--dm-ink-soft);
+}
+.dm-tutorial-text {
+  color: var(--dm-text);
+  line-height: 1.3;
+}
+.dm-kbd {
+  display: inline-block;
+  min-width: 14px;
+  padding: 2px 6px 3px;
+  font-family: var(--dm-font-pixel);
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--dm-ink);
+  background: var(--dm-cream-2);
+  border: 2px solid var(--dm-wood-dark);
+  border-radius: 4px;
+  box-shadow: 0 2px 0 var(--dm-wood-dark);
+}
+.dm-kbd-mouse {
+  background: var(--dm-parchment);
+  font-style: italic;
+}
+.dm-tutorial-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.dm-tutorial-ok {
+  font-size: var(--dm-fs);
+  padding: 8px 22px;
+}
+
+@keyframes dm-tutorial-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dm-tutorial-card {
+    animation: none;
+  }
+}
+@media (max-width: 520px) {
+  .dm-tutorial-grid {
+    grid-template-columns: 1fr;
+  }
+  .dm-tutorial-keys {
+    min-width: 92px;
+  }
+}

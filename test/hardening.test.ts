@@ -39,6 +39,20 @@ describe("decodeClient", () => {
     expect(decodeClient("{")).toBeNull();
     expect(decodeClient(JSON.stringify({ t: "chat", text: "a".repeat(5000) }))).toBeNull(); // oversized frame
   });
+  it("validates moveSlot", () => {
+    expect(decodeClient(JSON.stringify({ t: "moveSlot", from: 0, to: 9, x: 1 }))).toEqual({ t: "moveSlot", from: 0, to: 9 });
+    expect(decodeClient(JSON.stringify({ t: "moveSlot", from: 3, to: 2, qty: 5, req: "r" }))).toEqual({ t: "moveSlot", from: 3, to: 2, qty: 5, req: "r" });
+    for (const m of [
+      { t: "moveSlot", from: 0, to: 0 },
+      { t: "moveSlot", from: 0, to: 24 },
+      { t: "moveSlot", from: -1, to: 2 },
+      { t: "moveSlot", from: "0", to: 2 },
+      { t: "moveSlot", from: 0, to: 2, qty: 0 },
+      { t: "moveSlot", from: 0, to: 2, qty: 1.5 },
+    ])
+      expect(decodeClient(JSON.stringify(m))).toBeNull();
+  });
+
   it("cleans chat text", () => {
     expect(decodeClient(JSON.stringify({ t: "chat", text: "  hi\u0000\nthere  " }))).toEqual({ t: "chat", text: "hi  there" });
     expect(decodeClient(JSON.stringify({ t: "chat", text: "   " }))).toBeNull();

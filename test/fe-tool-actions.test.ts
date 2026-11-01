@@ -10,7 +10,7 @@ describe("actionNameFor", () => {
     expect(actionNameFor({ k: "plant", at: 0 })).toBe("harvest");
   });
   it("returns null for actions without art", () => {
-    expect(actionNameFor({ k: "eat", at: 0 })).toBeNull();
+    expect(actionNameFor({ k: "dance", at: 0 })).toBeNull();
     expect(actionNameFor({ k: "constructor", at: 0 })).toBeNull();
   });
 });

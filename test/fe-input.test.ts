@@ -112,6 +112,22 @@ describe("createInput", () => {
     expect(input.dir()).toEqual({ dx: 1, dy: 0 });
   });
 
+  it("reports direction changes at once with the event time, ignoring key repeat", () => {
+    const got: { dx: number; dy: number; at: number }[] = [];
+    input.onDir((d, at) => got.push({ ...d, at }));
+    const e = key("keydown", "KeyD");
+    key("keydown", "KeyD", { repeat: true });
+    key("keyup", "KeyD");
+    expect(got.map(({ dx, dy }) => ({ dx, dy }))).toEqual([
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: 0 },
+    ]);
+    expect(got[0]!.at).toBe(e.timeStamp);
+    key("keydown", "KeyW");
+    input.setTyping(true);
+    expect(got[got.length - 1]).toMatchObject({ dx: 0, dy: 0 });
+  });
+
   it("is zero while typing or focused in an input, and clears on blur", () => {
     key("keydown", "KeyD");
     input.setTyping(true);

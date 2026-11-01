@@ -18,7 +18,6 @@
   font-size: var(--dm-fs-sm);
 }
 #friends-panel[hidden],
-#player-menu[hidden],
 .fr-badge[hidden],
 .fr-add[hidden],
 .fr-tabs[hidden] {
@@ -210,32 +209,125 @@
   text-align: center;
 }
 
-/* Player context menu. */
-#player-menu {
+/* Player card (right-click a player). */
+#player-card {
   position: fixed;
   z-index: var(--dm-z-dialog);
+  width: min(260px, calc(100vw - 16px));
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 130px;
-  padding: 6px;
-}
-.fr-menu-title {
-  font-family: var(--dm-font-pixel);
+  gap: 8px;
+  padding: 10px;
+  font-family: var(--dm-font-body);
   font-size: var(--dm-fs-sm);
+}
+.pc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pc-portrait {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--dm-wood);
+  border-radius: var(--dm-radius);
+  background: var(--dm-parchment);
+  box-shadow: inset 0 0 0 2px var(--dm-cream-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.pc-portrait-img {
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+}
+.pc-portrait-letter {
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs-lg);
   color: var(--dm-wood-dark);
-  padding: 2px 4px 4px;
-  border-bottom: 1px solid var(--dm-line);
-  max-width: 180px;
+}
+.pc-who {
+  flex: 1;
+  min-width: 0;
+}
+.pc-name {
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs);
+  color: var(--dm-wood-dark);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.fr-menu-item {
-  text-align: left;
+.pc-status {
+  color: var(--dm-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pc-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dm-border-soft);
+}
+.pc-status[data-online="true"]::before {
+  background: var(--dm-moss-light);
+  box-shadow: 0 0 0 1px var(--dm-moss-dark);
+}
+.pc-close {
+  align-self: flex-start;
+}
+.pc-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--dm-panel-light);
+  border: 1px solid var(--dm-line);
+  border-radius: var(--dm-radius);
+}
+.pc-stats dt {
+  color: var(--dm-text-dim);
+}
+.pc-stats dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+  color: var(--dm-ink);
+}
+.pc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.pc-actions:empty,
+.pc-msg:empty,
+.pc-stats[hidden],
+#player-card[hidden] {
+  display: none;
+}
+.pc-msg {
+  font-size: 12px;
+  color: var(--dm-text-dim);
+}
+.pc-msg[data-kind="ok"] {
+  color: var(--dm-moss-dark);
+}
+.pc-msg[data-kind="error"] {
+  color: var(--dm-error);
 }
 
-/* Player names in chat open the player menu. */
+/* Muted players (Friends panel). */
+.fr-muted-note {
+  font-size: 12px;
+}
+
+/* Player names in chat open the player card. */
 .chat-name[data-player-name] {
   cursor: context-menu;
 }

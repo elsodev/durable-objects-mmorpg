@@ -10,12 +10,13 @@
     "dev:client": "vite",
     "build": "vite build",
     "build:client": "vite build",
-    "deploy": "npm run build:client && wrangler deploy && wrangler d1 migrations apply durable-mmo-auth --remote",
+    "deploy": "npm run build:client && wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply durable-mmo-auth --local --env local",
     "db:migrate:remote": "wrangler d1 migrations apply durable-mmo-auth --remote",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.client.json",
     "test": "vitest run",
     "e2e": "node scripts/e2e.mjs",
+    "e2e:playtest": "node scripts/e2e-playtest.mjs",
     "dev:local": "npm run build:client && wrangler dev --env local"
   },
   "devDependencies": {
@@ -34,10 +35,5 @@
     "better-auth": "^1.7.15",
     "pixi.js": "^8.22.0",
     "zod": "^4.6.7"
-  },
-  "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/elsodev/durable-objects-mmorpg"
   }
 }

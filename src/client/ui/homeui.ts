@@ -16,15 +16,19 @@ export interface HomeUiOpts {
   /** "Move bed" in the sleep dialog: enter build mode on the bed. */
   moveBed?(): void;
   setTyping(typing: boolean): void;
+  /** The shipping bin panel was closed (✕, Escape or closeBin), e.g. to shut the bin's lid. */
+  onBinClose?(): void;
 }
 
 export interface HomeUi {
-  /** Shows the home rows (at home) or hides everything (shared zones). */
+  /** Shows the home rows (at home) or hides them (shared zones, until setZoneStamina). */
   setAtHome(atHome: boolean): void;
   /** Visiting someone else's home: only the (host's) clock shows; stamina, water and Eat are yours, not here. */
   setVisiting?(visiting: boolean): void;
   setClock(day: number, label: string, night: boolean): void;
   setVitals(stamina: number, maxStamina: number, water: number, maxWater: number): void;
+  /** Shared zones: only the stamina bar shows (mining and chopping cost it there too). */
+  setZoneStamina?(stamina: number, maxStamina: number): void;
   /** Selected item if it can be eaten, else null. */
   setEdible(item: ItemId | null): void;
   setBin(items: ShipLine[], total: number, open: boolean): void;
@@ -121,7 +125,12 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
   const binTotal = el("div", "home-bin-total");
   const takeBack = btn("Take back last", "dm-btn dm-btn-small", "bin-takeback", () => opts.unship());
   const binHead = el("div", "dm-panel-header");
-  add(binHead, el("span", "dm-title", "Shipping bin"), btn("✕", "dm-close", "bin-close", () => (bin.hidden = true)));
+  const hideBin = () => {
+    if (bin.hidden) return;
+    bin.hidden = true;
+    opts.onBinClose?.();
+  };
+  add(binHead, el("span", "dm-title", "Shipping bin"), btn("✕", "dm-close", "bin-close", hideBin));
   add(bin, binHead, el("p", "home-muted", "Everything here is sold tonight when the day ends."), binList, binTotal, takeBack);
   layer.appendChild(bin);
 
@@ -149,7 +158,13 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
   }
 
   const onKey = (ev: KeyboardEvent) => {
-    if (dialog.hidden) return;
+    if (dialog.hidden) {
+      if (ev.key === "Escape" && !bin.hidden) {
+        ev.preventDefault();
+        hideBin();
+      }
+      return;
+    }
     if (ev.key === "Escape") {
       ev.preventDefault();
       closeDialog?.();
@@ -173,18 +188,37 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
     fade.classList.add("is-on");
   }
 
+  const setBar = (stamina: number, maxStamina: number) => {
+    const pct = maxStamina > 0 ? Math.max(0, Math.min(1, stamina / maxStamina)) : 0;
+    staminaFill.style.width = `${Math.round(pct * 100)}%`;
+    staminaFill.classList.toggle("is-low", pct <= 0.2);
+    staminaText.textContent = `${stamina}`;
+  };
+
+  let home = false;
   const ui: HomeUi = {
     setAtHome(atHome) {
+      home = atHome;
+      // In zones the rows stay hidden until the zone reports your stamina (setZoneStamina).
       rows.hidden = !atHome;
+      clockEl.hidden = !atHome;
+      waterEl.hidden = !atHome;
+      staminaEl.hidden = false;
       if (!atHome) {
+        eatBtn.hidden = true;
         bin.hidden = true;
         banner.hidden = true;
       }
     },
     setVisiting(visiting) {
+      if (!home) return; // zones: only the stamina bar, whatever setAtHome left
       staminaEl.hidden = visiting;
       waterEl.hidden = visiting;
       if (visiting) eatBtn.hidden = true;
+    },
+    setZoneStamina(stamina, maxStamina) {
+      setBar(stamina, maxStamina);
+      rows.hidden = false;
     },
     setClock(day, label, night) {
       dayEl.textContent = `Day ${day}`;
@@ -192,10 +226,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       clockEl.classList.toggle("is-night", night);
     },
     setVitals(stamina, maxStamina, water, maxWater) {
-      const pct = maxStamina > 0 ? Math.max(0, Math.min(1, stamina / maxStamina)) : 0;
-      staminaFill.style.width = `${Math.round(pct * 100)}%`;
-      staminaFill.classList.toggle("is-low", pct <= 0.2);
-      staminaText.textContent = `${stamina}`;
+      setBar(stamina, maxStamina);
       waterEl.textContent = `Watering can ${water}/${maxWater}`;
       waterEl.classList.toggle("is-empty", water <= 0);
     },
@@ -205,7 +236,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
     },
     setBin(items, total, open) {
       binList.replaceChildren();
-      if (items.length === 0) binList.appendChild(el("li", "home-muted", "Empty. Use a crop on the bin to ship it."));
+      if (items.length === 0) binList.appendChild(el("li", "home-muted", "Empty. Use a crop, ore or anything sellable on the bin to ship it."));
       for (const l of items) {
         const li = el("li", "home-line");
         const { name, quality } = itemLabel(l.item);
@@ -217,7 +248,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       if (open) bin.hidden = false;
     },
     closeBin() {
-      bin.hidden = true;
+      hideBin();
     },
     confirmSleep() {
       return new Promise((resolve) => {
@@ -292,6 +323,11 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
           if (summary.crows.length > 0) {
             const names = summary.crows.map((c) => itemLabel(c.crop).name.toLowerCase());
             notes.appendChild(el("li", "is-bad", `Crows ate ${summary.crows.length} crop${summary.crows.length === 1 ? "" : "s"} (${names.join(", ")}). A scarecrow keeps them away.`));
+          }
+          if (summary.wilted) notes.appendChild(el("li", "is-bad", `${summary.wilted} crop${summary.wilted === 1 ? "" : "s"} wilted without water. Water ${summary.wilted === 1 ? "it" : "them"} today to perk ${summary.wilted === 1 ? "it" : "them"} up.`));
+          if (summary.died?.length) {
+            const n = summary.died.length;
+            notes.appendChild(el("li", "is-bad", `${n} crop${n === 1 ? "" : "s"} died of thirst. Clear ${n === 1 ? "it" : "them"} with your hoe or by hand.`));
           }
           if (summary.reverted > 0) notes.appendChild(el("li", "", `${summary.reverted} patch${summary.reverted === 1 ? "" : "es"} of empty soil went back to grass.`));
           if (summary.passedOut) notes.appendChild(el("li", "is-bad", `You stayed up past 2:00 and lost ${summary.penalty}g.`));

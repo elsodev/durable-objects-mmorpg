@@ -59,14 +59,25 @@ export function usableItem(inv: Inventory, slot: number): string | null {
 
 /**
  * Like usableItem, but only for items that do something in this zone: farming tools and seeds
- * work only on the home farm, while pickaxes and swords work everywhere (rocks, monsters).
- * Clicks with anything else just walk, instead of asking the server for a "Nothing to do" reject.
+ * work only on the home farm, while pickaxes, axes and swords work everywhere (rocks, trees,
+ * monsters). Clicks with anything else just walk, instead of asking the server for a reject.
  */
 export function usableHere(inv: Inventory, slot: number, zone: ZoneId | null): string | null {
   const item = usableItem(inv, slot);
   if (!item || zone === "home") return item;
   const tool = getItem(item)?.tool;
-  return tool === "pickaxe" || tool === "sword" ? item : null;
+  return tool === "pickaxe" || tool === "axe" || tool === "sword" ? item : null;
+}
+
+/**
+ * Whether a left click in reach should use the selected tool rather than walk: when the rules say
+ * it does something there, when there is something to bounce off or a farm tile to swing at (a
+ * clunk, "Already tilled."), and always for swords (a swing at the air is still a swing).
+ */
+export function clickUsesTool(item: string, outcome: { ok: boolean; reason?: string } | null, target: { kind: string } | null): boolean {
+  if (getItem(item)?.tool === "sword") return true;
+  if (outcome?.ok) return true;
+  return !!target && ["rock", "tree", "stump", "monster", "soil", "water"].includes(target.kind);
 }
 
 /** Interact target for a prop: the shipping bin sells the selected stack, other props take their id. */

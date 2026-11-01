@@ -209,22 +209,43 @@
   filter: grayscale(0.6);
 }
 
-/* Narrow screens: chat sits above the hotbar, the menu wraps under the status. */
+/* Narrow screens, bottom up: the hotbar, the menu as one row that scrolls sideways, then the
+   chat. (A wrapped menu grew upwards over the chat, and both took the same spot.) */
 @media (max-width: 760px) {
   .dm-hud {
+    /* --dm-slot is resolved on :root, so it has to be set again here for the slots to shrink. */
     --dm-slot-size: 40px;
+    --dm-slot: 40px;
+    --dm-menu-row: 44px;
   }
   .hud-layer-chat {
-    bottom: calc(var(--dm-slot-size) + 36px);
+    bottom: calc(var(--dm-slot-size) + 36px + var(--dm-menu-row) + 6px);
   }
   .hud-menu {
     top: auto;
-    bottom: calc(var(--dm-slot-size) + 36px);
-    max-width: calc(100vw - 24px);
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--dm-slot-size) + 30px);
+    box-sizing: border-box;
+    height: var(--dm-menu-row);
+    max-width: none;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    pointer-events: auto;
+  }
+  .hud-menu > * {
+    flex: none;
+  }
+  /* No keyboard on a phone. */
+  .hud-menu .dm-btn-key {
+    display: none;
   }
   .hud-build-banner {
     top: auto;
-    bottom: calc(var(--dm-slot-size) + 36px);
+    bottom: calc(var(--dm-slot-size) + 36px + var(--dm-menu-row) + 6px);
     flex-wrap: wrap;
     max-width: calc(100vw - 24px);
   }
@@ -282,5 +303,11 @@
   .hud-stats {
     top: 64px;
     right: 12px;
+  }
+}
+/* Phones: the status panel takes most of the top row, so the world stats would sit on it. */
+@media (max-width: 480px) {
+  .hud-stats {
+    display: none;
   }
 }

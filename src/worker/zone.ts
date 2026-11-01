@@ -8,7 +8,8 @@
 import { DurableObject } from "cloudflare:workers";
 import { devToolsEnabled, H_ZONE, type Env } from "./env";
 import type { PlayerSave } from "./home";
-import { decodeClient, type ClientMsg, type ServerMsg, type VillageGoal } from "../shared/protocol";
+import { bumpStat, cleanStats, type PlayerStats } from "../shared/players";
+import { decodeClient, type ClientMsg, type ImpactStamp, type ServerMsg, type VillageGoal } from "../shared/protocol";
 import { cleanChat, safeSpawnName } from "../shared/validate";
 import { getItem } from "../shared/items";
 import { getMap } from "../shared/maps";
@@ -20,9 +21,35 @@ import {
   type Look,
   type MapData,
   type MapExit,
+  type RockOre,
   type SharedZoneId,
 } from "../shared/types";
-import { addItem, buildCollision, canAdd, canStand, dist, exitAt, removeFromSlot, type CollisionGrid } from "../shared/engine";
+import {
+  addItem,
+  buildCollision,
+  canAdd,
+  canStand,
+  clampStamina,
+  dist,
+  exitAt,
+  facingToTile,
+  hurtAmount,
+  impactDelayMs,
+  KNOCKBACK_HALF_LIFE_MS,
+  MAX_STAMINA,
+  passOutPenalty,
+  PLAYER_IFRAME_MS,
+  moveSlot,
+  removeFromSlot,
+  rockRand,
+  rollMonsterDrops,
+  staminaCost,
+  type CollisionGrid,
+} from "../shared/engine";
+import { GroundItems, giveOrDrop, viewOf, visibleToUser, type GroundItem } from "./game/groundItems";
+import { ForageGrower } from "./game/forage";
+import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../shared/spawns";
+import { HOME_FAINT_SPAWN } from "../shared/maps/home";
 import { canChangeLook, savedLook, shownLook } from "./game/look";
 import { entityIdFor, readAttachment, readIdentity, type SocketAttachment } from "./game/identity";
 import { cloneInventory, clampHp, sanitizeInventory } from "./game/sanitize";
@@ -40,16 +67,40 @@ import { timeout } from "./game/timeout";
 import { stripControls } from "./npc/text";
 import { scheduleHour } from "../shared/npcSchedule";
 import { EntityDiffer } from "./game/diff";
-import { MonsterPool } from "./game/monsterPool";
+import { AIMED_REACH, MonsterPool, strikeTargets } from "./game/monsterPool";
+import type { MonsterState } from "../shared/engine/monsters";
 import { INTERACT_TEXT, NpcRunner, type NpcHost } from "./game/npcRunner";
 import { agentMind } from "./npc/think/client";
 import { isSitting, SeatBook, sitDown, standSpots, standUp } from "./game/seats";
 import { SEAT_FACING } from "../shared/maps/interiors/props";
 import { RockField } from "./game/rockField";
-import { canMine, rockDrops } from "./game/rocks";
-import { buyFrom, sellTo } from "./game/shop";
+import { ChestField, isRareLoot, rollChestLoot } from "./game/chestField";
+import { CHEST_REACH, CHEST_TARGET_PREFIX } from "../shared/chests";
+import { bondGift, bondGiftRefusal, bondHearts, bondList, bondTalk, npcName, type BondOutcome } from "./game/bonds";
+import { giftLine } from "./npc/giftTables";
+import { giftTaste, isNpcId } from "./npc/bible";
+import { heartCurve, MAX_HEARTS, newBond, sanitizeBonds, type Bonds } from "../shared/hearts";
+import { rockDrops } from "./game/rocks";
+import { parseDropRates, type DropRates } from "../shared/engine/dropRate";
+import { TreeField } from "./game/treeField";
+import {
+  classifyTarget,
+  facingToward,
+  HitTracker,
+  hitsNeeded,
+  isSwingTool,
+  resolveToolUse,
+  rollDrops,
+  STUMP_RULE,
+  toolKeyOf,
+  TREE_RULES,
+  weaponStats,
+  type ToolTarget,
+  type WeaponStats,
+} from "../shared/engine/toolRules";
+import { buyFrom, sellTo, shopToday } from "./game/shop";
 import { donate, GOAL_DEFS, goalsView, sanitizeProgress, type GoalProgress } from "./game/goals";
-import { applyDamage, regen } from "./game/vitals";
+import { regen } from "./game/vitals";
 import { distToRect, inToolReach, NPC_CHAT_RANGE, NPC_TALK_RANGE, PROP_REACH, SHOP_RANGE } from "./game/range";
 import {
   closeQuietly,
@@ -64,6 +115,7 @@ import {
 } from "./game/net";
 
 const SAVE_EVERY_MS = 5000;
+const BAG_FULL_NOTICE_MS = 30_000;
 const USE_COOLDOWN_MS = 250;
 const SHOP_DEDUP_MS = 1500;
 /** One gift per NPC per player this often (the item is gone either way; this stops spam). */
@@ -74,6 +126,8 @@ const LOAD_TIMEOUT_MS = 5000;
 const GOALS_CACHE_MS = 5000;
 /** Village side: remembered donation request ids, so a retried RPC is counted once. */
 const DONATION_IDS_MAX = 1000;
+/** Treasure chests per zone (only the caves have any). */
+const CHESTS_PER_ZONE: Partial<Record<SharedZoneId, number>> = { caves: 4 };
 
 interface ZPlayer {
   ws: WebSocket;
@@ -87,6 +141,8 @@ interface ZPlayer {
   lease: string;
   entity: EntityState;
   inv: Inventory;
+  /** Lifetime counters (player card); saved with the inventory. */
+  stats: PlayerStats;
   motion: Motion;
   saver: CoalescingSaver<PlayerSave>;
   saveSoon: SaveDebouncer;
@@ -101,10 +157,16 @@ interface ZPlayer {
   lastUse: number;
   lastHurt: number;
   lastRegen: number;
+  /** No monster can hurt them before this (after each hit). */
+  iframeUntil: number;
+  /** Tool stamina, carried from the home save (mining and chopping cost it here too). */
+  stamina: number;
   /** While seated: where the player stood before sitting (they get up there). */
   standBack?: { x: number; y: number };
   lastAck: number | undefined;
   lastShop: Map<string, number>;
+  /** Friendship with each villager (saved with the player). */
+  bonds: Bonds;
 }
 
 interface World {
@@ -112,9 +174,22 @@ interface World {
   map: MapData;
   grid: CollisionGrid;
   rocks: RockField;
+  trees: TreeField;
+  /** Hit progress on rocks, trees and stumps. */
+  hits: HitTracker;
   monsters: MonsterPool;
   npcs: NpcRunner;
   seats: SeatBook;
+  chests: ChestField | null;
+  /** Overflow loot and forage lying around. */
+  ground: GroundItems;
+  forage: ForageGrower | null;
+}
+
+/** A knockback velocity as the total slide it makes (tiles), for clients to play at once. */
+function slideOf(kb: { vx: number; vy: number }): { x: number; y: number } {
+  const k = KNOCKBACK_HALF_LIFE_MS / Math.LN2;
+  return { x: Math.round(kb.vx * k * 1000) / 1000, y: Math.round(kb.vy * k * 1000) / 1000 };
 }
 
 const isSharedZone = (z: unknown): z is SharedZoneId => (SHARED_ZONES as unknown[]).includes(z);
@@ -132,9 +207,15 @@ export class ZoneRoom extends DurableObject<Env> {
   private donationIds = new Map<string, number>();
   private chatGuards = new ChatGuards();
   private emotes = new Throttle(EMOTE_MIN_INTERVAL_MS);
+  /** The "bag full, loot on the ground" notice once in a while, not on every kill. */
+  private bagFullNotes = new Throttle(BAG_FULL_NOTICE_MS);
+
+  /** Drop-rate multipliers from env (DROP_RATE*), read once per instance. */
+  private readonly rates: DropRates;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    this.rates = parseDropRates(env as unknown as Record<string, unknown>);
     ctx.blockConcurrencyWhile(async () => {
       const zone = await ctx.storage.get<string>("zone");
       if (isSharedZone(zone)) await this.initWorld(zone);
@@ -164,9 +245,12 @@ export class ZoneRoom extends DurableObject<Env> {
 
   private async initWorld(zone: SharedZoneId): Promise<void> {
     const map = getMap(zone);
-    const rocks = new RockField(map);
-    const unbroken = rocks.load(await this.ctx.storage.get<Record<string, number>>("rocks"));
+    const rocks = new RockField(map, zone, this.rates);
+    const unbroken = rocks.load(await this.ctx.storage.get<Record<string, number>>("rocks"), await this.ctx.storage.get("rockSpawns"));
     const grid = buildCollision(map, { rocks: unbroken });
+    const trees = new TreeField(map);
+    trees.load(await this.ctx.storage.get("trees"));
+    trees.applyTo(grid);
     const rand = Math.random;
     const host: NpcHost = {
       players: () => this.playerEntities(),
@@ -188,15 +272,26 @@ export class ZoneRoom extends DurableObject<Env> {
         const p = this.playerByEntity(entityId);
         if (p) send(p.ws, { t: "notice", text, kind: "info" });
       },
+      hearts: (userId, npcId) => {
+        for (const p of this.players.values()) if (p.userId === userId) return bondHearts(p.bonds, npcId, Date.now());
+        return 0;
+      },
     };
     const seats = new SeatBook(map.seats ?? []);
+    const chestCount = CHESTS_PER_ZONE[zone] ?? 0;
+    const chests = chestCount > 0 ? new ChestField(map, chestCount) : null;
+    chests?.load(await this.ctx.storage.get("chests"), grid, rand);
     const npcs = new NpcRunner(map, grid, this.env, this.ctx.storage, host, rand, agentMind(this.env), seats);
     await npcs.load();
     if (devToolsEnabled(this.env)) {
       const offset = await this.ctx.storage.get<number>("devHourOffset");
       if (typeof offset === "number") npcs.setHourOffset(offset, Date.now());
     }
-    this.world = { zone, map, grid, rocks, monsters: new MonsterPool(map, grid, rand), npcs, seats };
+    const ground = new GroundItems();
+    ground.load(await this.ctx.storage.get("ground"), Date.now());
+    const forage = ForageGrower.forZone(zone, map, grid);
+    const monsters = new MonsterPool(map, grid, rand, zone, Date.now());
+    this.world = { zone, map, grid, rocks, trees, hits: new HitTracker(), monsters, npcs, seats, chests, ground, forage };
   }
 
   private async loadGoals(): Promise<void> {
@@ -265,10 +360,17 @@ export class ZoneRoom extends DurableObject<Env> {
       entities: this.allEntities(),
       inventory: p.inv,
       brokenRocks: world.rocks.brokenIds(),
+      rockOres: world.rocks.oreOverrides(),
+      trees: world.trees.stages(),
       goals: goalsView(this.goals),
       needsLook: !p.look,
+      bonds: bondList(p.bonds, Date.now()),
+      ...(world.chests ? { chests: world.chests.views(p.userId) } : {}),
+      ground: world.ground.visibleTo(p.userId),
+      ...(devToolsEnabled(this.env) ? { devTools: true } : {}),
       serverTime: Date.now(),
     });
+    this.sendStamina(p);
     this.deliverInvites(p);
     this.startTick();
     return new Response(null, { status: 101, webSocket: client });
@@ -307,6 +409,7 @@ export class ZoneRoom extends DurableObject<Env> {
         look: shownLook(save.look),
       },
       inv: sanitizeInventory(save.inventory),
+      stats: cleanStats(save.stats),
       motion: new Motion(),
       saver: new CoalescingSaver<PlayerSave>(async (s) => (await this.home(s.userId).savePlayer(s)) !== false),
       saveSoon: new SaveDebouncer(() => {
@@ -321,8 +424,11 @@ export class ZoneRoom extends DurableObject<Env> {
       lastUse: 0,
       lastHurt: 0,
       lastRegen: 0,
+      iframeUntil: 0,
+      stamina: clampStamina(save.stamina),
       lastAck: undefined,
       lastShop: new Map(),
+      bonds: sanitizeBonds(save.bonds),
     };
     this.players.set(ws, p);
     return p;
@@ -399,6 +505,7 @@ export class ZoneRoom extends DurableObject<Env> {
   /** Tells SocialRoom (presence) and forgets per-player throttles. */
   private left(p: ZPlayer): void {
     this.emotes.drop(p.userId);
+    this.bagFullNotes.drop(p.userId);
     if (this.world) reportPresence(this.env, p.userId, this.world.zone, false);
   }
 
@@ -429,9 +536,8 @@ export class ZoneRoom extends DurableObject<Env> {
         this.kick(p, CLOSE_IDLE, "idle");
         continue;
       }
-      const before = { x: p.entity.x, y: p.entity.y };
-      acks.set(p, p.motion.step(p.entity, world.grid, dt));
-      if (before.x !== p.entity.x || before.y !== p.entity.y) p.dirty = true;
+      acks.set(p, p.motion.step(p.entity, world.grid, now));
+      if (p.motion.takeMoved()) p.dirty = true;
       const exit = exitAt(world.map, p.entity.x, p.entity.y);
       // A donation in flight finishes first (its refund must land in this zone's save).
       if (exit && !p.donation) void this.takeExit(p, exit);
@@ -442,6 +548,7 @@ export class ZoneRoom extends DurableObject<Env> {
       const p = this.playerByEntity(hit.playerId);
       if (p) this.hurt(p, hit.damage, now);
     }
+    this.tickGround(now);
     for (const p of this.players.values()) {
       if (regen(p.entity, now, p.lastHurt, p.lastRegen)) {
         p.lastRegen = now;
@@ -452,10 +559,23 @@ export class ZoneRoom extends DurableObject<Env> {
     world.npcs.tick(dt, now);
     world.seats.retain(new Set(this.allEntities().map((e) => e.id)));
 
+    if (world.chests?.respawnDue(world.grid, now, this.allEntities(), Math.random)) {
+      void this.ctx.storage.put("chests", world.chests.record());
+      for (const p of this.players.values()) send(p.ws, { t: "chests", chests: world.chests.views(p.userId) });
+    }
+
     const restored = world.rocks.respawnDue(world.grid, now, this.allEntities());
     if (restored.length > 0) {
-      for (const id of restored) this.broadcast({ t: "rock", id, broken: false });
+      for (const id of restored) {
+        const rock = world.rocks.byId(id);
+        this.broadcast({ t: "rock", id, broken: false, ...(rock ? { ore: rock.ore } : {}) });
+      }
       void this.ctx.storage.put("rocks", world.rocks.record());
+    }
+    const regrown = world.trees.regrowDue(world.grid, now, this.allEntities());
+    if (regrown.length > 0) {
+      for (const id of regrown) this.broadcast({ t: "tree", id, stage: "tree", hits: 0 });
+      void this.ctx.storage.put("trees", world.trees.record());
     }
 
     const { upd, del } = this.differ.diff(this.allEntities());
@@ -464,7 +584,10 @@ export class ZoneRoom extends DurableObject<Env> {
       if (upd.length === 0 && del.length === 0 && ack === p.lastAck) continue;
       p.lastAck = ack;
       const msg: ServerMsg = { t: "tick", at: now, upd, del };
-      if (ack !== undefined) msg.ack = ack;
+      if (ack !== undefined) {
+        msg.ack = ack;
+        msg.ackMs = p.motion.ackMs(now);
+      }
       send(p.ws, msg);
     }
 
@@ -474,16 +597,121 @@ export class ZoneRoom extends DurableObject<Env> {
     }
   }
 
+  /** A monster's bite: ignored while the player is still invincible from the last one. */
   private hurt(p: ZPlayer, damage: number, now: number): void {
+    if (now < p.iframeUntil || this.players.get(p.ws) !== p) return;
+    const max = p.entity.maxHp ?? p.maxHp;
+    const dmg = hurtAmount(damage, Math.random);
+    p.iframeUntil = now + PLAYER_IFRAME_MS;
     p.lastHurt = now;
     p.dirty = true;
-    if (!applyDamage(p.entity, damage)) return;
-    const spawn = this.world!.map.spawns.default;
-    p.motion.stop();
-    p.entity.x = spawn.x;
-    p.entity.y = spawn.y;
-    send(p.ws, { t: "notice", text: "You fainted... and woke up feeling rested.", kind: "error" });
-    this.save(p);
+    p.entity.hp = Math.max(0, (p.entity.hp ?? max) - dmg);
+    this.broadcast({ t: "hurt", id: p.entity.id, dmg, ms: PLAYER_IFRAME_MS });
+    if (p.entity.hp <= 0) this.faint(p);
+  }
+
+  /**
+   * Out cold: a tenth of the coins (at most 100) is gone and the player wakes up at home in bed,
+   * healed. The trip home goes through the normal exit path so the save lands first.
+   */
+  private faint(p: ZPlayer): void {
+    const lost = passOutPenalty(p.inv.coins);
+    p.inv.coins -= lost;
+    p.entity.hp = p.entity.maxHp ?? p.maxHp;
+    send(p.ws, { t: "inventory", inventory: p.inv });
+    send(p.ws, {
+      t: "notice",
+      text: lost > 0 ? `You fainted and lost ${lost} coins. Someone carried you home to bed.` : "You fainted. Someone carried you home to bed.",
+      kind: "error",
+    });
+    void this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: "home", spawn: HOME_FAINT_SPAWN });
+  }
+
+  private sendStamina(p: ZPlayer): void {
+    send(p.ws, { t: "stamina", stamina: p.stamina, max: MAX_STAMINA });
+  }
+
+  /** Mining and chopping cost stamina like at home; false (and a reject) when too tired. */
+  private spendStamina(p: ZPlayer, msg: ClientMsg, tool: Parameters<typeof staminaCost>[0]): boolean {
+    const cost = staminaCost(tool);
+    if (cost <= 0) return true;
+    if (p.stamina < cost) {
+      this.reject(p, msg, "You're too tired. Eat something or go home to bed.");
+      return false;
+    }
+    p.stamina -= cost;
+    p.dirty = true;
+    this.sendStamina(p);
+    return true;
+  }
+
+  // ------------------------------------------------------------------ ground items
+
+  /** Walk-over pickup of your own drops, expiry, and the forage top-up. */
+  private tickGround(now: number): void {
+    const world = this.world!;
+    let changed = false;
+    for (const p of this.players.values()) {
+      for (const g of world.ground.ownedNear(p.userId, p.entity)) {
+        if (!addItem(p.inv, g.item, g.qty)) continue;
+        world.ground.take(g.id);
+        changed = true;
+        this.groundGone(g);
+        this.inventoryChanged(p, `+${g.qty} ${getItem(g.item)?.name ?? g.item}`);
+      }
+    }
+    for (const g of world.ground.expire(now)) {
+      changed = true;
+      this.groundGone(g);
+    }
+    if (world.forage) {
+      const grown = world.forage.refill(world.ground, this.playerEntities(), now, Math.random, this.rates);
+      for (const g of grown) this.groundAdded(g);
+      if (grown.length > 0) changed = true;
+    }
+    if (changed) this.saveGround();
+  }
+
+  private saveGround(): void {
+    void this.ctx.storage.put("ground", this.world!.ground.record());
+  }
+
+  /** Tells whoever can see `g` that it appeared. */
+  private groundAdded(g: GroundItem): void {
+    for (const p of this.players.values()) if (visibleToUser(g, p.userId)) send(p.ws, { t: "ground", upd: [viewOf(g)], del: [] });
+  }
+
+  private groundGone(g: GroundItem): void {
+    for (const p of this.players.values()) if (visibleToUser(g, p.userId)) send(p.ws, { t: "ground", upd: [], del: [g.id] });
+  }
+
+  /**
+   * Loot for `p`: into the bag, and what doesn't fit onto the ground at `at` (theirs for a few
+   * minutes). Returns the loot line for the notice.
+   */
+  private grantLoot(p: ZPlayer, items: readonly { item: string; qty: number }[], at: { x: number; y: number }, now: number): string {
+    const { given, dropped } = giveOrDrop(p.inv, this.world!.ground, p.userId, items, at, now, Math.random);
+    for (const g of dropped) this.groundAdded(g);
+    if (dropped.length > 0) {
+      this.saveGround();
+      if (this.bagFullNotes.allow(p.userId, now)) send(p.ws, { t: "notice", text: "Your bag is full, so some loot dropped on the ground. Walk over it once you've made room.", kind: "info" });
+    }
+    return given.map((d) => `+${d.qty} ${getItem(d.item)?.name ?? d.item}`).join(", ");
+  }
+
+  /** Interact on forage: first come, first served. */
+  private onForage(p: ZPlayer, id: string): void {
+    const world = this.world!;
+    const g = world.ground.get(id);
+    if (!g || g.owner !== null) return;
+    if (dist(p.entity, g) > FORAGE_REACH) return send(p.ws, { t: "notice", text: "Walk a little closer.", kind: "info" });
+    if (!canAdd(p.inv, g.item, g.qty)) return send(p.ws, { t: "notice", text: "Your bag is full.", kind: "error" });
+    world.ground.take(id);
+    addItem(p.inv, g.item, g.qty);
+    this.groundGone(g);
+    this.saveGround();
+    send(p.ws, { t: "loot", at: { x: g.x, y: g.y }, items: [g.item] });
+    this.inventoryChanged(p, `+${g.qty} ${getItem(g.item)?.name ?? g.item}`);
   }
 
   // ------------------------------------------------------------------ entities & messaging
@@ -528,6 +756,9 @@ export class ZoneRoom extends DurableObject<Env> {
       x: isSitting(p.entity) && p.standBack ? p.standBack.x : p.entity.x,
       y: isSitting(p.entity) && p.standBack ? p.standBack.y : p.entity.y,
       lease: p.lease,
+      stamina: p.stamina,
+      stats: { ...p.stats },
+      bonds: p.bonds,
       ...(p.look ? { look: p.look } : {}),
       ...override,
     };
@@ -592,7 +823,7 @@ export class ZoneRoom extends DurableObject<Env> {
     switch (msg.t) {
       case "move":
         if (msg.dx !== 0 || msg.dy !== 0) this.getUp(p);
-        p.motion.onMove(msg.dx, msg.dy, msg.seq);
+        p.motion.onMove(p.entity, world.grid, msg.dx, msg.dy, msg.seq, now);
         return;
       case "moveTo":
         this.getUp(p);
@@ -617,6 +848,8 @@ export class ZoneRoom extends DurableObject<Env> {
       case "moveObject":
       case "pickup":
         return this.reject(p, msg, "You can only do that at home.");
+      case "moveSlot":
+        return this.onMoveSlot(p, msg);
       case "setLook":
         return this.onSetLook(p, msg, now);
       case "emote":
@@ -627,6 +860,15 @@ export class ZoneRoom extends DurableObject<Env> {
         send(p.ws, { t: "pong", at: msg.at, serverTime: now });
         return;
     }
+  }
+
+  private onMoveSlot(p: ZPlayer, msg: Extract<ClientMsg, { t: "moveSlot" }>): void {
+    if (!moveSlot(p.inv, msg.from, msg.to, msg.qty)) {
+      this.reject(p, msg, "Can't move that there.");
+      // Resync: the client moved it optimistically.
+      return send(p.ws, { t: "inventory", inventory: p.inv });
+    }
+    this.inventoryChanged(p);
   }
 
   /** Saved through the HomeRoom like inventory; everyone here sees it in the next tick's diff. */
@@ -653,6 +895,8 @@ export class ZoneRoom extends DurableObject<Env> {
     if (!text) return;
     const hourCmd = /^\/hour(?:\s+(\d{1,2}))?$/.exec(text);
     if (hourCmd && devToolsEnabled(this.env)) return void this.devSetHour(p, hourCmd[1], now);
+    const heartsCmd = /^\/hearts\s+(\d{1,2})$/.exec(text);
+    if (heartsCmd && devToolsEnabled(this.env)) return this.devSetHearts(p, Number(heartsCmd[1]));
     // The client sends /invite, /kick and /uninvite over HTTP; never broadcast one that slips through.
     if (parseHomeCommand(text)) return send(p.ws, { t: "notice", text: HOME_COMMAND_NOTICE, kind: "error" });
     const guard = this.chatGuards.get(p.userId, now);
@@ -664,7 +908,10 @@ export class ZoneRoom extends DurableObject<Env> {
     }
     this.broadcast({ t: "chat", from: p.entity.id, name: p.name, text, at: now });
     const npc = this.world!.npcs.nearest(p.entity, NPC_CHAT_RANGE);
-    if (npc) this.world!.npcs.talk(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, text, now);
+    if (npc) {
+      this.world!.npcs.talk(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, text, now);
+      this.bondChanged(p, npc.entity, bondTalk(p.bonds, npc.id, p.inv, now, Math.random, this.rates), true);
+    }
   }
 
   private onUse(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, now: number): void {
@@ -673,40 +920,143 @@ export class ZoneRoom extends DurableObject<Env> {
     const slot = p.inv.slots[msg.slot];
     const def = slot ? getItem(slot.item) : undefined;
     if (!def) return this.reject(p, msg, "Nothing in that slot.");
+    const key = toolKeyOf(def.id);
+    // A tool swings toward the tile whether or not it does anything there.
+    if (isSwingTool(key)) {
+      p.entity.facing = facingToward(p.entity, msg, p.entity.facing);
+      p.entity.act = { k: key, at: now, item: def.id };
+    }
     if (!inToolReach(p.entity, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
-    if (def.tool === "pickaxe" || def.tool === "sword") p.entity.act = { k: def.tool, at: now, item: def.id };
-    if (def.tool === "pickaxe") return this.mine(p, msg, def.power ?? 1, now);
-    if (def.tool === "sword") return this.attack(p, msg, def.power ?? 1, now);
-    const farming = def.kind === "seed" || def.tool === "hoe" || def.tool === "water";
-    this.reject(p, msg, farming ? "That's for your farm at home." : "Nothing to do with that here.");
-  }
-
-  private mine(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, power: number, now: number): void {
+    if (!isSwingTool(key)) p.entity.facing = facingToTile(p.entity, msg.x, msg.y);
     const world = this.world!;
+    const weapon = weaponStats(def.id);
+    // A sword sweeps the arc in front of you: everything in it is hit, whatever tile you aimed at.
+    if (weapon?.arc && world.monsters.inArc(p.entity, p.entity.facing).length > 0) {
+      return this.strikeAtImpact(p, weapon, null, key);
+    }
+    const aimed = world.monsters.targetAt(msg.x, msg.y);
+    const monster = aimed && !weapon?.arc && dist(aimed, p.entity) <= AIMED_REACH ? aimed : null;
     const rock = world.rocks.at(msg.x, msg.y);
-    if (!rock) return this.reject(p, msg, "There's no rock there.");
-    if (!canMine(rock.ore, power)) return this.reject(p, msg, "You need a stronger pickaxe.");
-    const drops = rockDrops(rock.ore, Math.random);
-    // Check the whole haul fits before breaking anything.
-    const trial = cloneInventory(p.inv);
-    if (!drops.every((d) => addItem(trial, d.item, d.qty))) return this.reject(p, msg, "Your bag is full.");
-    p.inv = trial;
-    world.rocks.breakRock(rock, world.grid, now);
-    void this.ctx.storage.put("rocks", world.rocks.record());
-    this.broadcast({ t: "rock", id: rock.id, broken: true });
-    this.inventoryChanged(p, drops.map((d) => `+${d.qty} ${getItem(d.item)?.name ?? d.item}`).join(", "));
+    const tree = world.trees.at(msg.x, msg.y);
+    const target = classifyTarget(
+      {
+        monster: !!monster,
+        rock: rock?.ore ?? null,
+        tree: tree ? { stage: tree.stage, size: tree.size } : null,
+      },
+      now,
+    );
+    const out = resolveToolUse(key, target, { farm: false, power: def.power });
+    if (!out.ok) {
+      if (out.reason) this.reject(p, msg, out.reason);
+      return;
+    }
+    // Applied now; clients show it when the swing lands (see ImpactStamp).
+    const stamp: ImpactStamp = { by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
+    if (out.effect === "hitMonster" && monster && weapon) return this.strikeAtImpact(p, weapon, monster.id, key);
+    if (out.effect === "hitRock" && rock) {
+      if (!this.spendStamina(p, msg, def.tool)) return;
+      return this.mine(p, msg, rock, target, now, stamp);
+    }
+    if (out.effect === "hitTree" || out.effect === "hitStump") {
+      if (!this.spendStamina(p, msg, def.tool)) return;
+      return this.chop(p, msg, target, now, stamp);
+    }
   }
 
-  private attack(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, power: number, now: number): void {
+  private mine(
+    p: ZPlayer,
+    msg: Extract<ClientMsg, { t: "use" }>,
+    rock: { id: string; x: number; y: number; ore: RockOre },
+    target: ToolTarget,
+    now: number,
+    stamp: ImpactStamp,
+  ): void {
     const world = this.world!;
-    const m = world.monsters.targetAt(msg.x, msg.y);
-    if (!m || dist(m, p.entity) > 2.5) return this.reject(p, msg, "Missed.");
-    const drops = world.monsters.hit(m, power, now);
-    if (!drops) return;
-    const got: string[] = [];
-    for (const d of drops) if (addItem(p.inv, d.item, d.qty)) got.push(`+${d.qty} ${getItem(d.item)?.name ?? d.item}`);
-    if (got.length < drops.length) send(p.ws, { t: "notice", text: "Your bag is full; some loot was lost.", kind: "error" });
-    if (got.length > 0) this.inventoryChanged(p, got.join(", "));
+    const need = hitsNeeded(target);
+    const left = need - world.hits.progress(rock.id, now);
+    void msg;
+    const drops = left <= 1 ? rockDrops(rock.ore, rockRand(world.zone, rock.id, world.rocks.spawnOf(rock.id)), this.rates) : [];
+    const hit = world.hits.hit(rock.id, need, now);
+    if (!hit.done) return this.broadcast({ t: "rock", id: rock.id, broken: false, hits: hit.hits, need, ...stamp });
+    bumpStat(p.stats, "oresMined");
+    world.rocks.breakRock(rock, world.grid, now);
+    void this.ctx.storage.put({ rocks: world.rocks.record(), rockSpawns: world.rocks.spawnRecord() });
+    this.broadcast({ t: "rock", id: rock.id, broken: true, hits: hit.hits, need, drops: drops.map((d) => d.item), ...stamp });
+    // A full bag no longer blocks the last hit: what doesn't fit waits on the ground.
+    this.inventoryChanged(p, this.grantLoot(p, drops, { x: rock.x + 0.5, y: rock.y + 0.6 }, now));
+  }
+
+  /** An axe hit on a standing tree (fells it to a stump) or a stump (clears it). */
+  private chop(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, target: ToolTarget, now: number, stamp: ImpactStamp): void {
+    const world = this.world!;
+    const found = world.trees.at(msg.x, msg.y);
+    if (!found) return;
+    const { tree, stage, size } = found;
+    const need = hitsNeeded(target);
+    const key = `${tree.id}:${stage}`;
+    const left = need - world.hits.progress(key, now);
+    const drops = left <= 1 ? rollDrops(stage === "tree" ? TREE_RULES[size].drops : STUMP_RULE.drops, Math.random, this.rates) : [];
+    const hit = world.hits.hit(key, need, now);
+    if (!hit.done) return this.broadcast({ t: "tree", id: tree.id, stage, hits: hit.hits, need, ...stamp });
+    if (stage === "tree") world.trees.fell(tree, now);
+    else world.trees.clearStump(tree, world.grid);
+    void this.ctx.storage.put("trees", world.trees.record());
+    const next = stage === "tree" ? "stump" : "gone";
+    this.broadcast({ t: "tree", id: tree.id, stage: next, hits: hit.hits, need, drops: drops.map((d) => d.item), ...stamp });
+    // Like rocks: a full bag doesn't stop the tree falling; the wood that doesn't fit waits on the ground.
+    if (drops.length) this.inventoryChanged(p, this.grantLoot(p, drops, { x: tree.x + 0.5, y: tree.y + 1.1 }, now) || undefined);
+  }
+
+  /**
+   * Lands a weapon swing at its impact frame (shared/engine/toolTiming.ts), not when the click
+   * arrives: whoever is in the arc then (or the aimed monster, if still in reach) takes the hit,
+   * so damage numbers, knockback and kills show as the tool comes down.
+   */
+  private strikeAtImpact(p: ZPlayer, weapon: WeaponStats, aimedId: string | null, key: string): void {
+    const facing = p.entity.facing;
+    const land = () => {
+      const world = this.world;
+      if (!world || this.players.get(p.ws) !== p) return;
+      const targets = strikeTargets(world.monsters, p.entity, facing, weapon, aimedId);
+      if (targets.length > 0) this.attack(p, targets, weapon, Date.now());
+    };
+    const delay = impactDelayMs(key, facing);
+    if (delay <= 0) land();
+    else setTimeout(land, delay);
+  }
+
+  /**
+   * One swing at `targets`: each hit is broadcast (damage numbers, knockback); on a kill every
+   * player with a big enough share of the damage rolls their own loot.
+   */
+  private attack(p: ZPlayer, targets: MonsterState[], weapon: WeaponStats, now: number): void {
+    const world = this.world!;
+    for (const h of world.monsters.strike(p.entity, targets, weapon, now)) {
+      const at = { x: Math.round(h.m.x * 1000) / 1000, y: Math.round(h.m.y * 1000) / 1000 };
+      this.broadcast({
+        t: "hit",
+        id: h.m.id,
+        by: p.entity.id,
+        dmg: h.dmg,
+        at,
+        ...(h.crit ? { crit: true } : {}),
+        ...(h.miss ? { miss: true } : {}),
+        ...(h.kb ? { kb: slideOf(h.kb) } : {}),
+        ...(h.killedFor ? { kill: true } : {}),
+      });
+      if (!h.killedFor) continue;
+      for (const id of h.killedFor) {
+        const winner = this.playerByEntity(id);
+        if (!winner) continue;
+        bumpStat(winner.stats, "monstersDefeated");
+        winner.saveSoon.schedule();
+        const items = rollMonsterDrops(h.m.type, Math.random, world.zone, this.rates);
+        if (items.length === 0) continue;
+        send(winner.ws, { t: "loot", at, items: items.map((d) => d.item) });
+        this.inventoryChanged(winner, this.grantLoot(winner, items, at, now));
+      }
+    }
   }
 
   private onInteract(p: ZPlayer, target: string, now: number): void {
@@ -718,8 +1068,11 @@ export class ZoneRoom extends DurableObject<Env> {
       }
       if (npc.def?.shop) this.sendShop(p, npc.id);
       world.npcs.talk(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, INTERACT_TEXT, now);
+      this.bondChanged(p, npc.entity, bondTalk(p.bonds, npc.id, p.inv, now, Math.random, this.rates), true);
       return;
     }
+    if (target.startsWith(CHEST_TARGET_PREFIX)) return this.onChest(p, target.slice(CHEST_TARGET_PREFIX.length), now);
+    if (target.startsWith(GROUND_TARGET_PREFIX)) return this.onForage(p, target.slice(GROUND_TARGET_PREFIX.length));
     const prop = world.map.props.find((pr) => pr.id === target);
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
     if (SEAT_FACING[prop.type]) return this.onSeat(p, prop.id, now);
@@ -784,14 +1137,15 @@ export class ZoneRoom extends DurableObject<Env> {
     const now = Date.now();
     if (now - (p.lastShop.get(n.id) ?? 0) < SHOP_DEDUP_MS) return;
     p.lastShop.set(n.id, now);
-    send(p.ws, { t: "shop", npc: n.id, name: n.entity.name, offers: shop.sells, buys: shop.buys });
+    const today = shopToday(shop, now);
+    send(p.ws, { t: "shop", npc: n.id, name: n.entity.name, offers: today.sells, buys: today.buys });
   }
 
   private shopFor(p: ZPlayer, npcId: string) {
     const n = this.world!.npcs.byEntityId(npcId);
     if (!n?.def?.shop) return { error: "They don't run a shop." } as const;
     if (dist(n.entity, p.entity) > SHOP_RANGE) return { error: "You're too far from the shop." } as const;
-    return { shop: n.def.shop } as const;
+    return { shop: shopToday(n.def.shop, Date.now()) } as const;
   }
 
   private onBuy(p: ZPlayer, msg: Extract<ClientMsg, { t: "buy" }>): void {
@@ -821,9 +1175,99 @@ export class ZoneRoom extends DurableObject<Env> {
     if (!slot || !def) return this.reject(p, msg, "Nothing in that slot.");
     if (def.kind === "tool") return this.reject(p, msg, "You'll need that yourself.");
     if (world.npcs.giftedRecently(npc.id, p.userId, now, GIFT_NPC_COOLDOWN_MS)) return this.reject(p, msg, "Give them a moment.");
+    const limit = bondGiftRefusal(p.bonds, npc.id, now);
+    if (limit === "day") return this.reject(p, msg, `${npc.def.name} already had a gift from you today.`);
+    if (limit === "week") return this.reject(p, msg, `${npc.def.name} had two gifts from you this week. Try again on Sunday.`);
+    const quality = slot.quality ?? def.quality ?? 0;
     if (!removeFromSlot(p.inv, msg.slot, 1)) return this.reject(p, msg, "Nothing in that slot.");
     this.inventoryChanged(p, `Gave ${npc.def.name} a ${def.name}.`);
     void world.npcs.receiveGift(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, def.id, now);
+    if (isNpcId(npc.id)) {
+      const out = bondGift(p.bonds, npc.id, giftTaste(npc.id, def.id), p.inv, now, Math.random, { quality, rates: this.rates });
+      this.bondChanged(p, npc.entity, out, false);
+    }
+  }
+
+  /**
+   * Tells the player how a friendship moved, and hands over milestone furniture: the villager says
+   * a line (to this player only) and the piece goes in the bag, or waits with them if it is full.
+   */
+  private bondChanged(p: ZPlayer, npc: EntityState, out: BondOutcome | null, talk: boolean): void {
+    if (!out) return;
+    send(p.ws, {
+      t: "bond",
+      view: out.view,
+      delta: out.delta,
+      from: npc.id,
+      ...(talk ? { talk: true } : {}),
+      ...(out.delivered.length > 0 ? { gifts: out.delivered } : {}),
+    });
+    // Always: the Relationships rows show "talked today" and gift markers, not just hearts.
+    send(p.ws, { t: "bonds", list: bondList(p.bonds, Date.now()) });
+    const who = npcName(out.npc);
+    for (const item of out.delivered) {
+      send(p.ws, { t: "chat", from: npc.id, name: npc.name, text: giftLine(item, Math.random), at: Date.now() });
+    }
+    if (out.delivered.length > 0) {
+      this.holdUp(p, out.delivered[0]!);
+      this.inventoryChanged(p, out.delivered.map((i) => `+1 ${getItem(i)?.name ?? i} (gift from ${who})`).join(", "));
+    }
+    if (out.owed.length > 0) this.mailGifts(p, out.npc, who, out.owed);
+    p.saveSoon.schedule();
+  }
+
+  /**
+   * Gifts that didn't fit the bag go to the player's mailbox at home. If the home can't be
+   * reached they stay with the villager (Bond.pending) and come with the next chat instead.
+   */
+  private mailGifts(p: ZPlayer, npc: string, who: string, items: string[]): void {
+    const what = items.map((i) => getItem(i)?.name ?? i).join(", ");
+    void this.home(p.userId)
+      .mailGift(p.userId, who, items)
+      .then((ok) => {
+        if (!ok) throw new Error("not mailed");
+        const b = p.bonds[npc];
+        for (const item of items) {
+          const i = b ? b.pending.indexOf(item) : -1;
+          if (i >= 0) b!.pending.splice(i, 1);
+        }
+        p.saveSoon.schedule();
+        if (this.players.get(p.ws) !== p) return;
+        send(p.ws, { t: "notice", text: `Your bag is full, so ${who} sent ${what} to your mailbox at home.`, kind: "info" });
+        send(p.ws, { t: "bonds", list: bondList(p.bonds, Date.now()) });
+      })
+      .catch(() => {
+        if (this.players.get(p.ws) !== p) return;
+        send(p.ws, { t: "notice", text: `${who} has a gift for you (${what}), but your bag is full. Make room and talk to them again.`, kind: "info" });
+      });
+  }
+
+  /** The player lifts a newly received item over their head (everyone here sees it). */
+  private holdUp(p: ZPlayer, item: string): void {
+    p.entity.act = { k: "holdUp", at: Date.now(), item };
+  }
+
+  /** Opens a cave chest for this player: their own loot, once per chest spawn. */
+  private onChest(p: ZPlayer, id: string, now: number): void {
+    const chests = this.world!.chests;
+    const chest = chests?.get(id);
+    if (!chests || !chest) return;
+    if (dist(p.entity, { x: chest.x + 0.5, y: chest.y + 0.5 }) > CHEST_REACH + 0.5) {
+      return send(p.ws, { t: "notice", text: "Walk a little closer.", kind: "info" });
+    }
+    if (chest.openedBy.includes(p.userId)) {
+      return send(p.ws, { t: "notice", text: "You've emptied this one. Chests turn up somewhere new now and then.", kind: "info" });
+    }
+    const loot = rollChestLoot(Math.random, this.rates);
+    if (!chests.open(chest, p.userId, now)) return;
+    p.inv.coins += loot.coins;
+    void this.ctx.storage.put("chests", chests.record());
+    const got = this.grantLoot(p, loot.items, { x: chest.x + 0.5, y: chest.y + 1.3 }, now);
+    const lines = [`+${loot.coins} coins`, ...(got ? [got] : [])];
+    send(p.ws, { t: "chestOpened", id: chest.id, loot: lines });
+    const rare = loot.items.find((d) => isRareLoot(d.item));
+    if (rare) this.holdUp(p, rare.item);
+    this.inventoryChanged(p, lines.join(", "));
   }
 
   /** Generic village news for NPC memory: goal status only, never anything about players. */
@@ -956,6 +1400,22 @@ export class ZoneRoom extends DurableObject<Env> {
       ),
     );
     send(p.ws, { t: "notice", text: `Routine hour set to ${want}:00 in every zone.`, kind: "info" });
+  }
+
+  /**
+   * Local dev only: "/hearts N" puts the nearest villager one point short of N hearts (talk
+   * counters reset), so the next chat reaches N and rolls its milestone gifts.
+   */
+  private devSetHearts(p: ZPlayer, hearts: number): void {
+    const npc = this.world!.npcs.nearest(p.entity, NPC_CHAT_RANGE);
+    if (!npc || !isNpcId(npc.id) || hearts < 1 || hearts > MAX_HEARTS) {
+      return send(p.ws, { t: "notice", text: "Stand next to a villager: /hearts 1-10", kind: "info" });
+    }
+    const b = (p.bonds[npc.id] ??= newBond());
+    Object.assign(b, { pts: heartCurve(npc.id).at[hearts]! - 1, day: 0, talkPts: 0, gifts: 0, talked: false, weekGifts: 0, lastTalk: 0 });
+    b.milestones = b.milestones.filter((m) => m < hearts);
+    send(p.ws, { t: "bonds", list: bondList(p.bonds, Date.now()) });
+    send(p.ws, { t: "notice", text: `${npc.def?.name ?? npc.id}: one point short of ${hearts} hearts.`, kind: "info" });
   }
 
   /** RPC (local dev only): shift this zone's NPC routine clock. */

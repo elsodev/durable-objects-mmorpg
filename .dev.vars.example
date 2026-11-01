@@ -13,3 +13,15 @@ TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
 # `npm run dev` (no --env local) needs this to allow sign-in without a Turnstile secret.
 # CAPTCHA_DISABLED=1
+
+# Drop rates (multipliers, 0..10; empty = default). DROP_RATE scales every chance drop; the
+# others override it for one kind of drop, and DROP_RATE_RARE for rare items wherever they drop.
+# Defaults live in wrangler.jsonc vars; see the README's "Drop rates" section.
+# DROP_RATE=1
+# DROP_RATE_MONSTER=
+# DROP_RATE_ROCK=
+# DROP_RATE_CHEST=
+# DROP_RATE_FORAGE=
+# DROP_RATE_GIFT=
+# DROP_RATE_HARVEST=
+# DROP_RATE_RARE=

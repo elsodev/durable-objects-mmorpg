@@ -2,6 +2,10 @@
 // lines they must never cross. The agent's read-only "soul" memory block and the scripted replies are
 // built from this file. Ids, names, sprites, roles and shops stay in catalog.ts.
 import type { ItemId, SharedZoneId } from "../../shared/types";
+import type { GiftTaste } from "../../shared/hearts";
+import type { Birthday } from "../../shared/calendar";
+import { baseItem } from "../../shared/items";
+import { isRareCrop } from "../../shared/seeds";
 
 export const NPC_IDS = ["bram", "odette", "fenwick", "rue", "pip", "marlo", "sable", "iris", "grumm", "tess"] as const;
 export type NpcId = (typeof NPC_IDS)[number];
@@ -115,6 +119,8 @@ export interface MemoryLines {
   giftLiked: string[];
   giftDisliked: string[];
   giftNeutral: string[];
+  /** Hated gifts; falls back to giftDisliked. */
+  giftHated?: string[];
 }
 
 export interface NpcBibleEntry {
@@ -124,7 +130,8 @@ export interface NpcBibleEntry {
   speechStyle: string;
   /** 3 to 5 lines in their voice; also used as scripted small talk. */
   sampleLines: string[];
-  gifts: { loved: ItemId[]; liked: ItemId[]; disliked: ItemId[] };
+  /** Personal tastes win over UNIVERSAL_GIFTS; anything in neither is neutral. */
+  gifts: { loved: ItemId[]; liked: ItemId[]; disliked: ItemId[]; hated: ItemId[] };
   likes: string[];
   dislikes: string[];
   relationships: Relationship[];
@@ -169,7 +176,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "My watch stopped years ago, but I always know when it's lunch.",
       "The Spring Fair was the jewel of the valley. Pumpkins as big as wheelbarrows!",
     ],
-    gifts: { loved: ["pumpkin"], liked: ["strawberry", "wood", "flower_pot", "carrot"], disliked: ["slime_gel", "bat_wing"] },
+    gifts: { loved: ["pumpkin"], liked: ["strawberry", "wood", "flower_pot", "carrot"], disliked: ["bat_wing"], hated: ["slime_gel"] },
     likes: ["speeches", "the village oak", "a full donation board", "tea at noon"],
     dislikes: ["gloomy talk about the bridge", "litter in the square", "geese in the fountain"],
     relationships: [
@@ -215,7 +222,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "I talk to my carrots. They're very good listeners.",
       "Pip keeps borrowing my strawberries. I pretend not to notice.",
     ],
-    gifts: { loved: ["strawberry"], liked: ["carrot", "turnip", "pumpkin", "flower_pot", "herb_mint"], disliked: ["slime_gel", "ore_iron", "bat_wing"] },
+    gifts: { loved: ["strawberry"], liked: ["carrot", "turnip", "pumpkin", "flower_pot", "herb_mint"], disliked: ["ore_iron", "bat_wing"], hated: ["slime_gel"] },
     likes: ["rain after a dry week", "neat rows", "customers who come back"],
     dislikes: ["wasted seed", "trampled beds", "haggling"],
     relationships: [
@@ -260,7 +267,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Bring me ore and I'll pay fair.",
       "The bridge plans are drawn. Just need the wood and stone.",
     ],
-    gifts: { loved: ["ore_iron"], liked: ["ore_copper", "wood", "crab_shell", "gem_crystal"], disliked: ["slime_gel", "mushroom"] },
+    gifts: { loved: ["ore_iron"], liked: ["ore_copper", "wood", "crab_shell", "gem_crystal"], disliked: ["mushroom"], hated: ["slime_gel"] },
     likes: ["sturdy work", "quiet mornings", "carving", "well-kept tools"],
     dislikes: ["rushed jobs", "rusty tools", "loud boasting"],
     relationships: [
@@ -305,7 +312,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "I hear everything first. Comes with pouring tea.",
       "Every traveller's family here, until they prove otherwise.",
     ],
-    gifts: { loved: ["fish_trout"], liked: ["carrot", "herb_mint", "mushroom", "turnip", "pumpkin"], disliked: ["bat_wing", "stone", "slime_gel"] },
+    gifts: { loved: ["fish_trout"], liked: ["carrot", "herb_mint", "mushroom", "turnip", "pumpkin"], disliked: ["bat_wing", "stone"], hated: ["slime_gel"] },
     likes: ["full tables", "old songs", "a good story", "trout stew"],
     dislikes: ["mean gossip", "empty chairs", "muddy boots on her floor"],
     relationships: [
@@ -350,7 +357,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Aunt Rue says I can't have a sword till I'm taller than the well.",
       "Wanna race to the fountain? I'll win. Probably.",
     ],
-    gifts: { loved: ["gem_crystal"], liked: ["stone", "strawberry", "crab_shell", "bat_wing"], disliked: ["mushroom", "carrot", "herb_mint"] },
+    gifts: { loved: ["gem_crystal"], liked: ["stone", "strawberry", "crab_shell", "bat_wing"], disliked: ["carrot", "herb_mint"], hated: ["mushroom"] },
     likes: ["shiny things", "hero stories", "strawberries", "racing"],
     dislikes: ["vegetables", "bedtime", "being told to be careful"],
     relationships: [
@@ -396,7 +403,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Been restless, this river. Since the lantern went out.",
       "Bring me trout and I'll pay fair. No rush.",
     ],
-    gifts: { loved: ["strawberry"], liked: ["fish_trout", "wood", "turnip", "pumpkin"], disliked: ["ore_copper", "bat_wing", "slime_gel"] },
+    gifts: { loved: ["strawberry"], liked: ["fish_trout", "wood", "turnip", "pumpkin"], disliked: ["ore_copper", "bat_wing"], hated: ["slime_gel"] },
     likes: ["quiet mornings", "a good catch", "Rue's stew", "secretly, sweets"],
     dislikes: ["shouting near the water", "litter in the river", "being rushed"],
     relationships: [
@@ -441,7 +448,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Gem crystals grow only in the deepest caves; you will need an iron pickaxe.",
       "Thank you for walking out to the island. Few do.",
     ],
-    gifts: { loved: ["gem_crystal"], liked: ["herb_mint", "flower_pot", "lamp", "strawberry"], disliked: ["bat_wing", "slime_gel"] },
+    gifts: { loved: ["gem_crystal"], liked: ["herb_mint", "flower_pot", "lamp", "strawberry"], disliked: ["bat_wing"], hated: ["slime_gel"] },
     likes: ["evening light", "quiet", "small kindnesses", "mint tea"],
     dislikes: ["shouting at the shrine", "despair", "rushing"],
     relationships: [
@@ -487,7 +494,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "My hypothesis: the slimes are just lonely. Very sticky and lonely.",
       "Hold still, you've got a leaf in your... no, never mind, it's a specimen now.",
     ],
-    gifts: { loved: ["slime_gel"], liked: ["herb_mint", "mushroom", "bat_wing", "strawberry"], disliked: ["stone", "ore_iron", "wood"] },
+    gifts: { loved: ["slime_gel"], liked: ["herb_mint", "mushroom", "bat_wing", "strawberry"], disliked: ["stone", "ore_iron"], hated: ["wood"] },
     likes: ["experiments", "rare herbs", "slimes", "notebooks"],
     dislikes: ["boring rocks", "people who squish slimes for fun", "tidying up"],
     relationships: [
@@ -533,7 +540,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Slimes are harmless. Mostly. Bats are just rude.",
       "Bah. Kids these days. Go on, mind the crabs.",
     ],
-    gifts: { loved: ["turnip"], liked: ["mushroom", "fish_trout", "ore_iron", "pumpkin"], disliked: ["flower_pot", "strawberry", "rug"] },
+    gifts: { loved: ["turnip"], liked: ["mushroom", "fish_trout", "ore_iron", "pumpkin"], disliked: ["strawberry", "rug"], hated: ["flower_pot"] },
     likes: ["a good seam of ore", "turnip soup", "quiet tunnels", "newcomers who listen"],
     dislikes: ["fuss", "sweets", "anyone wandering deep without a light"],
     relationships: [
@@ -579,7 +586,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "There's an old shrine chamber down here somewhere. I can feel it.",
       "Crabs near the ore, bats near the ceiling. Write that down! I did.",
     ],
-    gifts: { loved: ["crab_shell"], liked: ["gem_crystal", "mushroom", "carrot", "bat_wing"], disliked: ["turnip", "stone"] },
+    gifts: { loved: ["crab_shell"], liked: ["gem_crystal", "mushroom", "carrot", "bat_wing"], disliked: ["turnip"], hated: ["stone"] },
     likes: ["blank map paper", "naming things", "echoes", "carrot snacks"],
     dislikes: ["dead ends", "soggy paper", "being told it can't be found"],
     relationships: [
@@ -638,12 +645,136 @@ export function routineSlotAt(id: NpcId, hour: number): RoutineSlot {
   return slots.find((s) => h >= s.from && h < s.to) ?? slots[0]!;
 }
 
-export type GiftTaste = "loved" | "liked" | "disliked" | "neutral";
+export type { GiftTaste };
 
-export function giftTaste(id: NpcId, item: ItemId): GiftTaste {
-  const g = NPC_BIBLE[id].gifts;
+/** Tastes every villager shares unless their own lists say otherwise. */
+export const UNIVERSAL_GIFTS: Readonly<{ loved: ItemId[]; liked: ItemId[]; disliked: ItemId[]; hated: ItemId[] }> = {
+  loved: [],
+  liked: ["gem_crystal", "strawberry", "flower_pot", "lamp"],
+  disliked: ["stone", "wood", "fence"],
+  hated: ["slime_gel", "bat_wing"],
+};
+
+function tasteIn(g: { loved: ItemId[]; liked: ItemId[]; disliked: ItemId[]; hated: ItemId[] }, item: ItemId): GiftTaste | null {
   if (g.loved.includes(item)) return "loved";
   if (g.liked.includes(item)) return "liked";
   if (g.disliked.includes(item)) return "disliked";
-  return "neutral";
+  if (g.hated.includes(item)) return "hated";
+  return null;
 }
+
+/** The villager's taste for an item: personal list, then the universal one, else neutral. Quality crops count as their base crop. */
+export function giftTaste(id: NpcId, item: ItemId): GiftTaste {
+  const base = baseItem(item);
+  const own = tasteIn(NPC_BIBLE[id].gifts, base);
+  if (own) return own;
+  // Rare crops and their seeds are treasured by everyone.
+  if (isRareCrop(item) || isRareCrop(base)) return "loved";
+  return tasteIn(UNIVERSAL_GIFTS, base) ?? "neutral";
+}
+
+/** Each villager's birthday on the world calendar (shared/calendar.ts): one or two per season. */
+export const NPC_BIRTHDAYS: Readonly<Record<NpcId, Birthday>> = {
+  bram: { season: "spring", day: 9 },
+  odette: { season: "spring", day: 20 },
+  fenwick: { season: "summer", day: 4 },
+  rue: { season: "summer", day: 17 },
+  pip: { season: "summer", day: 26 },
+  marlo: { season: "fall", day: 6 },
+  sable: { season: "fall", day: 22 },
+  iris: { season: "winter", day: 3 },
+  grumm: { season: "winter", day: 14 },
+  tess: { season: "winter", day: 25 },
+};
+
+export function birthdayOf(id: string): Birthday | undefined {
+  return isNpcId(id) ? NPC_BIRTHDAYS[id] : undefined;
+}
+
+/**
+ * Scripted greetings keyed by situation, picked by pickLineKey (npc/dialogue.ts) in priority
+ * order: birthday, hearts band (hearts9 / hearts6 / hearts2), weekday (Mon..Sun), season, then the
+ * memory lines. Placeholders as in MemoryLines.
+ */
+export const NPC_DIALOGUE: Readonly<Record<NpcId, Partial<Record<string, string[]>>>> = {
+  bram: {
+    birthday: ["Ahem! It's my birthday, {name}, and you remembered to visit. Splendid!"],
+    hearts9: ["{name}, you are the pride of Mossbrook. I mean it, from the bottom of my chain of office."],
+    hearts6: ["Ah, {name}! I saved you the good bench by the oak."],
+    hearts2: ["Good to see you, {name}. The council speaks well of you."],
+    Mon: ["Monday, {name}! A fresh week of donations to count."],
+    spring: ["Spring in Mossbrook, {name}! Fair season, if we can manage it."],
+  },
+  odette: {
+    birthday: ["My birthday, {name}! I put the best berries aside, just for today."],
+    hearts9: ["There you are, love. The stall feels empty until you stop by."],
+    hearts6: ["{name}! I kept a basket back for you, don't tell the others."],
+    hearts2: ["Morning, {name}. Fresh stock in, have a look."],
+    Sat: ["Saturday market, {name}! Busiest day of the week."],
+    summer: ["Summer, {name}. Everything ripens at once and I can't keep up."],
+  },
+  fenwick: {
+    birthday: ["It's my birthday. Mm. Didn't think anyone knew, {name}."],
+    hearts9: ["{name}. Forge is always warm for you."],
+    hearts6: ["Sharpened your name into a horseshoe. Kidding. Mostly, {name}."],
+    hearts2: ["{name}. Need something mended?"],
+    Wed: ["Midweek. Iron day, {name}."],
+    winter: ["Cold out. Good for the forge, {name}."],
+  },
+  rue: {
+    birthday: ["Is it my birthday? Bless you for remembering, {name}! Pie's on the house."],
+    hearts9: ["Sit down, {name}, dear, your usual's already warming."],
+    hearts6: ["{name}! I made extra stew, I had a feeling you'd come."],
+    hearts2: ["Hello, {name}, dear. Hungry?"],
+    Fri: ["Friday night at the inn, {name}! Stay for the fiddle."],
+    fall: ["Fall, {name}! Pumpkin soup season, my favourite."],
+  },
+  pip: {
+    birthday: ["It's my BIRTHDAY, {name}! I'm officially older and wiser now!"],
+    hearts9: ["{name}! You're my best friend. Don't tell the frogs."],
+    hearts6: ["{name}! I found a shiny rock and saved it to show you!"],
+    hearts2: ["Oh, hi {name}! Wanna see a beetle?"],
+    Sun: ["No chores on Sunday, {name}! Adventure day!"],
+    summer: ["Summer means swimming, {name}! Don't tell my mum."],
+  },
+  marlo: {
+    birthday: ["My birthday, {name}. River gave me a fine trout this morning, so it knew."],
+    hearts9: ["{name}. River's quieter when you're here. Good quiet."],
+    hearts6: ["Saved you a spot on the bank, {name}."],
+    hearts2: ["Afternoon, {name}. Fish are biting."],
+    Tue: ["Tuesday. Trout like Tuesdays, {name}."],
+    spring: ["Spring melt, {name}. River's high and lively."],
+  },
+  sable: {
+    birthday: ["Today the valley turns another year for me, {name}. Thank you for coming."],
+    hearts9: ["{name}. The lantern burns a little brighter when you visit."],
+    hearts6: ["Welcome, {name}. The shrine remembers kind feet."],
+    hearts2: ["Peace to you, {name}."],
+    Thu: ["Thursday is a listening day, {name}. Sit a while."],
+    fall: ["The leaves let go so gracefully, {name}."],
+  },
+  iris: {
+    birthday: ["It's my birthday! I'm celebrating with a small, safe explosion, {name}."],
+    hearts9: ["{name}! My favourite lab partner. My only lab partner, but still!"],
+    hearts6: ["{name}! I named a reaction after you. It fizzes."],
+    hearts2: ["Oh, {name}! Mind the bubbling flask."],
+    Mon: ["Mondays are for new experiments, {name}!"],
+    winter: ["Winter's perfect for crystals, {name}. Everything grows so neatly."],
+  },
+  grumm: {
+    birthday: ["Birthday. Bah. Fine, it's my birthday, {name}. Don't make a fuss."],
+    hearts9: ["Hmph. You're alright, {name}. Better than alright."],
+    hearts6: ["{name}. Pull up a stool, I suppose."],
+    hearts2: ["{name}. What is it?"],
+    Sat: ["Saturday. Everyone's loud on Saturday, {name}."],
+    winter: ["Winter. Finally some peace and quiet, {name}."],
+  },
+  tess: {
+    birthday: ["It's my birthday, {name}! I'm naming today's tunnel Birthday Tunnel!"],
+    hearts9: ["{name}! You're on every page of my map now!"],
+    hearts6: ["{name}! I drew a tiny you next to the crystal cave!"],
+    hearts2: ["Hi {name}! Exploring today?"],
+    Wed: ["Wednesday is mapping day, {name}!"],
+    spring: ["Spring rains flood the low tunnels, {name}. Careful down there!"],
+  },
+};

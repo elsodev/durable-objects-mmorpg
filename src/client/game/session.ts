@@ -12,6 +12,10 @@ import { createStore } from "../state/store";
 import { mountHud, type GameApi, type Hud, type SessionUser } from "../ui";
 import { createHomeUi } from "../ui/homeui";
 import { createVisitsUi } from "../ui/visits";
+import { createMailboxUi } from "../ui/mailbox";
+import { createDoorFade } from "../ui/door-fade";
+import { exitAt } from "../../shared/engine/geometry";
+import { MAILBOX_TAKE } from "../../shared/mail";
 import { visitsApi } from "../ui/visits-api";
 import type { InviteNotice, VisitInfo, VisitorEntry } from "../../shared/visits";
 import { clockMinutes, dayPhase, farmNow, formatClock, type HomeClock } from "../../shared/engine/homeclock";
@@ -19,8 +23,10 @@ import { getItem } from "../../shared/items";
 import type { HomeServerMsg } from "../../shared/home";
 import { footstep } from "../audio/player";
 import { getMap } from "../../shared/maps";
+import type { LoadingScreen } from "../ui/loading";
+import { createTutorial } from "../ui/tutorial";
 import type { ClientMsg, ServerMsg } from "../../shared/protocol";
-import { Ground, type EntityState, type MapData, type Vec2, type ZoneId } from "../../shared/types";
+import { Ground, TICK_MS, type EntityState, type HomeMapId, type MapData, type Vec2, type ZoneId } from "../../shared/types";
 import {
   chatKind,
   createReqIds,
@@ -32,6 +38,7 @@ import {
   sfxForUse,
   propTarget,
   usableHere,
+  clickUsesTool,
   usableItem,
   useTarget,
   withinInteract,
@@ -41,15 +48,45 @@ import { appearanceOf, applyAppearance } from "./appearance";
 import { playSfx, setAudioHooks, setMusicZone, type AudioHooks } from "./audio";
 import { installDebug } from "./debug";
 import { createCombatSfx } from "./combat-sfx";
+import { createCombatFx } from "./combat-fx";
+import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../../shared/spawns";
 import { createInput } from "./input";
 import { every, startLoop } from "./loop";
+import { chestFor } from "../render/chests";
+import { CHEST_REACH, CHEST_TARGET_PREFIX } from "../../shared/chests";
+import { gainText } from "../ui/bonds-logic";
 import { createPredictor } from "./prediction";
+import { createFarmFx } from "./farm-fx";
+import { isWaterSource } from "../../shared/engine";
 import { createWorld, type World } from "./world";
+import {
+  clearedTreeTiles,
+  effectiveAct,
+  pendingImpactMs,
+  predictUse,
+  startSwing,
+  swingLocked,
+  takeImpact,
+  targetAtTile,
+  type LocalSwing,
+} from "./tool-swing";
+import { ImpactQueue, impactDueMs } from "./impact";
+import { INTERP_DELAY_MS } from "../state/interp";
+
+type StampedMsg = Extract<ServerMsg, { t: "farm" | "rock" | "tree" }>;
+
+/** Held results that must stay in order: the same rock or tree, or any farm tiles. */
+function sameTarget(a: StampedMsg, b: StampedMsg): boolean {
+  if (a.t !== b.t) return false;
+  return a.t === "farm" || ("id" in a && "id" in b && a.id === b.id);
+}
+import { isSwingTool, toolKeyOf, type ToolEffect, type ToolOutcome, type ToolTarget } from "../../shared/engine/toolRules";
 import { createSocialConnection } from "../net/social";
 import { emitSocial, onSocial as onSocialEvent } from "../social-events";
 import { parseChatInput, type ChatTab, type SocialServerMsg } from "../../shared/social";
 import type { EmoteCode } from "../../shared/emotes";
 import { emoteLine } from "../ui/chat";
+import { playerHit, tileDistance } from "./player-hit";
 
 const HOTBAR_SLOTS = 8;
 /** Stats panel refresh while in a shared zone. */
@@ -61,6 +98,10 @@ export interface SessionOptions {
   audio?: Partial<AudioHooks>;
   /** First zone to join. Default: "village" for accounts, "home" for guests. */
   startZone?: ZoneId;
+  /** Called on the first welcome from the server: the renderer is up and the game is connected. */
+  onReady?: () => void;
+  /** Loading screen to drive: steps as they finish, zone changes, and when the world is on screen. */
+  loading?: Pick<LoadingScreen, "done" | "zone" | "ready">;
 }
 
 type ActionReq = "use" | "place" | "moveObject" | "pickup";
@@ -74,10 +115,13 @@ export async function startSession(
   const appearance = appearanceOf(user);
   let isGuest = user.isGuest;
 
+  const loading = opts.loading;
   const game = await createGameApp(mount.game);
+  loading?.done("renderer");
   // Character layers load alongside the art pack, so composited players are ready on first draw.
   const looks = createLookCompositor();
   const [art] = await Promise.all([loadArt(game.app), looks.load()]);
+  loading?.done("art");
   const characterFor = lookResolver(looks);
   let creator: CreatorHandle | null = null;
   let lookPrompted = false;
@@ -95,6 +139,13 @@ export async function startSession(
 
   const map = (): MapData | null => world?.map ?? store.map;
   const serverNow = () => Date.now() + conn.clockOffset();
+  const zoneName = (z: ZoneId): string | null => {
+    try {
+      return getMap(z).name;
+    } catch {
+      return null;
+    }
+  };
   /** Home clock + vitals from the last homeState (null outside home). */
   let home: Extract<HomeServerMsg, { t: "homeState" }> | null = null;
   let typing = false;
@@ -103,16 +154,40 @@ export async function startSession(
   let visiting: VisitInfo | null = null;
   /** The visit being connected to, and where to go back to if it's refused. */
   let visitTarget: { ownerId: string; from: ZoneId } | null = null;
+  /** Home map of the last welcome (null outside home): a new welcome on another one is a door. */
+  let homeMapNow: HomeMapId | null = null;
+  /** Mailbox flag state, kept across world rebuilds. */
+  let mailFlag = false;
   /** Farm engine time: at home crops follow the home day, not real time (see homeclock.farmNow). */
   const farmTime = () => (store.zone === "home" && home ? farmNow(home.clock.day) : serverNow());
   const unbrokenRocks = (): Vec2[] =>
     (map()?.rocks ?? []).filter((r) => !store.brokenRocks.has(r.id)).map((r) => ({ x: r.x, y: r.y }));
 
+  /** Open tree tiles, rebuilt only when a tree message changes them. */
+  let clearedTrees: Vec2[] = [];
+  const refreshClearedTrees = () => {
+    clearedTrees = clearedTreeTiles(map(), store.trees);
+  };
   const predictor: Predictor = createPredictor(map, () => ({
     objects: [...store.objects.values()],
-    rocks: unbrokenRocks(),
+    // Cave chests block like rocks do.
+    rocks: [...unbrokenRocks(), ...(world?.chests.list() ?? [])],
+    cleared: clearedTrees,
   }));
+  /** Your own tool swing, played locally the moment you press use. */
+  let swing: LocalSwing | null = null;
+  /** The last act you played locally; keeps the server's older acts from replaying after it. */
+  let localAct: LocalSwing["act"] | null = null;
+  /** What your pending swing does when it lands (prediction, effects, sound). */
+  let onImpact: (() => void) | null = null;
+  /** Server results of tool swings held until the swing's impact frame (see impact.ts). */
+  const impacts = new ImpactQueue<StampedMsg>();
+  /** Rocks and trees your own swing already wobbled at impact: the server's echo stays quiet. */
+  const shownHits = new Set<string>();
   const camera: Camera = createCamera(game.layers, { w: game.width(), h: game.height() });
+  const combatFx = createCombatFx({ world: () => world, youId: () => store.youId, camera, latest: (id) => store.latest(id) });
+  /** Zones: last stamina the server sent (a gentle warning when it runs low). */
+  let zoneStamina: number | null = null;
   const input: Input = createInput(game.app.canvas, (sx, sy) => camera.screenToTile(sx, sy));
 
   /** Your entity: authoritative fields + predicted position, with the creator's look applied locally. */
@@ -124,7 +199,11 @@ export async function startSession(
     // Seated: the server places you on the chair; nothing to predict.
     if (base.act?.k === "sit") return applyAppearance({ ...base, moving: false }, appearance);
     const p = predictor.state();
-    return applyAppearance({ ...base, x: p.x, y: p.y, facing: p.facing, moving: p.moving }, appearance);
+    const act = effectiveAct(base.act, localAct);
+    const now = performance.now();
+    // While your swing plays you face what you swing at.
+    const facing = swing && now < swing.endMs && act === swing.act ? swing.facing : p.facing;
+    return applyAppearance({ ...base, act, x: p.x, y: p.y, facing, moving: p.moving }, appearance);
   }
 
   function visibleEntities(): EntityState[] {
@@ -137,17 +216,22 @@ export async function startSession(
     conn.send(msg);
   }
 
-  function sendTagged(msg: ClientMsg & { req?: string }, kind: ActionReq): void {
+  function sendTagged(msg: ClientMsg & { req?: string }, kind: ActionReq): string {
     const req = nextReq();
     pendingReqs.set(req, kind);
     if (pendingReqs.size > 64) pendingReqs.delete(pendingReqs.keys().next().value!);
     send({ ...msg, req } as ClientMsg);
+    return req;
   }
 
+  /**
+   * Shows a notice once: loot ("+1 Turnip …") pops up over your head, everything else is a
+   * toast. (Both at once repeated the same words twice.)
+   */
   function notice(text: string, kind: "info" | "error" | "loot" = "info"): void {
-    hud.notice(text, kind);
     const me = you();
-    if (me && world) world.effects.floatText({ x: me.x, y: me.y - 1.5 }, text, kind);
+    if (kind === "loot" && me && world) world.effects.floatText({ x: me.x, y: me.y - 1.5 }, text, kind);
+    else hud.notice(text, kind);
   }
 
   function selectSlot(slot: number): void {
@@ -160,7 +244,9 @@ export async function startSession(
   }
 
   function syncBuildBanner(): void {
-    hud.setBuildMode(!!world?.build.active());
+    const on = !!world?.build.active();
+    hud.setBuildMode(on);
+    input.setWheelRotates?.(on);
   }
 
   function setBuildItem(slot: number | null): void {
@@ -203,21 +289,51 @@ export async function startSession(
     zone: () => store.zone,
     isGuest: () => isGuest,
     openWardrobe: () => openWardrobe(false),
-    playerNameAt(clientX, clientY) {
+    openControls: () => tutorial.open(),
+    playerAt(clientX, clientY) {
       if (!world) return null;
       const r = game.app.canvas.getBoundingClientRect();
-      const id = world.entities.entityAt(camera.screenToTile(clientX - r.left, clientY - r.top));
-      const st = id && id !== store.youId ? store.latest(id) : null;
-      return st?.kind === "player" ? st.name : null;
+      return playerUnder(camera.screenToTile(clientX - r.left, clientY - r.top));
     },
+    playerByName(name) {
+      const key = name.toLowerCase();
+      const ent = visibleEntities().find((e) => e.kind === "player" && e.name.toLowerCase() === key);
+      return ent ? playerHit(ent.id, ent, store.youId) : null;
+    },
+    playerDistance(entityId) {
+      const me = you();
+      const them = visibleEntities().find((e) => e.id === entityId);
+      return me && them ? tileDistance(me, them) : null;
+    },
+    playerPortrait: (entityId) => portraitOf(entityId),
     chat: (text, tab) => onChatInput(text, tab),
     emote: (code) => sendEmote(code),
+    slashContext: () => ({
+      atHome: store.zone === "home",
+      homeOwner: store.zone === "home" && !visiting,
+      guest: isGuest,
+      devTools,
+    }),
   };
+  const tutorial = createTutorial(mount.ui, { userId: user.id, setTyping: (t) => gameApi.setTyping(t) });
   const hud: Hud = mountHud(mount.ui, gameApi);
   hud.setIconSource((item) => art.iconUrl(item));
   hud.setSelectedSlot(selectedSlot);
+  const farmFx = createFarmFx({
+    world: () => world,
+    art,
+    map,
+    farm: () => store.farm,
+    objects: () => [...store.objects.values()],
+    rockAt: (x, y) => unbrokenRocks().some((r) => r.x === x && r.y === y),
+    you,
+    farmTime,
+    playSfx,
+    closeBinUi: () => homeUi.closeBin(),
+  });
   const homeUi = createHomeUi(mount.ui, {
     unship: () => sendTagged({ t: "unship" }, "use"),
+    onBinClose: () => farmFx.binClosed(),
     eat: () => eatSelected(),
     moveBed: () => {
       const bed = [...store.objects.values()].find((o) => o.item === "bed_simple");
@@ -242,6 +358,23 @@ export async function startSession(
     },
     now: () => serverNow(),
   });
+  const mailboxUi = createMailboxUi(mount.ui, {
+    acceptInvite: (n) => void acceptInvite(n),
+    declineInvite: (n) =>
+      void visitsApi.respond(n.fromId, false).then((r) => {
+        if (!r.ok) notice(r.error, "error");
+        else visitsUi.removeInvite(n.fromId);
+      }),
+    takeParcels: () => send({ t: "interact", target: MAILBOX_TAKE }),
+    notice: (text, kind) => notice(text, kind),
+    onFlag: (up) => {
+      mailFlag = up;
+      world?.mailboxFlag?.set(up);
+    },
+    now: () => serverNow(),
+    isGuest: () => isGuest,
+  });
+  const doorFade = createDoorFade(mount.ui);
   const socialUnsubs = [
     onSocialEvent("invite", (p) => visitsUi.addInvites([p])),
     onSocialEvent("inviteRevoked", (p) => {
@@ -257,6 +390,38 @@ export async function startSession(
     notice(`Heading over to ${n.fromName}'s home…`, "info");
     joinVisit(n.fromId);
   }
+
+  /** The player whose sprite covers a tile point (yourself included), else null. */
+  function playerUnder(tile: Vec2) {
+    if (!world) return null;
+    const id = world.entities.entityAt(tile);
+    return playerHit(id, id ? store.latest(id) : undefined, store.youId);
+  }
+
+  /** Head-and-shoulders of a player's composited look, facing you, for the player card. */
+  function portraitOf(entityId: string): HTMLCanvasElement | null {
+    const look = validateLook(store.latest(entityId)?.look);
+    const m = looks.manifest();
+    const sheet = look ? looks.sheet(look) : null;
+    if (!look || !m || !sheet) return null;
+    const c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 64;
+    const ctx = c.getContext("2d");
+    if (!ctx) return null;
+    const row = m.walk.down;
+    const fw = m.frameW;
+    const fh = m.frameH;
+    // LPC frames are 64x64 with the head in the upper middle: keep the top 40 rows, centred.
+    const crop = { x: fw * 0.2, y: fh * 0.08, w: fw * 0.6, h: fh * 0.6 };
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sheet, (row.col ?? 0) * fw + crop.x, row.row * fh + crop.y, crop.w, crop.h, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  /** Muted players' chat, bubbles and emotes are hidden (ui/mutes.ts; the server drops the rest). */
+  const mutedEntity = (entityId: string): boolean => !!hud.mutes?.hidesEntity(entityId);
+  const mutedName = (name: string): boolean => !!hud.mutes?.hasName(name);
 
   // ------------------------------------------------------------ social (world chat, whispers, stats)
   let lastWhisper: string | null = null;
@@ -306,6 +471,7 @@ export async function startSession(
         for (const l of msg.history) {
           if (l.at <= lastWorldAt) continue;
           lastWorldAt = l.at;
+          if (mutedName(l.name)) continue;
           hud.addChat(l.name, l.text, "player", { channel: "world" });
         }
         if (store.zone) social.send({ t: "here", zone: store.zone });
@@ -313,10 +479,13 @@ export async function startSession(
         break;
       case "world":
         lastWorldAt = Math.max(lastWorldAt, msg.at);
+        if (mutedName(msg.name)) break;
         hud.addChat(msg.name, msg.text, "player", { channel: "world" });
         sayByName(msg.name, msg.text);
         break;
       case "pm":
+        // The server already drops these; this covers a mute made a moment ago on another device.
+        if (msg.dir === "in" && mutedName(msg.name)) break;
         if (msg.dir === "in") {
           lastWhisper = msg.name;
           playSfx("chat");
@@ -336,6 +505,33 @@ export async function startSession(
       case "pong":
         break;
     }
+  }
+
+  /** "+25 ♥" floating over the villager whose friendship moved. */
+  function onBondGain(from: string | undefined, delta: number): void {
+    const text = gainText(delta);
+    const npc = from ? store.latest(from) : null;
+    if (!text || !npc || !world) return;
+    world.effects.floatText({ x: npc.x, y: npc.y - 0.4 }, text, delta > 0 ? "love" : "info");
+    if (delta > 0) world.effects.burst({ x: npc.x, y: npc.y - 1.6 }, "sparkle");
+  }
+
+  /** Picks forage on a tile when it is in reach, else walks up to it. */
+  function forageInteract(me: EntityState, tile: Vec2): boolean {
+    const g = world?.groundItems.forageAt(tile);
+    if (!g) return false;
+    if (tileDistance(me, g) <= FORAGE_REACH) interact(`${GROUND_TARGET_PREFIX}${g.id}`);
+    else moveTo(g.x, g.y + 0.6);
+    return true;
+  }
+
+  /** Opens a cave chest when it is in reach, else walks up to it. */
+  function chestInteract(me: EntityState, tile: Vec2): boolean {
+    const c = world?.chests.at(tile);
+    if (!c) return false;
+    if (withinInteract(me, { x: c.x + 0.5, y: c.y + 0.5 })) interact(`${CHEST_TARGET_PREFIX}${c.id}`);
+    else moveTo(c.x + 0.5, c.y + 1.5);
+    return true;
   }
 
   /** Payloads other Durable Objects push through SocialRoom.notify go to the client bus (../social-events). */
@@ -374,6 +570,7 @@ export async function startSession(
   });
 
   function joinZone(zone: ZoneId, spawn?: string): void {
+    loading?.zone(zoneName(zone));
     pendingZone = zone;
     visitTarget = null;
     world?.build.exit();
@@ -384,6 +581,7 @@ export async function startSession(
   /** Connects to /ws/visit/<ownerId>; their home arrives as zone "home" with welcome.visit set. */
   function joinVisit(ownerId: string): void {
     const from: ZoneId = visiting?.returnTo ?? store.zone ?? "village";
+    loading?.zone(null);
     pendingZone = "home";
     visitTarget = { ownerId, from };
     world?.build.exit();
@@ -458,7 +656,33 @@ export async function startSession(
     }
   }
 
+  /** Holds a tool swing's result until its impact frame; everything else applies at once. */
   function handleMessage(msg: ServerMsg): void {
+    if (msg.t === "farm" || msg.t === "rock" || msg.t === "tree" || msg.t === "farmAll") {
+      const now = performance.now();
+      if (msg.t !== "farmAll" && msg.impactAt !== undefined) {
+        const due = impactDueMs(msg, {
+          youId: store.youId,
+          nowMs: now,
+          serverNow: serverNow(),
+          localImpactMs: pendingImpactMs(swing),
+          // Others' swings are drawn behind: interpolation, the tick they ride in, half the trip.
+          remoteLagMs: INTERP_DELAY_MS + TICK_MS / 2 + conn.rtt() / 2,
+        });
+        impacts.push(due, msg);
+        return applyDueImpacts(now);
+      }
+      // An unstamped change to the same things must not overtake a held one.
+      for (const held of impacts.flush()) applyMessage(held);
+    }
+    applyMessage(msg);
+  }
+
+  function applyDueImpacts(now: number): void {
+    for (const m of impacts.take(now, sameTarget)) applyMessage(m);
+  }
+
+  function applyMessage(msg: ServerMsg): void {
     sfxBefore(msg);
     store.apply(msg, performance.now());
     switch (msg.t) {
@@ -473,49 +697,66 @@ export async function startSession(
         refreshEdible();
         break;
       case "farm":
-        world?.farm.setFarm(store.farm.values(), farmTime());
+        farmFx.farmChanged(msg.tiles);
         break;
       case "homeState":
         home = msg;
         homeUi.setVitals(msg.stamina, msg.maxStamina, msg.water, msg.maxWater);
-        world?.farm.setFarm(store.farm.values(), farmTime());
+        farmFx.homeState(msg);
+        farmFx.redraw();
         break;
       case "farmAll":
         store.farm.clear();
         for (const t of msg.tiles) store.farm.set(`${t.x},${t.y}`, t);
-        world?.farm.setFarm(store.farm.values(), farmTime());
+        farmFx.farmChanged(null);
         break;
       case "bin":
         homeUi.setBin(msg.items, msg.total, !!msg.open);
+        farmFx.bin(msg);
         break;
       case "sleeping":
         homeUi.sleeping(msg.host, msg.endsAt, serverNow);
+        break;
+      case "mail":
+        mailboxUi.set(msg);
         break;
       case "daySummary":
         playSfx("goal_complete");
         homeUi.showSummary(msg.summary);
         break;
       case "objects":
-        world?.farm.setObjects(store.objects.values());
+        world?.farm.setObjects(store.objects.values(), map());
         break;
       case "rock": {
         const m = map();
-        if (world && m) world.farm.setRocks(m, store.brokenRocks);
+        if (world && m) world.farm.setRocks(m, store.brokenRocks, store.rockOres);
         const rock = m?.rocks?.find((r) => r.id === msg.id);
-        if (rock && msg.broken) {
-          playSfx("rock_break");
-          world?.effects.burst({ x: rock.x + 0.5, y: rock.y + 0.5 }, "dust");
-        }
+        if (rock && world) onRockMsg(world, rock, msg);
+        break;
+      }
+      case "tree": {
+        refreshClearedTrees();
+        // Your own plain hit already wobbled the tree when your swing landed.
+        if (!msg.drops && msg.hits > 0 && ownShownHit(msg)) break;
+        const from = store.youId ? you() : null;
+        world?.trees.update(msg.id, msg.stage, msg.hits, msg.drops, from);
+        if (msg.stage === "stump" && msg.hits > 0) playSfx("tree_fall");
+        else if (msg.stage === "gone") playSfx("rock_break");
+        else if (msg.hits > 0) playSfx("tree_chop");
         break;
       }
       case "goals":
         hud.setGoals(store.goals);
         break;
       case "chat": {
+        if (mutedEntity(msg.from)) break;
         const kind = chatKind(msg.from);
         hud.addChat(msg.name, msg.text, kind);
         if (kind !== "system") world?.overlays.say(msg.from, msg.text);
-        if (kind === "npc") playSfx("chat");
+        if (kind === "npc") {
+          playSfx("chat");
+          hud.npcSaid?.(msg.from, msg.text);
+        }
         break;
       }
       case "notice":
@@ -542,9 +783,47 @@ export async function startSession(
         visitsUi.setVisitors(msg.visitors, msg.max);
         break;
       case "emote": {
+        if (mutedEntity(msg.from)) break;
         world?.overlays.emote?.(msg.from, msg.code);
         const who = store.latest(msg.from)?.name ?? (msg.from === store.youId ? "You" : "Someone");
         hud.addChat("", emoteLine(who, msg.code), "system", { channel: "zone" });
+        break;
+      }
+      case "bond":
+        hud.bond?.(msg.view, msg.delta, !!msg.talk, msg.from, msg.gifts);
+        onBondGain(msg.from, msg.delta);
+        break;
+      case "bonds":
+        hud.setBonds?.(msg.list);
+        break;
+      case "chests":
+        world?.chests.set(msg.chests);
+        break;
+      case "hit":
+        combatFx.onHit(msg);
+        break;
+      case "hurt":
+        combatFx.onHurt(msg);
+        break;
+      case "loot":
+        combatFx.onLoot(msg);
+        playSfx("loot");
+        break;
+      case "ground":
+        world?.groundItems.update(msg.upd, msg.del);
+        break;
+      case "stamina":
+        if (zoneStamina !== null && msg.stamina <= msg.max * 0.2 && zoneStamina > msg.max * 0.2) {
+          notice("You're getting tired. Eat something, or rest at home.", "info");
+        }
+        zoneStamina = msg.stamina;
+        if (store.zone !== "home") homeUi.setZoneStamina?.(msg.stamina, msg.max);
+        break;
+      case "chestOpened": {
+        world?.chests.open(msg.id);
+        const c = world?.chests.list().find((x) => x.id === msg.id);
+        if (c) world?.effects.burst({ x: c.x + 0.5, y: c.y + 0.6 }, "sparkle");
+        playSfx("loot");
         break;
       }
       case "pong":
@@ -552,8 +831,34 @@ export async function startSession(
     }
   }
 
+  /** Two animation frames: by then Pixi has drawn the new world at least once. */
+  function afterFrame(fn: () => void): void {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!destroyed) fn();
+    }));
+  }
+  let firstWorldShown = false;
+  /** welcome.devTools: this server runs the /day, /time and /hour dev commands. */
+  let devTools = false;
+
   function onWelcome(msg: Extract<ServerMsg, { t: "welcome" }>): void {
+    opts.onReady?.();
+    const nextHomeMap: HomeMapId | null = msg.zone === "home" ? (msg.homeMap ?? "home") : null;
+    // Walking through the house door: same socket, the other home map.
+    const throughDoor = homeMapNow !== null && nextHomeMap !== null && nextHomeMap !== homeMapNow;
+    homeMapNow = nextHomeMap;
     pendingZone = null;
+    devTools = msg.devTools === true;
+    loading?.done("world");
+    afterFrame(() => {
+      loading?.ready();
+      if (!firstWorldShown) {
+        firstWorldShown = true;
+        // New characters pick a look first; the controls card follows once the creator closes.
+        if (creator) void creator.done.then(() => !destroyed && tutorial.openFirstTime());
+        else tutorial.openFirstTime();
+      }
+    });
     world?.destroy();
     world = null;
     lastHp.clear();
@@ -573,6 +878,7 @@ export async function startSession(
         notice: (text) => notice(text, "error"),
       },
       characterFor,
+      { beat: itemPoseBeat },
     );
     if (msg.zone !== "home") home = null;
     visiting = msg.visit ?? null;
@@ -581,9 +887,27 @@ export async function startSession(
     visitsUi.setVisiting(visiting?.ownerName ?? null);
     visitsUi.setAtHome(msg.zone === "home" && !visiting);
     if (msg.zone !== "home") homeUi.closeBin();
-    world.farm.setFarm(store.farm.values(), farmTime());
-    world.farm.setRocks(m, store.brokenRocks);
-    world.farm.setObjects(store.objects.values());
+    farmFx.reset();
+    farmFx.redraw();
+    world.farm.setRocks(m, store.brokenRocks, store.rockOres);
+    world.chests.set(msg.chests ?? []);
+    world.groundItems.set(msg.ground ?? []);
+    hud.setBonds?.(msg.bonds ?? []);
+    world.farm.setObjects(store.objects.values(), map());
+    world.trees.sync(store.trees);
+    refreshClearedTrees();
+    swing = null;
+    localAct = null;
+    onImpact = null;
+    impacts.clear();
+    shownHits.clear();
+    world.mailboxFlag?.set(mailFlag);
+    if (nextHomeMap !== "home" || visiting) mailboxUi.close();
+    else void mailboxUi.refreshRequests();
+    if (throughDoor) {
+      playSfx("door");
+      doorFade.reveal();
+    }
 
     const me = msg.entities.find((e) => e.id === msg.you);
     const start = me ?? { x: m.spawns.default?.x ?? m.width / 2, y: m.spawns.default?.y ?? m.height / 2, facing: "down" as const };
@@ -593,7 +917,7 @@ export async function startSession(
 
     // A shop belongs to an NPC in the zone we just left.
     hud.closeShop();
-    hud.setZone(msg.zone, visiting ? `${visiting.ownerName}'s home` : m.name);
+    hud.setZone(msg.zone, visiting ? `${visiting.ownerName}'s ${nextHomeMap === "home_in" ? "house" : "home"}` : m.name);
     hud.setInventory(store.inventory);
     hud.setGoals(store.goals);
     if (me?.hp !== undefined) hud.setHp(me.hp, me.maxHp ?? me.hp);
@@ -618,23 +942,25 @@ export async function startSession(
     }
     for (const id of msg.del) lastHp.delete(id);
     combatSfx.onTick(msg.upd, msg.del, store.youId, performance.now());
+    farmFx.tick();
     const mine = store.youId ? msg.upd.find((e) => e.id === store.youId) : undefined;
     if (mine?.act?.k === "sit") {
       // On a chair: follow the server exactly, so standing up starts from the seat.
       predictor.reset({ x: mine.x, y: mine.y }, mine.facing);
       if (mine.hp !== undefined) hud.setHp(mine.hp, mine.maxHp ?? mine.hp);
     } else if (mine) {
-      predictor.reconcile(mine, msg.ack);
+      predictor.reconcile(mine, msg.ack, msg.ackMs);
       if (mine.hp !== undefined) hud.setHp(mine.hp, mine.maxHp ?? mine.hp);
     } else if (msg.ack !== undefined && store.youId) {
       // Ack without a position change (e.g. blocked move): still let the predictor drop acked inputs.
       const latest = store.latest(store.youId);
-      if (latest) predictor.reconcile(latest, msg.ack);
+      if (latest) predictor.reconcile(latest, msg.ack, msg.ackMs);
     }
   }
 
   function onReject(msg: Extract<ServerMsg, { t: "reject" }>): void {
     const kind = msg.req ? pendingReqs.get(msg.req) : undefined;
+    farmFx.rejected(msg.req);
     if (msg.req) pendingReqs.delete(msg.req);
     if (msg.action === "move" || msg.action === "moveTo") {
       const latest = store.youId ? store.latest(store.youId) : undefined;
@@ -643,7 +969,7 @@ export async function startSession(
     if (kind === "place" || kind === "moveObject" || msg.action === "place" || msg.action === "moveObject") {
       // Server state wins: redraw the furniture from the store, dropping any optimistic ghost.
       world?.build.exit();
-      world?.farm.setObjects(store.objects.values());
+      world?.farm.setObjects(store.objects.values(), map());
       syncBuildBanner();
     }
     if (msg.reason) notice(msg.reason, "error");
@@ -651,19 +977,118 @@ export async function startSession(
   }
 
   // ------------------------------------------------------------ actions
+  /** What the rules say about using the selected item on a tile, from what the client knows. */
+  function probeAt(tile: Vec2): { target: ToolTarget; outcome: ToolOutcome } | null {
+    const m = map();
+    const s = store.inventory.slots[selectedSlot];
+    if (!m || !s) return null;
+    const farm = store.zone === "home" && !visiting;
+    const monsters = store.sample(performance.now()).filter((e) => e.kind === "monster");
+    const target = targetAtTile(
+      { map: m, farm, farmTiles: store.farm, objects: store.objects.values(), brokenRocks: store.brokenRocks, rockOres: store.rockOres, trees: store.trees, monsters },
+      tile,
+      farmTime(),
+    );
+    return { target, outcome: predictUse(s.item, target, farm, getItem(s.item)?.power) };
+  }
+  const predictAt = (tile: Vec2): ToolOutcome | null => probeAt(tile)?.outcome ?? null;
+
   function useAt(tile: Vec2): void {
+    const now = performance.now();
+    // Nothing else happens until the swing lands.
+    if (swingLocked(swing, now)) return;
     const inv = store.inventory;
     // Visitors carry nothing here; their `use` only ever helps harvest (server-checked).
     if (!visiting && !inv.slots[selectedSlot]) {
       notice("Nothing in that slot.", "error");
       return;
     }
-    sendTagged({ t: "use", slot: selectedSlot, x: tile.x, y: tile.y }, "use");
+    const item = visiting ? null : (inv.slots[selectedSlot]?.item ?? null);
+    const me = you();
+    // Swing right away (even at nothing): the server's answer only adds the results.
+    const s = me ? startSwing(item, me, tile, now, serverNow()) : null;
+    if (s) {
+      swing = s;
+      localAct = s.act;
+    }
+    const req = sendTagged({ t: "use", slot: selectedSlot, x: tile.x, y: tile.y }, "use");
+    const used = usableItem(inv, selectedSlot);
+    const water = home?.water ?? null;
+    const atHome = store.zone === "home" && !visiting;
+    const outcome = item ? predictAt(tile) : null;
     const sfx = sfxForUse(inv, selectedSlot);
-    if (sfx === "tool_sword") combatSfx.swing(tile, store.sample(performance.now()));
-    else playSfx(sfx);
-    const kind = usableItem(inv, selectedSlot) === "watering_can" ? "water" : "dust";
-    world?.effects.burst({ x: tile.x + 0.5, y: tile.y + 0.5 }, kind);
+    const clunk = !!s && !!outcome && !outcome.ok && !!outcome.reason;
+    // The sword's whoosh starts with the swing; everything else is the sound of it landing.
+    if (sfx === "tool_sword" && !clunk) combatSfx.swing(tile, store.sample(now));
+    const land = (): void => {
+      if (atHome) farmFx.used(used, tile, req, water);
+      if (clunk) playSfx("tool_clunk");
+      else if (sfx !== "tool_sword") playSfx(sfx);
+      if (outcome?.ok) impactFx(tile, outcome.effect, used);
+    };
+    // Seeds and other non-swings land at once; a swing lands at its impact frame (see frame()).
+    if (s) onImpact = land;
+    else land();
+  }
+
+  /** What your own swing shows the moment it lands, before the server's answer. */
+  function impactFx(tile: Vec2, effect: ToolEffect, used: string | null): void {
+    const w = world;
+    const m = map();
+    if (!w || !m) return;
+    const at = { x: tile.x + 0.5, y: tile.y + 0.5 };
+    if (effect === "till" || effect === "water" || effect === "plant" || effect === "clear") {
+      w.effects.burst(at, used === "watering_can" ? "water" : "dust");
+    } else if (effect === "hitRock") {
+      const rock = m.rocks?.find((r) => r.x === tile.x && r.y === tile.y && !store.brokenRocks.has(r.id));
+      if (!rock) return;
+      w.hitFx.shake(w.farm.rockSprite?.(rock.id));
+      w.hitFx.chips({ x: rock.x, y: rock.y }, "stone", 6);
+      shownHits.add(rock.id);
+    } else if (effect === "hitTree" || effect === "hitStump") {
+      const tree = m.props.find((p) => p.type === "tree" && p.x === tile.x && p.y === tile.y);
+      if (!tree) return;
+      w.trees.hit(tree.id);
+      shownHits.add(tree.id);
+    }
+  }
+
+  /** True (once) when `msg` is the server's echo of a hit your swing already showed. */
+  function ownShownHit(msg: { id: string; by?: string }): boolean {
+    return msg.by !== undefined && msg.by === store.youId && shownHits.delete(msg.id);
+  }
+
+  /** Rock hit (shake, chips, cracks), break (burst and drops) or respawn. */
+  function onRockMsg(w: World, rock: { id: string; x: number; y: number }, msg: Extract<ServerMsg, { t: "rock" }>): void {
+    const at = { x: rock.x, y: rock.y };
+    if (!msg.broken && (msg.hits ?? 0) > 0) {
+      // Your own swing already shook it and threw chips at impact: just deepen the cracks.
+      if (ownShownHit(msg)) return w.hitFx.crack(rock.id, at, msg.hits!, msg.need ?? 2);
+      w.hitFx.shake(w.farm.rockSprite?.(rock.id));
+      w.hitFx.chips(at, "stone", 6);
+      w.hitFx.crack(rock.id, at, msg.hits!, msg.need ?? 2);
+      playSfx("tool_pickaxe");
+      return;
+    }
+    w.hitFx.crack(rock.id, at, 0, 0);
+    if (msg.broken) {
+      playSfx("rock_break");
+      w.hitFx.chips(at, "stone", 16, 0.3);
+      w.effects.burst({ x: rock.x + 0.5, y: rock.y + 0.5 }, "dust");
+      if (msg.drops?.length) w.hitFx.drops({ x: rock.x + 0.5, y: rock.y + 0.9 }, msg.drops);
+    }
+  }
+
+  /** Starts loading the selected tool's action sheet, so its first swing isn't lost. */
+  let preloaded = "";
+  function preloadSelectedTool(): void {
+    const me = you();
+    const item = store.inventory.slots[selectedSlot]?.item;
+    if (!me || !item || !isSwingTool(toolKeyOf(item))) return;
+    const key = `${me.sprite}|${JSON.stringify(me.look ?? null)}|${item}`;
+    if (key === preloaded) return;
+    // action() starts the load and returns null until the images are in; ask again later.
+    if (characterFor(art, me).action?.(item)) preloaded = key;
   }
 
   /** Edible item in the selected slot (home only), for the Eat button / Q key. */
@@ -680,7 +1105,16 @@ export async function startSession(
   function eatSelected(): void {
     if (!edibleSelected()) return;
     sendTagged({ t: "eat", slot: selectedSlot }, "use");
-    playSfx("harvest");
+  }
+
+  /** A bite (crunch) or a hold-up (fanfare and sparkles), heard when it's you or near you. */
+  function itemPoseBeat(id: string, kind: "eat" | "hold"): void {
+    const me = you();
+    const e = id === store.youId ? me : store.latest(id);
+    if (!me || !e || Math.hypot(e.x - me.x, e.y - me.y) > 10) return;
+    if (kind === "eat") return playSfx("eat");
+    playSfx("goal");
+    world?.effects.burst({ x: e.x, y: e.y - 1.8 }, "sparkle");
   }
 
   /** Asks "Go to sleep? The day will end." and sends sleep on yes. */
@@ -730,6 +1164,10 @@ export async function startSession(
           void askSleep();
           break;
         }
+        const herb = world.groundItems.nearestForage(me, FORAGE_REACH);
+        if (herb) return interact(`${GROUND_TARGET_PREFIX}${herb.id}`);
+        const chest = chestFor(world.chests.list(), me, ahead, CHEST_REACH);
+        if (chest) return interact(`${CHEST_TARGET_PREFIX}${chest.id}`);
         const prop = world.props.propAt(ahead) ?? world.props.propAt(floorTile(me));
         if (prop) interact(propTarget(map(), prop, selectedSlot));
         break;
@@ -749,7 +1187,8 @@ export async function startSession(
         else setBuildItem(selectedSlot);
         break;
       case "rotate":
-        if (world.build.active()) world.build.rotate();
+      case "rotateBack":
+        if (world.build.active()) world.build.rotate(a === "rotate" ? 1 : -1);
         break;
       case "cancel":
         if (world.build.active()) setBuildItem(null);
@@ -765,6 +1204,8 @@ export async function startSession(
     const me = you();
     if (!world || !me) return;
     const tile = floorTile(p.tile);
+    // Right-click on a player opens their card (ui/player-card.ts): never a pickup, tool or step.
+    if (p.button === 2 && !world.build.active() && playerUnder(p.tile)) return;
 
     if (world.build.active()) {
       if (p.button === 2) return setBuildItem(null);
@@ -818,16 +1259,32 @@ export async function startSession(
       if (st?.kind === "player" && st.name) return hud.whisper(st.name);
     }
 
+    if (forageInteract(me, tile)) return;
+    if (chestInteract(me, tile)) return;
     const prop = world.props.propAt(tile);
+    // The well is a prop, but with the watering can in hand clicking it refills the can.
+    const m = map();
+    if (prop && m && store.zone === "home" && usableItem(store.inventory, selectedSlot) === "watering_can" && isWaterSource(m, tile.x, tile.y)) {
+      if (inUseRange(me, p.tile)) return useAt(tile);
+      return moveTo(tile.x + 0.5, tile.y + 1.5);
+    }
     if (prop) {
       if (withinInteract(me, { x: tile.x + 0.5, y: tile.y + 0.5 })) interact(propTarget(map(), prop, selectedSlot));
       else moveTo(tile.x + 0.5, tile.y + 1.5);
       return;
     }
 
-    if (inUseRange(me, p.tile) && usableHere(store.inventory, selectedSlot, store.zone)) {
-      return useAt(useTarget(me, me.facing, p.tile));
+    // Left click with a tool (or seeds at home) uses it on the clicked tile when it is in reach;
+    // further away it walks there.
+    // Inside the house there is nothing to till, water or mine: clicks walk.
+    const indoors = world.map.ambient === "indoor" && store.zone === "home";
+    const tool = !indoors && inUseRange(me, p.tile) ? usableHere(store.inventory, selectedSlot, store.zone) : null;
+    if (tool) {
+      const t = useTarget(me, me.facing, p.tile);
+      const probe = probeAt(t);
+      if (clickUsesTool(tool, probe?.outcome ?? null, probe?.target ?? null)) return useAt(t);
     }
+    if (swingLocked(swing, performance.now())) return;
     moveTo(tile.x + 0.5, tile.y + 0.5);
   }
 
@@ -837,8 +1294,22 @@ export async function startSession(
     input.onClick(onClick),
     input.onPointerMove((p) => {
       if (world?.build.active()) world.build.pointer(floorTile(p.tile));
+      else cursorHint(p.tile);
     }),
   ];
+
+  /** Pointer cursor over a tile the selected tool would do something to (and is in reach). */
+  let hintKey = "";
+  function cursorHint(at: Vec2): void {
+    const me = you();
+    const tile = floorTile(at);
+    const key = `${tile.x},${tile.y}|${selectedSlot}`;
+    if (key === hintKey || !me) return;
+    hintKey = key;
+    const tool = inUseRange(me, at) ? usableHere(store.inventory, selectedSlot, store.zone) : null;
+    const probe = tool ? probeAt(tile) : null;
+    game.app.canvas.style.cursor = probe?.outcome.ok ? "pointer" : "";
+  }
 
   // ------------------------------------------------------------ frame loop
   const refreshCrops = every(10_000, () => world?.farm.setFarm(store.farm.values(), farmTime()));
@@ -847,7 +1318,10 @@ export async function startSession(
   function homeLights(): Vec2[] {
     const out: Vec2[] = [];
     for (const o of store.objects.values()) if (o.item === "lamp") out.push({ x: o.x + 0.5, y: o.y + 0.3 });
-    for (const pr of map()?.props ?? []) if (pr.type === "lantern_post") out.push({ x: pr.x + pr.w / 2, y: pr.y + 0.2 });
+    for (const pr of map()?.props ?? []) {
+      if (pr.type === "lantern_post" || pr.type === "wall_sconce") out.push({ x: pr.x + pr.w / 2, y: pr.y + 0.2 });
+      else if (pr.type === "hearth" || pr.type === "fireplace") out.push({ x: pr.x + pr.w / 2, y: pr.y + 0.5 });
+    }
     return out;
   }
   function updateHomeClock(): void {
@@ -862,19 +1336,32 @@ export async function startSession(
     }
   }
   const refreshPing = every(1_000, () => hud.setPing(Math.round(conn.rtt())));
+  const refreshPreload = every(400, preloadSelectedTool);
   const refreshStats = every(STATS_MS, requestStats);
 
   function frame(dt: number): void {
     refreshPing(dt);
     refreshStats(dt);
     if (!world || pendingZone) return;
-    const { dx, dy } = input.dir();
-    const step = predictor.step(dx, dy, dt);
+    const nowMs = performance.now();
+    // Your swing's effect lands at its impact frame, then any held server results that are due.
+    if (takeImpact(swing, nowMs)) {
+      const land = onImpact;
+      onImpact = null;
+      land?.();
+    }
+    applyDueImpacts(nowMs);
+    // Movement pauses while a swing plays out.
+    const locked = swingLocked(swing, nowMs);
+    const { dx, dy } = locked ? { dx: 0, dy: 0 } : input.dir();
+    const step = predictor.step(dx, dy, dt, performance.now());
+    refreshPreload(dt);
     if (step.send) send(step.send);
 
     const states = visibleEntities();
     world.entities.sync(states, dt);
     world.overlays.sync(states, (id) => world!.entities.headOf(id), store.youId);
+    world.itemPoses.sync(states, (id) => world!.entities.headOf(id), performance.now(), dt);
     const me = states.find((e) => e.id === store.youId) ?? null;
     if (me) camera.follow(me.x, me.y);
     // The audio module rate-limits steps itself, so calling every moving frame is fine.
@@ -884,9 +1371,17 @@ export async function startSession(
     world.effects.update(dt, me ? { x: me.x, y: me.y } : null);
     updateHomeClock();
     world.doorHint.update(world.map, me);
+    // Stepping onto the house door: start the fade now, the server's welcome finishes it.
+    if (me && homeMapNow && exitAt(world.map, me.x, me.y)?.map) doorFade.cover();
     refreshCrops(dt);
   }
   const stopLoop = startLoop(game.app.ticker, frame);
+  // Key presses go out at once (not on the next frame), stamped with the event time.
+  const stopDir = input.onDir((d, at) => {
+    if (!world || pendingZone) return;
+    const msg = predictor.setDir(d.dx, d.dy, Math.min(at, performance.now()));
+    if (msg) send(msg);
+  });
 
   const onResize = () => camera.resize(game.width(), game.height());
   window.addEventListener("resize", onResize);
@@ -908,7 +1403,8 @@ export async function startSession(
       send,
       moveTo,
       tileToScreen: (x, y) => camera.tileToScreen(x, y),
-      rocks: () => (map()?.rocks ?? []).filter((r) => !store.brokenRocks.has(r.id)),
+      rocks: () => (map()?.rocks ?? []).filter((r) => !store.brokenRocks.has(r.id)).map((r) => ({ ...r, ore: store.rockOres.get(r.id) ?? r.ore })),
+      props: () => (map()?.props ?? []).map((p) => ({ id: p.id, type: p.type, x: p.x, y: p.y, w: p.w, h: p.h })),
     });
   }
   exposeDebug();
@@ -922,11 +1418,15 @@ export async function startSession(
       if (destroyed) return;
       destroyed = true;
       creator?.close();
+      tutorial.destroy();
       stopLoop();
+      stopDir();
       window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onEatKey);
       homeUi.destroy();
       visitsUi.destroy();
+      mailboxUi.destroy();
+      doorFade.destroy();
       for (const u of socialUnsubs) u();
       for (const u of unsubs) u();
       conn.close();

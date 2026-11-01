@@ -7,7 +7,7 @@
 //
 // Furniture is placed in floor coordinates (fx, fy) = (0, 0) at the floor's top-left tile.
 
-import { Ground, type InteriorZoneId, type MapData, type MapProp } from "../../types";
+import { Ground, type HomeMapId, type InteriorZoneId, type MapData, type MapExit, type MapProp } from "../../types";
 import { MapBuilder } from "../builder";
 import type { PropType } from "../props";
 import { doorFor } from "./doors";
@@ -15,7 +15,8 @@ import { TALL_WALL_PROPS, WALL_DECOR_PROPS, wallPiece, type WallFeature, type Wa
 import { deriveSeats } from "./rules";
 
 export interface RoomSpec {
-  zone: InteriorZoneId;
+  /** A village interior, or "home" for the inside of a player's house (see homeIn.ts). */
+  zone: InteriorZoneId | "home";
   /** Floor size in tiles (walls excluded). */
   w: number;
   h: number;
@@ -31,6 +32,14 @@ export interface RoomSpec {
    * - (left free for a prop placed with wallProp, e.g. stairs). Missing chars are plain.
    */
   wallPattern?: string;
+  /** Display name; village interiors default to their door's name. */
+  name?: string;
+  /** Where the door leads; default the village (spawn "from_<zone>"). */
+  exit?: Pick<MapExit, "to" | "spawn" | "map">;
+  /** Name of the spawn just inside the door; default "from_village". */
+  entrySpawn?: string;
+  /** Home maps only. */
+  homeMap?: HomeMapId;
 }
 
 const FEATURE: Record<string, WallFeature> = { p: "plain", w: "window", s: "shelf", a: "art" };
@@ -57,9 +66,10 @@ export class Room {
     }
 
     // Way in and out: the door column stays clear of furniture for two rows.
-    b.exit({ x: door.x, y: door.y, w: 1, h: 1 }, "village", `from_${spec.zone}`);
+    const out = spec.exit ?? { to: "village", spawn: `from_${spec.zone}` };
+    b.exit({ x: door.x, y: door.y, w: 1, h: 1 }, out.to, out.spawn, out.map);
     b.spawn("default", door.x, door.y - 2);
-    b.spawn("from_village", door.x, door.y - 2);
+    b.spawn(spec.entrySpawn ?? "from_village", door.x, door.y - 2);
     b.prop("doormat", door.x, door.y - 1, { id: "doormat" });
   }
 
@@ -88,7 +98,9 @@ export class Room {
   }
 
   build(): MapData {
-    const map = this.b.build({ zone: this.spec.zone, name: doorFor(this.spec.zone).name, ambient: "indoor" });
+    const { zone, homeMap } = this.spec;
+    const name = this.spec.name ?? (zone === "home" ? "Home" : doorFor(zone).name);
+    const map = this.b.build({ zone, name, ambient: "indoor", ...(homeMap ? { homeMap } : {}) });
     moveWindowsFromBehindFurniture(map, this.spec.wall);
     map.seats = deriveSeats(map);
     map.interior = { wall: this.spec.wall, ...(this.spec.floorStyle ? { floor: this.spec.floorStyle } : {}) };

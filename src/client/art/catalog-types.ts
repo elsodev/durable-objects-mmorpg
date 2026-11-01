@@ -46,10 +46,15 @@ export interface SpriteEntry {
   anchor?: PointTuple;
   footprintTiles?: { w: number; h: number };
   shadow?: string;
-  /** Animation frames (rects in the same PNG), e.g. campfire. */
-  frames?: RectTuple[];
+  /**
+   * Animation frames (rects in the same PNG): a list loops (campfire); named closed/opening/open
+   * frames make a lid that opens and closes (shipping bin).
+   */
+  frames?: RectTuple[] | Record<string, RectTuple>;
   /** Furniture: named alternative rects (left, right, back, ...). Ores: array of variants. */
   variants?: Record<string, RectTuple> | RectTuple[];
+  /** Furniture: feet point of each named variant when it differs in size from `rect`. */
+  variantAnchors?: Record<string, PointTuple>;
   /** Market stall: shopkeeper feet point relative to rect origin. */
   keeper?: PointTuple;
   /** Signpost: centre of the destination label plate, relative to rect origin. */
@@ -64,7 +69,12 @@ export interface SpriteEntry {
 
 export interface CropEntry {
   file: string;
+  /** seedling, small, medium, ready */
   stages?: RectTuple[];
+  /** Wilted art for the seedling, small and medium stages (ready crops don't wilt). */
+  wilted?: RectTuple[];
+  /** The dead plant. */
+  dead?: RectTuple;
   anchor?: PointTuple;
   shadow?: string;
 }

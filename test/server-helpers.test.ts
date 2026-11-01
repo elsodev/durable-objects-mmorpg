@@ -68,8 +68,12 @@ describe("sanitize", () => {
         null,
       ],
     });
-    expect(inv).toEqual({ coins: 0, slots: [{ item: "hoe", qty: 1 }, { item: "turnip", qty: 99 }] });
-    expect(sanitizeInventory(null)).toEqual({ coins: 0, slots: [] });
+    // Bad entries become empty slots in place, so the good ones keep their positions.
+    const want: unknown[] = Array.from({ length: 24 }, () => null);
+    want[0] = { item: "hoe", qty: 1 };
+    want[3] = { item: "turnip", qty: 99 };
+    expect(inv).toEqual({ coins: 0, slots: want });
+    expect(sanitizeInventory(null)).toEqual({ coins: 0, slots: Array.from({ length: 24 }, () => null) });
   });
   it("clamps hp and checks zones", () => {
     expect(clampHp(500, 100)).toBe(100);
@@ -88,6 +92,7 @@ describe("sanitize", () => {
     expect(farm).toHaveLength(2);
     expect(farm[1].crop).toBeNull();
     expect(farm[1].wateredDays).toBe(0);
+    expect(farm[1].lastWateredDay).toBe(0); // empty soil keeps the day it was watered
     const objs = sanitizeObjects([
       { id: "o1", item: "chair_wood", x: 4, y: 6, rotation: 0 },
       { id: "o1", item: "chair_wood", x: 5, y: 6, rotation: 0 },
@@ -151,9 +156,9 @@ describe("shop", () => {
     expect(sellTo(inv, shop, 1, 1).ok).toBe(false);
     expect(sellTo(inv, shop, 0, 4).ok).toBe(false);
     expect(sellTo(inv, shop, 0, 3).ok).toBe(true);
-    expect(inv).toEqual({ coins: 75, slots: [{ item: "stone", qty: 3 }] });
+    expect(inv).toEqual({ coins: 75, slots: [null, { item: "stone", qty: 3 }] });
     // Shipping bin (no shop) takes anything sellable, but not tools.
-    expect(sellTo(inv, null, 0, 3).ok).toBe(true);
+    expect(sellTo(inv, null, 1, 3).ok).toBe(true);
     expect(sellTo({ coins: 0, slots: [{ item: "hoe", qty: 1 }] }, null, 0, 1).ok).toBe(false);
   });
 });
@@ -189,5 +194,25 @@ describe("vitals and range", () => {
     expect(inToolReach({ x: 5.5, y: 5.5 }, 9, 5)).toBe(false);
     expect(distToRect({ x: 1, y: 1 }, { x: 0, y: 0, w: 2, h: 2 })).toBe(0);
     expect(distToRect({ x: 5, y: 1 }, { x: 0, y: 0, w: 2, h: 2 })).toBe(3);
+  });
+});
+
+describe("inventory save migration", () => {
+  it("pads an old packed save to the fixed grid, keeping every item in place", () => {
+    const old = { coins: 12, slots: [{ item: "hoe", qty: 1 }, { item: "turnip", qty: 4 }, { item: "axe", qty: 1 }] };
+    const inv = sanitizeInventory(old);
+    expect(inv.slots).toHaveLength(24);
+    expect(inv.slots.slice(0, 3)).toEqual(old.slots);
+    expect(inv.slots.slice(3).every((s) => s === null)).toBe(true);
+    // A new-style grid with holes survives a round trip unchanged.
+    const holes = sanitizeInventory({ coins: 0, slots: [null, { item: "hoe", qty: 1 }, null, { item: "turnip", qty: 2, quality: 2 }] });
+    expect(holes.slots[1]).toEqual({ item: "hoe", qty: 1 });
+    expect(holes.slots[3]).toEqual({ item: "turnip", qty: 2, quality: 2 });
+    expect(sanitizeInventory(holes)).toEqual(holes);
+  });
+  it("drops bad quality values but keeps the stack", () => {
+    const inv = sanitizeInventory({ coins: 0, slots: [{ item: "turnip", qty: 1, quality: "gold" }, { item: "turnip", qty: 1, quality: 99 }] });
+    expect(inv.slots[0]).toEqual({ item: "turnip", qty: 1 });
+    expect(inv.slots[1]).toEqual({ item: "turnip", qty: 1 });
   });
 });

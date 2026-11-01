@@ -2,7 +2,7 @@
 // taken back the same day. All-or-nothing and synchronous, like the shop.
 import type { Inventory, ItemId } from "../../shared/types";
 import type { ShipLine } from "../../shared/home";
-import { getItem } from "../../shared/items";
+import { getItem, isShippable } from "../../shared/items";
 import { addItem, canAdd, removeFromSlot } from "../../shared/engine";
 import { MAX_QTY } from "../../shared/validate";
 
@@ -11,7 +11,7 @@ export interface BinEntry {
   qty: number;
 }
 
-/** Separate shipments kept in the bin per day (each one can be undone, last first). */
+/** Separate entries kept in the bin per day (one per item; the last one can be taken back). */
 export const BIN_MAX = 48;
 
 export type BinResult = { ok: true; text: string } | { ok: false; reason: string };
@@ -21,11 +21,15 @@ export function shipSlot(inv: Inventory, bin: BinEntry[], slot: number): BinResu
   const s = Number.isInteger(slot) ? inv.slots[slot] : undefined;
   if (!s) return { ok: false, reason: "Pick something to ship first." };
   const def = getItem(s.item);
-  if (!def || def.sell <= 0 || def.kind === "tool") return { ok: false, reason: "That can't be shipped." };
-  if (bin.length >= BIN_MAX) return { ok: false, reason: "The bin is full until tonight." };
+  if (!def || !isShippable(def.id)) return { ok: false, reason: "That can't be shipped." };
   const { item, qty } = s;
+  // Same item again joins its earlier entry (moved to the end, so "take back" returns it all):
+  // the bin then fills up by kinds of item, not by trips.
+  const at = bin.findIndex((e) => e.item === item && e.qty + qty <= MAX_QTY);
+  if (at < 0 && bin.length >= BIN_MAX) return { ok: false, reason: "The bin is full until tonight." };
   if (!removeFromSlot(inv, slot, qty)) return { ok: false, reason: "Nothing in that slot." };
-  bin.push({ item, qty });
+  if (at >= 0) bin.push({ item, qty: qty + bin.splice(at, 1)[0]!.qty });
+  else bin.push({ item, qty });
   return { ok: true, text: `Shipped ${qty} ${def.name} — paid tonight` };
 }
 
@@ -43,7 +47,8 @@ export function unshipLast(inv: Inventory, bin: BinEntry[]): BinResult {
 export function binPayout(bin: readonly BinEntry[]): { lines: ShipLine[]; total: number } {
   const byItem = new Map<ItemId, ShipLine>();
   for (const e of bin) {
-    const price = getItem(e.item)?.sell ?? 0;
+    // Paid at each item's full sell value; anything unshippable (sell 0) pays nothing.
+    const price = isShippable(e.item) ? getItem(e.item)!.sell : 0;
     const line = byItem.get(e.item) ?? { item: e.item, qty: 0, coins: 0 };
     line.qty += e.qty;
     line.coins += price * e.qty;
@@ -59,7 +64,7 @@ export function sanitizeBin(v: unknown): BinEntry[] {
     if (out.length >= BIN_MAX) break;
     const def = e && typeof e === "object" ? getItem((e as BinEntry).item) : undefined;
     const qty = (e as BinEntry | undefined)?.qty;
-    if (!def || typeof qty !== "number" || !Number.isInteger(qty) || qty < 1) continue;
+    if (!def || !isShippable(def.id) || typeof qty !== "number" || !Number.isInteger(qty) || qty < 1) continue;
     out.push({ item: def.id, qty: Math.min(qty, MAX_QTY) });
   }
   return out;

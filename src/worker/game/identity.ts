@@ -2,6 +2,7 @@
 import { H_GUEST, H_SESSION, H_SPAWN, H_USER_ID, H_USER_NAME } from "../env";
 import type { VisitAttachment } from "../visit/visitors";
 import { coerceName } from "../../shared/names";
+import type { HomeMapId } from "../../shared/types";
 
 export const PLAYER_SPRITES = ["player_1", "player_2", "player_3", "player_4"] as const;
 export const PLAYER_MAX_HP = 100;
@@ -71,6 +72,8 @@ export interface SocketAttachment {
   /** Last known position, refreshed on periodic saves. */
   x?: number;
   y?: number;
+  /** Home sockets: the home map (yard or house) after the last door walked through. */
+  homeMap?: HomeMapId;
   /** Set on a visitor's socket in someone else's HomeRoom. */
   visit?: VisitAttachment;
 }

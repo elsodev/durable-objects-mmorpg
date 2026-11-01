@@ -1,5 +1,5 @@
 // Pure helpers for reading the art catalog: no Pixi, no DOM, so they are unit-testable.
-import type { AnimRow, Catalog, PointTuple, RectTuple, SpriteEntry } from "./catalog-types";
+import type { AnimRow, Catalog, CropEntry, PointTuple, RectTuple, SpriteEntry } from "./catalog-types";
 
 /** Stable 32-bit hash of a tile position (same tile -> same variant on every client). */
 export function hashXY(x: number, y: number): number {
@@ -29,6 +29,22 @@ export function asRect(v: unknown): RectTuple | null {
   const [x, y, w, h] = v as number[];
   if (w! <= 0 || h! <= 0 || x! < 0 || y! < 0) return null;
   return [x!, y!, w!, h!];
+}
+
+/**
+ * The sheet rect for a crop's stage and look. Ready crops never wilt, so a wilted ready crop keeps
+ * its ready art; a crop without wilted or dead frames falls back to its stage art.
+ */
+export function cropRect(e: CropEntry, stage: 0 | 1 | 2 | 3, look: "normal" | "wilted" | "dead" = "normal"): RectTuple | null {
+  if (look === "dead") {
+    const dead = asRect(e.dead);
+    if (dead) return dead;
+  }
+  if (look !== "normal" && stage < 3 && Array.isArray(e.wilted)) {
+    const w = asRect(e.wilted[stage]);
+    if (w) return w;
+  }
+  return Array.isArray(e.stages) ? asRect(e.stages[stage]) : null;
 }
 
 export function asPoint(v: unknown): PointTuple | null {
@@ -61,20 +77,37 @@ export function rowRects(row: AnimRow | undefined, frameW: number, frameH: numbe
  * Furniture rotation -> source rect. 0 = front (default rect), 1 = left, 2 = back, 3 = right
  * (a mirrored "left" when the sheet has no right view). Missing views fall back to the front.
  */
-export function furnitureView(entry: SpriteEntry, rotation: 0 | 1 | 2 | 3): { rect: RectTuple; mirror: boolean } | null {
+export function furnitureView(
+  entry: SpriteEntry,
+  rotation: 0 | 1 | 2 | 3,
+): { rect: RectTuple; mirror: boolean; anchor?: PointTuple } | null {
   const base = asRect(entry.rect);
   if (!base) return null;
   const v = entry.variants && !Array.isArray(entry.variants) ? entry.variants : {};
-  const left = asRect(v.left);
-  const right = asRect(v.right);
-  const back = asRect(v.back);
-  if (rotation === 1 && left) return { rect: left, mirror: false };
-  if (rotation === 2 && back) return { rect: back, mirror: false };
-  if (rotation === 3) {
-    if (right) return { rect: right, mirror: false };
-    if (left) return { rect: left, mirror: true };
-  }
+  const anchors = entry.variantAnchors ?? {};
+  const pick = (name: string, mirror: boolean) => {
+    const rect = asRect(v[name]);
+    if (!rect) return null;
+    const anchor = asPoint(anchors[name]);
+    return anchor ? { rect, mirror, anchor } : { rect, mirror };
+  };
+  if (rotation === 1) return pick("left", false) ?? { rect: base, mirror: false };
+  if (rotation === 2) return pick("back", false) ?? { rect: base, mirror: false };
+  // Facing right: its own art, else the left art mirrored, else the front mirrored (items only
+  // allow rotation 3 without turned art where a mirror image reads right, see ItemDef.rotations).
+  if (rotation === 3) return pick("right", false) ?? pick("left", true) ?? { rect: base, mirror: true };
   return { rect: base, mirror: false };
+}
+
+/**
+ * Anchor (px) for a furniture view whose rect differs in size from the front rect: keeps the
+ * front anchor's offset from the bottom centre, so side and back views stand on the same feet
+ * point (a 2x1 rotated bed is wider and shorter than the 1x2 front view).
+ */
+export function viewAnchorPx(base: RectTuple, baseAnchor: PointTuple | null, view: RectTuple): PointTuple {
+  const a = baseAnchor ?? [base[2] / 2, base[3]];
+  if (view[2] === base[2] && view[3] === base[3]) return a;
+  return [view[2] / 2 + (a[0] - base[2] / 2), view[3] - (base[3] - a[1])];
 }
 
 /**

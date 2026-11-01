@@ -9,12 +9,19 @@ import { createChat } from "./chat";
 import { createAccountPrompt, createGoals, createNotices, createShop } from "./dialogs";
 import { iconFor, setIconSource } from "./icons";
 import { createFriendsPanel, type FriendsPanel } from "./friends";
-import { createPlayerMenu } from "./player-menu";
+import { createPlayerCard } from "./player-card";
+import { createMuteStore, type MuteStore } from "./mutes";
+import { parseMuteCommand } from "../../shared/players";
+import { createBondsUi, type BondsUi } from "./bonds";
 import { badgeText, whisperPrefill } from "./friends-logic";
 import { FRIEND_NAME_HINT, parseFriendCommand } from "../../shared/friends";
 import { parseHomeCommand } from "../../shared/visits";
 import { runHomeCommand } from "./visits-api";
 import { uiSound } from "./sound";
+import { createGameMenu, type GameMenu } from "./game-menu";
+import { createMapPane, type MapPane } from "./map-pane";
+import { createSlotDrag, type SlotDrag } from "./slot-drag";
+import { planMove } from "./slot-drag-logic";
 import { openCredits } from "./credits";
 import { mountAudioControls } from "../audio/player";
 import { HOTBAR_SIZE, heartStates, hotbarSlots, pingLevel, shortcutFor } from "./hud-logic";
@@ -49,6 +56,15 @@ function button(text: string, className: string, id: string | undefined, onClick
     ev.stopPropagation();
     onClick();
   });
+  return b;
+}
+
+/**
+ * Adds the shortcut key after a button's label, as " (G)". The key is set in the body font: in
+ * the pixel font G, B and O read as 6, 8 and 0.
+ */
+function keyed(b: HTMLButtonElement, key: string): HTMLButtonElement {
+  b.appendChild(el("span", { className: "dm-btn-key", text: ` (${key})` }));
   return b;
 }
 
@@ -122,11 +138,18 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   hud.appendChild(status);
 
   // --- menu (top-right)
-  const inventoryBtn = button("Bag (I)", "dm-btn dm-btn-small", "hud-btn-inventory", () => toggleInventory());
-  const goalsBtn = button("Goals (G)", "dm-btn dm-btn-small", "hud-btn-goals", () => toggleGoals());
-  const friendsBtn = button("Friends (O)", "dm-btn dm-btn-small", "hud-btn-friends", () => friends.toggle());
+  const inventoryBtn = keyed(button("Bag", "dm-btn dm-btn-small", "hud-btn-inventory", () => toggleInventory()), "I");
+  const goalsBtn = keyed(button("Goals", "dm-btn dm-btn-small", "hud-btn-goals", () => toggleGoals()), "G");
+  const friendsBtn = keyed(button("Friends", "dm-btn dm-btn-small", "hud-btn-friends", () => menu.toggle("friends")), "O");
+  const bondsBtn = keyed(button("Hearts", "dm-btn dm-btn-small", "hud-btn-bonds", () => menu.toggle("hearts")), "H");
+  const mapBtn = keyed(button("Map", "dm-btn dm-btn-small", "hud-btn-map", () => menu.toggle("map")), "M");
+  const optionsBtn = button("Options", "dm-btn dm-btn-small", "hud-btn-options", () => menu.toggle("options"));
+  bondsBtn.title = "Relationships with villagers";
   const wardrobeBtn = game.openWardrobe
     ? button("Wardrobe", "dm-btn dm-btn-small", "hud-btn-wardrobe", () => game.openWardrobe?.())
+    : null;
+  const controlsBtn = game.openControls
+    ? button("Controls", "dm-btn dm-btn-small", "hud-btn-controls", () => game.openControls?.())
     : null;
   const creditsBtn = button("Credits", "dm-btn dm-btn-small", "hud-btn-credits", () => {
     uiSound("click");
@@ -142,12 +165,21 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       void showAccountPrompt("Create an account to keep your farm and explore Mossbrook.");
     }),
   );
-  const menu = el("div", { id: "hud-menu", className: "dm-panel hud-menu" }, guestBadge, inventoryBtn, goalsBtn, friendsBtn);
-  if (wardrobeBtn) menu.appendChild(wardrobeBtn);
-  menu.appendChild(creditsBtn);
-  menu.appendChild(signOutBtn);
-  hud.appendChild(menu);
-  safe("audio controls", () => mountAudioControls(menu), null);
+  const topMenu = el("div", { id: "hud-menu", className: "dm-panel hud-menu" }, guestBadge, inventoryBtn, goalsBtn, friendsBtn, bondsBtn, mapBtn, optionsBtn);
+  topMenu.appendChild(signOutBtn);
+  hud.appendChild(topMenu);
+  safe("audio controls", () => mountAudioControls(topMenu), null);
+  // Wardrobe, controls and credits live in the menu's Options tab.
+  const optionsPane = el("div", { id: "options-pane", className: "options-pane" });
+  optionsPane.hidden = true;
+  const optionButtons = el("div", { className: "options-buttons" });
+  if (wardrobeBtn) optionButtons.appendChild(wardrobeBtn);
+  if (controlsBtn) optionButtons.appendChild(controlsBtn);
+  optionButtons.appendChild(creditsBtn);
+  optionsPane.appendChild(optionButtons);
+  optionsPane.appendChild(
+    el("p", { className: "options-keys dm-muted", text: "Keys: I bag · H hearts · O friends · M map · G goals · Esc closes. Drag items between slots; Shift-drag splits a stack." }),
+  );
 
   // --- global stats (top-right, under the menu; shared zones only)
   const statsEl = el("div", { id: "hud-stats", className: "dm-panel hud-stats" });
@@ -161,7 +193,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     statsEl.hidden = !show;
     if (!show || !stats || !zoneId) return;
     // Sit just under the menu, which wraps to two rows on some widths (on narrow screens it moves to the bottom).
-    const m = menu.getBoundingClientRect();
+    const m = topMenu.getBoundingClientRect();
     statsEl.style.top = m.height > 0 && m.top < 120 ? `${Math.round(m.bottom + 6)}px` : "";
     clear(statsEl);
     for (const r of statRows(stats, zoneId)) {
@@ -187,7 +219,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     "div",
     { id: "build-banner", className: "dm-panel hud-build-banner" },
     el("span", { className: "dm-title", text: "Build mode" }),
-    el("span", { className: "dm-muted", text: "Click to place · R to rotate · Esc to cancel" }),
+    el("span", { className: "dm-muted", text: "Click to place · R or wheel to rotate · Esc to cancel" }),
     button("Done", "dm-btn dm-btn-primary dm-btn-small", "build-done", () => {
       uiSound("confirm");
       game.setBuildItem(null);
@@ -217,20 +249,57 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   }
   hud.appendChild(hotbar);
 
+  // --- drag and drop between bag slots (hotbar + inventory panel)
+  const drag: SlotDrag | null = safe(
+    "slot drag",
+    () =>
+      createSlotDrag({
+        iconOf: (slot) => {
+          const s = inv?.slots[slot];
+          return s ? itemIcon(s.item) : null;
+        },
+        enabled: () => !buildMode,
+        onDrop: (from, to, split) => moveBagSlot(from, to, split),
+      }),
+    null,
+  );
+  if (drag) slotEls.forEach((b, i) => drag.attach(b, i));
+
+  /** Optimistic move; the server answers with the real bag (or a reject and the old one). */
+  function moveBagSlot(from: number, to: number, split: boolean): void {
+    const plan = planMove(inv, from, to, split);
+    if (!plan) {
+      uiSound("error");
+      return;
+    }
+    uiSound(plan.result === "swap" ? "select" : "click");
+    applyInventory(plan.next);
+    game.send(plan.msg);
+  }
+
   // --- sub-modules, each in its own layer
   const invLayer = layer("inventory");
   const chatLayer = layer("chat");
   const shopLayer = layer("shop");
   const goalsLayer = layer("goals");
   const friendsLayer = layer("friends");
+  const bondsLayer = layer("bonds");
   const noticesLayer = layer("notices");
   const accountLayer = layer("account");
-  for (const l of [invLayer, goalsLayer, friendsLayer, chatLayer, shopLayer, noticesLayer, accountLayer]) hud.appendChild(l);
+  for (const l of [invLayer, goalsLayer, friendsLayer, bondsLayer, chatLayer, shopLayer, noticesLayer, accountLayer]) hud.appendChild(l);
 
+  const bonds: BondsUi = safe("bonds", () => createBondsUi(bondsLayer), {
+    setList() {},
+    bond() {},
+    said() {},
+    toggle() {},
+    close() {},
+    isOpen: () => false,
+  });
   const notices: Notices = safe("notices", () => createNotices(noticesLayer), { notice() {} });
   const inventory = safe(
     "inventory",
-    () => createInventoryPanel(invLayer, { onItem: (slot) => onInventoryItem(slot) }),
+    () => createInventoryPanel(invLayer, { onItem: (slot) => onInventoryItem(slot), drag: drag ?? undefined }),
     noopInventory,
   );
   const chat = safe(
@@ -245,6 +314,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         command: (text) => chatCommand(text),
         emote: (code) => (game.emote ? game.emote(code) : game.send({ t: "emote", code })),
         guest: () => game.isGuest(),
+        slashContext: game.slashContext ? () => game.slashContext!() : undefined,
       }),
     noopChat,
   );
@@ -252,6 +322,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   const shop = safe("shop", () => createShop(shopLayer, { send }), noopShop);
   const goals = safe("goals", () => createGoals(goalsLayer, { send }), noopGoals);
   const prefillChat = (text: string): void => chat.prefill?.(text);
+  const mutes: MuteStore = createMuteStore({ isGuest: () => safe("isGuest", () => game.isGuest(), false) });
   const friends: FriendsPanel = safe(
     "friends",
     () =>
@@ -264,6 +335,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         notice: (text, kind) => notices.notice(text, kind),
         isGuest: () => safe("isGuest", () => game.isGuest(), false),
         askAccount: () => void showAccountPrompt("Create an account to add friends and see when they're online."),
+        mutes,
         onBadge: (n) => {
           const text = badgeText(n);
           if (text) friendsBtn.dataset.badge = text;
@@ -273,16 +345,41 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       }),
     noopFriends,
   );
+  const inviteHome = (name: string): void =>
+    void runHomeCommand("invite", name, (t, kind) => notices.notice(t, kind));
   safe(
-    "player menu",
+    "player card",
     () =>
-      createPlayerMenu(friendsLayer, {
-        playerNameAt: (x, y) => game.playerNameAt?.(x, y) ?? null,
-        addFriend: (name) => void friends.addByName(name),
-        whisper: (name) => prefillChat(whisperPrefill(name)),
+      createPlayerCard(friendsLayer, {
+        playerAt: (x, y) => game.playerAt?.(x, y) ?? null,
+        playerByName: (name) => game.playerByName?.(name) ?? null,
+        distanceTo: (id) => (game.playerDistance ? game.playerDistance(id) : 0),
+        portrait: (id) => game.playerPortrait?.(id) ?? null,
+        context: () => ({
+          viewerGuest: safe("isGuest", () => game.isGuest(), false),
+          homeOwner: safe("slashContext", () => game.slashContext?.().homeOwner ?? false, false),
+        }),
+        addFriend: (name) => friends.addByName(name),
+        friendsChanged: () => void friends.refresh(),
+        prefillChat,
+        inviteHome,
+        mutes,
+        notice: (text, kind) => notices.notice(text, kind),
       }),
     null,
   );
+  async function muteCommand(cmd: "mute" | "unmute", name: string): Promise<void> {
+    const say = (t: string, kind: "info" | "error"): void => notices.notice(t, kind);
+    if (!name) return say(`Usage: /${cmd} name. ${FRIEND_NAME_HINT}`, "error");
+    if (cmd === "mute") {
+      const r = await mutes.mute({ name });
+      return "error" in r ? say(r.error, "error") : say(`Muted ${r.name}. You won't see their chat.`, "info");
+    }
+    const id = mutes.set.idByName(name);
+    if (!id) return say(`${name} isn't muted.`, "error");
+    const r = await mutes.unmute(id);
+    return "error" in r ? say(r.error, "error") : say(`Unmuted ${r.name || name}.`, "info");
+  }
   function chatCommand(text: string): boolean {
     const home = parseHomeCommand(text);
     if (home) {
@@ -291,6 +388,12 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       } else {
         void runHomeCommand(home.cmd, home.name, (t, kind) => notices.notice(t, kind));
       }
+      return true;
+    }
+    const mute = parseMuteCommand(text);
+    if (mute) {
+      if (safe("isGuest", () => game.isGuest(), false)) void showAccountPrompt("Create an account to keep a mute list.");
+      else void muteCommand(mute.cmd, mute.name);
       return true;
     }
     const cmd = parseFriendCommand(text);
@@ -303,7 +406,66 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     show: async () => false,
   });
 
+  // --- the tabbed menu: Bag, Hearts, Friends, Map, Options
+  const panelIn = (layerEl: HTMLElement, id: string): HTMLElement => {
+    const found = layerEl.querySelector<HTMLElement>(`#${id}`);
+    if (found) return found;
+    const blank = el("div", { id });
+    blank.hidden = true;
+    return blank;
+  };
+  const mapPane: MapPane = safe("map", () => createMapPane({ zone: () => zoneId }), {
+    el: el("div"),
+    show() {},
+    hide() {},
+    refresh() {},
+  });
+  const menuLayer = layer("menu");
+  hud.appendChild(menuLayer);
+  const menu: GameMenu = safe(
+    "menu",
+    () =>
+      createGameMenu(menuLayer, {
+        bag: {
+          el: panelIn(invLayer, "inventory-panel"),
+          show: () => {
+            if (!inventory.isOpen()) inventory.toggle();
+          },
+          hide: () => inventory.close(),
+        },
+        hearts: {
+          el: panelIn(bondsLayer, "bonds-panel"),
+          show: () => {
+            if (!bonds.isOpen()) bonds.toggle();
+          },
+          hide: () => bonds.close(),
+        },
+        friends: { el: panelIn(friendsLayer, "friends-panel"), show: () => friends.open(), hide: () => friends.close() },
+        map: mapPane,
+        options: {
+          el: optionsPane,
+          show: () => {
+            optionsPane.hidden = false;
+          },
+          hide: () => {
+            optionsPane.hidden = true;
+          },
+        },
+      }),
+    { toggle() {}, open() {}, close() {}, isOpen: () => false, tab: () => "bag", destroy() {} },
+  );
+
   // --- behaviour
+  function applyInventory(next: Inventory): void {
+    inv = next;
+    coinsEl.textContent = next.coins.toLocaleString();
+    coinsEl.title = `${next.coins.toLocaleString()} coins`;
+    renderHotbar();
+    inventory.setInventory(next);
+    shop.setInventory(next);
+    goals.setInventory(next);
+  }
+
   function renderHotbar(): void {
     const slots = hotbarSlots(inv);
     slots.forEach((s, i) => {
@@ -362,8 +524,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   }
 
   function toggleInventory(): void {
-    // Panels play their own open/close sounds.
-    inventory.toggle();
+    menu.toggle("bag");
   }
 
   function toggleGoals(): void {
@@ -428,10 +589,15 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       toggleGoals();
     } else if (action === "friends") {
       e.preventDefault();
-      friends.toggle();
+      menu.toggle("friends");
+    } else if (action === "bonds") {
+      e.preventDefault();
+      menu.toggle("hearts");
+    } else if (action === "map") {
+      e.preventDefault();
+      menu.toggle("map");
     } else {
-      if (inventory.isOpen()) inventory.close();
-      friends.close();
+      menu.close();
     }
   };
   window.addEventListener("keydown", onKey);
@@ -439,22 +605,20 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   renderHotbar();
 
   return {
+    get mutes() {
+      return mutes.set;
+    },
     setZone(zone: ZoneId, title: string) {
       zoneEl.textContent = title || zone;
       hud.dataset.zone = zone;
       zoneId = zone;
       renderStats();
+      mapPane.refresh();
       refreshGuest();
       chat.setGuest?.(safe("isGuest", () => game.isGuest(), false));
     },
     setInventory(next: Inventory) {
-      inv = next;
-      coinsEl.textContent = next.coins.toLocaleString();
-      coinsEl.title = `${next.coins.toLocaleString()} coins`;
-      renderHotbar();
-      inventory.setInventory(next);
-      shop.setInventory(next);
-      goals.setInventory(next);
+      applyInventory(next);
     },
     setSelectedSlot(slot: number) {
       setSelected(slot);
@@ -510,6 +674,15 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       hud.classList.toggle("offline", state === "offline");
     },
     showAccountPrompt,
+    setBonds(list) {
+      bonds.setList(list);
+    },
+    bond(view, delta, talk, entityId, gifts) {
+      bonds.bond(view, delta, talk, entityId, gifts);
+    },
+    npcSaid(entityId, text) {
+      bonds.said(entityId, text);
+    },
     setIconSource(src: (item: ItemId) => string) {
       safe("icons", () => setIconSource(src), undefined);
       renderHotbar();

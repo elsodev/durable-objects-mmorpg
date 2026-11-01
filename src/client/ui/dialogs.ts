@@ -380,13 +380,12 @@ export const createAccountPrompt: CreateAccountPrompt = (root) => {
         const title = el("h2", "dlg-title", "Create an account to explore");
         title.id = "account-prompt-title";
         add(header, title, closeButton(() => finish(false)));
-        const why = el("p", "dlg-reason", String(reason).slice(0, MAX_TEXT));
+        // The embedded account form shows the reason and its own "Not now", so the dialog adds
+        // neither (they used to appear twice).
         const formHost = el("div", "dlg-account-form");
         const error = el("p", "dlg-error");
         error.hidden = true;
-        const footer = el("div", "dlg-footer");
-        add(footer, button("Not now", "dlg-cancel", () => finish(false), ""));
-        add(box, header, why, formHost, error, footer);
+        add(box, header, formHost, error);
         add(backdrop, box);
         add(root, backdrop);
         uiSound("open");

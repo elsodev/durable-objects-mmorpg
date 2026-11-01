@@ -53,13 +53,15 @@ export function isTypingTarget(t: unknown): boolean {
 }
 
 /** Which HUD shortcut a keydown triggers, or null (modifiers, auto-repeat and typing are ignored). */
-export function shortcutFor(e: KeyLike, typing: boolean): "inventory" | "goals" | "friends" | "escape" | null {
+export function shortcutFor(e: KeyLike, typing: boolean): "inventory" | "goals" | "friends" | "bonds" | "map" | "escape" | null {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return null;
   if (typing || isTypingTarget(e.target)) return null;
   const k = e.key.toLowerCase();
   if (k === "i") return "inventory";
   if (k === "g") return "goals";
   if (k === "o") return "friends";
+  if (k === "h") return "bonds";
+  if (k === "m") return "map";
   if (k === "escape") return "escape";
   return null;
 }

@@ -1,8 +1,9 @@
 // Frontend module contracts. Each module below is built separately,
 // so these interfaces are the ONLY way modules talk to each other. Add optional members if needed;
 // never rename or remove. Every factory returns an object with destroy() where it owns display objects.
-import type { Application, Container, Texture } from "pixi.js";
+import type { Application, Container, Sprite, Texture } from "pixi.js";
 import type { EmoteCode } from "../shared/emotes";
+import type { CropLook } from "../shared/engine";
 import type { ClientMsg, ServerMsg, VillageGoal } from "../shared/protocol";
 import type {
   EntityState,
@@ -13,6 +14,7 @@ import type {
   ItemId,
   MapData,
   PlacedObject,
+  RockOre,
   Vec2,
   ZoneId,
 } from "../shared/types";
@@ -75,6 +77,8 @@ export interface SpriteArt {
   shadow?: ShadowSize;
   /** Looping animation frames (campfire); texture is frames[0]. Same anchor. */
   frames?: Texture[];
+  /** Lid frames from closed to open (shipping bin); texture is open[0]. Same anchor. */
+  open?: Texture[];
   /** Drawn above an NPC standing at `keeper` (market stall counter). Place at the same position as the sprite. */
   front?: SpriteArt;
   /** Where a shopkeeper's feet go: screen px (already x SCALE) relative to the sprite's anchor point. */
@@ -96,8 +100,9 @@ export interface Art {
   wallBorder?(style: string, piece: string): Texture | null;
   /** Players (player_1..player_4), NPC sprite keys (see npc catalog), monsters (slime, bat, rock_crab). */
   character(key: string): CharacterArt;
-  crop(crop: ItemId, stage: 0 | 1 | 2 | 3): SpriteArt;
-  rock(ore: "stone" | "copper" | "iron" | "gem"): SpriteArt;
+  /** Growth stage art; `look` swaps in the wilted or dead plant (engine cropLook). */
+  crop(crop: ItemId, stage: 0 | 1 | 2 | 3, look?: CropLook): SpriteArt;
+  rock(ore: RockOre): SpriteArt;
   furniture(item: ItemId, rotation: 0 | 1 | 2 | 3): SpriteArt;
   icon(item: ItemId): Texture;
   /** Same icon as a data URL for DOM UI (cached). */
@@ -118,8 +123,8 @@ export interface Placeholders {
   ground(kind: Ground, variant: number): Texture;
   prop(type: string): SpriteArt;
   character(key: string): CharacterArt;
-  crop(crop: ItemId, stage: 0 | 1 | 2 | 3): SpriteArt;
-  rock(ore: "stone" | "copper" | "iron" | "gem"): SpriteArt;
+  crop(crop: ItemId, stage: 0 | 1 | 2 | 3, look?: CropLook): SpriteArt;
+  rock(ore: RockOre): SpriteArt;
   furniture(item: ItemId, rotation: 0 | 1 | 2 | 3): SpriteArt;
   icon(item: ItemId): Texture;
 }
@@ -198,6 +203,10 @@ export interface WorldStore {
   farm: Map<string, FarmTile>; // key `${x},${y}`
   objects: Map<string, PlacedObject>;
   brokenRocks: Set<string>;
+  /** Rocks holding another ore than the map places this spawn (cave silver, gold, diamond). */
+  rockOres: Map<string, RockOre>;
+  /** Chopped trees: tree id -> "stump" or "gone" (standing trees are not listed). */
+  trees: Map<string, "stump" | "gone">;
   goals: VillageGoal[];
   /** Apply any ServerMsg that changes world state (welcome, tick, inventory, farm, objects, rock, goals, chat). */
   apply(msg: ServerMsg, recvTime: number): void;
@@ -215,19 +224,27 @@ export type Interpolate = (a: EntityState, b: EntityState, t: number) => EntityS
 
 // ---------------------------------------------------------------- prediction (src/client/game/prediction.ts)
 export interface Predictor {
-  /** Local input each frame; returns the seq to send with a move msg when direction changed or every 100 ms. */
-  step(dx: number, dy: number, dtMs: number): { send: ClientMsg | null };
-  /** Server state for you + last acked seq: replay unacked inputs; snap if error > 1.5 tiles else ease. */
-  reconcile(server: EntityState, ack: number | undefined): void;
+  /**
+   * Local input each frame; returns a move msg to send when direction changed or every 100 ms.
+   * `now` (performance.now() clock) lets it integrate exactly up to the frame; without it, dtMs.
+   */
+  step(dx: number, dy: number, dtMs: number, now?: number): { send: ClientMsg | null };
+  /** Direction changed at clock time `at` (key event timeStamp): returns the move msg to send now, or null if unchanged. */
+  setDir(dx: number, dy: number, at: number): ClientMsg | null;
+  /**
+   * Server state for you + last acked seq (+ how long the server has applied it): replay the
+   * inputs the server has not simulated yet; snap if error > 1.5 tiles else ease.
+   */
+  reconcile(server: EntityState, ack: number | undefined, ackMs?: number): void;
   /** Click-to-move: client also walks the path locally. */
   moveTo(target: Vec2): ClientMsg;
   state(): { x: number; y: number; facing: Facing; moving: boolean };
   reset(at: Vec2, facing: Facing): void;
 }
-export type CreatePredictor = (getMap: () => MapData | null, getBlockedExtras: () => { objects: PlacedObject[]; rocks: Vec2[] }) => Predictor;
+export type CreatePredictor = (getMap: () => MapData | null, getBlockedExtras: () => { objects: PlacedObject[]; rocks: Vec2[]; cleared?: Vec2[] }) => Predictor;
 
 // ---------------------------------------------------------------- input (src/client/game/input.ts)
-export type InputAction = "use" | "interact" | "gift" | "build" | "rotate" | "cancel" | "inventory" | "goals" | "chat";
+export type InputAction = "use" | "interact" | "gift" | "build" | "rotate" | "rotateBack" | "cancel" | "inventory" | "goals" | "chat";
 export interface PointerInfo {
   screen: Vec2;
   tile: Vec2; // float tile coords under the pointer
@@ -236,11 +253,15 @@ export interface PointerInfo {
 export interface Input {
   /** Held movement direction from WASD/arrows, in {-1,0,1}. Zero while typing. */
   dir(): { dx: number; dy: number };
+  /** Fires as soon as the held direction changes, with the event's timeStamp (performance.now() clock). */
+  onDir(cb: (dir: { dx: number; dy: number }, at: number) => void): () => void;
   setTyping(typing: boolean): void;
   onAction(cb: (a: InputAction) => void): () => void;
   onSlot(cb: (slot: number) => void): () => void; // keys 1-8, mouse wheel
   /** Tell input the slot chosen elsewhere (HUD click), so the wheel steps from it. */
   setSlot?(slot: number): void;
+  /** While true the mouse wheel rotates (emits rotate / rotateBack) instead of stepping slots. */
+  setWheelRotates?(on: boolean): void;
   onClick(cb: (p: PointerInfo) => void): () => void;
   onPointerMove(cb: (p: PointerInfo) => void): () => void;
   destroy(): void;
@@ -258,6 +279,8 @@ export interface Camera {
   tileToScreen(x: number, y: number): Vec2;
   /** Visible tile rect for culling. */
   view(): { x: number; y: number; w: number; h: number };
+  /** Shakes the view for `ms` by up to `amp` screen px. */
+  shake?(ms: number, amp: number): void;
 }
 export type CreateCamera = (layers: Layers, viewport: { w: number; h: number }) => Camera;
 
@@ -272,6 +295,12 @@ export type CreateGroundLayer = (art: Art, map: MapData, layers: Layers) => Grou
 export interface PropsLayer {
   /** Prop id under a tile, for interact clicks (shipping_bin, stalls...). */
   propAt(tile: Vec2): string | null;
+  /** Body and ground shadow of a prop that changes at runtime (choppable trees). */
+  spriteOf?(id: string): { body: Sprite; shadow: Sprite | null } | null;
+  /** Opens or closes a prop's lid (shipping bin); no-op for props without one. */
+  setOpen?(id: string, open: boolean): void;
+  /** Squashes a lidded prop as something lands in it. */
+  bump?(id: string): void;
   destroy(): void;
 }
 export type CreatePropsLayer = (art: Art, map: MapData, layers: Layers) => PropsLayer;
@@ -283,6 +312,12 @@ export interface EntityLayer {
   /** Screen-space (camera) head position for overlays. */
   headOf(id: string): Vec2 | null;
   flash(id: string): void;
+  /** Plays a knockback slide (tiles, total) at once, ahead of the server's next positions. */
+  nudge?(id: string, slide: Vec2): void;
+  /** Blinks the entity for `ms` (hurt invincibility). */
+  blink?(id: string, ms: number): void;
+  /** Death: squash flat and fade now; the entity is removed a moment later. */
+  die?(id: string): void;
   destroy(): void;
 }
 export type CreateEntityLayer = (art: Art, layers: Layers) => EntityLayer;
@@ -300,9 +335,13 @@ export type CreateOverlays = (layers: Layers) => Overlays;
 /** render/farm.ts: tilled/watered soil, crop stages (engine cropView), mining rocks (hidden when broken), placed furniture. */
 export interface FarmLayer {
   setFarm(tiles: Iterable<FarmTile>, now: number): void;
-  setRocks(map: MapData, broken: Set<string>): void;
-  setObjects(objects: Iterable<PlacedObject>): void;
+  /** `ores`: this spawn's ore where it differs from the map's. */
+  setRocks(map: MapData, broken: Set<string>, ores?: ReadonlyMap<string, RockOre>): void;
+  /** `map`: the map they stand on (wall pieces sort in front of their wall); kept until the next one. */
+  setObjects(objects: Iterable<PlacedObject>, map?: MapData | null): void;
   objectAt(tile: Vec2): string | null;
+  /** The sprite drawing a rock, for hit effects. */
+  rockSprite?(id: string): Sprite | null;
   destroy(): void;
 }
 export type CreateFarmLayer = (art: Art, layers: Layers) => FarmLayer;
@@ -315,7 +354,8 @@ export interface BuildMode {
   /** Start moving an existing placed object. */
   pick(objectId: string): void;
   exit(): void;
-  rotate(): void;
+  /** Next allowed rotation of the piece (ItemDef.rotations); dir -1 turns the other way. */
+  rotate(dir?: 1 | -1): void;
   pointer(tile: Vec2): void;
   /** Returns the message to send (place or moveObject) when valid, else null (and shows why). */
   click(tile: Vec2): ClientMsg | null;
@@ -337,8 +377,17 @@ export type CreateBuildMode = (
 /** render/effects.ts: ambient tint (cave dark with light around you, indoor warm), float text (+3 ore), dust/hit particles. */
 export interface Effects {
   setAmbient(ambient: MapData["ambient"]): void;
-  floatText(at: Vec2, text: string, kind: "info" | "error" | "loot"): void;
+  floatText(at: Vec2, text: string, kind: "info" | "error" | "loot" | "love" | "damage" | "crit" | "miss" | "hurt"): void;
   burst(at: Vec2, kind: "dust" | "hit" | "water" | "sparkle"): void;
+  /**
+   * Rings spreading on water (watering-can refill). With `sortY` (tiles) they y-sort like a
+   * prop standing there (in a well, in front of it but behind you), else they draw above all.
+   */
+  ripple?(at: Vec2, sortY?: number): void;
+  /** Watering-can meter over your head, filling from `from` to `to` (0..1), then fading. */
+  meter?(from: number, to: number): void;
+  /** Throws `texture` in an arc from `from` to `to` (tiles), shrinking at the end; `onLand` when it lands. */
+  toss?(from: Vec2, to: Vec2, texture: Texture, onLand?: () => void): void;
   update(dtMs: number, you: Vec2 | null): void;
   destroy(): void;
 }

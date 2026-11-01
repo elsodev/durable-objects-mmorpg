@@ -133,8 +133,10 @@ describe("scripted memory recall", () => {
     expect(scriptedReply("odette", m, "greet", false, r0)).toBe("I remember you like pumpkins, Ada.");
   });
   it("reacts to gifts by taste", () => {
-    expect(giftReply("fenwick", "slime_gel", "Ada", r0).taste).toBe("disliked");
-    expect(giftReply("fenwick", "lamp", "Ada", r0).taste).toBe("neutral");
+    expect(giftReply("fenwick", "slime_gel", "Ada", r0).taste).toBe("hated");
+    expect(giftReply("fenwick", "mushroom", "Ada", r0).taste).toBe("disliked");
+    expect(giftReply("fenwick", "lamp", "Ada", r0).taste).toBe("liked"); // universal like
+    expect(giftReply("fenwick", "carrot", "Ada", r0).taste).toBe("neutral");
   });
   it("trims model text to two sentences", () => {
     expect(twoSentences("One. Two! Three? Four.")).toBe("One. Two!");

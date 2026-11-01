@@ -7,6 +7,8 @@ import { onSocial } from "../social-events";
 import { friendsApi as defaultApi, type FriendsApi } from "./friends-api";
 import { addNameError, badgeText, CONFIRM_MS, FRIENDS_POLL_MS, inviteCommand, whisperPrefill, zoneLabel } from "./friends-logic";
 import { uiSound } from "./sound";
+import type { MuteStore } from "./mutes";
+import type { MutedEntry } from "../../shared/players";
 import "./styles/friends.css";
 
 export interface FriendsPanel {
@@ -31,9 +33,11 @@ export interface FriendsPanelOpts {
   /** Incoming request count changed (HUD button badge). */
   onBadge?(count: number): void;
   api?: FriendsApi;
+  /** Mute list: the Muted tab lists it with Unmute buttons. */
+  mutes?: MuteStore;
 }
 
-type Tab = "friends" | "requests";
+type Tab = "friends" | "requests" | "muted";
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = "", text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -88,11 +92,14 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
   const reqBadge = el("span", "fr-badge");
   reqBadge.id = "friends-requests-badge";
   add(tabRequests, reqLabel, reqBadge);
+  const tabMuted = el("button", "fr-tab", "Muted");
   tabFriends.id = "friends-tab-friends";
   tabRequests.id = "friends-tab-requests";
+  tabMuted.id = "friends-tab-muted";
   for (const [b, t] of [
     [tabFriends, "friends"],
     [tabRequests, "requests"],
+    [tabMuted, "muted"],
   ] as const) {
     b.type = "button";
     b.setAttribute("role", "tab");
@@ -104,6 +111,7 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
     });
   }
   add(tabs, tabFriends, tabRequests);
+  if (opts.mutes) add(tabs, tabMuted);
 
   const addForm = el("form", "fr-add");
   const addInput = el("input", "dm-input fr-add-input");
@@ -156,6 +164,7 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
     tab = t;
     tabFriends.setAttribute("aria-selected", String(t === "friends"));
     tabRequests.setAttribute("aria-selected", String(t === "requests"));
+    tabMuted.setAttribute("aria-selected", String(t === "muted"));
     render();
   }
 
@@ -219,6 +228,26 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
       void run().finally(() => (b.disabled = false));
     });
     return b;
+  }
+
+  function mutedRow(m: MutedEntry): HTMLElement {
+    const row = el("li", "fr-row");
+    row.dataset.userId = m.userId;
+    const who = el("div", "fr-who");
+    add(who, el("span", "fr-name", m.name), el("span", "fr-zone", "muted"));
+    const actions = el("div", "fr-actions");
+    add(
+      actions,
+      btn("Unmute", "fr-unmute", async (b) => {
+        b.disabled = true;
+        const r = await opts.mutes!.unmute(m.userId);
+        b.disabled = false;
+        if ("error" in r) return fail(r.error);
+        showMsg(`Unmuted ${m.name}.`, "ok");
+      }),
+    );
+    add(row, who, actions);
+    return row;
   }
 
   function requestRow(r: FriendRequestEntry, incoming: boolean): HTMLElement {
@@ -303,6 +332,19 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
 
     if (!data) {
       body.replaceChildren(empty(loadError ?? "Loading…"));
+      return;
+    }
+    if (tab === "muted") {
+      const muted = opts.mutes?.list() ?? [];
+      tabMuted.textContent = muted.length ? `Muted ${muted.length}` : "Muted";
+      if (muted.length === 0) {
+        body.replaceChildren(empty("Nobody is muted. Right-click a player and pick Mute, or type /mute name."));
+        return;
+      }
+      const ul = el("ul", "fr-list");
+      ul.id = "muted-list";
+      add(ul, ...muted.map(mutedRow));
+      body.replaceChildren(ul, el("p", "fr-foot dm-muted fr-muted-note", "Muted players can't tell. You won't see their chat, whispers, invites or friend requests."));
       return;
     }
     if (tab === "friends") {
@@ -410,6 +452,9 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
       void refresh();
     });
   }
+  opts.mutes?.onChange(() => {
+    if (isOpen()) render();
+  });
   // Presence changes (friend came online / changed zone) only matter while the list is on screen.
   onSocial("presence", () => {
     if (isOpen()) void refresh();

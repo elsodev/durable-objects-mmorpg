@@ -1,0 +1,221 @@
+/* Friendship: talk card (bottom centre, above the hotbar) and the Relationships panel. */
+
+#bond-card,
+#bonds-panel {
+  pointer-events: auto;
+}
+#bond-card[hidden],
+#bonds-panel[hidden] {
+  display: none;
+}
+
+/* Bottom-right, clear of the chat (left), the hotbar (centre) and a villager's shop (middle). */
+.bond-card {
+  position: absolute;
+  right: 16px;
+  bottom: calc(var(--dm-slot-size, 48px) + 40px);
+  width: min(340px, calc(100vw - 32px));
+  z-index: 31;
+  animation: bond-card-in 0.18s ease-out;
+}
+@keyframes bond-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (max-width: 760px) {
+  .bond-card {
+    right: 50%;
+    transform: translateX(50%);
+    bottom: auto;
+    top: 96px;
+    animation: none;
+  }
+}
+.bond-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bond-card-name {
+  flex: 1;
+  margin: 0;
+  font-family: var(--dm-font-heading, inherit);
+  font-size: 1.05rem;
+}
+.bond-card-hearts {
+  position: relative;
+  margin: 4px 0 6px;
+}
+.bond-card-line {
+  margin: 8px 0 2px;
+  min-height: 1.3em;
+  font-style: italic;
+  color: var(--dm-ink, #3a2a1c);
+  overflow-wrap: anywhere;
+}
+.bond-card-line.is-waiting {
+  color: var(--dm-ink-soft, #6b5640);
+}
+.bond-card-today {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+}
+
+.bond-hearts {
+  display: inline-flex;
+  gap: 2px;
+}
+.bond-heart {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+  background-size: 100% 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath fill='%235a3920' d='M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1z'/%3E%3Cpath fill='%23e2d2b0' d='M1 2h2v1h2V2h2v2H6v1H5v1H3V5H2V4H1z'/%3E%3C/svg%3E");
+}
+.bond-heart.full {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath fill='%235a3920' d='M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1z'/%3E%3Cpath fill='%23ec5f9b' d='M1 2h2v1h2V2h2v2H6v1H5v1H3V5H2V4H1z'/%3E%3Cpath fill='%23ffc2dc' d='M2 2h1v1H2z'/%3E%3C/svg%3E");
+}
+.bond-hearts-big .bond-heart {
+  width: 22px;
+  height: 22px;
+}
+
+.bond-bar {
+  position: relative;
+  height: 16px;
+  border: 2px solid var(--dm-wood-dark, #5a3920);
+  border-radius: 4px;
+  background: var(--dm-cream-2, #ece0c0);
+  overflow: hidden;
+}
+.bond-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(#f38ab8, #d9467f);
+  transition: width 0.4s ease-out;
+}
+.bond-bar-text {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 12px;
+  font-weight: 700;
+  color: var(--dm-ink, #3a2a1c);
+}
+
+.bond-pop {
+  position: absolute;
+  right: 4px;
+  top: -4px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #d9467f;
+  text-shadow: 0 1px 0 #fff;
+  pointer-events: none;
+  animation: bond-pop 1.4s ease-out forwards;
+}
+.bond-pop.down {
+  color: var(--dm-ink-soft, #6b5640);
+}
+@keyframes bond-pop {
+  to {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+
+.bond-panel {
+  position: absolute;
+  right: 16px;
+  top: 72px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+.bond-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bond-row {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--dm-panel-light, #fbf3dc);
+  border: 1px solid var(--dm-line, rgba(90, 60, 30, 0.2));
+}
+.bond-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.bond-row-name {
+  font-weight: 700;
+}
+
+.bond-card-gift {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #fde6f0;
+  border: 1px solid #f0a6c6;
+  font-size: 0.8rem;
+}
+.bond-card-gift[hidden] {
+  display: none;
+}
+.bond-card-gift-label {
+  font-weight: 700;
+  color: #b23a6e;
+}
+.bond-gift-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px 1px 2px;
+  border-radius: 10px;
+  background: var(--dm-panel-light, #fbf3dc);
+}
+.bond-gift-chip img {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+}
+
+/* Relationship row markers: talked today, gifts this week, birthday. */
+.bond-row-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.bond-mark {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--dm-text, #fff8e7);
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+.bond-mark.is-on {
+  opacity: 1;
+  filter: none;
+  background: rgba(245, 200, 76, 0.28);
+}
+.bond-mark-birthday.is-on { background: rgba(240, 120, 160, 0.4); }

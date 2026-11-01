@@ -66,6 +66,21 @@ describe("predictor input & sending", () => {
     expect(p.state().moving).toBe(false);
   });
 
+  it("setDir walks from the key event time and sends at once", () => {
+    const { p } = setup();
+    p.step(0, 0, FRAME, 1000);
+    const msg = p.setDir(1, 0, 1010);
+    expect(msg).toMatchObject({ t: "move", dx: 1, dy: 0 });
+    expect(p.setDir(1, 0, 1012)).toBeNull(); // unchanged (key repeat)
+    // The next frame moves only for the 6 ms since the press, and doesn't send again.
+    expect(p.step(1, 0, FRAME, 1016).send).toBeNull();
+    expect(p.state().x).toBeCloseTo(3.5 + (PLAYER_SPEED * 6) / 1000, 6);
+    // Released between frames: walking stops at the release time, not at the next frame.
+    p.setDir(0, 0, 1100);
+    p.step(0, 0, FRAME, 1116);
+    expect(p.state().x).toBeCloseTo(3.5 + (PLAYER_SPEED * 90) / 1000, 6);
+  });
+
   it("does nothing (but still sends) without a map", () => {
     const { p } = setup(null);
     expect(p.step(1, 0, FRAME).send).toMatchObject({ t: "move" });

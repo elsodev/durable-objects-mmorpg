@@ -2,14 +2,16 @@
 // Conversations run async next to the tick; the tick never awaits them.
 import { isInteriorZone, type EntityState, type Facing, type MapData, type NpcSpawn, type SharedZoneId, type Vec2 } from "../../shared/types";
 import { npcPresent, scheduleHour } from "../../shared/npcSchedule";
-import { canStand, dist, facingFor, findPath, isBlocked, NPC_SPEED, stepToward, type CollisionGrid } from "../../shared/engine";
-import { isSitting, SeatBook, sitDown, standSpots, standUp } from "./seats";
+import { bumps, canStand, dist, facingFor, findPath, isBlocked, NPC_SPEED, stepToward, withPeople, type CollisionGrid } from "../../shared/engine";
+import { isSitting, SeatBook, sitDown, standSpots, standUp, talkSpots } from "./seats";
 import { cleanChat } from "../../shared/validate";
 import type { Env } from "../env";
 import type { ItemId } from "../../shared/types";
 import { decide, idleLine, speak, type BrainEnv, type Decision, type NpcAction, type NpcContext, type NpcDef } from "../npc/brain";
 import { NPCS } from "../npc/catalog";
-import { isNpcId, type NpcId } from "../npc/bible";
+import { isNpcId, NPC_BIRTHDAYS, type NpcId } from "../npc/bible";
+import type { Situation } from "../npc/dialogue";
+import { isBirthday, worldDate, worldHour } from "../../shared/calendar";
 import { giftReply } from "../npc/think/scripted";
 import { intentsToActions, validateIntents } from "../npc/think/tools";
 import type { GoalId, ConverseResult } from "../npc/think/types";
@@ -35,6 +37,8 @@ export const SIT_MAX_MS = 90_000;
 /** Indoors: how long an NPC lingers at the fire or the bar. */
 const LINGER_MIN_MS = 5_000;
 const LINGER_MAX_MS = 15_000;
+/** Someone in the way: wait this long for them to move, then find another way (or give up). */
+const BLOCKED_WAIT_MS = 1200;
 
 /** A place worth walking to indoors, and which way to face once there. */
 interface Poi {
@@ -54,7 +58,7 @@ const GIFT_TIMEOUT_MS = 3000;
 const MAX_PAIRS = 500;
 /** Interact text ZoneRoom sends for a click/F press (not typed chat). */
 export const INTERACT_TEXT = "(walks up to talk to you)";
-const GIFT_EMOTE: Record<string, string> = { loved: "love", liked: "happy", disliked: "sad", neutral: "happy" };
+const GIFT_EMOTE: Record<string, string> = { loved: "love", liked: "happy", disliked: "sad", hated: "angry", neutral: "happy" };
 
 export interface NpcHost {
   /** Players currently in the zone (entity state, live objects). */
@@ -68,6 +72,8 @@ export interface NpcHost {
   worldFacts?(): string[];
   /** A private notice to one player (quest pointers). */
   notice?(playerEntityId: string, text: string): void;
+  /** Hearts this player has with this villager (0..10), for the NPC's situation. */
+  hearts?(userId: string, npcId: string): number;
 }
 
 export interface Speaker {
@@ -96,6 +102,10 @@ interface NpcState {
   /** Seated until then (indoors). */
   sitUntil: number;
   standBack: Vec2 | null;
+  /** When someone first stood in this NPC's way (0 = the way is clear). */
+  blockedSince: number;
+  /** This walk was already re-planned around someone once (a second block gives it up). */
+  rerouted: boolean;
 }
 
 const FALLBACK: Decision = { intent: "smalltalk", actions: [], mood: "neutral", source: "fallback" };
@@ -130,6 +140,9 @@ export class NpcRunner {
   private readonly pois: Poi[];
   private readonly floorTiles: Vec2[];
   private readonly lastGiftIn = new Map<string, number>();
+
+  /** Everyone present this tick (players and NPCs): soft obstacles for walking NPCs. */
+  private crowd: EntityState[] = [];
 
   constructor(
     private readonly map: MapData,
@@ -170,6 +183,8 @@ export class NpcRunner {
         pendingEmote: null,
         here: npcPresent(s.npcId, this.zone, hour),
         path: null,
+        blockedSince: 0,
+        rerouted: false,
         goal: null,
         sitUntil: 0,
         standBack: null,
@@ -279,6 +294,7 @@ export class NpcRunner {
   tick(dtMs: number, now: number): void {
     this.updatePresence(now);
     const players = this.host.players();
+    this.crowd = [...players, ...this.entities()];
     for (const n of this.npcs) {
       if (!n.here) continue;
       if (n.statusUntil && now >= n.statusUntil && n.entity.status !== THINKING) {
@@ -305,7 +321,7 @@ export class NpcRunner {
       const p = players.find((e) => e.id === n.follow!.id);
       if (!p || now >= n.follow.until) n.follow = null;
       else if (dist(n.entity, p) > FOLLOW_GAP && dist(p, home) <= this.leash(n) * 2) {
-        this.stepTo(n, p, dtMs);
+        this.stepTo(n, p, dtMs, now);
         return;
       } else {
         n.entity.moving = false;
@@ -330,8 +346,13 @@ export class NpcRunner {
       }
       return;
     }
-    const arrived = this.stepTo(n, n.target, dtMs);
-    if (arrived || !n.entity.moving) n.target = null;
+    const arrived = this.stepTo(n, n.target, dtMs, now);
+    if (arrived) n.target = null;
+    else if (!n.entity.moving && !this.holdingOn(n, now)) {
+      // Stuck on a wall, or someone has stood in the way too long: pick a new stroll later.
+      n.target = null;
+      n.blockedSince = 0;
+    }
   }
 
   /**
@@ -346,9 +367,14 @@ export class NpcRunner {
     }
     if (n.path) {
       const wp = n.path[0]!;
-      const arrived = this.stepTo(n, wp, dtMs);
+      const arrived = this.stepTo(n, wp, dtMs, now);
       if (arrived) n.path.shift();
-      else if (!n.entity.moving) return this.abandon(n, now);
+      else if (!n.entity.moving) {
+        if (this.holdingOn(n, now)) return;
+        // Still blocked: walk around whoever is there, else give this walk up.
+        if (n.blockedSince === 0 || !this.repath(n)) return this.abandon(n, now);
+        return;
+      }
       if (n.path.length === 0) this.arrive(n, now);
       return;
     }
@@ -389,12 +415,35 @@ export class NpcRunner {
     return false;
   }
 
-  /** Starts an A* walk; false if there's no way there. */
+  /** Starts an A* walk around walls and anyone standing about; false if there's no way there. */
   private walk(n: NpcState, to: Vec2, goal: Goal): boolean {
-    const path = findPath(this.grid, n.entity, to);
+    const path = findPath(this.gridAround(n, to), n.entity, to) ?? findPath(this.grid, n.entity, to);
     if (!path) return false;
     n.path = path.length > 0 ? path : [to];
     n.goal = goal;
+    n.rerouted = false;
+    return true;
+  }
+
+  /** Collision grid with everyone but `n` blocked (their tiles), keeping `n`'s tile and goal free. */
+  private gridAround(n: NpcState, goal: Vec2): CollisionGrid {
+    return withPeople(this.grid, this.crowd.filter((e) => e !== n.entity), [n.entity, goal]);
+  }
+
+  /** True while someone has been in `n`'s way for less than BLOCKED_WAIT_MS. */
+  private holdingOn(n: NpcState, now: number): boolean {
+    return n.blockedSince > 0 && now - n.blockedSince < BLOCKED_WAIT_MS;
+  }
+
+  /** Re-plans the current walk around people in the way; false if there's no way round. */
+  private repath(n: NpcState): boolean {
+    const to = n.path?.[n.path.length - 1];
+    if (!to || n.rerouted) return false;
+    n.rerouted = true;
+    const path = findPath(this.gridAround(n, to), n.entity, to);
+    if (!path) return false;
+    n.path = path.length > 0 ? path : [to];
+    n.blockedSince = 0;
     return true;
   }
 
@@ -431,7 +480,8 @@ export class NpcRunner {
     const seat = this.seats.of(n.entity.id);
     this.seats.release(n.entity.id);
     const back = !toward && n.standBack && canStand(this.grid, n.standBack.x, n.standBack.y) ? n.standBack : null;
-    const spot = back ?? (seat ? standSpots(this.grid, seat, toward ?? n.standBack ?? undefined)[0] : undefined) ?? {
+    const spots = !seat ? [] : toward ? talkSpots(this.grid, seat, toward) : standSpots(this.grid, seat, n.standBack ?? undefined);
+    const spot = back ?? spots[0] ?? {
       x: n.spawn.x + 0.5,
       y: n.spawn.y + 0.5,
     };
@@ -452,8 +502,15 @@ export class NpcRunner {
     return this.seats.of(n.entity.id)?.id;
   }
 
-  private stepTo(n: NpcState, to: Vec2, dtMs: number): boolean {
+  /** One step toward `to`. Never walks into a player or another NPC: it stops and waits instead. */
+  private stepTo(n: NpcState, to: Vec2, dtMs: number, now: number): boolean {
     const r = stepToward(n.entity, to, NPC_SPEED, dtMs, this.grid);
+    if (r.moving && bumps(n.entity, r, this.crowd.filter((e) => e !== n.entity))) {
+      Object.assign(n.entity, { facing: r.facing, moving: false });
+      if (n.blockedSince === 0) n.blockedSince = now;
+      return false;
+    }
+    n.blockedSince = 0;
     Object.assign(n.entity, { x: r.x, y: r.y, facing: r.facing, moving: r.moving });
     return r.arrived;
   }
@@ -641,12 +698,33 @@ export class NpcRunner {
         world,
         shopOpened: actions.some((a) => a.kind === "open_shop"),
         ...(gave ? { gave: { item: gave.item, qty: gave.qty } } : {}),
+        situation: this.situation(npcId, speaker.userId, Date.now()),
       },
       ai,
     };
     const out = await withTimeout(this.mind!.converse(npcId, req).catch(() => null), MIND_TIMEOUT_MS, null);
     if (!out || typeof out.reply !== "string") return null;
     return out;
+  }
+
+  /** What the villager knows about "now" for this player (world calendar, UTC hour, hearts). */
+  private situation(npcId: NpcId, userId: string, now: number): Situation {
+    const date = worldDate(now);
+    let hearts = 0;
+    try {
+      hearts = this.host.hearts?.(userId, npcId) ?? 0;
+    } catch {
+      hearts = 0;
+    }
+    return {
+      hearts: Math.max(0, Math.min(10, Math.floor(hearts))),
+      zone: this.map.zone as SharedZoneId,
+      hour: worldHour(now),
+      weekday: date.weekday,
+      season: date.season,
+      day: date.day,
+      birthday: isBirthday(NPC_BIRTHDAYS[npcId], date),
+    };
   }
 
   private pointToQuests(entityId: string, quests: GoalId[]): void {

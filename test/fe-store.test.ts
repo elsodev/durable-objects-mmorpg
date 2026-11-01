@@ -56,6 +56,13 @@ describe("sampleBuffer", () => {
     expect(sampleBuffer(buf, 150).x).toBeCloseTo(1.5);
     expect(sampleBuffer(buf, 1000).x).toBeCloseTo(1 + MAX_EXTRAPOLATE_MS / 100);
   });
+  it("never flings an entity when two ticks arrive back to back", () => {
+    const burst = [
+      { at: 1000, s: ent("a", 5, 5) },
+      { at: 1000.2, s: ent("a", 5.2, 5) }, // one tick's walk, received 0.2 ms after the last
+    ];
+    expect(sampleBuffer(burst, 1100).x).toBeLessThan(5.5);
+  });
   it("does not extrapolate a stopped entity", () => {
     const stopped = [buf[0]!, { at: 100, s: ent("a", 1, 0, { moving: false }) }];
     expect(sampleBuffer(stopped, 180).x).toBe(1);

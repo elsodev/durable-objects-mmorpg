@@ -9,6 +9,7 @@ import {
   propTarget,
   sfxForUse,
   usableHere,
+  clickUsesTool,
   usableItem,
   useTarget,
 } from "../src/client/game/actions";
@@ -79,6 +80,16 @@ describe("items in slots", () => {
     expect(usableHere(kit, 2, "caves")).toBe("pickaxe");
     expect(usableHere(kit, 3, "village")).toBe("sword_wood");
     expect(usableHere(kit, 2, "home")).toBe("pickaxe");
+    expect(usableHere({ coins: 0, slots: [{ item: "axe", qty: 1 }] }, 0, "village")).toBe("axe");
+  });
+  it("a click uses the tool on targets it affects or bounces off, swords always swing, else it walks", () => {
+    expect(clickUsesTool("hoe", { ok: true }, { kind: "grass" })).toBe(true);
+    expect(clickUsesTool("hoe", { ok: false, reason: "You can't till here." }, { kind: "none" })).toBe(false);
+    expect(clickUsesTool("pickaxe", { ok: false, reason: "bounces" }, { kind: "tree" })).toBe(true);
+    expect(clickUsesTool("axe", { ok: false, reason: "" }, { kind: "none" })).toBe(false);
+    expect(clickUsesTool("hoe", { ok: false, reason: "Already tilled." }, { kind: "soil" })).toBe(true);
+    expect(clickUsesTool("sword_wood", { ok: false, reason: "" }, { kind: "none" })).toBe(true);
+    expect(clickUsesTool("seed_turnip", { ok: true }, { kind: "soil" })).toBe(true);
   });
   it("targets the selected stack when interacting with the shipping bin", () => {
     const home = getMap("home");

@@ -31,6 +31,19 @@ export type SharedZoneId = OutdoorZoneId | InteriorZoneId;
 export type ZoneId = SharedZoneId | "home";
 export const SHARED_ZONES: SharedZoneId[] = [...OUTDOOR_ZONES, ...INTERIOR_ZONES];
 
+/**
+ * The maps of a player's home, all served by the owner's HomeRoom: "home" is the yard (house
+ * exterior, farm, shipping bin, mailbox), "home_in" the inside of the house. Players stay in
+ * zone "home" on both; only the map they stand on changes (see MapExit.map).
+ */
+export type HomeMapId = "home" | "home_in";
+export const HOME_MAPS: readonly HomeMapId[] = ["home", "home_in"];
+export function isHomeMapId(v: unknown): v is HomeMapId {
+  return v === "home" || v === "home_in";
+}
+/** Anything getMap() can build: every zone plus the home's inside. */
+export type MapId = ZoneId | HomeMapId;
+
 export function isInteriorZone(z: unknown): z is InteriorZoneId {
   return (INTERIOR_ZONES as readonly unknown[]).includes(z);
 }
@@ -129,6 +142,11 @@ export interface MapExit {
   to: ZoneId;
   /** Spawn point name in the destination map. */
   spawn: string;
+  /**
+   * Home only: a door between the home's own maps. `to` stays "home" and the player switches to
+   * this map on the same connection instead of changing zone.
+   */
+  map?: HomeMapId;
 }
 
 export interface NpcSpawn {
@@ -159,32 +177,54 @@ export interface MapData {
   spawns: Record<string, Vec2>; // "default", "from_village", ...
   npcs: NpcSpawn[];
   monsters: MonsterSpawn[];
-  /** Home only: rectangles where farming is allowed. */
+  /** Rectangles where farming is allowed (when not `farmGrass`). */
   farmArea?: { x: number; y: number; w: number; h: number }[];
+  /**
+   * Home yard: every grass tile is farmland except paths, props (house,
+   * trees, fences...), exits and the `noFarm` rectangles. Replaces `farmArea`.
+   */
+  farmGrass?: boolean;
+  /** With `farmGrass`: tiles kept clear of farmland (in front of the door, bin and mailbox). */
+  noFarm?: { x: number; y: number; w: number; h: number }[];
   /** Home only: rectangles where furniture may be placed (indoors). */
   floorArea?: { x: number; y: number; w: number; h: number }[];
   /** Mining nodes that can be broken (caves). */
-  rocks?: { id: string; x: number; y: number; ore: "stone" | "copper" | "iron" | "gem" }[];
+  rocks?: { id: string; x: number; y: number; ore: RockOre }[];
   /** Interiors: chairs and stools anyone may sit on (derived from the seat props). */
   seats?: Seat[];
   /** Interiors: wall style (side/south wall art) and floor art key (catalog `interior` floors). */
   interior?: { wall: string; floor?: string };
   /** Visual tint for the client (caves are darker). */
   ambient: "day" | "cave" | "indoor";
+  /** Home maps only: which of the home's maps this is. */
+  homeMap?: HomeMapId;
 }
 
 // ---------- Items & inventory ----------
+
+/**
+ * What a mining rock holds. Maps place stone, copper, iron and gem rocks; in the caves a rock may
+ * come back as silver, gold or diamond instead (shared/engine/rockOres.ts).
+ */
+export type RockOre = "stone" | "copper" | "iron" | "silver" | "gold" | "gem" | "diamond";
 
 export type ItemId = string; // e.g. "seed_turnip", "turnip", "ore_copper", "hoe", "chair_wood"
 
 export interface InventorySlot {
   item: ItemId;
   qty: number;
+  /** Optional per-stack quality (0 normal). Stacks only merge when item and quality match. */
+  quality?: number;
 }
 
+/**
+ * A fixed grid of MAX_SLOTS (24) slots. Empty slots stay `null` so items never shift position
+ * (the hotbar is slots 0..7). Old saves and tests may hold a shorter, packed array: every engine
+ * function treats a missing index as empty, and sanitizeInventory pads to the full grid.
+ */
 export interface Inventory {
   coins: number;
-  slots: InventorySlot[]; // max 24
+  slots: (InventorySlot | null)[];
 }
 
 // ---------- Home: farming & placed objects ----------
@@ -198,8 +238,13 @@ export interface FarmTile {
   /** Number of distinct in-game days the crop was watered. */
   wateredDays: number;
   lastWateredDay: number | null; // day index = Math.floor(ms / DAY_MS)
-  /** Home only: day ends this tile spent tilled with nothing planted (it reverts to grass after 2-3). */
+  /**
+   * Home only: day ends in a row this tile went unwatered. Empty soil reverts to grass after 2-3;
+   * a growing crop wilts from 1 and dies at CROP_DEATH_DAYS.
+   */
   dryDays?: number;
+  /** Home only: the crop died of thirst and stays as a dead plant until cleared. */
+  dead?: boolean;
 }
 
 export interface PlacedObject {

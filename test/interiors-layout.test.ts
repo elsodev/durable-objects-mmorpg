@@ -10,7 +10,7 @@ import { columnsBehindTallFurniture } from "../src/shared/maps/interiors/room";
 import { buildCollision, canStand, facingFor } from "../src/shared/engine";
 import { INTERIOR_ZONES, type EntityState, type MapData, type MapProp } from "../src/shared/types";
 import { NpcRunner, SIT_MAX_MS, type NpcHost } from "../src/worker/game/npcRunner";
-import { isSitting, SeatBook, standSpots as standSpotsFor } from "../src/worker/game/seats";
+import { isSitting, SeatBook, standSpots as standSpotsFor, TALK_GAP, talkSpots } from "../src/worker/game/seats";
 import type { Env } from "../src/worker/env";
 
 const propAt = (map: MapData, x: number, y: number): MapProp | undefined =>
@@ -254,11 +254,13 @@ describe("NPCs indoors", () => {
     expect(r.seats.isFree(seat.id)).toBe(true);
     expect(canStand(grid, e.x, e.y)).toBe(true);
     expect(Math.abs(e.x - (seat.x + 0.5)) + Math.abs(e.y - (seat.y + 0.5))).toBeCloseTo(1, 5);
+    // ...but not on top of the speaker, who stands on that side of the chair.
+    expect(Math.hypot(player.x - e.x, player.y - e.y)).toBeGreaterThanOrEqual(TALK_GAP);
     await vi.waitFor(() => expect(e.status).not.toBe("..."));
     const dx = player.x - e.x;
     const dy = player.y - e.y;
     expect(e.facing).toBe(facingFor(dx, dy, e.facing));
-    expect(Math.hypot(dx, dy)).toBeLessThan(1.5);
+    expect(Math.hypot(dx, dy)).toBeLessThan(2);
 
     // Holds still facing them for the talk pause...
     const at = { x: e.x, y: e.y };
@@ -271,6 +273,18 @@ describe("NPCs indoors", () => {
       resumed = e.moving || isSitting(e) || e.x !== at.x || e.y !== at.y;
     }
     expect(resumed).toBe(true);
+  });
+
+  it("a sitter getting up to talk never lands on the speaker's tile", () => {
+    const map = getMap("int_inn");
+    const grid = buildCollision(map);
+    for (const seat of map.seats!) {
+      for (const spot of standSpotsFor(grid, seat)) {
+        const speaker = { x: spot.x, y: spot.y + 0.2 };
+        const best = talkSpots(grid, seat, speaker)[0];
+        if (standSpotsFor(grid, seat).length > 1) expect(Math.hypot(best!.x - speaker.x, best!.y - speaker.y)).toBeGreaterThanOrEqual(TALK_GAP);
+      }
+    }
   });
 
   it("sits for 30 to 90 seconds", () => {

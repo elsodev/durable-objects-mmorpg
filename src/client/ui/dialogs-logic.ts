@@ -1,6 +1,6 @@
 // Pure shop/goal math for ui/dialogs.ts, kept DOM-free so tests can run it under the Workers tsconfig.
 import type { Inventory, ItemId } from "../../shared/types";
-import { baseItem, getItem } from "../../shared/items";
+import { baseItem, getItem, shopSellPrice } from "../../shared/items";
 
 /** Largest quantity the steppers offer: one full stack. */
 export const MAX_STEP_QTY = 99;
@@ -29,7 +29,7 @@ export function sellRows(inv: Inventory, buys: readonly ItemId[]): SellRow[] {
   const rows: SellRow[] = [];
   inv.slots.forEach((s, slot) => {
     if (!s || s.qty <= 0 || !wanted.has(baseItem(s.item))) return;
-    const price = getItem(s.item)?.sell ?? 0;
+    const price = shopSellPrice(s.item);
     if (price > 0) rows.push({ slot, item: s.item, qty: s.qty, price });
   });
   return rows;

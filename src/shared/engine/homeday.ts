@@ -1,30 +1,36 @@
 // Home farm rules that run once per day end (sleep, passing out at 2:00, or a day that ended
-// while nobody was home), plus harvest quality, regrowing crops, stamina and the watering can.
+// while nobody was home), plus regrowing crops, stamina and the watering can. Harvest quality
+// and yield live in harvest.ts.
 // Pure: callers pass `now` (farm time, see homeclock.farmNow) and `rand`.
 //
 // Growth itself needs no work here: farm time moves to the next day, so a crop watered today
 // counts one more grown day tomorrow (cropView), and soil reads dry again (wateredToday false).
-import type { FarmTile, ItemId, PlacedObject, Vec2 } from "../types";
-import { getItem, qualityItem, type ToolKind } from "../items";
-import { dayIndex, harvestable, tillTile } from "./farming";
+// What does happen here is thirst: a growing crop not watered on the day that ended counts a dry
+// day (it wilts), and at CROP_DEATH_DAYS it dies. Ripe crops don't need water.
+import { DAY_MS, type FarmTile, type ItemId, type PlacedObject, type Vec2 } from "../types";
+import { getItem, type ToolKind } from "../items";
+import { CROP_DEATH_DAYS, cropView, dayIndex, harvestable, tillTile } from "./farming";
 
 /** Crows never touch crops within this many tiles of a scarecrow. */
 export const SCARECROW_RADIUS = 8;
-/** Chance per morning that crows visit an unprotected farm. */
+/** Chance per morning that crows visit an unprotected farm of CROW_FULL_CROPS or more crops. */
 export const CROW_CHANCE = 0.3;
+/**
+ * Smaller plots draw crows less (chance scales with the crop count up to here): with a flat 30%
+ * a lone 10-day crop was eaten 97% of the time, so a single rare seed was nearly always lost.
+ */
+export const CROW_FULL_CROPS = 12;
 /** One extra crop eaten per this many unprotected crops. */
 export const CROWS_PER_CROPS = 16;
 /** Empty tilled soil reverts after 2 dry days with this chance, and always after 3. */
 export const REVERT_CHANCE_DAY2 = 0.5;
 export const REVERT_DAYS_MAX = 3;
 
-/** Harvest quality weights: normal, silver, gold. */
-export const QUALITY_WEIGHTS = [0.7, 0.22, 0.08] as const;
-
 export const MAX_STAMINA = 100;
 /** Passing out at 2:00 leaves you more tired the next morning. */
 export const PASS_OUT_STAMINA = 50;
-export const TOOL_STAMINA: Record<ToolKind, number> = { hoe: 2, water: 2, pickaxe: 4, sword: 3 };
+// Pickaxe and axe cost per hit (rocks and trees take several, see toolRules.ts).
+export const TOOL_STAMINA: Record<ToolKind, number> = { hoe: 2, water: 2, pickaxe: 2, axe: 2, sword: 3 };
 export const MAX_WATER = 20;
 
 export interface CropLoss {
@@ -42,6 +48,10 @@ export interface FarmDayResult {
   eaten: CropLoss[];
   /** Crops that grew (were watered on the day that ended). */
   grown: number;
+  /** Growing crops that went without water and wilted (still alive). */
+  wilted: number;
+  /** Crops that died of thirst this morning. */
+  died: CropLoss[];
 }
 
 /** Scarecrow positions (tile centres) among placed objects. */
@@ -54,13 +64,13 @@ export function protectedByScarecrow(tile: Vec2, scarecrows: readonly Vec2[], ra
 }
 
 /**
- * Picks the crops crows eat this morning: with CROW_CHANCE, one crop (plus one per
+ * Picks the crops crows eat this morning: with CROW_CHANCE (less on small plots), one crop (plus one per
  * CROWS_PER_CROPS unprotected crops) among those not near a scarecrow.
  */
 export function crowTargets(farm: readonly FarmTile[], objects: readonly PlacedObject[], rand: () => number): FarmTile[] {
   const scarecrows = scarecrowsOf(objects);
-  const open = farm.filter((t) => t.crop && !protectedByScarecrow(t, scarecrows));
-  if (open.length === 0 || rand() >= CROW_CHANCE) return [];
+  const open = farm.filter((t) => t.crop && !t.dead && !protectedByScarecrow(t, scarecrows));
+  if (open.length === 0 || rand() >= CROW_CHANCE * Math.min(1, open.length / CROW_FULL_CROPS)) return [];
   const n = Math.min(open.length, 1 + Math.floor(open.length / CROWS_PER_CROPS));
   const pool = open.slice();
   const out: FarmTile[] = [];
@@ -69,8 +79,8 @@ export function crowTargets(farm: readonly FarmTile[], objects: readonly PlacedO
 }
 
 /**
- * Ends `endedDay` for the farm: empty soil dries out (and may revert), then crows visit.
- * Mutates tiles in place and returns the surviving list.
+ * Ends `endedDay` for the farm: unwatered crops wilt (and die after CROP_DEATH_DAYS), empty soil
+ * dries out (and may revert), then crows visit. Mutates tiles in place and returns the survivors.
  */
 export function rollFarmDay(
   farm: readonly FarmTile[],
@@ -81,14 +91,30 @@ export function rollFarmDay(
   const kept: FarmTile[] = [];
   const reverted: Vec2[] = [];
   let grown = 0;
+  let wilted = 0;
+  const died: CropLoss[] = [];
+  // How the crops look the next morning, before this roll changes anything.
+  const morning = (endedDay + 1) * DAY_MS;
   for (const t of farm) {
     if (t.crop) {
-      if (t.lastWateredDay === endedDay) grown++;
-      t.dryDays = 0;
       kept.push(t);
+      if (t.dead) continue;
+      if (t.lastWateredDay === endedDay) {
+        grown++;
+        t.dryDays = 0;
+      } else if (cropView(t, morning).ready) {
+        t.dryDays = 0;
+      } else {
+        t.dryDays = (t.dryDays ?? 0) + 1;
+        if (t.dryDays >= CROP_DEATH_DAYS) {
+          t.dead = true;
+          died.push({ x: t.x, y: t.y, crop: t.crop });
+        } else wilted++;
+      }
       continue;
     }
-    const dry = (t.dryDays ?? 0) + 1;
+    // Soil watered that day stayed damp: its dry count starts over.
+    const dry = t.lastWateredDay === endedDay ? 0 : (t.dryDays ?? 0) + 1;
     if (dry >= REVERT_DAYS_MAX || (dry >= 2 && rand() < REVERT_CHANCE_DAY2)) {
       reverted.push({ x: t.x, y: t.y });
       continue;
@@ -101,24 +127,7 @@ export function rollFarmDay(
     eaten.push({ x: t.x, y: t.y, crop: t.crop! });
     Object.assign(t, tillTile(t.x, t.y), { dryDays: 0 });
   }
-  return { farm: kept, reverted, eaten, grown };
-}
-
-/** 0 normal, 1 silver, 2 gold. */
-export function rollQuality(rand: () => number): 0 | 1 | 2 {
-  const r = rand();
-  if (r < QUALITY_WEIGHTS[2]) return 2;
-  if (r < QUALITY_WEIGHTS[2] + QUALITY_WEIGHTS[1]) return 1;
-  return 0;
-}
-
-/**
- * The item a harvest yields (quality rolled), or null if not ready. Does not mutate, so the
- * caller can check the bag first; then call harvestCrop.
- */
-export function harvestYield(tile: FarmTile, now: number, rand: () => number): ItemId | null {
-  const crop = harvestable(tile, now);
-  return crop ? qualityItem(crop, rollQuality(rand)) : null;
+  return { farm: kept, reverted, eaten, grown, wilted, died };
 }
 
 /** Days a crop regrows in after a harvest, if it regrows. */
@@ -133,6 +142,7 @@ export function regrowDays(crop: ItemId): number | undefined {
 export function harvestCrop(tile: FarmTile, now: number): boolean {
   const crop = harvestable(tile, now);
   if (!crop) return false;
+  tile.dryDays = 0;
   const total = getItem(`seed_${crop}`)?.grows?.days;
   const again = regrowDays(crop);
   if (!again || !total) {

@@ -1,8 +1,9 @@
 // Crops (4 growth stages) and mining rocks, each on a 32x32 tile with the base at the bottom.
-import { hashStr, P, rng, shade, type Rgb } from "../palette";
+import { hashStr, mix, P, rng, shade, type Rgb } from "../palette";
 import { PixelGrid } from "./grid";
+import type { RockOre } from "../../../shared/types";
 
-export type Ore = "stone" | "copper" | "iron" | "gem";
+export type Ore = RockOre;
 export type Stage = 0 | 1 | 2 | 3;
 
 const LEAF = 0x5aa83e;
@@ -130,14 +131,41 @@ function pumpkin(g: PixelGrid, s: Stage): void {
 
 const CROPS: Record<string, (g: PixelGrid, s: Stage) => void> = { turnip, carrot, strawberry, pumpkin };
 
-export function drawCrop(crop: string, stage: Stage): PixelGrid {
+/** Dry-leaf brown that wilted and dead placeholder crops fade toward. */
+const WITHER = 0x8a6a3a;
+
+export function drawCrop(crop: string, stage: Stage, look: "normal" | "wilted" | "dead" = "normal"): PixelGrid {
   const g = new PixelGrid(32, 32);
   const id = crop.startsWith("seed_") ? crop.slice(5) : crop;
   const draw = Object.hasOwn(CROPS, id) ? CROPS[id] : null;
-  if (draw) draw(g, stage);
-  else genericCrop(g, stage, hashStr(id));
+  // A dead plant is its small stage, dried out.
+  const s: Stage = look === "dead" ? 1 : stage;
+  if (draw) draw(g, s);
+  else genericCrop(g, s, hashStr(id));
+  if (look !== "normal") wither(g, look === "dead" ? 0.7 : 0.4);
   g.outline("self");
   return g;
+}
+
+/** Fades every pixel toward brown and sags the top rows down a pixel (droop). */
+function wither(g: PixelGrid, t: number): void {
+  for (let y = g.h - 1; y >= 0; y--) {
+    for (let x = 0; x < g.w; x++) {
+      const c = g.get(x, y);
+      if (c === null) continue;
+      g.color[y * g.w + x] = shade(mix(c, WITHER, t), -t * 0.2);
+    }
+  }
+  for (let y = g.h - 1; y > 0; y--) {
+    if (y > BASE_Y - 8) continue;
+    for (let x = 0; x < g.w; x++) {
+      const i = y * g.w + x;
+      const j = (y - 1) * g.w + x;
+      g.color[i] = g.color[j];
+      g.alpha[i] = g.alpha[j];
+    }
+  }
+  for (let x = 0; x < g.w; x++) g.alpha[x] = 0;
 }
 
 function genericCrop(g: PixelGrid, s: Stage, h: number): void {
@@ -154,7 +182,10 @@ const ORE_FLECK: Record<Ore, [Rgb, Rgb] | null> = {
   stone: null,
   copper: [P.copper, P.copperLight],
   iron: [0xa8b0bc, 0xe8eef4],
+  silver: [0xc8d2dc, 0xffffff],
+  gold: [0xe0a820, 0xfff0a0],
   gem: null,
+  diamond: null,
 };
 
 export function drawRock(ore: Ore): PixelGrid {
@@ -184,6 +215,11 @@ export function drawRock(ore: Ore): PixelGrid {
     crystal(g, 12, 16, 3, 9, P.gem);
     crystal(g, 18, 14, 3.5, 11, 0x7fd8e8);
     crystal(g, 23, 20, 2.5, 7, 0xd070e0);
+  }
+  if (ore === "diamond") {
+    crystal(g, 13, 16, 3, 9, 0xe8f8ff);
+    crystal(g, 19, 14, 3.5, 11, 0xffffff);
+    crystal(g, 23, 20, 2.5, 7, 0xc8f0ff);
   }
   g.outline("self");
   return g;

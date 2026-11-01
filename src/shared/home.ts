@@ -2,6 +2,7 @@
 // end-of-day summary. Appended to ClientMsg / ServerMsg in protocol.ts.
 import type { FarmTile, ItemId } from "./types";
 import type { HomeClock } from "./engine/homeclock";
+import type { MailServerMsg } from "./mail";
 
 export type HomeClientMsg =
   /** Eat one of the (edible) item in an inventory slot: restores stamina. Home only. */
@@ -30,6 +31,10 @@ export interface DaySummary {
   reverted: number;
   /** Crops that grew a stage overnight. */
   grown: number;
+  /** Growing crops that wilted for lack of water (water them today to revive them). */
+  wilted?: number;
+  /** Crops that died of thirst. */
+  died?: { x: number; y: number; crop: ItemId }[];
   /** Stayed up past 2:00. */
   passedOut: boolean;
   /** Coins lost for passing out. */
@@ -56,7 +61,8 @@ export type HomeServerMsg =
   /** Someone is going to sleep: the day ends at `endsAt` (countdown for anyone else at home). */
   | { t: "sleeping"; host: string; endsAt: number }
   /** A new morning: the end-of-day summary. */
-  | { t: "daySummary"; summary: DaySummary };
+  | { t: "daySummary"; summary: DaySummary }
+  | MailServerMsg;
 
 const isSlot = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 23;
 const optReq = (o: Record<string, unknown>): { req?: string } | null => {

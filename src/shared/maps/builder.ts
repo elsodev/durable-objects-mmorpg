@@ -262,8 +262,8 @@ export class MapBuilder {
     this.reserve({ x: tx - 1, y: ty - 1, w: 3, h: 3 });
   }
 
-  exit(r: Rect, to: MapExit["to"], spawn: string): void {
-    this.exits.push({ ...r, to, spawn });
+  exit(r: Rect, to: MapExit["to"], spawn: string, map?: MapExit["map"]): void {
+    this.exits.push({ ...r, to, spawn, ...(map ? { map } : {}) });
     this.reserve({ x: r.x - 2, y: r.y - 2, w: r.w + 4, h: r.h + 4 });
   }
 
@@ -303,7 +303,7 @@ export class MapBuilder {
     for (let i = 0; i < this.ground.length; i++) if (!seen[i] && !BLOCKING_GROUND.has(this.ground[i]!)) this.ground[i] = wall;
   }
 
-  build(meta: Pick<MapData, "zone" | "name" | "ambient" | "farmArea" | "floorArea">): MapData {
+  build(meta: Pick<MapData, "zone" | "name" | "ambient" | "farmArea" | "floorArea" | "homeMap" | "farmGrass" | "noFarm">): MapData {
     const map: MapData = {
       ...meta,
       width: this.width,

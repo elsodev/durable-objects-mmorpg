@@ -1,6 +1,6 @@
 // Snapshot interpolation helpers for remote entities.
 import type { Interpolate } from "../contracts";
-import type { EntityState } from "../../shared/types";
+import { TICK_MS, type EntityState } from "../../shared/types";
 
 /** Remote entities are drawn this far behind the newest snapshot so there are two to blend between. */
 export const INTERP_DELAY_MS = 100;
@@ -39,10 +39,13 @@ export function sampleBuffer(buf: readonly Snapshot[], at: number): EntityState 
 
 function extrapolate(prev: Snapshot, last: Snapshot, at: number): EntityState {
   const out = { ...last.s };
-  const span = last.at - prev.at;
+  // Two ticks can arrive back to back (a busy page or network burst): their receive times are
+  // then ~0 ms apart and the speed would come out enormous, flinging the entity off the map.
+  // The server sends one tick per TICK_MS, so that is the shortest real gap.
+  const span = Math.max(last.at - prev.at, TICK_MS);
   const dx = last.s.x - prev.s.x;
   const dy = last.s.y - prev.s.y;
-  if (!last.s.moving || span <= 0 || Math.hypot(dx, dy) > SNAP_DIST) return out;
+  if (!last.s.moving || Math.hypot(dx, dy) > SNAP_DIST) return out;
   const ahead = Math.min(at - last.at, MAX_EXTRAPOLATE_MS);
   out.x += (dx / span) * ahead;
   out.y += (dy / span) * ahead;

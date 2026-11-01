@@ -22,6 +22,7 @@ import {
 import { emoteDataUrl } from "../art/emotes";
 import { uiSound } from "./sound";
 import "./styles/chat.css";
+import { enterCompletes, moveSelection, slashSuggestions, type SlashContext, type SlashSuggestion } from "./slash-commands";
 
 function isEditable(el: Element | null): boolean {
   if (!el) return false;
@@ -126,7 +127,16 @@ export const createChat: CreateChat = (root, opts) => {
 
   row.appendChild(input);
   row.appendChild(emoteBtn);
-  for (const part of [picker, tabs, log, row]) box.appendChild(part);
+  // --- "/" command suggestions, above the input
+  const slash = document.createElement("div");
+  slash.id = "chat-slash";
+  slash.className = "chat-slash";
+  slash.hidden = true;
+  slash.setAttribute("role", "listbox");
+  slash.setAttribute("aria-label", "Commands");
+  input.setAttribute("aria-controls", slash.id);
+
+  for (const part of [picker, slash, tabs, log, row]) box.appendChild(part);
   root.appendChild(box);
 
   const isGuest = () => {
@@ -197,13 +207,115 @@ export const createChat: CreateChat = (root, opts) => {
     opts.setTyping(false);
   });
 
+  let suggestions: SlashSuggestion[] = [];
+  let selected = -1;
+  /** Esc hides the list until the text changes. */
+  let dismissedFor: string | null = null;
+  const slashCtx = (): SlashContext => {
+    try {
+      return opts.slashContext?.() ?? { atHome: false, homeOwner: false, guest: isGuest(), devTools: false };
+    } catch {
+      return { atHome: false, homeOwner: false, guest: isGuest(), devTools: false };
+    }
+  };
+  function renderSlash(): void {
+    slash.replaceChildren();
+    suggestions.forEach((sg, i) => {
+      const item = document.createElement("div");
+      item.className = "chat-slash-item";
+      item.id = `chat-slash-${i}`;
+      item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", String(i === selected));
+      const label = document.createElement("span");
+      label.className = "chat-slash-label";
+      label.textContent = sg.label;
+      item.appendChild(label);
+      if (sg.syntax) {
+        const syntax = document.createElement("span");
+        syntax.className = "chat-slash-syntax";
+        syntax.textContent = sg.syntax;
+        item.appendChild(syntax);
+      }
+      if (sg.description) {
+        const desc = document.createElement("span");
+        desc.className = "chat-slash-desc";
+        desc.textContent = sg.description;
+        item.appendChild(desc);
+      }
+      // pointerdown, not click: keep focus in the input.
+      item.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        complete(i);
+      });
+      slash.appendChild(item);
+    });
+    slash.hidden = suggestions.length === 0;
+    box.classList.toggle("chat-slash-open", !slash.hidden);
+    if (selected >= 0) {
+      input.setAttribute("aria-activedescendant", `chat-slash-${selected}`);
+      slash.children[selected]?.scrollIntoView?.({ block: "nearest" });
+    }
+    else input.removeAttribute("aria-activedescendant");
+  }
+  function refreshSlash(): void {
+    const text = input.value;
+    const next = dismissedFor === text ? [] : slashSuggestions(text, slashCtx());
+    if (dismissedFor !== text) dismissedFor = null;
+    const keep = selected >= 0 ? suggestions[selected]?.key : undefined;
+    suggestions = next;
+    const i = keep ? next.findIndex((s) => s.key === keep) : -1;
+    selected = i >= 0 ? i : next.length > 0 ? 0 : -1;
+    renderSlash();
+  }
+  function closeSlash(): void {
+    suggestions = [];
+    selected = -1;
+    renderSlash();
+  }
+  function complete(i: number): void {
+    const sg = suggestions[i];
+    if (!sg) return;
+    input.value = sg.completion;
+    input.setSelectionRange(input.value.length, input.value.length);
+    uiSound("select");
+    refreshSlash();
+  }
+  input.addEventListener("input", refreshSlash);
+  input.addEventListener("blur", closeSlash);
+
   input.addEventListener("keydown", (e) => {
     // Keep game hotkeys (I, G, WASD...) from firing while typing.
     e.stopPropagation();
+    if (suggestions.length > 0) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        selected = moveSelection(selected, e.key === "ArrowDown" ? 1 : -1, suggestions.length);
+        renderSlash();
+        return;
+      }
+      if (e.key === "Tab" && !e.shiftKey) {
+        e.preventDefault();
+        complete(selected >= 0 ? selected : 0);
+        return;
+      }
+      if (e.key === "Enter" && !e.isComposing && enterCompletes(input.value, suggestions[selected])) {
+        e.preventDefault();
+        complete(selected);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        dismissedFor = input.value;
+        closeSlash();
+        return;
+      }
+    }
     if (e.key === "Enter") {
       e.preventDefault();
       const text = outgoingText(input.value);
       input.value = "";
+      closeSlash();
       if (text) {
         // Client-side commands (e.g. "/friend name") are handled locally, never broadcast.
         if (!opts.command?.(text)) opts.send(text, tab);
@@ -239,7 +351,7 @@ export const createChat: CreateChat = (root, opts) => {
     who.textContent = name;
     who.style.color = nameColor(name);
     who.title = `Whisper to ${name}`;
-    // Right-click / long-press opens the player menu (ui/player-menu.ts).
+    // Right-click / long-press opens the player menu (ui/player-card.ts).
     who.setAttribute("data-player-name", name);
     who.addEventListener("click", (e) => {
       e.stopPropagation();

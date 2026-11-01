@@ -200,6 +200,24 @@ function shippingBin(): PixelGrid {
   return g;
 }
 
+/** Wooden post with a rounded tin mailbox; the red flag is drawn by render/mailbox.ts. */
+export function mailbox(): PixelGrid {
+  const g = canvas(1, 1, 18); // 32 x 50
+  g.rect(13, 24, 6, 26, P.wood);
+  g.vline(13, 24, 26, P.woodLight);
+  g.vline(18, 24, 26, P.woodDark);
+  const tin = 0x5b86b4;
+  g.box(4, 12, 24, 14, tin);
+  g.ellipse(16, 12, 12, 6, tin);
+  g.hline(6, 9, 20, shade(tin, 0.3));
+  g.hline(5, 24, 22, shade(tin, -0.3));
+  // Front door of the box with its latch.
+  g.box(4, 12, 6, 13, shade(tin, -0.15));
+  g.px(8, 18, P.gold);
+  g.outline("self");
+  return g;
+}
+
 function fenceSegment(g: PixelGrid, x0: number, w: number, base: number): void {
   for (const y of [base - 18, base - 9]) {
     g.rect(x0, y, w, 4, P.wood);
@@ -468,6 +486,8 @@ const DRAWERS: Record<OutdoorPropType, Drawer> = {
   mine_cart: mineCart,
   campfire,
   cottage,
+  home_house: () => withOutline(houseSmall()),
+  mailbox,
   herb_patch: herbPatch,
   fishing_spot: fishingSpot,
 };

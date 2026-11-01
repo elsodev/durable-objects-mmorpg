@@ -22,7 +22,8 @@
 }
 .visit-banner {
   position: absolute;
-  top: 12px;
+  /* Below the top-right HUD menu, which reaches past the centre on laptop widths. */
+  top: 72px;
   left: 50%;
   transform: translateX(-50%);
   padding: 6px 10px;
@@ -55,4 +56,9 @@
 .visit-banner[hidden],
 .visit-list[hidden] {
   display: none;
+}
+
+/* While the banner shows, toasts stack under it instead of on top of it. */
+#ui:has(.visit-banner:not([hidden])) .dlg-notices {
+  top: 120px;
 }

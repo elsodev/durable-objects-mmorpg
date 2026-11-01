@@ -16,20 +16,27 @@ export function sanitizeInventory(inv: unknown): Inventory {
   const o = (inv && typeof inv === "object" ? inv : {}) as { coins?: unknown; slots?: unknown };
   const coins =
     typeof o.coins === "number" && Number.isFinite(o.coins) ? Math.min(MAX_COINS, Math.max(0, Math.floor(o.coins))) : 0;
-  const slots: InventorySlot[] = [];
-  for (const s of Array.isArray(o.slots) ? o.slots : []) {
-    if (slots.length >= MAX_SLOTS) break;
-    if (!s || typeof s !== "object") continue;
-    const def = getItem((s as InventorySlot).item);
-    const qty = (s as InventorySlot).qty;
-    if (!def || typeof qty !== "number" || !Number.isInteger(qty) || qty < 1) continue;
-    slots.push({ item: def.id, qty: Math.min(qty, def.stack, MAX_QTY) });
-  }
+  // Migration: old saves hold a packed list; padding it with nulls keeps every item where it was.
+  // Invalid entries become empty slots (not removed) so later items don't shift either.
+  const src = Array.isArray(o.slots) ? (o.slots as unknown[]) : [];
+  const slots: (InventorySlot | null)[] = [];
+  for (let i = 0; i < MAX_SLOTS; i++) slots.push(cleanSlot(src[i]));
   return { coins, slots };
 }
 
+function cleanSlot(s: unknown): InventorySlot | null {
+  if (!s || typeof s !== "object") return null;
+  const def = getItem((s as InventorySlot).item);
+  const qty = (s as InventorySlot).qty;
+  if (!def || typeof qty !== "number" || !Number.isInteger(qty) || qty < 1) return null;
+  const out: InventorySlot = { item: def.id, qty: Math.min(qty, def.stack, MAX_QTY) };
+  const quality = (s as InventorySlot).quality;
+  if (typeof quality === "number" && Number.isInteger(quality) && quality > 0 && quality <= 4) out.quality = quality;
+  return out;
+}
+
 export function cloneInventory(inv: Inventory): Inventory {
-  return { coins: inv.coins, slots: inv.slots.map((s) => ({ ...s })) };
+  return { coins: inv.coins, slots: inv.slots.map((s) => (s ? { ...s } : null)) };
 }
 
 export function clampHp(hp: unknown, maxHp: number): number {
@@ -65,10 +72,11 @@ export function sanitizeFarm(tiles: unknown): FarmTile[] {
         crop && typeof f.wateredDays === "number" && Number.isInteger(f.wateredDays) && f.wateredDays >= 0
           ? Math.min(f.wateredDays, 100)
           : 0,
-      lastWateredDay: crop ? f.lastWateredDay : null,
-      ...(!crop && typeof f.dryDays === "number" && Number.isInteger(f.dryDays) && f.dryDays > 0
+      lastWateredDay: f.lastWateredDay,
+      ...(typeof f.dryDays === "number" && Number.isInteger(f.dryDays) && f.dryDays > 0
         ? { dryDays: Math.min(f.dryDays, 10) }
         : {}),
+      ...(crop && f.dead === true ? { dead: true } : {}),
     });
   }
   return out;

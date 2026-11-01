@@ -1,5 +1,6 @@
 // D1 queries for friends (migrations/0005_friends.sql). Limits are re-checked inside the writing
 // statement itself, so two parallel requests can't both slip past a check made before either wrote.
+import { takeQuota } from "../http/rate";
 import { FRIEND_REQ_RATE_MAX, FRIEND_REQ_RATE_WINDOW_MS, MAX_FRIENDS, MAX_PENDING_OUT } from "../../shared/friends";
 
 export interface UserRow {
@@ -139,7 +140,10 @@ export async function listIncoming(db: D1Database, userId: string): Promise<Requ
     .prepare(
       `SELECT u.id AS id, u.name AS name, r.created_at AS at
          FROM "friend_request" r JOIN "user" u ON u.id = r.from_id
-        WHERE r.to_id = ? ORDER BY r.created_at DESC LIMIT 100`,
+        WHERE r.to_id = ?1
+          -- Requests from players you muted stay hidden (mute is silent: the sender sees "waiting").
+          AND NOT EXISTS (SELECT 1 FROM "player_mute" m WHERE m.muter_id = ?1 AND m.muted_id = r.from_id)
+        ORDER BY r.created_at DESC LIMIT 100`,
     )
     .bind(userId)
     .all<RequestRow>();
@@ -158,25 +162,9 @@ export async function listOutgoing(db: D1Database, userId: string): Promise<Requ
   return res.results ?? [];
 }
 
-/**
- * Fixed-window counter in the shared "rateLimit" table (migrations/0002), under a key Better Auth
- * never uses. Takes one unit and returns true, or returns false (without counting) when the user
- * already used FRIEND_REQ_RATE_MAX in the current window. `lastRequest` holds the window start.
- */
-export async function takeRequestQuota(db: D1Database, userId: string, now: number): Promise<boolean> {
-  const key = `friends:request:${userId}`;
-  const row = await db
-    .prepare(
-      `INSERT INTO "rateLimit" (id, key, count, lastRequest) VALUES (?5, ?1, 1, ?2)
-       ON CONFLICT (key) DO UPDATE SET
-         count = CASE WHEN "rateLimit".lastRequest <= ?2 - ?3 THEN 1 ELSE "rateLimit".count + 1 END,
-         lastRequest = CASE WHEN "rateLimit".lastRequest <= ?2 - ?3 THEN ?2 ELSE "rateLimit".lastRequest END
-        WHERE "rateLimit".lastRequest <= ?2 - ?3 OR "rateLimit".count < ?4
-       RETURNING count`,
-    )
-    .bind(key, now, FRIEND_REQ_RATE_WINDOW_MS, FRIEND_REQ_RATE_MAX, crypto.randomUUID())
-    .first<{ count: number }>();
-  return !!row;
+/** One friend request from `userId` against FRIEND_REQ_RATE_MAX per window (see ../http/rate). */
+export function takeRequestQuota(db: D1Database, userId: string, now: number): Promise<boolean> {
+  return takeQuota(db, `friends:request:${userId}`, now, FRIEND_REQ_RATE_WINDOW_MS, FRIEND_REQ_RATE_MAX);
 }
 
 /** Just the friend ids (SocialRoom uses this to push presence changes to friends). */

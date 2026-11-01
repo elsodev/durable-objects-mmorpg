@@ -1,6 +1,7 @@
 // Camera: keeps the followed tile position centred by offsetting layers.world.
 // All math lives in pure helpers (exported for tests); createCamera only holds state and
 // writes the snapped offset to the world container.
+import { shakeOffset } from "./hit-fx-logic";
 import type { Camera, CreateCamera } from "../contracts";
 import { TILE } from "../contracts";
 import type { Vec2 } from "../../shared/types";
@@ -32,9 +33,20 @@ export function approach(current: number, target: number, dtMs: number, tauMs = 
   return Math.abs(target - next) < SETTLE_PX ? target : next;
 }
 
+/**
+ * The centre to draw with: the smoothed centre moved by under half a pixel so it sits a whole
+ * number of pixels from the target. The player sprite and the world offset are both rounded to
+ * pixels; without this their rounding errors differ frame to frame and the walking player
+ * wobbles by a pixel on screen.
+ */
+export function pixelLocked(center: number, target: number): number {
+  return target - Math.round(target - center);
+}
+
 /** World container offset (px, integer) that puts `center` (world px) in the middle of the viewport. */
 export function offsetFor(center: Vec2, viewport: { w: number; h: number }): Vec2 {
-  return { x: Math.round(viewport.w / 2 - center.x), y: Math.round(viewport.h / 2 - center.y) };
+  // Round each part on its own, like a sprite at `center` would be, so both move in step.
+  return { x: Math.round(viewport.w / 2) - Math.round(center.x), y: Math.round(viewport.h / 2) - Math.round(center.y) };
 }
 
 export function screenToTileAt(offset: Vec2, sx: number, sy: number): Vec2 {
@@ -71,6 +83,7 @@ export const createCamera: CreateCamera = (layers, initialViewport) => {
   const target: Vec2 = { x: 0, y: 0 }; // world px, unclamped
   const center: Vec2 = { x: 0, y: 0 }; // world px, clamped
   let offset: Vec2 = { x: 0, y: 0 };
+  const quake = { t: 0, ms: 0, amp: 0 };
 
   const clamped = (p: Vec2): Vec2 => ({
     x: clampAxis(p.x, viewport.w, bounds ? bounds.w * TILE : null),
@@ -78,9 +91,13 @@ export const createCamera: CreateCamera = (layers, initialViewport) => {
   });
 
   const apply = (): void => {
-    offset = offsetFor(center, viewport);
-    layers.world.position.set(offset.x, offset.y);
-    layers.overlay.position.set(offset.x, offset.y);
+    const c = clamped(target);
+    offset = offsetFor({ x: pixelLocked(center.x, c.x), y: pixelLocked(center.y, c.y) }, viewport);
+    // The shake moves only what is drawn, never the tile maths (clicks still land true).
+    const sx = Math.round(shakeOffset(quake.t, quake.ms, quake.amp));
+    const sy = Math.round(shakeOffset(quake.t + 37, quake.ms + 37, quake.amp * 0.6));
+    layers.world.position.set(offset.x + sx, offset.y + sy);
+    layers.overlay.position.set(offset.x + sx, offset.y + sy);
   };
 
   const snapToTarget = (): void => {
@@ -101,6 +118,7 @@ export const createCamera: CreateCamera = (layers, initialViewport) => {
       if (snap) snapToTarget();
     },
     update(dtMs) {
+      if (quake.t < quake.ms) quake.t += dtMs;
       const c = clamped(target);
       center.x = approach(center.x, c.x, dtMs);
       center.y = approach(center.y, c.y, dtMs);
@@ -118,6 +136,13 @@ export const createCamera: CreateCamera = (layers, initialViewport) => {
     screenToTile: (sx, sy) => screenToTileAt(offset, sx, sy),
     tileToScreen: (x, y) => tileToScreenAt(offset, x, y),
     view: () => viewRect(offset, viewport, bounds),
+    shake(ms, amp) {
+      // A bigger or fresher hit replaces a dying one.
+      if (quake.t < quake.ms && quake.amp > amp && quake.ms - quake.t > ms) return;
+      quake.t = 0;
+      quake.ms = Math.max(0, ms);
+      quake.amp = amp;
+    },
   };
   apply();
   return camera;

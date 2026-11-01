@@ -1,11 +1,17 @@
 // Farm layer: tilled/watered soil, crops by stage, mining rocks and placed furniture.
+// Soil is autotiled (soil-autotile.ts): connected tilled tiles merge into one patch, and watered
+// tiles lay a darker patch of the same shape on top.
 // Every set* call diffs against what is on screen by a per-item signature, so the store can
 // call them on each change event without rebuilding sprites. See ../contracts.ts.
-import { Container, Graphics, GraphicsContext, Sprite, Ticker } from "pixi.js";
-import { cropView, objectRect, footprint, pointInRect } from "../../shared/engine";
+import { Container, Graphics, GraphicsContext, Sprite, Ticker, type Texture } from "pixi.js";
+import { cropLook, cropView, objectRect, footprint, pointInRect, wallFaceRow } from "../../shared/engine";
 import { getItem } from "../../shared/items";
 import { Ground, type FarmTile, type MapData, type PlacedObject, type Vec2 } from "../../shared/types";
+import { hashXY } from "../art/slice";
 import { fenceKey, fenceMasks } from "./fence";
+import { BlobTextures, type GroundEdgeArt } from "./ground";
+import { QUADRANTS, type BlobPiece, type BlobSet, type Quadrant } from "./ground-autotile";
+import { planSoil, soilShift, soilSig, type SoilPlan } from "./soil-autotile";
 import { SCALE, TILE, type Art, type CreateFarmLayer, type SpriteArt } from "../contracts";
 
 // ---------------------------------------------------------------- pure helpers (tested)
@@ -53,7 +59,27 @@ export function diffKeyed<T>(
 /** What a farm tile looks like right now; equal signatures render identically. */
 export function farmSig(tile: FarmTile, now: number): string {
   const v = cropView(tile, now);
-  return `${tile.crop ?? ""}|${v.stage}|${v.wateredToday ? 1 : 0}|${v.ready ? 1 : 0}`;
+  return `${tile.crop ?? ""}|${v.stage}|${v.wateredToday ? 1 : 0}|${v.ready ? 1 : 0}|${cropLook(v)}`;
+}
+
+/**
+ * Sort depth of a piece hung on a wall: just in front of the wall it hangs on (whose art sorts at
+ * the first floor row below it), behind anyone standing on that floor row.
+ */
+export function wallObjectZ(o: PlacedObject, map: MapData | null): number {
+  const fp = footprint(o.item, o.rotation);
+  const bottom = Math.floor(o.y) + fp.h - 1;
+  const row = map ? wallFaceRow(map, Math.floor(o.x), bottom) : null;
+  return (row ?? bottom + 2) * TILE + 0.5;
+}
+
+/**
+ * Per-tile variety so a row of the same crop doesn't look stamped: a mirror flip and a nudge of up
+ * to 2 source px sideways and 1 px down/up, fixed by tile position (same on every client).
+ */
+export function cropJitter(x: number, y: number): { flip: boolean; dx: number; dy: number } {
+  const h = hashXY(x, y);
+  return { flip: (h & 1) === 1, dx: ((h >>> 1) % 5) - 2, dy: ((h >>> 4) % 3) - 1 };
 }
 
 export function objectSig(o: PlacedObject): string {
@@ -72,11 +98,34 @@ export function findObjectAt(objects: Iterable<PlacedObject>, tile: Vec2): strin
 
 // ---------------------------------------------------------------- rendering
 
-/** Wet soil is the dry texture darkened; works the same for LPC art and placeholders. */
+/** Soil plans for every tile at once: each tile's edges depend on its neighbours. */
+export function planFarmSoil(tiles: readonly FarmTile[], now: number): Map<string, SoilPlan> {
+  const tilled = new Set<string>();
+  const wet = new Set<string>();
+  for (const t of tiles) {
+    const k = tileKey(t.x, t.y);
+    tilled.add(k);
+    if (cropView(t, now).wateredToday) wet.add(k);
+  }
+  const out = new Map<string, SoilPlan>();
+  for (const t of tiles) {
+    out.set(
+      tileKey(t.x, t.y),
+      planSoil((x, y) => tilled.has(tileKey(x, y)), (x, y) => wet.has(tileKey(x, y)), t.x, t.y),
+    );
+  }
+  return out;
+}
+
+/** Wet soil without wet art: the dry texture darkened; works the same for LPC art and placeholders. */
 const WET_TINT = 0x8a7466;
+/** The pack's wet soil is only a shade darker than dry; deepen it so watered tiles read at a glance. */
+const WET_OVERLAY_TINT = 0xa08878;
 /** Crops sit slightly above the tile's bottom edge so they look planted in the soil mound. */
 const CROP_BASE = 0.82;
 const ROCK_BASE = 0.92;
+/** A ripe crop sways gently (stretch at its base) so it reads as harvestable at a glance. */
+const READY_BOB = 0.035;
 
 /** Soft shadow: stacked translucent ellipses, unit radius, scaled per object. Shared geometry. */
 let shadowCtx: GraphicsContext | null = null;
@@ -125,7 +174,7 @@ function makeSprite(a: SpriteArt, x: number, y: number): Sprite {
 }
 
 interface FarmView {
-  soil: Sprite;
+  soil: Container;
   crop?: Sprite;
   shadow?: Graphics;
   sparkle?: Graphics;
@@ -138,8 +187,9 @@ interface PlacedView {
   shadow?: Graphics;
 }
 
-function destroyView(v: { sprite?: Sprite; soil?: Sprite; crop?: Sprite; shadow?: Graphics; sparkle?: Graphics }): void {
-  v.soil?.destroy();
+function destroyView(v: { sprite?: Sprite; soil?: Container; crop?: Sprite; shadow?: Graphics; sparkle?: Graphics }): void {
+  // Soil quadrants use the art's (and BlobTextures') cached textures: free only the nodes.
+  v.soil?.destroy({ children: true });
   v.crop?.destroy();
   v.sprite?.destroy();
   // Graphics built from a shared context: destroy the node, keep the context.
@@ -157,6 +207,7 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
   const sparkleRoot = new Container();
   layers.overlay.addChild(sparkleRoot);
 
+  const blobs = new BlobTextures(art as Art & GroundEdgeArt);
   const farmSigs = new Map<string, string>();
   const farmViews = new Map<string, FarmView>();
   const rockSigs = new Map<string, string>();
@@ -167,6 +218,8 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
   const maskOf = (o: PlacedObject) => fenceMask.get(fenceKey(Math.floor(o.x), Math.floor(o.y))) ?? 0;
   const objViews = new Map<string, PlacedView>();
   const objects = new Map<string, PlacedObject>();
+  /** Map the objects stand on (wall pieces sort by the wall they hang on). */
+  let objMap: MapData | null = null;
 
   // ---- sparkle animation runs only while some crop is ready
   let t = 0;
@@ -180,6 +233,7 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       s.alpha = Math.max(0, w) * 0.9;
       s.scale.set(0.5 + 0.35 * Math.max(0, w));
       s.rotation = t * 0.6 + v.phase;
+      if (v.crop) v.crop.scale.y = SCALE * (1 + READY_BOB * Math.sin(t * 2.2 + v.phase));
     }
   };
   function updateTicker(): void {
@@ -190,23 +244,56 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
     ticking = any;
   }
 
-  function buildFarm(tile: FarmTile, now: number): FarmView {
+  /** One soil quadrant: the blob piece at the patch's edge, else the plain tile's quarter. */
+  function soilQuad(c: Container, set: BlobSet, piece: BlobPiece | null, full: Texture, q: Quadrant, tint?: number): void {
+    const tex = piece ? blobs.quad(set, piece, q, soilShift(piece, q)) : blobs.quadOf(full, q);
+    if (!tex) return;
+    const half = TILE / 2;
+    const s = new Sprite(tex);
+    s.position.set(q & 1 ? half : 0, q & 2 ? half : 0);
+    s.width = half;
+    s.height = half;
+    if (tint !== undefined) s.tint = tint;
+    c.addChild(s);
+  }
+
+  function buildSoil(tile: FarmTile, plan: SoilPlan): Container {
+    const c = new Container();
+    c.position.set(tile.x * TILE, tile.y * TILE);
+    const dry = art.ground(Ground.Tilled, tile.x, tile.y);
+    if (!blobs.has("tilled")) {
+      // No blob sheet (placeholder art): plain square tiles, wet ones darkened.
+      const s = new Sprite(plan.wet ? art.tilledWet?.(tile.x, tile.y) ?? dry : dry);
+      s.width = TILE;
+      s.height = TILE;
+      if (plan.wet && !art.tilledWet) s.tint = WET_TINT;
+      c.addChild(s);
+      return c;
+    }
+    const wetArt = plan.wet && blobs.has("tilled_wet") && art.tilledWet ? art.tilledWet(tile.x, tile.y) : null;
+    // Without a wet sheet, tint the dry patch instead of overlaying.
+    const dryTint = plan.wet && !wetArt ? WET_TINT : undefined;
+    for (const q of QUADRANTS) soilQuad(c, "tilled", plan.dry[q] ?? null, dry, q, dryTint);
+    if (wetArt && plan.wet) for (const q of QUADRANTS) soilQuad(c, "tilled_wet", plan.wet[q] ?? null, wetArt, q, WET_OVERLAY_TINT);
+    return c;
+  }
+
+  function buildFarm(tile: FarmTile, now: number, plan: SoilPlan): FarmView {
     const v = cropView(tile, now);
     const px = tile.x * TILE;
     const py = tile.y * TILE;
-    const soil = new Sprite(art.ground(Ground.Tilled, tile.x, tile.y));
-    soil.position.set(px, py);
-    soil.width = TILE;
-    soil.height = TILE;
-    if (v.wateredToday) soil.tint = WET_TINT;
+    const soil = buildSoil(tile, plan);
     soilRoot.addChild(soil);
     const view: FarmView = { soil, phase: ((tile.x * 7 + tile.y * 13) % 17) * 0.37 };
     if (tile.crop) {
       const cx = px + TILE / 2;
       const by = py + TILE * CROP_BASE;
-      view.shadow = makeShadow(cx, by, TILE * (0.18 + v.stage * 0.06));
+      // The dead plant is drawn from the small stage, so its shadow matches that.
+      view.shadow = makeShadow(cx, by, TILE * (0.18 + (v.dead ? 1 : v.stage) * 0.06));
       shadowRoot.addChild(view.shadow);
-      view.crop = makeSprite(art.crop(tile.crop, v.stage), cx, by);
+      const j = cropJitter(tile.x, tile.y);
+      view.crop = makeSprite(art.crop(tile.crop, v.stage, cropLook(v)), cx + j.dx * SCALE, by + j.dy * SCALE);
+      if (j.flip) view.crop.scale.x = -SCALE;
       layers.sorted.addChild(view.crop);
       if (v.ready) {
         view.sparkle = new Graphics(sparkleContext());
@@ -235,8 +322,13 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
     const mask = o.item === "fence" ? maskOf(o) : 0;
     const look = (mask && art.fence?.(mask)) || art.furniture(o.item, o.rotation);
     const sprite = makeSprite(look, (x + fp.w / 2) * TILE, (y + fp.h) * TILE);
+    const def = getItem(o.item);
+    if (def?.placeOn === "wall") {
+      sprite.zIndex = wallObjectZ(o, objMap);
+      layers.sorted.addChild(sprite);
+    }
     // Walkable furniture (rugs) lies flat under everyone instead of y-sorting.
-    if (getItem(o.item)?.walkable) floorRoot.addChild(sprite);
+    else if (def?.walkable) floorRoot.addChild(sprite);
     else layers.sorted.addChild(sprite);
     return { sprite };
   }
@@ -251,7 +343,10 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
     setFarm(tiles, now) {
       const list = [...tiles];
       const byKey = (f: FarmTile) => tileKey(f.x, f.y);
-      const d = diffKeyed(farmSigs, list, byKey, (f) => farmSig(f, now));
+      const plans = planFarmSoil(list, now);
+      const planOf = (f: FarmTile) => plans.get(byKey(f))!;
+      // A neighbour being tilled or watered changes this tile's edges, so the soil is in the signature.
+      const d = diffKeyed(farmSigs, list, byKey, (f) => `${farmSig(f, now)}|${soilSig(planOf(f))}`);
       for (const k of d.removed) {
         const v = farmViews.get(k);
         if (v) destroyView(v);
@@ -261,18 +356,26 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
         const k = byKey(f);
         const old = farmViews.get(k);
         if (old) destroyView(old);
-        farmViews.set(k, buildFarm(f, now));
+        farmViews.set(k, buildFarm(f, now, planOf(f)));
       }
       updateTicker();
     },
 
-    setRocks(map, broken) {
+    rockSprite(id) {
+      return rockViews.get(id)?.sprite ?? null;
+    },
+
+    setRocks(map, broken, ores) {
       if (map !== rockMap) {
         clearRocks();
         rockMap = map;
       }
-      const visible = (map.rocks ?? []).filter((r) => !broken.has(r.id));
-      // Rocks never move, so the signature is just the ore; broken rocks drop out as "removed".
+      const visible = (map.rocks ?? []).filter((r) => !broken.has(r.id)).map((r) => {
+        const ore = ores?.get(r.id);
+        return ore && ore !== r.ore ? { ...r, ore } : r;
+      });
+      // Rocks never move, so the signature is just the ore (a cave rock may come back as another);
+      // broken rocks drop out as "removed".
       const d = diffKeyed(rockSigs, visible, (r) => r.id, (r) => `${r.ore}|${r.x}|${r.y}`);
       for (const k of d.removed) {
         const v = rockViews.get(k);
@@ -286,7 +389,8 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       }
     },
 
-    setObjects(list) {
+    setObjects(list, map) {
+      if (map !== undefined) objMap = map;
       const all = [...list];
       objects.clear();
       for (const o of all) objects.set(o.id, o);
@@ -317,6 +421,7 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       for (const v of farmViews.values()) destroyView(v);
       for (const v of objViews.values()) destroyView(v);
       clearRocks();
+      blobs.destroy();
       farmViews.clear();
       objViews.clear();
       farmSigs.clear();

@@ -4,7 +4,7 @@ import { MAX_FOLLOW_MS, sanitizeActions, type ActionScope } from "../src/worker/
 import { CoalescingSaver } from "../src/worker/game/saver";
 import { Motion } from "../src/worker/game/motion";
 import { RockField } from "../src/worker/game/rockField";
-import { buildCollision, isBlocked } from "../src/shared/engine";
+import { buildCollision, isBlocked, PLAYER_SPEED } from "../src/shared/engine";
 import { getMap } from "../src/shared/maps";
 import type { EntityState } from "../src/shared/types";
 import { openMap } from "./engine-fixtures";
@@ -117,20 +117,52 @@ describe("Motion", () => {
   const ent = (): EntityState => ({ id: "p:1", kind: "player", name: "A", sprite: "player_1", x: 2.5, y: 2.5, facing: "down", moving: false });
   it("moves by held direction and acks the seq", () => {
     const grid = buildCollision(openMap(10, 10));
-    const m = new Motion();
+    const m = new Motion(0);
     const e = ent();
-    m.onMove(1, 0, 7);
+    m.onMove(e, grid, 1, 0, 7, 0);
     expect(m.step(e, grid, 100)).toBe(7);
     expect(e.x).toBeGreaterThan(2.5);
     expect(e.moving).toBe(true);
+    expect(m.takeMoved()).toBe(true);
+    expect(m.takeMoved()).toBe(false);
+  });
+  it("integrates inputs at the time they arrive, not per tick", () => {
+    const grid = buildCollision(openMap(20, 10));
+    const m = new Motion(0);
+    const e = ent();
+    m.step(e, grid, 0);
+    // Pressed 90 ms after a tick, released 30 ms after the next one: 140 ms of walking.
+    m.onMove(e, grid, 1, 0, 1, 90);
+    m.step(e, grid, 100);
+    m.onMove(e, grid, 0, 0, 2, 230);
+    m.step(e, grid, 300);
+    expect(e.x).toBeCloseTo(2.5 + (PLAYER_SPEED * 140) / 1000, 6);
+    expect(m.ackMs(300)).toBe(70);
+  });
+  it("reports how long the acked input has run", () => {
+    const grid = buildCollision(openMap(10, 10));
+    const m = new Motion(0);
+    const e = ent();
+    expect(m.ackMs(0)).toBeUndefined();
+    m.onMove(e, grid, 0, 1, 3, 40);
+    m.step(e, grid, 100);
+    expect(m.ackMs(100)).toBe(60);
+  });
+  it("can't be sped up by spamming inputs", () => {
+    const grid = buildCollision(openMap(20, 10));
+    const m = new Motion(0);
+    const e = ent();
+    for (let t = 0; t <= 100; t += 5) m.onMove(e, grid, 1, 0, t, t);
+    m.step(e, grid, 100);
+    expect(e.x).toBeCloseTo(2.5 + (PLAYER_SPEED * 100) / 1000, 6);
   });
   it("follows a path to the clicked point and throttles moveTo", () => {
     const grid = buildCollision(openMap(10, 10));
-    const m = new Motion();
+    const m = new Motion(0);
     const e = ent();
     expect(m.onMoveTo(grid, e, 5.2, 2.5, 1, 0)).toBe(true);
     expect(m.onMoveTo(grid, e, 6, 2.5, 2, 50)).toBe(false);
-    for (let i = 0; i < 20; i++) m.step(e, grid, 100);
+    for (let i = 1; i <= 20; i++) m.step(e, grid, 50 + i * 100);
     expect(e.x).toBeCloseTo(5.2, 1);
     expect(m.path).toBeNull();
   });

@@ -22,10 +22,11 @@ export interface BlobPiece {
  * Blob sets the ground layer asks the art for (see GroundEdgeArt in ground.ts):
  * - grass: grass patch, transparent outside (catalog terrain.grass.edges outer3x3/inner2x2)
  * - tilled: tilled soil patch, transparent outside (terrain.tilled.edges)
+ * - tilled_wet: the same patch watered (terrain.tilled_wet.edges), drawn over dry soil by farm.ts
  * - water.grass / water.dirt: pond with a grass / dirt bank ring, transparent centre
  *   (terrain.water.edges grassBankOverlay3x3 + grassInner2x2, dirtBankOverlay3x3 + dirtInner2x2)
  */
-export type BlobSet = "grass" | "tilled" | "water.grass" | "water.dirt";
+export type BlobSet = "grass" | "tilled" | "tilled_wet" | "water.grass" | "water.dirt";
 
 /**
  * Piece for one quadrant of a tile whose own terrain is the blob's patch terrain.

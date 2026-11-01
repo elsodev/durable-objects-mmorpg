@@ -255,7 +255,8 @@
 
 .dlg-notices {
   position: absolute;
-  top: 16px;
+  /* Below the top-right HUD menu, which reaches past the centre on laptop widths. */
+  top: 72px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;

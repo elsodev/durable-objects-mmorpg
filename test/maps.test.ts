@@ -3,10 +3,11 @@ import { getMap, mapToAscii, PROP_FOOTPRINTS } from "../src/shared/maps";
 import { buildCaves } from "../src/shared/maps/caves";
 import { buildHome } from "../src/shared/maps/home";
 import { NPC_SCHEDULE, placeZone } from "../src/shared/npcSchedule";
-import { BLOCKING_GROUND, INTERIOR_ZONES, type MapData, type ZoneId } from "../src/shared/types";
+import { isFarmable } from "../src/shared/engine";
+import { BLOCKING_GROUND, INTERIOR_ZONES, type MapData, type MapId, type ZoneId } from "../src/shared/types";
 
-const ZONES: ZoneId[] = ["home", "village", "riverside", "caves", ...INTERIOR_ZONES];
-const SIZES: Partial<Record<ZoneId, [number, number]>> = {
+const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", ...INTERIOR_ZONES];
+const SIZES: Partial<Record<MapId, [number, number]>> = {
   home: [40, 30],
   village: [64, 48],
   riverside: [80, 40],
@@ -26,7 +27,7 @@ const NPC_HOMES: Record<string, ZoneId> = {
 };
 
 /** NPCs a zone's map must place: its outdoor workers, plus everyone whose routine visits it. */
-function expectedNpcs(zone: ZoneId): string[] {
+function expectedNpcs(zone: MapId): string[] {
   const ids = new Set(Object.entries(NPC_HOMES).filter(([, z]) => z === zone).map(([id]) => id));
   for (const [id, bands] of Object.entries(NPC_SCHEDULE)) if (bands.some((b) => placeZone(id, b.at) === zone)) ids.add(id);
   return [...ids].sort();
@@ -94,7 +95,7 @@ describe.each(ZONES)("map %s", (zone) => {
   const grid = blockedGrid(map);
 
   it("has the expected size and a complete ground grid", () => {
-    expect(map.zone).toBe(zone);
+    expect(map.homeMap ?? map.zone).toBe(zone);
     if (SIZES[zone]) expect([map.width, map.height]).toEqual(SIZES[zone]);
     expect(map.ground.length).toBe(map.width * map.height);
   });
@@ -152,19 +153,21 @@ describe.each(ZONES)("map %s", (zone) => {
   });
 
   it("exits point at valid spawns in the target map, and spawns exist for each connected zone", () => {
+    // A house door (exit.map) leads to another map of the same home zone.
+    const dest = (e: MapData["exits"][number]) => e.map ?? e.to;
     for (const e of map.exits) {
-      const target = getMap(e.to);
-      expect(target.spawns[e.spawn], `${zone} -> ${e.to}:${e.spawn}`).toBeDefined();
+      const target = getMap(dest(e));
+      expect(target.spawns[e.spawn], `${zone} -> ${dest(e)}:${e.spawn}`).toBeDefined();
       expect(e.spawn).toBe(`from_${zone}`);
-      expect(map.spawns[`from_${e.to}`], `${zone} needs from_${e.to}`).toBeDefined();
+      expect(map.spawns[`from_${dest(e)}`], `${zone} needs from_${dest(e)}`).toBeDefined();
       // and the target has an exit back
-      expect(target.exits.some((b) => b.to === zone)).toBe(true);
+      expect(target.exits.some((b) => dest(b) === zone)).toBe(true);
     }
   });
 
   it("each from_<zone> spawn sits just inside the matching exit", () => {
     for (const e of map.exits) {
-      const s = map.spawns[`from_${e.to}`]!;
+      const s = map.spawns[`from_${e.map ?? e.to}`]!;
       const dx = Math.max(e.x - s.x, 0, s.x - (e.x + e.w));
       const dy = Math.max(e.y - s.y, 0, s.y - (e.y + e.h));
       const d = Math.hypot(dx, dy);
@@ -207,21 +210,56 @@ describe("map specifics", () => {
     expect(JSON.stringify(buildCaves())).toBe(JSON.stringify(getMap("caves")));
   });
 
-  it("home has a farm area of at least 8x6 on open grass and an indoor floor area", () => {
+  it("home yard: one house with its door into home_in, bin and mailbox beside it, grass to farm", () => {
     const home = getMap("home");
     const grid = blockedGrid(home);
-    const farm = home.farmArea!;
-    expect(farm.reduce((n, r) => n + r.w * r.h, 0)).toBeGreaterThanOrEqual(48);
-    for (const r of farm)
-      for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) expect(walkable(home, grid, x, y)).toBe(true);
-    const floor = home.floorArea!;
-    expect(floor.length).toBeGreaterThan(0);
+    expect(home.floorArea).toBeUndefined();
+    expect(home.farmGrass).toBe(true);
+    const houses = home.props.filter((p) => p.type === "home_house");
+    expect(houses).toHaveLength(1);
+    const house = houses[0]!;
+    const door = home.exits.find((e) => e.map === "home_in")!;
+    expect(door).toMatchObject({ to: "home", spawn: "from_home" });
+    expect(door.y).toBe(house.y + house.h - 1);
+    expect(door.x >= house.x && door.x < house.x + house.w).toBe(true);
+    for (const id of ["shipping_bin", "mailbox"]) {
+      const p = home.props.find((q) => q.id === id)!;
+      expect(Math.hypot(p.x - door.x, p.y - door.y), id).toBeLessThan(5);
+    }
+    // Plenty of reachable grass to till, and none of it on the road, the house or the doorstep.
     const seen = bfs(home, grid, home.spawns.default!);
-    for (const r of [...farm, ...floor])
-      for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) expect(seen[y * home.width + x]).toBe(1);
+    const open = blockedGrid({ ...home, rocks: [] });
+    let farmable = 0;
+    for (let y = 0; y < home.height; y++)
+      for (let x = 0; x < home.width; x++) {
+        if (!isFarmable(home, x, y)) continue;
+        farmable++;
+        // Rocks are left to the caller (a broken one leaves grass to till).
+        expect(walkable(home, open, x, y), `${x},${y}`).toBe(true);
+      }
+    expect(farmable).toBeGreaterThan(300);
+    expect(isFarmable(home, door.x, door.y)).toBe(false);
+    expect(isFarmable(home, door.x, door.y + 1)).toBe(false);
+    expect(isFarmable(home, 20, 12)).toBe(false); // the road
+    expect(isFarmable(home, 25, 6)).toBe(true); // the fenced field
+    expect(seen[6 * home.width + 25]).toBe(1);
     expect(home.npcs).toEqual([]);
-    expect(home.props.some((p) => p.type === "shipping_bin")).toBe(true);
     expect((home.rocks ?? []).every((r) => r.ore === "stone")).toBe(true);
+  });
+
+  it("home_in: a walled room with the whole floor for furniture, door back to the doorstep", () => {
+    const inside = getMap("home_in");
+    expect(inside.zone).toBe("home");
+    expect(inside.ambient).toBe("indoor");
+    expect(inside.farmArea).toBeUndefined();
+    const floor = inside.floorArea![0]!;
+    expect(floor.w * floor.h).toBeGreaterThanOrEqual(80);
+    const grid = blockedGrid(inside);
+    const seen = bfs(inside, grid, inside.spawns.default!);
+    for (let y = floor.y; y < floor.y + floor.h; y++)
+      for (let x = floor.x; x < floor.x + floor.w; x++) if (walkable(inside, grid, x, y)) expect(seen[y * inside.width + x]).toBe(1);
+    expect(inside.exits).toEqual([expect.objectContaining({ to: "home", map: "home", spawn: "from_home_in" })]);
+    expect(getMap("home").spawns.from_home_in).toBeDefined();
   });
 
   it("caves have each ore type and each monster type", () => {

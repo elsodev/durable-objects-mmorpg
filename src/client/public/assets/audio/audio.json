@@ -173,15 +173,15 @@
     },
     "ui_open": {
       "files": [
-        "sfx/ui_open_0.ogg"
+        "sfx/ui_drawer_open_0.ogg"
       ],
-      "volume": 0.35
+      "volume": 0.25
     },
     "ui_close": {
       "files": [
-        "sfx/ui_close_0.ogg"
+        "sfx/ui_drawer_close_0.ogg"
       ],
-      "volume": 0.35
+      "volume": 0.25
     },
     "chat": {
       "files": [
@@ -429,6 +429,37 @@
         "sfx/rock_crab_die_1.ogg"
       ],
       "volume": 0.45
+    },
+    "bin_open": {
+      "files": [
+        "sfx/bin_open_0.ogg"
+      ],
+      "volume": 0.4
+    },
+    "bin_close": {
+      "files": [
+        "sfx/bin_close_0.ogg"
+      ],
+      "volume": 0.35
+    },
+    "ship_drop": {
+      "files": [
+        "sfx/ship_drop_0.ogg"
+      ],
+      "volume": 0.5
+    },
+    "refill": {
+      "files": [
+        "sfx/water_0.ogg"
+      ],
+      "volume": 0.45
+    },
+    "eat": {
+      "files": [
+        "sfx/eat_0.ogg",
+        "sfx/eat_1.ogg"
+      ],
+      "volume": 0.5
     }
   },
   "missing": []

@@ -38,6 +38,8 @@ export interface AudioController {
   getVolume(channel: AudioChannel): number;
   /** Called whenever settings change (mute or volume), so controls stay in sync. */
   onChange(fn: (s: AudioSettings) => void): () => void;
+  /** Resolves once the sound manifest has loaded (or failed: sounds then just stay silent). */
+  ready(): Promise<void>;
 }
 
 const STORAGE_KEY = "dmmo.audio";
@@ -45,6 +47,11 @@ const STORAGE_KEY = "dmmo.audio";
 const MAX_LATE_MS = 250;
 // Small, common sounds decoded right after unlock so the first click isn't silent.
 const PREWARM = ["ui_click", "ui_hover", "ui_open", "ui_close", "ui_slot", "step_grass", "step_stone"];
+/**
+ * Loaded right after PREWARM: a sound still loading when it's asked for is dropped (MAX_LATE_MS),
+ * so without these the first swing of each tool, the first harvest and so on were silent.
+ */
+const PREWARM_PLAY = ["hoe", "water", "plant", "harvest", "pick_swing", "pick_hit", "rock_break", "sword_swing", "sword_hit", "sword_miss", "pickup", "coins", "place", "error", "refill", "eat", "ui_tab", "ui_confirm", "ui_cancel", "npc_talk"];
 
 interface MusicTrack {
   key: string;
@@ -80,6 +87,7 @@ const silent: AudioController = {
   setVolume() {},
   getVolume: () => 0,
   onChange: () => () => {},
+  ready: () => Promise.resolve(),
 };
 
 /** Create the player (once) and hook it into the game and UI sound seams. */
@@ -139,12 +147,12 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
   let track: MusicTrack | null = null;
   let unlocked = false;
 
-  fetch(assetUrl(base, "audio.json"))
+  const manifestReady: Promise<void> = fetch(assetUrl(base, "audio.json"))
     .then((r) => (r.ok ? (r.json() as Promise<AudioManifest>) : Promise.reject(new Error(`audio.json ${r.status}`))))
     .then((m) => {
       manifest = { music: m.music ?? {}, sfx: m.sfx ?? {} };
       applyMusic();
-      if (unlocked) prewarm();
+      if (unlocked) return prewarm();
     })
     .catch((err) => console.warn("audio manifest failed", err));
 
@@ -158,7 +166,7 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
         unlocked = true;
         for (const e of unlockEvents) window.removeEventListener(e, unlock, true);
         track?.el.play().catch(() => {});
-        prewarm();
+        void prewarm();
       })
       .catch(() => {});
   };
@@ -212,12 +220,20 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
     });
   }
 
-  function prewarm() {
+  /** Starts decoding the common small sounds; resolves when they are all in (or failed). */
+  async function prewarm(): Promise<void> {
+    await warm(PREWARM);
+    await warm(PREWARM_PLAY);
+  }
+
+  async function warm(keys: readonly string[]): Promise<void> {
     if (!manifest) return;
-    for (const k of PREWARM) {
+    const loads: Promise<unknown>[] = [];
+    for (const k of keys) {
       const entry = manifest.sfx[k];
-      if (entry) for (const f of entry.files) void loadBuffer(f);
+      if (entry) for (const f of entry.files) loads.push(loadBuffer(f));
     }
+    await Promise.allSettled(loads);
   }
 
   function playResolved(key: string) {
@@ -326,6 +342,7 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
+    ready: () => manifestReady,
   };
 
   // Sign-in screen plays the title theme until the session picks a zone.

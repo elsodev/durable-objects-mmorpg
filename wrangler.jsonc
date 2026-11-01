@@ -38,6 +38,7 @@
     {
       "binding": "DB",
       "database_name": "durable-mmo-auth",
+      "database_id": "REPLACE_WITH_YOUR_D1_ID",
       "migrations_dir": "migrations"
     }
   ],
@@ -51,8 +52,11 @@
     "NPC_AGENT_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
     "NPC_AI_MODE": "on",
     "AI_DAILY_NEURONS": "9000",
+    // Global drop-rate multiplier (0..10). Optional overrides: DROP_RATE_MONSTER, DROP_RATE_ROCK,
+    // DROP_RATE_CHEST, DROP_RATE_FORAGE, DROP_RATE_GIFT, DROP_RATE_HARVEST, DROP_RATE_RARE.
+    "DROP_RATE": "1",
     // Public Turnstile site key. The secret goes in: wrangler secret put TURNSTILE_SECRET_KEY
-    "TURNSTILE_SITE_KEY": ""
+    "TURNSTILE_SITE_KEY": "REPLACE_WITH_YOUR_TURNSTILE_SITE_KEY"
   },
   // Daily guest cleanup (src/worker/cron.ts).
   "triggers": { "crons": ["17 4 * * *"] },
@@ -86,6 +90,7 @@
         // in a shared zone "/hour N" runs NPC routines as if it were N o'clock UTC. Never set in production.
         "DEV_TOOLS": "on",
         "AI_DAILY_NEURONS": "9000",
+        "DROP_RATE": "1",
         "TURNSTILE_SITE_KEY": "",
         "TURNSTILE_SECRET_KEY": "",
         "DMMO_ENV": "local"

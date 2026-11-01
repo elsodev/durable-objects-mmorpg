@@ -57,6 +57,11 @@ export function facingFor(dx: number, dy: number, fallback: Facing): Facing {
   return dy > 0 ? "down" : "up";
 }
 
+/** Facing that turns someone standing at `from` toward the centre of tile (tx, ty), e.g. to swing a tool at it. */
+export function facingToTile(from: { x: number; y: number; facing: Facing }, tx: number, ty: number): Facing {
+  return facingFor(tx + 0.5 - from.x, ty + 0.5 - from.y, from.facing);
+}
+
 /** The exit whose trigger rectangle contains the tile under (x,y), if any. */
 export function exitAt(map: MapData, x: number, y: number): MapExit | null {
   const tx = Math.floor(x);

@@ -3,6 +3,7 @@ import {
   asRect,
   collectFiles,
   furnitureView,
+  viewAnchorPx,
   hashXY,
   isSafePath,
   normAnchor,
@@ -66,7 +67,7 @@ describe("furniture views", () => {
     expect(furnitureView(e, 1)?.rect).toEqual([32, 128, 32, 32]);
     expect(furnitureView(e, 2)?.rect).toEqual([192, 128, 32, 32]);
     expect(furnitureView(e, 3)).toEqual({ rect: [32, 128, 32, 32], mirror: true });
-    expect(furnitureView({ file: "b.png", rect: [0, 0, 8, 8] }, 3)).toEqual({ rect: [0, 0, 8, 8], mirror: false });
+    expect(furnitureView({ file: "b.png", rect: [0, 0, 8, 8] }, 3)).toEqual({ rect: [0, 0, 8, 8], mirror: true });
   });
 });
 
@@ -92,5 +93,16 @@ describe("catalog scanning", () => {
     expect(shadowRect(cat as never, "large")).toEqual([100, 2, 60, 20]);
     expect(shadowRect(cat as never, "tree")).toBeNull();
     expect(isSafePath("/abs.png")).toBe(false);
+  });
+});
+
+describe("viewAnchorPx", () => {
+  it("keeps the front anchor for same-size views", () => {
+    expect(viewAnchorPx([0, 0, 52, 88], [26, 87], [52, 0, 52, 88])).toEqual([26, 87]);
+  });
+  it("keeps the offset from the bottom centre for differently sized views", () => {
+    // A 1x2 bed's 74x64 side view stands on the same feet point as its 52x88 front view.
+    expect(viewAnchorPx([0, 0, 52, 88], [26, 87], [104, 0, 74, 64])).toEqual([37, 63]);
+    expect(viewAnchorPx([0, 0, 52, 88], null, [104, 0, 74, 64])).toEqual([37, 64]);
   });
 });

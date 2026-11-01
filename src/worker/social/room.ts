@@ -26,6 +26,8 @@ import { stripControls } from "../npc/text";
 import { Presence } from "./presence";
 import { DailyStats } from "./stats";
 import { friendIds } from "../friends/store";
+import { mutedIds } from "../mutes/store";
+import { MUTES_NOTICE } from "../../shared/players";
 
 /** Friend lists are cached briefly so a burst of zone changes costs one D1 query. */
 const FRIEND_CACHE_MS = 60_000;
@@ -79,6 +81,8 @@ export class SocialRoom extends DurableObject<Env> {
   private history: WorldLine[] = [];
   private stats = DailyStats.from(null, Date.now());
   private friendCache = new Map<string, { at: number; ids: string[] }>();
+  /** Who each recipient muted, cached like friend lists; a { t: "mutes" } notify drops the entry. */
+  private muteCache = new Map<string, { at: number; ids: Set<string> }>();
   /** Name of each online user, kept until their offline push has gone out. */
   private lastNames = new Map<string, string>();
 
@@ -138,6 +142,23 @@ export class SocialRoom extends DurableObject<Env> {
     if (this.friendCache.size > 2000) this.friendCache.clear();
     const ids = await friendIds(this.env.DB, userId);
     this.friendCache.set(userId, { at: now, ids });
+    return ids;
+  }
+
+  /** Ids `userId` muted. On a D1 failure nobody reads as muted (a whisper is better than a lost one). */
+  protected async mutedBy(userId: string): Promise<Set<string>> {
+    const now = Date.now();
+    const hit = this.muteCache.get(userId);
+    if (hit && now - hit.at < FRIEND_CACHE_MS) return hit.ids;
+    if (this.muteCache.size > 2000) this.muteCache.clear();
+    let ids: Set<string>;
+    try {
+      ids = new Set(await mutedIds(this.env.DB, userId));
+    } catch (err) {
+      console.warn("mute lookup failed", err);
+      return new Set();
+    }
+    this.muteCache.set(userId, { at: now, ids });
     return ids;
   }
 
@@ -292,8 +313,12 @@ export class SocialRoom extends DurableObject<Env> {
     if (target.guest) return send(c.ws, { t: "notice", text: `${target.name} is a guest and can't receive whispers.`, kind: "error" });
     const text = this.guardText(c, raw, now);
     if (!text) return;
-    this.sendUser(target.userId, { t: "pm", dir: "in", name: c.att.name, text, at: now });
+    // Mute is silent: the sender always sees their line go out; a muted sender's never arrives.
     this.sendUser(c.att.userId, { t: "pm", dir: "out", name: target.name, text, at: now });
+    const from = c.att.userId;
+    return void this.mutedBy(target.userId).then((muted) => {
+      if (!muted.has(from)) this.sendUser(target.userId, { t: "pm", dir: "in", name: c.att.name, text, at: now });
+    });
   }
 
   private sendUser(userId: string, msg: SocialServerMsg): number {
@@ -372,6 +397,8 @@ export class SocialRoom extends DurableObject<Env> {
     if (json.length > MAX_NOTIFY_BYTES) return 0;
     // A friendship was made or removed: cached friend lists for presence pushes are stale.
     if (p.t === "friendAccepted" || p.t === "friendRemoved") this.friendCache.clear();
+    // The user changed their mute list (only ever sent to the muter).
+    if (p.t === MUTES_NOTICE) this.muteCache.delete(userId);
     return this.sendUser(userId, { t: "social", payload: JSON.parse(json) });
   }
 

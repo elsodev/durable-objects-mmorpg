@@ -3,6 +3,8 @@ import type { ItemId, SharedZoneId } from "../../../shared/types";
 import type { Intent } from "../brain";
 import type { PlaceId } from "../bible";
 import type { Mood } from "./memory";
+import type { Situation } from "../dialogue";
+import type { GiftTaste } from "../../../shared/hearts";
 
 export const GOAL_IDS = ["bridge", "fair", "lantern"] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
@@ -26,6 +28,8 @@ export interface ConverseContext {
   /** Something the decision already did this turn. */
   shopOpened: boolean;
   gave?: { item: ItemId; qty: number };
+  /** Date, hour, place, hearts and birthday (npc/dialogue.ts). Validated again by the agent. */
+  situation?: Situation;
 }
 
 export interface ConverseRequest {
@@ -53,5 +57,5 @@ export interface GiftRequest {
 
 export interface GiftResult {
   reply: string;
-  taste: "loved" | "liked" | "disliked" | "neutral";
+  taste: GiftTaste;
 }

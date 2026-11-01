@@ -5,6 +5,7 @@ import {
   dist,
   exitAt,
   facingTile,
+  facingToTile,
   findPath,
   isBlocked,
   moveGoal,
@@ -265,5 +266,15 @@ describe("exitAt / facingTile", () => {
     expect(facingTile({ x: 3.7, y: 4.2 }, "up")).toEqual({ x: 3, y: 3 });
     expect(facingTile({ x: 3.7, y: 4.2 }, "left")).toEqual({ x: 2, y: 4 });
     expect(facingTile({ x: 3.7, y: 4.2 }, "down")).toEqual({ x: 3, y: 5 });
+  });
+});
+
+describe("facingToTile", () => {
+  it("turns toward the centre of the tile a tool is used on", () => {
+    const me = { x: 24.5, y: 7.5, facing: "left" as const };
+    expect(facingToTile(me, 24, 6)).toBe("up");
+    expect(facingToTile(me, 26, 7)).toBe("right");
+    expect(facingToTile(me, 24, 8)).toBe("down");
+    expect(facingToTile(me, 24, 7)).toBe("left"); // own tile keeps the current facing
   });
 });

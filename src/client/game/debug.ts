@@ -14,6 +14,8 @@ export interface DebugSource {
   tileToScreen?(x: number, y: number): { x: number; y: number };
   /** Rocks of the current zone that are not broken (for tests that mine). */
   rocks?(): { id: string; x: number; y: number; ore: string }[];
+  /** Props of the current map (trees, wells, beds...) for tests that aim tools at them. */
+  props?(): { id?: string; type: string; x: number; y: number; w: number; h: number }[];
 }
 
 export interface DmmoDebug {
@@ -27,6 +29,7 @@ export interface DmmoDebug {
   teleportTo(x: number, y: number): void;
   tileToScreen?(x: number, y: number): { x: number; y: number };
   rocks?(): { id: string; x: number; y: number; ore: string }[];
+  props?(): { id?: string; type: string; x: number; y: number; w: number; h: number }[];
 }
 
 declare global {
@@ -50,6 +53,7 @@ export function installDebug(src: DebugSource | null): void {
     teleportTo: src.moveTo,
     tileToScreen: src.tileToScreen,
     rocks: src.rocks,
+    props: src.props,
   } as DmmoDebug;
   Object.defineProperty(api, "zone", { get: src.zone, enumerable: true });
   window.__dmmo = api;

@@ -6,6 +6,7 @@ import { SURFACE_PROPS, TABLETOP_PROPS, WALL_DECOR_PROPS } from "../../shared/ma
 /** Prop types the player can click/interact with; the server decides what each one does. */
 export const INTERACTABLE_TYPES: ReadonlySet<string> = new Set([
   "shipping_bin",
+  "mailbox",
   "notice_board",
   "market_stall",
   "shrine",
@@ -174,4 +175,18 @@ export function raisedZ(p: MapProp, props: readonly MapProp[]): number | null {
     return (t ? t.y + t.h : p.y + 1) * TILE + TABLE_SORT_BIAS + 0.1;
   }
   return null;
+}
+
+/** Shipping bin lid: frames per second while opening or closing (closed → opening → open). */
+export const LID_FPS = 14;
+export const LID_BUMP_MS = 260;
+
+/**
+ * Squash of the bin when something lands in it, at `t` (0..1 of LID_BUMP_MS): scale x, y about
+ * the feet. A quick dip, a small overshoot, then rest.
+ */
+export function lidBump(t: number): { x: number; y: number } {
+  if (t <= 0 || t >= 1) return { x: 1, y: 1 };
+  const k = Math.sin(t * Math.PI * 2) * (1 - t);
+  return { x: 1 + 0.06 * k, y: 1 - 0.1 * k };
 }

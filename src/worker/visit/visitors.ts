@@ -1,7 +1,7 @@
 // The visitors standing in one HomeRoom. Visitors never touch their own save while here (their own
 // HomeRoom keeps its lease and data); they only exist as an entity plus a socket, and when the
 // visit ends they are told to reconnect to the zone they came from.
-import type { EntityState, Look, Vec2, ZoneId } from "../../shared/types";
+import type { EntityState, HomeMapId, Look, Vec2, ZoneId } from "../../shared/types";
 import { MAX_VISITORS, type VisitorEntry } from "../../shared/visits";
 import { SLEEP_COUNTDOWN_MS } from "../game/homeTiming";
 import { entityIdFor, PLAYER_MAX_HP, type SocketAttachment } from "../game/identity";
@@ -21,6 +21,8 @@ export interface Visitor {
   ws: WebSocket;
   userId: string;
   name: string;
+  /** Which of the host's home maps the visitor stands on. */
+  map: HomeMapId;
   entity: EntityState;
   motion: Motion;
   lastAck: number | undefined;
@@ -80,6 +82,7 @@ export class VisitorSet {
       ws,
       userId: att.userId,
       name: att.name,
+      map: "home",
       entity: {
         id: entityIdFor(att.userId),
         kind: "player",

@@ -54,6 +54,8 @@ export function endHomeDay(
     crows: roll.eaten,
     reverted: roll.reverted.length,
     grown: roll.grown,
+    ...(roll.wilted > 0 ? { wilted: roll.wilted } : {}),
+    ...(roll.died.length > 0 ? { died: roll.died } : {}),
     passedOut: kind === "passout",
     penalty,
     ...(kind === "away" ? { away: true } : {}),

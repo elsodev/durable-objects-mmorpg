@@ -5,11 +5,11 @@ import type { BuildMode, CreateBuildMode } from "../contracts";
 import { SCALE, TILE } from "../contracts";
 import { footprint } from "../../shared/engine";
 import type { Vec2 } from "../../shared/types";
+import { normalizeRotation, stepRotation } from "../../shared/items";
 import {
   buildMessage,
   evaluate,
   furnitureInSlot,
-  nextRotation,
   type BuildTarget,
   type Placement,
   type Rotation,
@@ -17,7 +17,10 @@ import {
 
 const OK_COLOR = 0x5ad17a;
 const BAD_COLOR = 0xe2524a;
-const GHOST_ALPHA = 0.7;
+const GHOST_ALPHA = 0.75;
+/** The ghost sprite itself is tinted too, so validity reads even where the tiles are covered. */
+const OK_TINT = 0xb4f5c4;
+const BAD_TINT = 0xff9a90;
 
 let reqCounter = 0;
 const nextReq = () => `b${Date.now().toString(36)}${(reqCounter++).toString(36)}`;
@@ -65,13 +68,13 @@ export const createBuildMode: CreateBuildMode = (art, layers, deps) => {
     }
     // Same base point the farm layer uses for furniture: bottom-centre of the footprint.
     ghost.position.set((last.x + last.w / 2) * TILE, (last.y + last.h) * TILE);
-    ghost.tint = last.ok ? 0xffffff : 0xffb0a8;
+    ghost.tint = last.ok ? OK_TINT : BAD_TINT;
     root.visible = true;
   }
 
   function start(t: BuildTarget, rot: Rotation): void {
     target = t;
-    rotation = rot;
+    rotation = normalizeRotation(t.item, rot);
     refreshSprite();
     redraw();
   }
@@ -107,9 +110,14 @@ export const createBuildMode: CreateBuildMode = (art, layers, deps) => {
       root.visible = false;
     },
 
-    rotate() {
+    rotate(dir = 1) {
       if (!target) return;
-      rotation = nextRotation(rotation);
+      const next = stepRotation(target.item, rotation, dir);
+      if (next === rotation) {
+        deps.notice("This piece only goes one way round.");
+        return;
+      }
+      rotation = next;
       refreshSprite();
       redraw();
     },

@@ -33,7 +33,7 @@ describe("footprint", () => {
     expect(footprint("table_wood", 1)).toEqual({ w: 1, h: 2 });
     expect(footprint("table_wood", 2)).toEqual({ w: 2, h: 1 });
     expect(footprint("bed_simple", 3)).toEqual({ w: 2, h: 1 });
-    expect(footprint("rug", 1)).toEqual({ w: 2, h: 2 });
+    expect(footprint("rug", 0)).toEqual({ w: 5, h: 2 }); // the size of its art
     expect(footprint("turnip", 0)).toEqual({ w: 1, h: 1 });
   });
 });
@@ -41,7 +41,8 @@ describe("footprint", () => {
 describe("canPlace", () => {
   it("places floor furniture indoors", () => {
     expect(canPlace(map, [], [], "chair_wood", 1, 1, 0)).toEqual(ok);
-    expect(canPlace(map, [], [], "rug", 5, 2, 0)).toEqual(ok);
+    expect(canPlace(map, [], [], "rug", 1, 2, 0)).toEqual(ok);
+    expect(canPlace(map, [], [], "rug", 3, 2, 0).ok).toBe(false); // would run into the wall
   });
 
   it("rejects non-furniture and unknown items", () => {
@@ -109,5 +110,21 @@ describe("canPlace", () => {
     const r = canPlace(map, [], [], "chair_wood", 2, 6, 0);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason.length).toBeGreaterThan(0);
+  });
+});
+
+describe("doorways and rugs", () => {
+  // A room whose floor runs right up to the spawn point and the exit in its south wall.
+  const room = makeMap(["#######", "#wwwww#", "#wwwww#", "#wwwww#", "###w###"], {
+    floorArea: [{ x: 1, y: 1, w: 5, h: 3 }],
+    spawns: { default: { x: 3.5, y: 3.5 } },
+    exits: [{ x: 3, y: 4, w: 1, h: 1, to: "home", spawn: "from_home_in" }],
+  });
+  it("says to keep the way out clear on the door tile itself", () => {
+    expect(canPlace(room, [], [], "chair_wood", 3, 4, 0)).toEqual({ ok: false, reason: "Keep the way out clear." });
+  });
+  it("lets a rug lie by the door and the spawn (it never blocks anyone)", () => {
+    expect(canPlace(room, [], [], "rug", 1, 2, 0)).toEqual(ok);
+    expect(canPlace(room, [], [], "chair_wood", 3, 2, 0)).toEqual({ ok: false, reason: "Keep the doorway clear." });
   });
 });

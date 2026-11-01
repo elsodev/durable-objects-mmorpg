@@ -1,0 +1,165 @@
+/* Loading screen (ui/loading.ts): first load and the short zone-change veil. */
+.dm-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(140, 184, 90, 0.18), transparent 60%),
+    radial-gradient(ellipse at 50% 120%, rgba(90, 57, 32, 0.55), transparent 55%),
+    var(--dm-bg);
+  color: var(--dm-text-on-dark);
+  opacity: 1;
+  transition: opacity 350ms ease;
+}
+.dm-loading[hidden] {
+  display: none;
+}
+.dm-loading.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.dm-loading.is-zone {
+  background: rgba(29, 43, 31, 0.88);
+  transition-duration: 200ms;
+}
+.dm-loading.is-zone .dm-loading-title,
+.dm-loading.is-zone .dm-loading-tagline,
+.dm-loading.is-zone .dm-loading-bar {
+  display: none;
+}
+
+.dm-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  text-align: center;
+}
+.dm-loading-title {
+  margin: 4px 0 0;
+  font-family: var(--dm-font-pixel);
+  font-weight: 600;
+  font-size: clamp(30px, 7vw, 48px);
+  letter-spacing: 1px;
+  color: var(--dm-cream);
+  text-shadow: 0 3px 0 var(--dm-wood-dark), 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+.dm-loading-tagline {
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs-sm);
+  color: var(--dm-moss-light);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.dm-loading-bar {
+  width: min(320px, 76vw);
+  height: 16px;
+  box-sizing: border-box;
+  border: var(--dm-border-w) solid var(--dm-wood-dark);
+  border-radius: var(--dm-radius);
+  background: var(--dm-wood);
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.3), 0 3px 0 rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.dm-loading-fill {
+  height: 100%;
+  width: 0;
+  background: repeating-linear-gradient(-45deg, var(--dm-moss-light) 0 8px, var(--dm-moss) 8px 16px);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+  transition: width 300ms ease;
+  animation: dm-loading-stripes 900ms linear infinite;
+}
+.dm-loading-label {
+  min-height: 1.4em;
+  font-family: var(--dm-font-body);
+  font-weight: 600;
+  font-size: var(--dm-fs);
+  color: var(--dm-cream-2);
+}
+
+/* sprout: soil mound, stem and two leaves built from blocks, like the favicon */
+.dm-loading-sprout {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+.dm-sprout-soil {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 12px;
+  background: var(--dm-wood-dark);
+  border-top: 4px solid var(--dm-wood);
+  border-radius: 2px;
+}
+.dm-sprout-stem {
+  position: absolute;
+  left: 28px;
+  bottom: 12px;
+  width: 8px;
+  height: 28px;
+  background: var(--dm-moss);
+  transform-origin: 50% 100%;
+  animation: dm-sprout-grow 2.4s ease-in-out infinite;
+}
+.dm-sprout-leaf {
+  position: absolute;
+  bottom: 34px;
+  width: 16px;
+  height: 8px;
+  background: var(--dm-moss-light);
+  transform-origin: 50% 100%;
+}
+.dm-sprout-leaf.left {
+  left: 14px;
+  border-radius: 8px 0 8px 0;
+  animation: dm-sprout-sway 2.4s ease-in-out infinite;
+}
+.dm-sprout-leaf.right {
+  left: 34px;
+  border-radius: 0 8px 0 8px;
+  animation: dm-sprout-sway 2.4s ease-in-out infinite reverse;
+}
+
+@keyframes dm-sprout-grow {
+  0%,
+  100% {
+    transform: scaleY(0.85);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@keyframes dm-sprout-sway {
+  0%,
+  100% {
+    transform: translateY(2px) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(8deg);
+  }
+}
+@keyframes dm-loading-stripes {
+  to {
+    background-position: 22.6px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-loading,
+  .dm-loading-fill {
+    transition: none;
+  }
+  .dm-sprout-stem,
+  .dm-sprout-leaf,
+  .dm-loading-fill {
+    animation: none;
+  }
+}

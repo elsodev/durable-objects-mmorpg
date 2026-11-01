@@ -2,7 +2,14 @@
 import { installAudio } from "./audio/player";
 import { showFatal } from "./game/errors";
 import { startSession } from "./game/session";
+import { watchStart } from "./game/start-watch";
 import { mountAuth } from "./ui";
+import { createLoadingScreen, type LoadingScreen } from "./ui/loading";
+
+/** Audio counts as loaded once its manifest and common sounds are in, or after a short wait. */
+function waitForAudio(ready: Promise<void>, loading: LoadingScreen): void {
+  void Promise.race([ready, new Promise((r) => setTimeout(r, 4000))]).then(() => loading.done("audio"));
+}
 
 function ensureChild(parent: HTMLElement, id: string): HTMLElement {
   const found = document.getElementById(id);
@@ -20,19 +27,39 @@ async function main(): Promise<void> {
   const ui = ensureChild(root, "ui");
   let stage = "sign in";
   // Before auth so the start screen's UI sounds and title music work.
-  installAudio();
+  const audio = installAudio();
+  let loading: LoadingScreen | null = null;
   try {
     const user = await mountAuth(ui);
     stage = "start";
+    loading = createLoadingScreen(root);
+    waitForAudio(audio.ready(), loading);
     // Canvas text (name tags, signposts) is rasterised once, so the pixel font must be ready first.
     await Promise.race([
       document.fonts?.load('13px "Pixelify Sans"').catch(() => undefined),
       new Promise((r) => setTimeout(r, 1500)),
     ]);
-    const session = await startSession({ game, ui }, user);
-    window.addEventListener("pagehide", () => session.destroy(), { once: true });
+    // A renderer that never initialises, or a first connection that never comes up, would
+    // otherwise leave a blank page: after 15 s say which one we're waiting on.
+    const watch = watchStart(root);
+    let ready = false;
+    try {
+      const session = await startSession({ game, ui }, user, {
+        loading,
+        onReady: () => {
+          ready = true;
+          watch.done();
+        },
+      });
+      if (!ready) watch.stage("connection");
+      window.addEventListener("pagehide", () => session.destroy(), { once: true });
+    } catch (err) {
+      watch.done();
+      throw err;
+    }
   } catch (err) {
     console.error(err);
+    loading?.destroy();
     showFatal(root, stage === "sign in" ? "Couldn't sign you in" : "Mossbrook couldn't start", err);
   }
 }

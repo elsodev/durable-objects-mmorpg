@@ -1460,8 +1460,14 @@
  },
  "crops": {
   "turnip": {
-   "file": "crops/farming_plants.png",
+   "file": "crops/crop_stages.png",
    "stages": [
+    [
+     0,
+     0,
+     32,
+     64
+    ],
     [
      32,
      0,
@@ -1469,44 +1475,69 @@
      64
     ],
     [
-     32,
      64,
+     0,
      32,
      64
     ],
     [
-     32,
-     128,
-     32,
-     64
-    ],
-    [
-     32,
-     192,
+     96,
+     0,
      32,
      64
     ]
    ],
    "stageNames": [
-    "seed",
-    "sprout",
-    "growing",
+    "seedling",
+    "small",
+    "medium",
     "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     0,
+     32,
+     64
+    ],
+    [
+     160,
+     0,
+     32,
+     64
+    ],
+    [
+     192,
+     0,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    0,
+    32,
+    64
    ],
    "anchor": [
     16,
     60
    ],
-   "source": "potato",
-   "substitute": "No LPC turnip growth stages exist; uses Daneeklu potato plant.",
-   "shadow": "small"
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (turnips); wilted/dead frames derived"
   },
   "carrot": {
-   "file": "crops/farming_plants.png",
+   "file": "crops/crop_stages.png",
    "stages": [
     [
-     64,
      0,
+     64,
+     32,
+     64
+    ],
+    [
+     32,
+     64,
      32,
      64
     ],
@@ -1517,49 +1548,89 @@
      64
     ],
     [
+     96,
      64,
-     128,
-     32,
-     64
-    ],
-    [
-     64,
-     192,
      32,
      64
     ]
    ],
    "stageNames": [
-    "seed",
-    "sprout",
-    "growing",
+    "seedling",
+    "small",
+    "medium",
     "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     64,
+     32,
+     64
+    ],
+    [
+     160,
+     64,
+     32,
+     64
+    ],
+    [
+     192,
+     64,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    64,
+    32,
+    64
    ],
    "anchor": [
     16,
     60
    ],
-   "source": "carrot",
-   "shadow": "small"
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (carrots); wilted/dead frames derived"
   },
   "pumpkin": {
-   "file": "crops/farming_plants.png",
+   "file": "crops/crop_stages.png",
    "stages": [
     [
-     160,
      0,
+     192,
      32,
      64
     ],
     [
-     160,
+     32,
+     192,
+     32,
+     64
+    ],
+    [
      64,
+     192,
      32,
      64
     ],
     [
-     160,
+     96,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
      128,
+     192,
      32,
      64
     ],
@@ -1568,37 +1639,31 @@
      192,
      32,
      64
+    ],
+    [
+     192,
+     192,
+     32,
+     64
     ]
    ],
-   "stageNames": [
-    "seed",
-    "sprout",
-    "growing",
-    "ready"
+   "dead": [
+    224,
+    192,
+    32,
+    64
    ],
    "anchor": [
     16,
     60
    ],
-   "source": "zucchini",
-   "substitute": "No LPC pumpkin growth stages exist; uses Daneeklu zucchini plant.",
-   "shadow": "small"
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (pumpkin gourd vine); wilted/dead frames derived",
+   "derived": "Seedling is the sheet's zucchini sprout (same Daneeklu cucurbit sprout); vine frames nudged down onto the soil."
   },
   "strawberry": {
-   "file": "crops/farming_plants.png",
+   "file": "crops/crop_stages.png",
    "stages": [
-    [
-     0,
-     0,
-     32,
-     64
-    ],
-    [
-     0,
-     64,
-     32,
-     64
-    ],
     [
      0,
      128,
@@ -1606,25 +1671,63 @@
      64
     ],
     [
-     0,
-     192,
+     32,
+     128,
+     32,
+     64
+    ],
+    [
+     64,
+     128,
+     32,
+     64
+    ],
+    [
+     96,
+     128,
      32,
      64
     ]
    ],
    "stageNames": [
-    "seed",
-    "sprout",
-    "growing",
+    "seedling",
+    "small",
+    "medium",
     "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     128,
+     32,
+     64
+    ],
+    [
+     160,
+     128,
+     32,
+     64
+    ],
+    [
+     192,
+     128,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    128,
+    32,
+    64
    ],
    "anchor": [
     16,
     60
    ],
-   "source": "tomato",
-   "substitute": "No LPC strawberry growth stages exist; uses Daneeklu tomato plant.",
-   "shadow": "small"
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (strawberry bush); wilted/dead frames derived",
+   "derived": "Seedling is the young bush scaled to 60%."
   },
   "extra_tomato": {
    "file": "crops/farming_plants.png",
@@ -1990,6 +2093,1284 @@
    ],
    "note": "corn is taller than 64px in later stages; rect clips its top slightly",
    "shadow": "small"
+  },
+  "radish": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     256,
+     32,
+     64
+    ],
+    [
+     32,
+     256,
+     32,
+     64
+    ],
+    [
+     64,
+     256,
+     32,
+     64
+    ],
+    [
+     96,
+     256,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     256,
+     32,
+     64
+    ],
+    [
+     160,
+     256,
+     32,
+     64
+    ],
+    [
+     192,
+     256,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    256,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (radishes); wilted/dead frames derived"
+  },
+  "potato": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     320,
+     32,
+     64
+    ],
+    [
+     32,
+     320,
+     32,
+     64
+    ],
+    [
+     64,
+     320,
+     32,
+     64
+    ],
+    [
+     96,
+     320,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     320,
+     32,
+     64
+    ],
+    [
+     160,
+     320,
+     32,
+     64
+    ],
+    [
+     192,
+     320,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    320,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (russet potatoes); wilted/dead frames derived"
+  },
+  "beet": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     384,
+     32,
+     64
+    ],
+    [
+     32,
+     384,
+     32,
+     64
+    ],
+    [
+     64,
+     384,
+     32,
+     64
+    ],
+    [
+     96,
+     384,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     384,
+     32,
+     64
+    ],
+    [
+     160,
+     384,
+     32,
+     64
+    ],
+    [
+     192,
+     384,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    384,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (beets); wilted/dead frames derived"
+  },
+  "lettuce": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     448,
+     32,
+     64
+    ],
+    [
+     32,
+     448,
+     32,
+     64
+    ],
+    [
+     64,
+     448,
+     32,
+     64
+    ],
+    [
+     96,
+     448,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     448,
+     32,
+     64
+    ],
+    [
+     160,
+     448,
+     32,
+     64
+    ],
+    [
+     192,
+     448,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    448,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (romaine lettuce); wilted/dead frames derived"
+  },
+  "onion": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     512,
+     32,
+     64
+    ],
+    [
+     32,
+     512,
+     32,
+     64
+    ],
+    [
+     64,
+     512,
+     32,
+     64
+    ],
+    [
+     96,
+     512,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     512,
+     32,
+     64
+    ],
+    [
+     160,
+     512,
+     32,
+     64
+    ],
+    [
+     192,
+     512,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    512,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (yellow onion); wilted/dead frames derived"
+  },
+  "green_bean": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     576,
+     32,
+     64
+    ],
+    [
+     32,
+     576,
+     32,
+     64
+    ],
+    [
+     64,
+     576,
+     32,
+     64
+    ],
+    [
+     96,
+     576,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     576,
+     32,
+     64
+    ],
+    [
+     160,
+     576,
+     32,
+     64
+    ],
+    [
+     192,
+     576,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    576,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (green beans); wilted/dead frames derived"
+  },
+  "tomato": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     640,
+     32,
+     64
+    ],
+    [
+     32,
+     640,
+     32,
+     64
+    ],
+    [
+     64,
+     640,
+     32,
+     64
+    ],
+    [
+     96,
+     640,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     640,
+     32,
+     64
+    ],
+    [
+     160,
+     640,
+     32,
+     64
+    ],
+    [
+     192,
+     640,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    640,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (tomato vine); wilted/dead frames derived"
+  },
+  "bell_pepper": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     704,
+     32,
+     64
+    ],
+    [
+     32,
+     704,
+     32,
+     64
+    ],
+    [
+     64,
+     704,
+     32,
+     64
+    ],
+    [
+     96,
+     704,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     704,
+     32,
+     64
+    ],
+    [
+     160,
+     704,
+     32,
+     64
+    ],
+    [
+     192,
+     704,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    704,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (green bell pepper); wilted/dead frames derived"
+  },
+  "eggplant": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     768,
+     32,
+     64
+    ],
+    [
+     32,
+     768,
+     32,
+     64
+    ],
+    [
+     64,
+     768,
+     32,
+     64
+    ],
+    [
+     96,
+     768,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     768,
+     32,
+     64
+    ],
+    [
+     160,
+     768,
+     32,
+     64
+    ],
+    [
+     192,
+     768,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    768,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (eggplant); wilted/dead frames derived"
+  },
+  "cabbage": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     832,
+     32,
+     64
+    ],
+    [
+     32,
+     832,
+     32,
+     64
+    ],
+    [
+     64,
+     832,
+     32,
+     64
+    ],
+    [
+     96,
+     832,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     832,
+     32,
+     64
+    ],
+    [
+     160,
+     832,
+     32,
+     64
+    ],
+    [
+     192,
+     832,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    832,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (green cabbage); wilted/dead frames derived"
+  },
+  "cauliflower": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     896,
+     32,
+     64
+    ],
+    [
+     32,
+     896,
+     32,
+     64
+    ],
+    [
+     64,
+     896,
+     32,
+     64
+    ],
+    [
+     96,
+     896,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     896,
+     32,
+     64
+    ],
+    [
+     160,
+     896,
+     32,
+     64
+    ],
+    [
+     192,
+     896,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    896,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (cauliflower); wilted/dead frames derived"
+  },
+  "corn": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     960,
+     32,
+     64
+    ],
+    [
+     32,
+     960,
+     32,
+     64
+    ],
+    [
+     64,
+     960,
+     32,
+     64
+    ],
+    [
+     96,
+     960,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     960,
+     32,
+     64
+    ],
+    [
+     160,
+     960,
+     32,
+     64
+    ],
+    [
+     192,
+     960,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    960,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (corn); wilted/dead frames derived"
+  },
+  "blueberry": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     1024,
+     32,
+     64
+    ],
+    [
+     32,
+     1024,
+     32,
+     64
+    ],
+    [
+     64,
+     1024,
+     32,
+     64
+    ],
+    [
+     96,
+     1024,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     1024,
+     32,
+     64
+    ],
+    [
+     160,
+     1024,
+     32,
+     64
+    ],
+    [
+     192,
+     1024,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    1024,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (blueberry bush); wilted/dead frames derived",
+   "derived": "Seedling is the young bush scaled to 60%."
+  },
+  "grape": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     1088,
+     32,
+     64
+    ],
+    [
+     32,
+     1088,
+     32,
+     64
+    ],
+    [
+     64,
+     1088,
+     32,
+     64
+    ],
+    [
+     96,
+     1088,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     1088,
+     32,
+     64
+    ],
+    [
+     160,
+     1088,
+     32,
+     64
+    ],
+    [
+     192,
+     1088,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    1088,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (red grapes); wilted/dead frames derived"
+  },
+  "watermelon": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     1152,
+     32,
+     64
+    ],
+    [
+     32,
+     1152,
+     32,
+     64
+    ],
+    [
+     64,
+     1152,
+     32,
+     64
+    ],
+    [
+     96,
+     1152,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     1152,
+     32,
+     64
+    ],
+    [
+     160,
+     1152,
+     32,
+     64
+    ],
+    [
+     192,
+     1152,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    1152,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (watermelon vine); wilted/dead frames derived",
+   "derived": "Seedling is the sheet's zucchini sprout; vine frames nudged down onto the soil."
+  },
+  "pineapple": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     1216,
+     32,
+     64
+    ],
+    [
+     32,
+     1216,
+     32,
+     64
+    ],
+    [
+     64,
+     1216,
+     32,
+     64
+    ],
+    [
+     96,
+     1216,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     1216,
+     32,
+     64
+    ],
+    [
+     160,
+     1216,
+     32,
+     64
+    ],
+    [
+     192,
+     1216,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    1216,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (pineapple plant); wilted/dead frames derived"
+  },
+  "golden_melon": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     1280,
+     32,
+     64
+    ],
+    [
+     32,
+     1280,
+     32,
+     64
+    ],
+    [
+     64,
+     1280,
+     32,
+     64
+    ],
+    [
+     96,
+     1280,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     1280,
+     32,
+     64
+    ],
+    [
+     160,
+     1280,
+     32,
+     64
+    ],
+    [
+     192,
+     1280,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    1280,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (honeydew melon vine); wilted/dead frames derived",
+   "derived": "Recoloured from the honeydew melon vine (our edit): fruit turned gold. Seedling is the zucchini sprout."
+  },
+  "starfruit": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     1344,
+     32,
+     64
+    ],
+    [
+     32,
+     1344,
+     32,
+     64
+    ],
+    [
+     64,
+     1344,
+     32,
+     64
+    ],
+    [
+     96,
+     1344,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     1344,
+     32,
+     64
+    ],
+    [
+     160,
+     1344,
+     32,
+     64
+    ],
+    [
+     192,
+     1344,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    1344,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (coffee tree); wilted/dead frames derived",
+   "derived": "Recoloured from the coffee tree (our edit): red cherries turned to golden starfruit."
+  },
+  "moonberry": {
+   "file": "crops/crop_stages.png",
+   "stages": [
+    [
+     0,
+     1408,
+     32,
+     64
+    ],
+    [
+     32,
+     1408,
+     32,
+     64
+    ],
+    [
+     64,
+     1408,
+     32,
+     64
+    ],
+    [
+     96,
+     1408,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seedling",
+    "small",
+    "medium",
+    "ready"
+   ],
+   "wilted": [
+    [
+     128,
+     1408,
+     32,
+     64
+    ],
+    [
+     160,
+     1408,
+     32,
+     64
+    ],
+    [
+     192,
+     1408,
+     32,
+     64
+    ]
+   ],
+   "dead": [
+    224,
+    1408,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "shadow": "small",
+   "source": "bluecarrot16 [LPC] Crops v2 (blueberry bush); wilted/dead frames derived",
+   "derived": "Recoloured from the blueberry bush (our edit): berries turned silver-violet. Seedling is the young bush scaled to 60%."
   }
  },
  "plants": {
@@ -2336,6 +3717,24 @@
     32
    ],
    "note": "small ground-cover sprigs, 32x32 cells, rows = colors"
+  },
+  "tree_stump": {
+   "file": "plants/trees_summer.png",
+   "rect": [
+    26,
+    437,
+    43,
+    31
+   ],
+   "anchor": [
+    21,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
   }
  },
  "buildings": {
@@ -5383,6 +6782,45 @@
     56,
     13
    ]
+  },
+  "cave_chest": {
+   "file": "props/chest.png",
+   "rect": [
+    66,
+    0,
+    28,
+    27
+   ],
+   "anchor": [
+    14,
+    26
+   ],
+   "frames": [
+    [
+     66,
+     0,
+     28,
+     27
+    ],
+    [
+     66,
+     32,
+     28,
+     27
+    ],
+    [
+     66,
+     69,
+     28,
+     22
+    ]
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small",
+   "note": "cave treasure chest: closed, lid opening, open (frames)"
   }
  },
  "ores": {
@@ -5525,6 +6963,110 @@
     ]
    ],
    "note": "silver-ore node with pale blue crystals used as gem node",
+   "shadow": "character"
+  },
+  "rock_silver": {
+   "file": "ores/ore_silver.png",
+   "rect": [
+    96,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": [
+    [
+     64,
+     0,
+     32,
+     32
+    ],
+    [
+     96,
+     32,
+     32,
+     32
+    ]
+   ],
+   "note": "silver-ore node with bright veins (the crystal nodes of this sheet are the gem rock)",
+   "shadow": "character"
+  },
+  "rock_gold": {
+   "file": "ores/ore_gold.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": [
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     0,
+     32,
+     32,
+     32
+    ],
+    [
+     32,
+     32,
+     32,
+     32
+    ]
+   ],
+   "shadow": "character"
+  },
+  "rock_diamond": {
+   "file": "ores/ore_diamond.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": [
+    [
+     0,
+     0,
+     32,
+     32
+    ],
+    [
+     0,
+     32,
+     32,
+     32
+    ]
+   ],
+   "note": "silver-ore crystal node recoloured: dark slate rock with brilliant white-blue crystals",
    "shadow": "character"
   }
  },
@@ -5704,7 +7246,21 @@
     "w": 3,
     "h": 1
    },
-   "shadow": "large"
+   "shadow": "large",
+   "variants": {
+    "left": [
+     98,
+     74,
+     29,
+     86
+    ]
+   },
+   "variantAnchors": {
+    "left": [
+     14,
+     84
+    ]
+   }
   },
   "table_round": {
    "file": "furniture/table_rough_wood.png",
@@ -5725,20 +7281,40 @@
    "shadow": "character"
   },
   "bed_simple": {
-   "file": "furniture/beds_single_c.png",
+   "file": "furniture/bed_single.png",
    "rect": [
     0,
-    25,
-    64,
-    87
+    0,
+    52,
+    88
    ],
    "anchor": [
-    32,
-    85
+    26,
+    87
    ],
    "footprintTiles": {
-    "w": 2,
-    "h": 3
+    "w": 1,
+    "h": 2
+   },
+   "variants": {
+    "left": [
+     104,
+     0,
+     74,
+     64
+    ],
+    "right": [
+     178,
+     0,
+     74,
+     64
+    ],
+    "back": [
+     52,
+     0,
+     52,
+     77
+    ]
    },
    "shadow": "medium"
   },
@@ -5956,14 +7532,14 @@
    "substitute": "grain pile"
   },
   "turnip": {
-   "file": "icons/veggies_shadowless.png",
+   "file": "icons/crop_items.png",
    "rect": [
-    192,
-    32,
+    608,
+    0,
     32,
     32
    ],
-   "substitute": "radish"
+   "source": "veggies_shadowless radish recoloured to a turnip (derived)"
   },
   "carrot": {
    "file": "icons/veggies_shadowless.png",
@@ -6075,22 +7651,24 @@
    ]
   },
   "tomato": {
-   "file": "icons/veggies_shadowless.png",
+   "file": "icons/crop_items.png",
    "rect": [
-    0,
+    192,
     0,
     32,
     32
-   ]
+   ],
+   "source": "veggies_shadowless tomato"
   },
   "potato": {
-   "file": "icons/veggies_shadowless.png",
+   "file": "icons/crop_items.png",
    "rect": [
     32,
-    32,
+    0,
     32,
     32
-   ]
+   ],
+   "source": "veggies_shadowless potato"
   },
   "apple": {
    "file": "icons/veggies_shadowless.png",
@@ -6102,22 +7680,24 @@
    ]
   },
   "corn": {
-   "file": "icons/veggies_shadowless.png",
+   "file": "icons/crop_items.png",
    "rect": [
-    224,
-    32,
+    352,
+    0,
     32,
     32
-   ]
+   ],
+   "source": "veggies_shadowless corn"
   },
   "eggplant": {
-   "file": "icons/veggies_shadowless.png",
+   "file": "icons/crop_items.png",
    "rect": [
-    160,
-    32,
+    256,
+    0,
     32,
     32
-   ]
+   ],
+   "source": "veggies_shadowless eggplant"
   },
   "ingot_copper": {
    "file": "ores/ore_copper.png",
@@ -6192,6 +7772,373 @@
     16
    ],
    "note": "badge drawn over the bottom-left of an item icon"
+  },
+  "radish": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "source": "veggies_shadowless radish"
+  },
+  "seed_radish": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    0,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "seed_potato": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    32,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "beet": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    64,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Vegetables C"
+  },
+  "seed_beet": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    64,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "lettuce": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    96,
+    0,
+    32,
+    32
+   ],
+   "source": "veggies_shadowless lettuce"
+  },
+  "seed_lettuce": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    96,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "onion": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    128,
+    0,
+    32,
+    32
+   ],
+   "source": "veggies_shadowless onion"
+  },
+  "seed_onion": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    128,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "green_bean": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    160,
+    0,
+    32,
+    32
+   ],
+   "source": "veggies_shadowless peas"
+  },
+  "seed_green_bean": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    160,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "seed_tomato": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    192,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "bell_pepper": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    224,
+    0,
+    32,
+    32
+   ],
+   "source": "veggies_shadowless bell pepper"
+  },
+  "seed_bell_pepper": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    224,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "seed_eggplant": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    256,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "cabbage": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    288,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Vegetables C"
+  },
+  "seed_cabbage": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    288,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "cauliflower": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    320,
+    0,
+    32,
+    32
+   ],
+   "source": "veggies_shadowless cauliflower"
+  },
+  "seed_cauliflower": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    320,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "seed_corn": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    352,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "blueberry": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    384,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Fruit B"
+  },
+  "seed_blueberry": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    384,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "grape": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    416,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Fruit B"
+  },
+  "seed_grape": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    416,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "watermelon": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    448,
+    0,
+    32,
+    32
+   ],
+   "source": "veggies_shadowless watermelon"
+  },
+  "seed_watermelon": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    448,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "pineapple": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    480,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Fruit B"
+  },
+  "seed_pineapple": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    480,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "golden_melon": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    512,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Fruit B honeydew, recoloured gold"
+  },
+  "seed_golden_melon": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    512,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "starfruit": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    544,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Fruit B starfruit"
+  },
+  "seed_starfruit": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    544,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "moonberry": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    576,
+    0,
+    32,
+    32
+   ],
+   "source": "ElizaWy Fruit B blueberries, recoloured"
+  },
+  "seed_moonberry": {
+   "file": "icons/crop_items.png",
+   "rect": [
+    576,
+    32,
+    32,
+    32
+   ],
+   "source": "seed pile (grains_grasses) with the crop as a badge"
+  },
+  "ore_silver": {
+   "file": "ores/ore_silver.png",
+   "rect": [
+    32,
+    64,
+    32,
+    32
+   ]
+  },
+  "ore_gold": {
+   "file": "ores/ore_gold.png",
+   "rect": [
+    32,
+    64,
+    32,
+    32
+   ]
+  },
+  "gem_diamond": {
+   "file": "ores/ore_diamond.png",
+   "rect": [
+    32,
+    64,
+    32,
+    32
+   ]
   }
  },
  "shadows": {
@@ -6828,7 +8775,6 @@
  },
  "missing": {
   "icons.watering_can": "No LPC watering can; bucket substitute provided under icons.watering_can.",
-  "crops.turnip/pumpkin/strawberry": "No LPC growth-stage sheets for these; potato/zucchini/tomato plants substituted (see crops.*.substitute).",
   "monsters.rock_crab": "No LPC crab; grey spider substituted.",
   "icons.pickaxe_iron": "Only one LPC pickaxe icon exists; reused.",
   "characters.idle": "LPC idle sheets were missing for several clothing layers; idle uses walk frame 0.",
@@ -6840,8 +8786,6 @@
  },
  "substitutions": {
   "turnip": "radish",
-  "pumpkin": "No LPC pumpkin growth stages exist; uses Daneeklu zucchini plant.",
-  "strawberry": "No LPC strawberry growth stages exist; uses Daneeklu tomato plant.",
   "watering_can": "No LPC watering can; wooden bucket used.",
   "seed_turnip": "grain pile",
   "seed_carrot": "grain pile",

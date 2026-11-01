@@ -5,6 +5,7 @@
 import { Graphics, Rectangle, Texture, type Application } from "pixi.js";
 import { Ground, type Facing, type ItemId } from "../../shared/types";
 import type { CharacterArt, MakePlaceholders, SpriteArt } from "../contracts";
+import type { CropLook } from "../../shared/engine";
 import { ATTACK_FRAMES, drawCharacter, FACINGS, WALK_FRAMES } from "./draw/characters";
 import { drawCrop, drawRock, type Ore, type Stage } from "./draw/farm";
 import { drawFurniture, type Rotation } from "./draw/furniture";
@@ -109,9 +110,9 @@ export const makePlaceholders: MakePlaceholders = (app: Application) => {
       return art;
     },
 
-    crop(crop: ItemId, stage: 0 | 1 | 2 | 3): SpriteArt {
+    crop(crop: ItemId, stage: 0 | 1 | 2 | 3, look: CropLook = "normal"): SpriteArt {
       const s = Math.max(0, Math.min(3, Math.floor(stage))) as Stage;
-      return sprite(`crop:${crop}:${s}`, () => drawCrop(crop, s));
+      return sprite(`crop:${crop}:${s}:${look}`, () => drawCrop(crop, s, look));
     },
 
     rock(ore: Ore): SpriteArt {

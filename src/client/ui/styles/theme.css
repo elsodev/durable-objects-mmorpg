@@ -304,3 +304,12 @@ body {
     transition: none;
   }
 }
+
+/* Shortcut keys: the body font, since the pixel font's G, B and O read as 6, 8 and 0. */
+span.dm-btn-key,
+span.game-menu-key,
+kbd.dm-kbd,
+.dm-slot .dm-key {
+  font-family: var(--dm-font-body);
+  font-weight: 700;
+}

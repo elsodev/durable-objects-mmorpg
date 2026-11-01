@@ -15,7 +15,7 @@ import {
   formatClock,
   GAME_HOUR_MS,
   harvestCrop,
-  harvestYield,
+  harvestable,
   HOME_DAY_MS,
   lampStrength,
   MAX_STAMINA,
@@ -24,8 +24,9 @@ import {
   plantTile,
   protectedByScarecrow,
   crowTargets,
+  CROW_CHANCE,
+  CROW_FULL_CROPS,
   rollFarmDay,
-  rollQuality,
   staminaCost,
   tillTile,
   waterTile,
@@ -104,7 +105,7 @@ describe("growth on home days", () => {
     expect(waterTile(t, farmNow(1))).toBe(true);
     expect(waterTile(t, farmNow(1))).toBe(false); // once a day
     expect(cropView(t, farmNow(1)).stage).toBe(0);
-    expect(cropView(t, farmNow(2))).toMatchObject({ stage: 2, wateredToday: false }); // soil dried
+    expect(cropView(t, farmNow(2))).toMatchObject({ stage: 1, wateredToday: false }); // soil dried
     // Day 2 not watered: no growth on day 3.
     expect(cropView(t, farmNow(3)).ready).toBe(false);
     waterTile(t, farmNow(3));
@@ -129,6 +130,13 @@ describe("soil revert", () => {
     expect(r.reverted).toEqual([{ x: 1, y: 1 }]);
     expect(r.farm).toEqual([crop]);
   });
+  it("watered empty soil stays damp: its dry count starts over", () => {
+    const t = { ...tillTile(0, 0), dryDays: 2 };
+    waterTile(t, farmNow(1));
+    const r = rollFarmDay([t], [], 1, () => 0);
+    expect(r.reverted).toHaveLength(0);
+    expect(t.dryDays).toBe(0);
+  });
   it("may revert on the second dry day", () => {
     const t = { ...tillTile(0, 0), dryDays: 1 };
     // rand: revert roll 0.1 (< 0.5), crow roll irrelevant.
@@ -143,11 +151,6 @@ describe("soil revert", () => {
 });
 
 describe("harvest, quality and regrow", () => {
-  it("rolls quality by weight", () => {
-    expect(rollQuality(() => 0.01)).toBe(2);
-    expect(rollQuality(() => 0.2)).toBe(1);
-    expect(rollQuality(() => 0.9)).toBe(0);
-  });
   it("quality items stack separately and sell for more", () => {
     expect(qualityItem("turnip", 0)).toBe("turnip");
     expect(qualityItem("turnip", 1)).toBe("turnip_silver");
@@ -163,12 +166,12 @@ describe("harvest, quality and regrow", () => {
     expect(r.ok).toBe(true);
     expect(inv.coins).toBe(2 * getItem("turnip_gold")!.sell);
   });
-  it("harvestYield needs a ready crop and does not mutate", () => {
+  it("harvests only a ready crop", () => {
     const t = planted("seed_turnip", 1);
-    expect(harvestYield(t, farmNow(1), () => 0.5)).toBeNull();
+    expect(harvestable(t, farmNow(1))).toBeNull();
     waterTile(t, farmNow(1));
     waterTile(t, farmNow(2));
-    expect(harvestYield(t, farmNow(3), () => 0.01)).toBe("turnip_gold");
+    expect(harvestable(t, farmNow(3))).toBe("turnip");
     expect(t.crop).toBe("turnip");
     expect(harvestCrop(t, farmNow(3))).toBe(true);
     expect(t.crop).toBeNull();
@@ -207,14 +210,21 @@ describe("crows and scarecrows", () => {
     const near = planted("seed_turnip", 1, 12, 10);
     const far = planted("seed_turnip", 1, 30, 10);
     expect(crowTargets([near, far], [scarecrow], seq(0.9))).toEqual([]); // no visit
-    expect(crowTargets([near, far], [scarecrow], seq(0.1, 0))).toEqual([far]);
+    expect(crowTargets([near, far], [scarecrow], seq(0.02, 0))).toEqual([far]);
     expect(crowTargets([near], [scarecrow], seq(0.0, 0))).toEqual([]);
   });
   it("eaten crops leave empty soil and show up in the result", () => {
     const far = planted("seed_carrot", 1, 30, 10);
-    const r = rollFarmDay([far], [], 1, seq(0.1, 0));
+    const r = rollFarmDay([far], [], 1, seq(0.01, 0));
     expect(r.eaten).toEqual([{ x: 30, y: 10, crop: "carrot" }]);
     expect(far.crop).toBeNull();
+  });
+  it("small plots draw crows less: the chance scales with the crop count up to CROW_FULL_CROPS", () => {
+    const one = [planted("seed_turnip", 1, 30, 10)];
+    expect(crowTargets(one, [], seq(CROW_CHANCE / CROW_FULL_CROPS - 0.001, 0))).toHaveLength(1);
+    expect(crowTargets(one, [], seq(CROW_CHANCE / CROW_FULL_CROPS + 0.001, 0))).toEqual([]);
+    const full = Array.from({ length: CROW_FULL_CROPS }, (_, i) => planted("seed_turnip", 1, i, 0));
+    expect(crowTargets(full, [], seq(CROW_CHANCE - 0.001, 0))).toHaveLength(1);
   });
   it("more crops, more crows", () => {
     const many = Array.from({ length: 32 }, (_, i) => planted("seed_turnip", 1, i, 0));
@@ -223,10 +233,11 @@ describe("crows and scarecrows", () => {
 });
 
 describe("stamina", () => {
-  it("tools cost 2-4, eating restores up to the max", () => {
+  it("tools cost 2-3 per swing, eating restores up to the max", () => {
     expect(staminaCost("hoe")).toBe(2);
     expect(staminaCost("water")).toBe(2);
-    expect(staminaCost("pickaxe")).toBe(4);
+    expect(staminaCost("pickaxe")).toBe(2);
+    expect(staminaCost("axe")).toBe(2);
     expect(staminaCost(undefined)).toBe(0);
     expect(eatGain("turnip", 50)).toBe(getItem("turnip")!.eat);
     expect(eatGain("turnip_gold", 50)).toBeGreaterThan(eatGain("turnip", 50));
@@ -246,8 +257,9 @@ describe("shipping bin", () => {
     const bin: BinEntry[] = [];
     expect(shipSlot(inv, bin, 0).ok).toBe(false); // tools can't be shipped
     expect(shipSlot(inv, bin, 1).ok).toBe(true);
-    expect(shipSlot(inv, bin, 1).ok).toBe(true); // gold turnip moved to slot 1
-    expect(inv.slots).toEqual([{ item: "hoe", qty: 1 }]);
+    expect(shipSlot(inv, bin, 1).ok).toBe(false); // slot 1 is now empty: slots never shift
+    expect(shipSlot(inv, bin, 2).ok).toBe(true);
+    expect(inv.slots).toEqual([{ item: "hoe", qty: 1 }, null, null]);
     const pay = binPayout(bin);
     expect(pay.lines).toEqual([
       { item: "turnip", qty: 3, coins: 75 },
@@ -255,10 +267,28 @@ describe("shipping bin", () => {
     ]);
     expect(pay.total).toBe(75 + getItem("turnip_gold")!.sell);
     expect(unshipLast(inv, bin).ok).toBe(true);
-    expect(inv.slots[1]).toEqual({ item: "turnip_gold", qty: 1 });
+    expect(inv.slots[1]).toEqual({ item: "turnip_gold", qty: 1 }); // first empty slot
     expect(bin).toEqual([{ item: "turnip", qty: 3 }]);
     expect(inv.coins).toBe(0); // nothing paid before the day ends
     expect(unshipLast(inv, []).ok).toBe(false);
+  });
+  it("merges the same item into one bin entry, so the bin fills by kinds of item", () => {
+    const inv = { coins: 0, slots: [{ item: "turnip", qty: 2 }, { item: "carrot", qty: 1 }, { item: "turnip", qty: 5 }] };
+    const bin: BinEntry[] = [];
+    expect(shipSlot(inv, bin, 0).ok).toBe(true);
+    expect(shipSlot(inv, bin, 1).ok).toBe(true); // carrot (slots stay put)
+    expect(shipSlot(inv, bin, 2).ok).toBe(true); // more turnips join the first entry, now last
+    expect(bin).toEqual([
+      { item: "carrot", qty: 1 },
+      { item: "turnip", qty: 7 },
+    ]);
+    expect(unshipLast(inv, bin).ok).toBe(true);
+    expect(inv.slots).toEqual([{ item: "turnip", qty: 7 }, null, null]);
+    // A full bin still takes more of an item it already holds.
+    const packed: BinEntry[] = [{ item: "turnip", qty: 1 }, ...Array.from({ length: 47 }, (_, i) => ({ item: i % 2 ? "carrot" : "stone", qty: 1 }))];
+    expect(shipSlot({ coins: 0, slots: [{ item: "turnip", qty: 1 }] }, packed, 0).ok).toBe(true);
+    expect(packed.length).toBe(48);
+    expect(shipSlot({ coins: 0, slots: [{ item: "pumpkin", qty: 1 }] }, packed, 0).ok).toBe(false);
   });
   it("sanitizes stored bins", () => {
     expect(sanitizeBin([{ item: "turnip", qty: 2 }, { item: "nope", qty: 1 }, { item: "carrot", qty: -1 }, null])).toEqual([
@@ -286,7 +316,7 @@ describe("day end", () => {
     expect(st.bin).toEqual([]);
     expect(st.clock).toEqual({ day: 4, startAt: 5_000 });
     expect(res.summary).toMatchObject({ day: 3, total: 80, grown: 1, passedOut: false, penalty: 0 });
-    expect(cropView(st.farm[0], farmNow(st.clock.day)).stage).toBe(2);
+    expect(cropView(st.farm[0], farmNow(st.clock.day)).stage).toBe(1);
   });
   it("passing out costs coins and stamina", () => {
     const st = state();

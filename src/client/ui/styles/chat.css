@@ -227,6 +227,56 @@
   opacity: 0.3;
 }
 
+/* "/" command suggestions (chat.ts), above the input like Discord's */
+.chat-slash {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  pointer-events: auto;
+  background: var(--dm-chat-solid, #2a2119);
+  border: 1px solid var(--dm-gold, #e9b44c);
+  border-radius: var(--dm-radius, 6px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  z-index: 3;
+}
+.chat-slash[hidden] {
+  display: none;
+}
+.chat-slash-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  align-items: baseline;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--dm-cream, #f6eed8);
+}
+.chat-slash-item[aria-selected="true"] {
+  background: rgba(232, 179, 58, 0.22);
+  box-shadow: inset 2px 0 0 var(--dm-gold, #e8b33a);
+}
+.chat-slash-label {
+  font-family: var(--dm-font-pixel);
+  font-weight: 600;
+  color: var(--dm-gold, #e8b33a);
+}
+.chat-slash-syntax {
+  color: var(--dm-chat-muted, #b9c9a5);
+  font-family: var(--dm-font-pixel);
+  font-size: 12px;
+}
+.chat-slash-desc {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--dm-chat-npc, #e9dcb8);
+  opacity: 0.85;
+}
+
 @media (max-width: 480px) {
   .chat {
     --chat-line: 16px;

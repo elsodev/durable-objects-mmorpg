@@ -1,11 +1,14 @@
 // See ../contracts.ts for the contract.
-import { Container, Graphics, Sprite, Text, TextStyle, Texture, Ticker } from "pixi.js";
+import { AnimatedSprite, Container, Graphics, Sprite, Text, TextStyle, Texture, Ticker } from "pixi.js";
 import type { CreatePropsLayer, SpriteArt } from "../contracts";
 import { SCALE, SRC_TILE, TILE } from "../contracts";
 import type { MapProp } from "../../shared/types";
 import { fenceKey, fenceMasks } from "./fence";
 import {
   INTERACTABLE_TYPES,
+  LID_BUMP_MS,
+  LID_FPS,
+  lidBump,
   placeOnSurface,
   propSortZ,
   raisedZ,
@@ -141,10 +144,102 @@ function tick(anims: Anim[], t: number): void {
   }
 }
 
+/**
+ * A prop with a lid (shipping bin). With closed/opening/open frames in the art, an AnimatedSprite
+ * plays them forward to open and backward to close; without, the container lifts a little. Both
+ * sit in a container so a landing item can squash the bin about its feet.
+ */
+class Lid {
+  readonly box = new Container();
+  private anim: AnimatedSprite | null = null;
+  private open = false;
+  private bumpAt = -1;
+  /** Fallback lift 0..1 when there are no frames. */
+  private lift = 0;
+  private ticking = false;
+
+  constructor(private art: SpriteArt, x: number, y: number, z: number) {
+    this.box.position.set(x, y);
+    this.box.zIndex = z;
+    let body: Sprite;
+    if (art.open && art.open.length > 1) {
+      const a = new AnimatedSprite({ textures: art.open, autoUpdate: true, loop: false });
+      a.animationSpeed = LID_FPS / 60;
+      a.gotoAndStop(0);
+      this.anim = a;
+      body = a;
+    } else body = new Sprite(art.texture);
+    body.anchor.set(art.anchor.x, art.anchor.y);
+    body.scale.set(SCALE);
+    this.box.addChild(body);
+  }
+
+  setOpen(open: boolean): void {
+    if (open === this.open) return;
+    this.open = open;
+    const a = this.anim;
+    if (a) {
+      // Negative speed plays the frames backwards and stops on "closed".
+      a.animationSpeed = (open ? 1 : -1) * (LID_FPS / 60);
+      a.play();
+    } else this.startTick();
+  }
+
+  bump(): void {
+    this.bumpAt = performance.now();
+    // Flick the lid on the way in, then let it settle open again.
+    if (this.anim && this.open) {
+      this.anim.animationSpeed = LID_FPS / 60;
+      this.anim.gotoAndPlay(1);
+    }
+    this.startTick();
+  }
+
+  private startTick(): void {
+    if (this.ticking) return;
+    this.ticking = true;
+    Ticker.shared.add(this.tick, this);
+  }
+
+  private tick(ticker: Ticker): void {
+    let busy = false;
+    if (this.bumpAt >= 0) {
+      const t = (performance.now() - this.bumpAt) / LID_BUMP_MS;
+      const s = lidBump(t);
+      this.box.scale.set(s.x, s.y);
+      if (t >= 1) this.bumpAt = -1;
+      else busy = true;
+    }
+    if (!this.anim) {
+      const target = this.open ? 1 : 0;
+      const step = ticker.deltaMS / 150;
+      this.lift = target > this.lift ? Math.min(target, this.lift + step) : Math.max(target, this.lift - step);
+      const body = this.box.children[0] as Sprite;
+      body.position.y = -this.lift * 2 * SCALE;
+      body.skew.x = -this.lift * 0.04;
+      if (this.lift !== target) busy = true;
+    }
+    if (!busy) {
+      Ticker.shared.remove(this.tick, this);
+      this.ticking = false;
+    }
+  }
+
+  destroy(): void {
+    if (this.ticking) Ticker.shared.remove(this.tick, this);
+    this.ticking = false;
+    this.anim?.stop();
+    this.box.destroy({ children: true });
+  }
+}
+
 export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
   const owned: (Sprite | Container)[] = [];
   const hits: HitEntry[] = [];
   const anims: Anim[] = [];
+  /** Sprites of props that change at runtime (choppable trees), by prop id. */
+  const views = new Map<string, { body: Sprite; shadow: Sprite | null }>();
+  const lids = new Map<string, Lid>();
   const shadow = shadowTexture();
 
   const fences = fenceMasks(map.props.filter((p) => p.type === "fence_deco"));
@@ -176,15 +271,23 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       if (sa.frames && sa.frames.length > 1) anims.push({ kind: "frames", s, phase: phaseOf(p.x, p.y), frames: sa.frames });
       continue;
     }
-    const body = makeSprite(sa, fx, fy, z);
+    let body: Sprite;
+    if (p.type === "shipping_bin") {
+      const lid = new Lid(sa, fx, fy, z);
+      lids.set(p.id, lid);
+      layers.sorted.addChild(lid.box);
+      body = lid.box.children[0] as Sprite;
+    } else body = makeSprite(sa, fx, fy, z);
     if (p.walkable) {
       // Rugs and mats lie on the floor: under everyone, no shadow, nothing to click.
       layers.groundOverlay.addChild(body);
       owned.push(body);
       continue;
     }
-    layers.sorted.addChild(body);
-    owned.push(body);
+    if (!lids.has(p.id)) {
+      layers.sorted.addChild(body);
+      owned.push(body);
+    }
     if (sa.front) {
       const front = makeSprite(sa.front, fx, fy, fy + 1);
       layers.sorted.addChild(front);
@@ -199,6 +302,7 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       owned.push(plate);
     }
 
+    if (p.type === "tree") views.set(p.id, { body, shadow: null });
     if (!castsShadow(p)) continue;
     const sz = shadowSize(p, ext);
     const sh = new Sprite(shadow);
@@ -210,6 +314,8 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
     sh.cullable = true;
     layers.groundOverlay.addChild(sh);
     owned.push(sh);
+    const v = views.get(p.id);
+    if (v) v.shadow = sh;
 
     const a = animFor(p, body);
     if (a) anims.push(a);
@@ -225,13 +331,23 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
 
   return {
     propAt: (tile) => pickProp(hits, tile),
+    spriteOf: (id) => views.get(id) ?? null,
+    setOpen(id, open) {
+      lids.get(id)?.setOpen(open);
+    },
+    bump(id) {
+      lids.get(id)?.bump();
+    },
     destroy() {
       ticker.remove(onTick);
+      for (const l of lids.values()) l.destroy();
+      lids.clear();
       // Textures belong to the art module (and the shadow texture is shared), so keep them.
       for (const s of owned) if (!s.destroyed) s.destroy({ children: true, texture: false, textureSource: false });
       owned.length = 0;
       hits.length = 0;
       anims.length = 0;
+      views.clear();
     },
   };
 };

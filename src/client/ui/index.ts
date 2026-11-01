@@ -7,10 +7,16 @@
 //   ui/chat.ts      -> createChat
 //   ui/dialogs.ts   -> createShop, createGoals, createNotices, createAccountPrompt
 //   ui/styles/*.css -> one file per module; ui/styles/theme.css holds CSS variables
+import type { BondView } from "../../shared/hearts";
 import type { ClientMsg, ServerMsg, ShopOffer, VillageGoal } from "../../shared/protocol";
+import type { SlashContext } from "./slash-commands";
 import type { Inventory, ItemId, ZoneId } from "../../shared/types";
 import type { ChatChannel, ChatTab, SocialStats } from "../../shared/social";
 import type { EmoteCode } from "../../shared/emotes";
+import type { PlayerHit } from "./player-card-logic";
+import type { MuteSet } from "./mute-logic";
+import type { SlotDrag } from "./slot-drag";
+export type { PlayerHit } from "./player-card-logic";
 
 export interface SessionUser {
   id: string;
@@ -48,12 +54,22 @@ export interface GameApi {
   isGuest(): boolean;
   /** Opens the character creator (HUD "Wardrobe" button, #hud-btn-wardrobe). Optional: no button without it. */
   openWardrobe?(): void;
-  /** Name of the other player drawn under a viewport point (right-click / long-press menu), else null. */
-  playerNameAt?(clientX: number, clientY: number): string | null;
+  /** Opens the controls card (HUD "Controls" button, #hud-btn-controls). Optional: no button without it. */
+  openControls?(): void;
+  /** Player drawn under a viewport point (right-click / long-press card), yourself included; else null. */
+  playerAt?(clientX: number, clientY: number): PlayerHit | null;
+  /** A player in view by name (right-click on a chat name), else null. */
+  playerByName?(name: string): PlayerHit | null;
+  /** Tiles from you to that entity, or null once it is out of view (the card closes). */
+  playerDistance?(entityId: string): number | null;
+  /** Small portrait of a player entity (their composited look), or null. */
+  playerPortrait?(entityId: string): HTMLCanvasElement | null;
   /** Typed chat line from the given tab (handles /w, /r, /world, /emote...). Without it the HUD sends zone chat. */
   chat?(text: string, tab: ChatTab): void;
   /** Emote picker choice. */
   emote?(code: EmoteCode): void;
+  /** Where the player is, for the chat "/" command suggestions. */
+  slashContext?(): SlashContext;
 }
 
 /** Where a chat line belongs (tabs) and, for whispers, which way it went. */
@@ -83,6 +99,12 @@ export interface Hud {
   showAccountPrompt(reason: string): Promise<boolean>;
   /** Called by the game once art is loaded, so the HUD can show item icons. */
   setIconSource(src: (item: ItemId) => string): void;
+  /** Who you muted: the game hides their zone chat, bubbles, world chat and emotes. */
+  readonly mutes?: MuteSet;
+  /** Friendship (ui/bonds.ts): every villager met, one villager's change, and their lines. */
+  setBonds?(list: BondView[]): void;
+  bond?(view: BondView, delta: number, talk: boolean, entityId?: string, gifts?: ItemId[]): void;
+  npcSaid?(entityId: string, text: string): void;
 }
 
 /**
@@ -101,7 +123,10 @@ export interface InventoryPanel {
   isOpen(): boolean;
 }
 /** ui/inventory.ts. onItem: clicked slot (furniture at home -> build mode; others -> select into hotbar). */
-export type CreateInventoryPanel = (root: HTMLElement, opts: { onItem(slot: number): void }) => InventoryPanel;
+export type CreateInventoryPanel = (
+  root: HTMLElement,
+  opts: { onItem(slot: number): void; /** Drag and drop between slots (ui/slot-drag.ts). */ drag?: SlotDrag },
+) => InventoryPanel;
 
 export interface Chat {
   add(name: string, text: string, kind: "player" | "npc" | "system", opts?: ChatLineOpts): void;
@@ -125,6 +150,8 @@ export type CreateChat = (
     command?(text: string): boolean;
     emote?(code: EmoteCode): void;
     guest?(): boolean;
+    /** Where the player is, for the "/" command suggestions. Without it every non-dev command is offered. */
+    slashContext?(): SlashContext;
   },
 ) => Chat;
 

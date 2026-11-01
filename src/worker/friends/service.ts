@@ -10,6 +10,7 @@ import {
 } from "../../shared/friends";
 import type { SocialAdapter } from "../social-adapter";
 import * as store from "./store";
+import { isMutedBy } from "../mutes/store";
 
 export interface Me {
   id: string;
@@ -88,7 +89,11 @@ export async function request(db: D1Database, social: SocialAdapter, me: Me, nam
     if (await store.hasRequest(db, me.id, other.id)) return fail(409, `You already asked ${other.name}.`);
     return fail(409, `You have ${MAX_PENDING_OUT} requests waiting; cancel one first.`);
   }
-  await push(social, other.id, { t: "friendRequest", fromId: me.id, fromName: me.name });
+  // Someone who muted you never hears about the request (their list hides it too), but to you it
+  // looks like any other: mute is silent.
+  if (!(await isMutedBy(db, other.id, me.id))) {
+    await push(social, other.id, { t: "friendRequest", fromId: me.id, fromName: me.name });
+  }
   const result: FriendRequestResult = { status: "requested", user: { userId: other.id, name: other.name } };
   return ok(result, 201);
 }

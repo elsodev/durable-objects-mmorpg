@@ -100,6 +100,8 @@ async function newPlayer(browser, label) {
   await page.waitForSelector("canvas", { timeout: 15000 });
   // New accounts get the character creator first; keep the default look.
   await page.click("#creator-save", { timeout: 15000 });
+  // First visit shows the controls card; it holds game keys until dismissed.
+  await page.click("#tutorial-ok", { timeout: 15000 });
   const s = await waitFor(page, (s) => !!s.you && !!s.me, `${label}: connected with own entity`, 15000);
   return { ctx, page, email, state: s };
 }
@@ -162,7 +164,7 @@ async function main() {
   step("arrived home", true);
 
   // ---- Farming: hoe, seed, water on a plot (slots per starting inventory: 0 hoe, 1 can, seeds found by id) ----
-  // A tile inside the home farm area (x 19..32, y 3..10). Tools only reach ~2 tiles, so stand next to it first.
+  // A tile in the fenced field (any yard grass can be farmed). Tools only reach ~2 tiles, so stand next to it first.
   const tile = { x: 24, y: 6 };
   await send(pa, { t: "moveTo", x: tile.x + 0.5, y: tile.y + 1.5 });
   await waitFor(pa, (s) => s.me && Math.hypot(s.me.x - (tile.x + 0.5), s.me.y - (tile.y + 1.5)) < 0.3, "walk to the farm plot", 20000);
@@ -181,9 +183,10 @@ async function main() {
   // ---- Build mode: place a chair ----
   const chairSlot = await slotOf("chair_wood");
   if (chairSlot >= 0) {
-    await send(pa, { t: "moveTo", x: 8.5, y: 8.5 }); // inside the cottage, within decorating reach
-    await waitFor(pa, (s) => s.me && Math.hypot(s.me.x - 8.5, s.me.y - 8.5) < 0.3, "walk into the cottage", 20000);
-    await pa.waitForTimeout(600);
+    // Furniture goes inside the house: walk through its door (8,10) into the house map.
+    await send(pa, { t: "moveTo", x: 8.5, y: 10.5 });
+    await waitFor(pa, (s) => s.me && s.me.x < 13 && s.me.y < 10, "walk into the house", 20000);
+    await pa.waitForTimeout(800);
     await send(pa, { t: "place", slot: chairSlot, x: 6, y: 6, rotation: 0 });
     await pa.waitForTimeout(800);
     await shot(pa, "06-chair");

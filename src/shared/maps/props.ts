@@ -29,6 +29,10 @@ export const PROP_FOOTPRINTS = {
   campfire: { w: 1, h: 1 },
   /** Signpost beside an exit; its MapProp.label names where the exit leads. */
   sign_post: { w: 1, h: 1 },
+  /** The player's house seen from the yard (LPC cottage art); its door is a home map exit. */
+  home_house: { w: 4, h: 3 },
+  /** Beside the player's house; its flag is up while there is unread mail. */
+  mailbox: { w: 1, h: 1 },
   /** Home cottage facade/roof drawn over the cottage's north wall (home map overrides the width). */
   cottage: { w: 14, h: 3 },
   /** Forage patch at riverside (herbalist quests). */

@@ -11,6 +11,7 @@ import {
   dist,
   findPath,
   moveGoal,
+  setBlocked,
   stepDirection,
   stepToward,
   type CollisionGrid,
@@ -23,13 +24,13 @@ export const SNAP_DIST = 1.5;
 export const CORRECT_MS = 150;
 /** Errors smaller than this are ignored, so float noise doesn't start a correction. */
 const EPS_DIST = 0.01;
-/** Frame dt cap: a long stall (tab in background) must not produce a huge local jump. */
+/** Integration step cap: a long stall (tab in background) must not produce a huge local jump. */
 const MAX_DT_MS = 250;
 /** Input history cap, in case the server never acks (old server, dropped socket). */
 const MAX_INPUTS = 600;
 
 /** One predicted frame of movement, replayable on top of a server position. */
-interface InputFrame {
+export interface InputFrame {
   seq: number;
   /** Direction actually moved (held key or unit vector toward a path waypoint). */
   dx: number;
@@ -40,6 +41,8 @@ interface InputFrame {
 interface Extras {
   objects: PlacedObject[];
   rocks: Vec2[];
+  /** Map-blocked tiles that are open now (trees chopped down to nothing). */
+  cleared?: Vec2[];
 }
 
 /** Rebuilds the collision grid only when the map, objects or rocks actually change. */
@@ -47,6 +50,7 @@ export function createCollisionCache(getMap: () => MapData | null, getExtras: ()
   let map: MapData | null = null;
   let objects: PlacedObject[] = [];
   let rocks: Vec2[] = [];
+  let cleared: Vec2[] = [];
   let grid: CollisionGrid | null = null;
 
   const sameObjects = (a: PlacedObject[], b: PlacedObject[]) =>
@@ -64,14 +68,45 @@ export function createCollisionCache(getMap: () => MapData | null, getExtras: ()
       const m = getMap();
       if (!m) return (grid = map = null);
       const ex = getExtras();
-      if (grid && m === map && sameObjects(ex.objects, objects) && sameRocks(ex.rocks, rocks)) return grid;
+      const exCleared = ex.cleared ?? [];
+      if (grid && m === map && sameObjects(ex.objects, objects) && sameRocks(ex.rocks, rocks) && sameRocks(exCleared, cleared)) return grid;
       map = m;
       objects = ex.objects.slice();
       rocks = ex.rocks.slice();
+      cleared = exCleared.slice();
       grid = buildCollision(m, { objects, rocks });
+      for (const c of cleared) setBlocked(grid, c.x, c.y, 1, 1, false);
       return grid;
     },
   };
+}
+
+/**
+ * The part of the input history the server has not simulated yet. Frames older than the acked
+ * seq are done. With `ackMs` (how long the server has run the acked input), the first ackMs of
+ * the acked seq's own frames are done too, so a held key is replayed for exactly the time the
+ * server is behind. Without it (older server), every frame of the acked seq counts as done.
+ */
+export function unsimulated(inputs: readonly InputFrame[], ack: number, ackMs: number | undefined): InputFrame[] {
+  const out: InputFrame[] = [];
+  let skip = ackMs ?? 0;
+  for (const f of inputs) {
+    if (f.seq < ack) continue;
+    if (f.seq === ack) {
+      if (ackMs === undefined) continue;
+      if (skip >= f.dtMs) {
+        skip -= f.dtMs;
+        continue;
+      }
+      if (skip > 0) {
+        out.push({ ...f, dtMs: f.dtMs - skip });
+        skip = 0;
+        continue;
+      }
+    }
+    out.push(f);
+  }
+  return out;
 }
 
 const sign = (v: number) => (v > 0 ? 1 : v < 0 ? -1 : 0);
@@ -93,6 +128,8 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
   let lastDir = { dx: 0, dy: 0 };
   let sinceSendMs = 0;
   let path: Vec2[] | null = null;
+  /** Clock time (ms) the predicted position is integrated up to; null until the first step. */
+  let simAt: number | null = null;
 
   function nextSeq(): number {
     seq += 1;
@@ -144,44 +181,75 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
     }
   }
 
+  /** Integrates the current input (held direction or path) up to clock time `t`. */
+  function advance(t: number): void {
+    const from = simAt ?? t;
+    simAt = Math.max(from, t);
+    const dtMs = Math.min(Math.max(0, t - from), MAX_DT_MS);
+    const grid = collision.get();
+    if (!grid) {
+      moving = false;
+      return;
+    }
+    if (path) {
+      walkPath(dtMs, grid);
+    } else if (lastDir.dx !== 0 || lastDir.dy !== 0) {
+      if (dtMs <= 0) return;
+      const r = stepDirection({ x, y, facing }, lastDir.dx, lastDir.dy, PLAYER_SPEED, dtMs, grid);
+      record({ seq, dx: lastDir.dx, dy: lastDir.dy, dtMs });
+      x = r.x;
+      y = r.y;
+      facing = r.facing;
+      moving = r.moving;
+    } else {
+      moving = false;
+    }
+  }
+
+  /**
+   * Switches direction at clock time `at` (a key event's timeStamp, or the frame start). The old
+   * input is integrated up to `at` first, so walking lasts exactly as long as the key was held,
+   * which is also how long the server walks (it integrates between the same two messages).
+   */
+  function changeDir(dx: number, dy: number, at: number): ClientMsg {
+    advance(Math.max(at, simAt ?? at));
+    if ((dx !== 0 || dy !== 0) && path) path = null; // keys override click-to-move
+    lastDir = { dx, dy };
+    sinceSendMs = 0;
+    return { t: "move", dx, dy, seq: nextSeq() };
+  }
+
   const predictor: Predictor = {
-    step(rawDx, rawDy, rawDt) {
-      const dtMs = Math.min(Math.max(0, rawDt), MAX_DT_MS);
+    step(rawDx, rawDy, rawDt, now) {
+      const dtMs = Math.max(0, rawDt);
+      const t = now ?? (simAt ?? 0) + dtMs;
+      if (simAt === null) simAt = t - Math.min(dtMs, MAX_DT_MS);
       const dx = sign(rawDx);
       const dy = sign(rawDy);
-      decayCorrection(dtMs);
-      sinceSendMs += dtMs;
+      decayCorrection(Math.min(dtMs, MAX_DT_MS));
 
       let send: ClientMsg | null = null;
-      const held = dx !== 0 || dy !== 0;
-      if (held && path) path = null; // keys override click-to-move
-      if (dx !== lastDir.dx || dy !== lastDir.dy || (held && sinceSendMs >= RESEND_MS)) {
+      // A change that setDir() did not already see (no key event, e.g. typing started): treat it
+      // as starting with this frame, so the player still moves on this very frame.
+      if (dx !== lastDir.dx || dy !== lastDir.dy) send = changeDir(dx, dy, simAt);
+      const before = simAt;
+      advance(t);
+      sinceSendMs += Math.max(0, t - before);
+      if (!send && (dx !== 0 || dy !== 0) && sinceSendMs >= RESEND_MS) {
         send = { t: "move", dx, dy, seq: nextSeq() };
-        lastDir = { dx, dy };
         sinceSendMs = 0;
-      }
-
-      const grid = collision.get();
-      if (!grid) {
-        moving = false;
-        return { send };
-      }
-      if (path) {
-        walkPath(dtMs, grid);
-      } else if (held) {
-        const r = stepDirection({ x, y, facing }, dx, dy, PLAYER_SPEED, dtMs, grid);
-        record({ seq, dx, dy, dtMs });
-        x = r.x;
-        y = r.y;
-        facing = r.facing;
-        moving = r.moving;
-      } else {
-        moving = false;
       }
       return { send };
     },
 
-    reconcile(server, ack) {
+    setDir(rawDx, rawDy, at) {
+      const dx = sign(rawDx);
+      const dy = sign(rawDy);
+      if (dx === lastDir.dx && dy === lastDir.dy) return null;
+      return changeDir(dx, dy, at);
+    },
+
+    reconcile(server, ack, ackMs) {
       const shown = { x: x + corr.x, y: y + corr.y };
       const grid = collision.get();
       let px = server.x;
@@ -200,9 +268,12 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       }
 
       if (ack > acked) acked = ack;
-      inputs = inputs.filter((f) => f.seq > acked);
+      // ackMs describes `ack`; for a stale ack (from before a reset) it says nothing useful.
+      const ms = ack === acked ? ackMs : undefined;
+      const replay = unsimulated(inputs, acked, ms);
+      inputs = inputs.filter((f) => (ms === undefined ? f.seq > acked : f.seq >= acked));
       if (grid) {
-        for (const f of inputs) {
+        for (const f of replay) {
           const r = stepDirection({ x: px, y: py, facing: pf }, f.dx, f.dy, PLAYER_SPEED, f.dtMs, grid);
           px = r.x;
           py = r.y;
@@ -257,6 +328,7 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       lastDir = { dx: 0, dy: 0 };
       sinceSendMs = 0;
       path = null;
+      simAt = null;
     },
   };
 

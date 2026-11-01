@@ -54,6 +54,8 @@ export const createStore: CreateStore = () => {
     farm: new Map<string, FarmTile>(),
     objects: new Map<string, PlacedObject>(),
     brokenRocks: new Set<string>(),
+    rockOres: new Map(),
+    trees: new Map<string, "stump" | "gone">(),
     goals: [],
     chat: chatLog,
 
@@ -62,13 +64,15 @@ export const createStore: CreateStore = () => {
         case "welcome": {
           store.reset();
           store.zone = msg.zone;
-          store.map = getMap(msg.zone);
+          store.map = getMap(msg.homeMap ?? msg.zone);
           store.youId = msg.you;
           store.inventory = msg.inventory;
           for (const e of msg.entities) push(e, recvTime);
           for (const f of msg.farm ?? []) store.farm.set(tileKey(f), f);
           for (const o of msg.objects ?? []) store.objects.set(o.id, o);
           for (const r of msg.brokenRocks ?? []) store.brokenRocks.add(r);
+          for (const [id, ore] of Object.entries(msg.rockOres ?? {})) store.rockOres.set(id, ore);
+          for (const t of msg.trees ?? []) store.trees.set(t.id, t.stage);
           store.goals = msg.goals ?? [];
           emit("zone", msg.zone);
           emit("inventory", store.inventory);
@@ -111,7 +115,17 @@ export const createStore: CreateStore = () => {
         case "rock":
           if (msg.broken) store.brokenRocks.add(msg.id);
           else store.brokenRocks.delete(msg.id);
+          if (msg.ore) {
+            // Only differences from the map are kept, like the welcome's rockOres.
+            const base = store.map?.rocks?.find((r) => r.id === msg.id)?.ore;
+            if (msg.ore === base) store.rockOres.delete(msg.id);
+            else store.rockOres.set(msg.id, msg.ore);
+          }
           emit("rocks", msg);
+          break;
+        case "tree":
+          if (msg.stage === "tree") store.trees.delete(msg.id);
+          else store.trees.set(msg.id, msg.stage);
           break;
         case "goals":
           store.goals = msg.goals;
@@ -162,6 +176,8 @@ export const createStore: CreateStore = () => {
       store.farm.clear();
       store.objects.clear();
       store.brokenRocks.clear();
+      store.rockOres.clear();
+      store.trees.clear();
       store.goals = [];
       chatLog.length = 0;
     },

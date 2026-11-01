@@ -2,6 +2,7 @@
 import type { ItemId } from "../../shared/types";
 import type { ShopOffer } from "../../shared/protocol";
 import { getItem } from "../../shared/items";
+import { allCrops, STORE_SEEDS } from "../../shared/seeds";
 import type { NpcDef } from "./brain";
 
 /** Shop offers priced from items.ts so prices never drift from the item table. */
@@ -99,12 +100,15 @@ export const NPCS: Record<string, NpcDef> = {
       "A cheerful, practical market gardener with soil under her nails who talks about vegetables like old friends and never forgets a customer's name.",
     knowledge: [
       "Turnips grow in 2 watered days, carrots 3, strawberries 4 and pumpkins 5. Water each crop once a day.",
+      "Odette always stocks turnip, carrot, strawberry and pumpkin seeds. Her other seeds (radish, lettuce, potato, beet, onion, peppers, beans, tomatoes, eggplant, cabbage, cauliflower, blueberries and corn) change with the seasons, each on the shelf for two seasons a year.",
+      "Watermelon, grape and pineapple seeds are not sold in town; monsters sometimes carry them. Rare seeds like moonberry, golden melon and starfruit come from cave monsters or from good friends.",
+      "A crop left unwatered wilts, and after three dry days it dies.",
       LORE.fair,
       "Odette sells seeds and buys any crop you grow.",
     ],
     shop: {
-      sells: offers(["seed_turnip", "seed_carrot", "seed_strawberry", "seed_pumpkin"]),
-      buys: ["turnip", "carrot", "strawberry", "pumpkin"],
+      sells: offers([...STORE_SEEDS]),
+      buys: allCrops(),
     },
     lines: {
       greet: [
@@ -169,14 +173,16 @@ export const NPCS: Record<string, NpcDef> = {
     personality:
       "A big, soft-spoken blacksmith who measures words like iron, takes pride in sturdy work, and secretly carves tiny wooden animals.",
     knowledge: [
-      "An iron pickaxe breaks iron and gem rocks; the starter pickaxe only handles stone and copper.",
-      "Fenwick buys stone, copper ore, iron ore, gem crystals and crab shells.",
+      "An iron pickaxe breaks iron, silver, gold, gem and diamond rocks; the starter pickaxe only handles stone and copper.",
+      "Fenwick buys stone, ores, gems and crab shells, but pays less for ore than the shipping bin does.",
+      "Gold and diamond rocks are very rare, and turn up mostly on the deepest cave floor.",
       LORE.critters,
       LORE.bridge,
     ],
     shop: {
       sells: offers([
         "pickaxe_iron",
+        "axe",
         "sword_copper",
         "chair_wood",
         "table_wood",
@@ -187,7 +193,7 @@ export const NPCS: Record<string, NpcDef> = {
         "fence",
         "scarecrow",
       ]),
-      buys: ["stone", "ore_copper", "ore_iron", "gem_crystal", "crab_shell"],
+      buys: ["stone", "ore_copper", "ore_iron", "ore_silver", "ore_gold", "gem_crystal", "gem_diamond", "crab_shell"],
     },
     lines: {
       greet: [

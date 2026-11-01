@@ -37,14 +37,18 @@ const SHORE_FOAM = 0xeaf4f0;
 const CAVE_SHADOW = 0x120c18;
 const WALL_SHADOW = 0x1c1410;
 
-class BlobTextures {
+/** Quadrant textures cut from the art's blob sheets (shared with the farm layer's soil). */
+export class BlobTextures {
   private blobs = new Map<BlobSet, GroundBlob | null>();
   private quads = new Map<string, Texture | null>();
   constructor(private art: Art & GroundEdgeArt) {}
 
-  /** The quadrant of a blob piece as its own texture, or null when the art has no such sheet. */
-  quad(set: BlobSet, piece: BlobPiece, q: Quadrant): Texture | null {
-    const key = `${set}|${piece.block}|${piece.col}|${piece.row}|${q}`;
+  /**
+   * The quadrant of a blob piece as its own texture, or null when the art has no such sheet.
+   * `shift` moves the source window by that fraction of a tile (farm soil pulls its fringe outward).
+   */
+  quad(set: BlobSet, piece: BlobPiece, q: Quadrant, shift: { x: number; y: number } = { x: 0, y: 0 }): Texture | null {
+    const key = `${set}|${piece.block}|${piece.col}|${piece.row}|${q}|${shift.x}|${shift.y}`;
     const cached = this.quads.get(key);
     if (cached !== undefined) return cached;
     const blob = this.blob(set);
@@ -54,8 +58,8 @@ class BlobTextures {
       const tile = sheet.frame.width / (piece.block === "outer" ? 3 : 2);
       const half = tile / 2;
       const frame = new Rectangle(
-        sheet.frame.x + piece.col * tile + (q & 1 ? half : 0),
-        sheet.frame.y + piece.row * tile + (q & 2 ? half : 0),
+        sheet.frame.x + piece.col * tile + (q & 1 ? half : 0) + Math.round(shift.x * tile),
+        sheet.frame.y + piece.row * tile + (q & 2 ? half : 0) + Math.round(shift.y * tile),
         half,
         half,
       );

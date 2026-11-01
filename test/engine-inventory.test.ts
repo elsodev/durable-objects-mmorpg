@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addItem, canAdd, countItem, removeFromSlot, removeItem } from "../src/shared/engine";
+import { addItem, canAdd, countItem, moveSlot, removeFromSlot, removeItem } from "../src/shared/engine";
 import { ITEMS, MAX_SLOTS, getItem, starterInventory } from "../src/shared/items";
 import type { Inventory } from "../src/shared/types";
 
@@ -131,12 +131,12 @@ describe("addItem", () => {
 });
 
 describe("remove", () => {
-  it("removeFromSlot reduces and removes empty slots", () => {
+  it("removeFromSlot reduces and leaves an emptied slot null (nothing shifts)", () => {
     const inv: Inventory = { coins: 0, slots: [{ item: "turnip", qty: 3 }, { item: "stone", qty: 1 }] };
     expect(removeFromSlot(inv, 0, 2)).toBe(true);
     expect(inv.slots[0]).toEqual({ item: "turnip", qty: 1 });
     expect(removeFromSlot(inv, 0, 1)).toBe(true);
-    expect(inv.slots).toEqual([{ item: "stone", qty: 1 }]);
+    expect(inv.slots).toEqual([null, { item: "stone", qty: 1 }]);
   });
 
   it("removeFromSlot fails unchanged on bad slot / too many", () => {
@@ -160,10 +160,7 @@ describe("remove", () => {
     expect(countItem(inv, "stone")).toBe(109);
     expect(removeItem(inv, "stone", 50)).toBe(true);
     expect(countItem(inv, "stone")).toBe(59);
-    expect(inv.slots).toEqual([
-      { item: "stone", qty: 59 },
-      { item: "hoe", qty: 1 },
-    ]);
+    expect(inv.slots).toEqual([{ item: "stone", qty: 59 }, { item: "hoe", qty: 1 }, null]);
   });
 
   it("removeItem fails unchanged when not enough", () => {
@@ -171,5 +168,114 @@ describe("remove", () => {
     expect(removeItem(inv, "stone", 6)).toBe(false);
     expect(removeItem(inv, "turnip", 1)).toBe(false);
     expect(inv.slots).toEqual([{ item: "stone", qty: 5 }]);
+  });
+});
+
+describe("fixed slot grid", () => {
+  const grid = (...at: [number, string, number][]): Inventory => {
+    const slots: Inventory["slots"] = Array.from({ length: MAX_SLOTS }, () => null);
+    for (const [i, item, qty] of at) slots[i] = { item, qty };
+    return { coins: 0, slots };
+  };
+
+  it("emptying a slot never shifts the hotbar", () => {
+    const inv = grid([0, "hoe", 1], [1, "turnip", 1], [2, "axe", 1]);
+    removeFromSlot(inv, 1, 1);
+    expect(inv.slots[1]).toBeNull();
+    expect(inv.slots[2]).toEqual({ item: "axe", qty: 1 });
+    expect(inv.slots).toHaveLength(MAX_SLOTS);
+  });
+
+  it("addItem tops up stacks first, then fills the first empty slot", () => {
+    const inv = grid([0, "hoe", 1], [3, "turnip", 98], [5, "stone", 1]);
+    expect(addItem(inv, "turnip", 3)).toBe(true);
+    expect(inv.slots[3]).toEqual({ item: "turnip", qty: 99 });
+    expect(inv.slots[1]).toEqual({ item: "turnip", qty: 2 });
+    expect(inv.slots).toHaveLength(MAX_SLOTS);
+  });
+
+  it("stacks only merge at the same quality", () => {
+    const inv = grid();
+    addItem(inv, "turnip", 2);
+    addItem(inv, "turnip", 2, 2);
+    expect(inv.slots[0]).toEqual({ item: "turnip", qty: 2 });
+    expect(inv.slots[1]).toEqual({ item: "turnip", qty: 2, quality: 2 });
+  });
+
+  it("a full grid refuses and stays unchanged", () => {
+    const inv: Inventory = { coins: 0, slots: Array.from({ length: MAX_SLOTS }, () => ({ item: "stone", qty: 99 })) };
+    expect(canAdd(inv, "hoe", 1)).toBe(false);
+    expect(addItem(inv, "hoe", 1)).toBe(false);
+    inv.slots[7] = null;
+    expect(addItem(inv, "hoe", 1)).toBe(true);
+    expect(inv.slots[7]).toEqual({ item: "hoe", qty: 1 });
+  });
+});
+
+describe("moveSlot", () => {
+  const grid = (...at: [number, string, number][]): Inventory => {
+    const slots: Inventory["slots"] = Array.from({ length: MAX_SLOTS }, () => null);
+    for (const [i, item, qty] of at) slots[i] = { item, qty };
+    return { coins: 0, slots };
+  };
+
+  it("moves onto an empty slot", () => {
+    const inv = grid([0, "hoe", 1]);
+    expect(moveSlot(inv, 0, 9)).toBe("move");
+    expect(inv.slots[0]).toBeNull();
+    expect(inv.slots[9]).toEqual({ item: "hoe", qty: 1 });
+  });
+
+  it("swaps different items", () => {
+    const inv = grid([0, "hoe", 1], [1, "turnip", 4]);
+    expect(moveSlot(inv, 0, 1)).toBe("swap");
+    expect(inv.slots[0]).toEqual({ item: "turnip", qty: 4 });
+    expect(inv.slots[1]).toEqual({ item: "hoe", qty: 1 });
+  });
+
+  it("merges the same item up to the stack limit, leaving the rest", () => {
+    const inv = grid([0, "stone", 60], [1, "stone", 50]);
+    expect(moveSlot(inv, 0, 1)).toBe("merge");
+    expect(inv.slots[1]).toEqual({ item: "stone", qty: 99 });
+    expect(inv.slots[0]).toEqual({ item: "stone", qty: 11 });
+    const all = grid([0, "stone", 5], [1, "stone", 5]);
+    expect(moveSlot(all, 0, 1)).toBe("merge");
+    expect(all.slots[0]).toBeNull();
+    expect(all.slots[1]).toEqual({ item: "stone", qty: 10 });
+  });
+
+  it("splits part of a stack onto an empty slot", () => {
+    const inv = grid([2, "turnip", 10]);
+    expect(moveSlot(inv, 2, 3, 4)).toBe("split");
+    expect(inv.slots[2]).toEqual({ item: "turnip", qty: 6 });
+    expect(inv.slots[3]).toEqual({ item: "turnip", qty: 4 });
+  });
+
+  it("does not merge different qualities (swaps instead)", () => {
+    const inv = grid([0, "turnip", 3]);
+    inv.slots[1] = { item: "turnip", qty: 2, quality: 1 };
+    expect(moveSlot(inv, 0, 1)).toBe("swap");
+    expect(inv.slots[0]).toEqual({ item: "turnip", qty: 2, quality: 1 });
+  });
+
+  it("refuses bad moves and leaves the bag unchanged", () => {
+    const inv = grid([0, "hoe", 1], [1, "turnip", 4]);
+    const before = JSON.stringify(inv);
+    expect(moveSlot(inv, 5, 6)).toBeNull(); // empty source
+    expect(moveSlot(inv, 0, 0)).toBeNull();
+    expect(moveSlot(inv, 0, MAX_SLOTS)).toBeNull();
+    expect(moveSlot(inv, -1, 2)).toBeNull();
+    expect(moveSlot(inv, 1.5, 2)).toBeNull();
+    expect(moveSlot(inv, 1, 2, 5)).toBeNull(); // more than the stack
+    expect(moveSlot(inv, 1, 2, 0)).toBeNull();
+    expect(moveSlot(inv, 1, 0, 2)).toBeNull(); // a partial stack can't swap
+    expect(JSON.stringify(inv)).toBe(before);
+  });
+
+  it("works on an old packed (short) list", () => {
+    const inv: Inventory = { coins: 0, slots: [{ item: "hoe", qty: 1 }] };
+    expect(moveSlot(inv, 0, 7)).toBe("move");
+    expect(inv.slots[0]).toBeNull();
+    expect(inv.slots[7]).toEqual({ item: "hoe", qty: 1 });
   });
 });
