@@ -1,0 +1,435 @@
+{
+  "_note": "Paths are relative to this file. Volumes are suggested 0..1 multipliers; music is loudness-normalised to about -18 LUFS, SFX are peak-normalised to -1 dBFS (balance comes from 'volume'). 'fallback' is an AAC .m4a for browsers without Ogg Vorbis (old Safari). battle is a 4 s one-shot sting (loop:false). night and festival are optional extra tracks. Licences and credits: CREDITS.md. player_hurt is the voiced player hit; 'hurt' (a soft body thump) stays for compatibility. rock_crab_* sounds are spider-like (the rock crab is drawn as a spider).",
+  "music": {
+    "title": {
+      "file": "music/title.ogg",
+      "loop": true,
+      "volume": 0.55,
+      "fallback": "music/title.m4a"
+    },
+    "home": {
+      "file": "music/home.ogg",
+      "loop": true,
+      "volume": 0.5,
+      "fallback": "music/home.m4a"
+    },
+    "village": {
+      "file": "music/village.ogg",
+      "loop": true,
+      "volume": 0.5,
+      "fallback": "music/village.m4a"
+    },
+    "riverside": {
+      "file": "music/riverside.ogg",
+      "loop": true,
+      "volume": 0.5,
+      "fallback": "music/riverside.m4a"
+    },
+    "caves": {
+      "file": "music/caves.ogg",
+      "loop": true,
+      "volume": 0.45,
+      "fallback": "music/caves.m4a"
+    },
+    "battle": {
+      "file": "music/battle.ogg",
+      "loop": false,
+      "volume": 0.5
+    },
+    "night": {
+      "file": "music/night.ogg",
+      "loop": true,
+      "volume": 0.5
+    },
+    "festival": {
+      "file": "music/festival.ogg",
+      "loop": true,
+      "volume": 0.5
+    }
+  },
+  "sfx": {
+    "step_grass": {
+      "files": [
+        "sfx/step_grass_0.ogg",
+        "sfx/step_grass_1.ogg",
+        "sfx/step_grass_2.ogg",
+        "sfx/step_grass_3.ogg",
+        "sfx/step_grass_4.ogg"
+      ],
+      "volume": 0.25
+    },
+    "step_stone": {
+      "files": [
+        "sfx/step_stone_0.ogg",
+        "sfx/step_stone_1.ogg",
+        "sfx/step_stone_2.ogg",
+        "sfx/step_stone_3.ogg",
+        "sfx/step_stone_4.ogg"
+      ],
+      "volume": 0.25
+    },
+    "hoe": {
+      "files": [
+        "sfx/hoe_0.ogg",
+        "sfx/hoe_1.ogg"
+      ],
+      "volume": 0.5
+    },
+    "water": {
+      "files": [
+        "sfx/water_0.ogg"
+      ],
+      "volume": 0.35
+    },
+    "plant": {
+      "files": [
+        "sfx/plant_0.ogg",
+        "sfx/plant_1.ogg"
+      ],
+      "volume": 0.45
+    },
+    "harvest": {
+      "files": [
+        "sfx/harvest_0.ogg",
+        "sfx/harvest_1.ogg"
+      ],
+      "volume": 0.6
+    },
+    "pick_hit": {
+      "files": [
+        "sfx/pick_hit_0.ogg",
+        "sfx/pick_hit_1.ogg",
+        "sfx/pick_hit_2.ogg",
+        "sfx/pick_hit_3.ogg",
+        "sfx/pick_hit_4.ogg"
+      ],
+      "volume": 0.5
+    },
+    "rock_break": {
+      "files": [
+        "sfx/rock_break_0.ogg",
+        "sfx/rock_break_1.ogg"
+      ],
+      "volume": 0.6
+    },
+    "sword_swing": {
+      "files": [
+        "sfx/sword_swing_0.ogg",
+        "sfx/sword_swing_1.ogg",
+        "sfx/sword_swing_2.ogg"
+      ],
+      "volume": 0.45
+    },
+    "monster_hit": {
+      "files": [
+        "sfx/monster_hit_0.ogg",
+        "sfx/monster_hit_1.ogg",
+        "sfx/monster_hit_2.ogg"
+      ],
+      "volume": 0.5
+    },
+    "monster_die": {
+      "files": [
+        "sfx/monster_die_0.ogg",
+        "sfx/monster_die_1.ogg"
+      ],
+      "volume": 0.45
+    },
+    "bat_flap": {
+      "files": [
+        "sfx/bat_flap_0.ogg",
+        "sfx/bat_flap_1.ogg",
+        "sfx/bat_flap_2.ogg"
+      ],
+      "volume": 0.3
+    },
+    "hurt": {
+      "files": [
+        "sfx/hurt_0.ogg",
+        "sfx/hurt_1.ogg",
+        "sfx/hurt_2.ogg"
+      ],
+      "volume": 0.6
+    },
+    "pickup": {
+      "files": [
+        "sfx/pickup_0.ogg",
+        "sfx/pickup_1.ogg"
+      ],
+      "volume": 0.5
+    },
+    "coins": {
+      "files": [
+        "sfx/coins_0.ogg",
+        "sfx/coins_1.ogg"
+      ],
+      "volume": 0.55
+    },
+    "ui_click": {
+      "files": [
+        "sfx/ui_click_0.ogg"
+      ],
+      "volume": 0.4
+    },
+    "ui_open": {
+      "files": [
+        "sfx/ui_open_0.ogg"
+      ],
+      "volume": 0.35
+    },
+    "ui_close": {
+      "files": [
+        "sfx/ui_close_0.ogg"
+      ],
+      "volume": 0.35
+    },
+    "chat": {
+      "files": [
+        "sfx/chat_0.ogg"
+      ],
+      "volume": 0.35
+    },
+    "npc_talk": {
+      "files": [
+        "sfx/npc_talk_0.ogg",
+        "sfx/npc_talk_1.ogg",
+        "sfx/npc_talk_2.ogg",
+        "sfx/npc_talk_3.ogg"
+      ],
+      "volume": 0.25
+    },
+    "zone_change": {
+      "files": [
+        "sfx/zone_change_0.ogg"
+      ],
+      "volume": 0.45
+    },
+    "place": {
+      "files": [
+        "sfx/place_0.ogg",
+        "sfx/place_1.ogg",
+        "sfx/place_2.ogg"
+      ],
+      "volume": 0.5
+    },
+    "goal_complete": {
+      "files": [
+        "sfx/goal_complete_0.ogg"
+      ],
+      "volume": 0.6
+    },
+    "error": {
+      "files": [
+        "sfx/error_0.ogg"
+      ],
+      "volume": 0.4
+    },
+    "ui_hover": {
+      "files": [
+        "sfx/ui_hover_0.ogg"
+      ],
+      "volume": 0.15
+    },
+    "ui_tab": {
+      "files": [
+        "sfx/ui_tab_0.ogg"
+      ],
+      "volume": 0.35
+    },
+    "ui_confirm": {
+      "files": [
+        "sfx/ui_confirm_0.ogg"
+      ],
+      "volume": 0.45
+    },
+    "ui_cancel": {
+      "files": [
+        "sfx/ui_cancel_0.ogg"
+      ],
+      "volume": 0.4
+    },
+    "ui_slot": {
+      "files": [
+        "sfx/ui_slot_0.ogg"
+      ],
+      "volume": 0.3
+    },
+    "ui_toggle": {
+      "files": [
+        "sfx/ui_toggle_0.ogg",
+        "sfx/ui_toggle_1.ogg"
+      ],
+      "volume": 0.35
+    },
+    "menu_open_book": {
+      "files": [
+        "sfx/menu_open_book_0.ogg"
+      ],
+      "volume": 0.45
+    },
+    "menu_paper": {
+      "files": [
+        "sfx/menu_paper_0.ogg",
+        "sfx/menu_paper_1.ogg",
+        "sfx/menu_paper_2.ogg"
+      ],
+      "volume": 0.4
+    },
+    "sword_hit": {
+      "files": [
+        "sfx/sword_hit_0.ogg",
+        "sfx/sword_hit_1.ogg",
+        "sfx/sword_hit_2.ogg"
+      ],
+      "volume": 0.55
+    },
+    "sword_miss": {
+      "files": [
+        "sfx/sword_miss_0.ogg",
+        "sfx/sword_miss_1.ogg",
+        "sfx/sword_miss_2.ogg"
+      ],
+      "volume": 0.4
+    },
+    "pick_swing": {
+      "files": [
+        "sfx/pick_swing_0.ogg",
+        "sfx/pick_swing_1.ogg"
+      ],
+      "volume": 0.4
+    },
+    "player_hurt": {
+      "files": [
+        "sfx/player_hurt_0.ogg",
+        "sfx/player_hurt_1.ogg"
+      ],
+      "volume": 0.55
+    },
+    "player_faint": {
+      "files": [
+        "sfx/player_faint_0.ogg",
+        "sfx/player_faint_1.ogg"
+      ],
+      "volume": 0.55
+    },
+    "monster_spawn": {
+      "files": [
+        "sfx/monster_spawn_0.ogg"
+      ],
+      "volume": 0.35
+    },
+    "slime_idle": {
+      "files": [
+        "sfx/slime_idle_0.ogg",
+        "sfx/slime_idle_1.ogg",
+        "sfx/slime_idle_2.ogg"
+      ],
+      "volume": 0.25
+    },
+    "slime_aggro": {
+      "files": [
+        "sfx/slime_aggro_0.ogg",
+        "sfx/slime_aggro_1.ogg"
+      ],
+      "volume": 0.4
+    },
+    "slime_attack": {
+      "files": [
+        "sfx/slime_attack_0.ogg",
+        "sfx/slime_attack_1.ogg"
+      ],
+      "volume": 0.5
+    },
+    "slime_hurt": {
+      "files": [
+        "sfx/slime_hurt_0.ogg",
+        "sfx/slime_hurt_1.ogg"
+      ],
+      "volume": 0.45
+    },
+    "slime_die": {
+      "files": [
+        "sfx/slime_die_0.ogg",
+        "sfx/slime_die_1.ogg"
+      ],
+      "volume": 0.5
+    },
+    "bat_idle": {
+      "files": [
+        "sfx/bat_idle_0.ogg",
+        "sfx/bat_idle_1.ogg"
+      ],
+      "volume": 0.2
+    },
+    "bat_aggro": {
+      "files": [
+        "sfx/bat_aggro_0.ogg",
+        "sfx/bat_aggro_1.ogg"
+      ],
+      "volume": 0.35
+    },
+    "bat_attack": {
+      "files": [
+        "sfx/bat_attack_0.ogg",
+        "sfx/bat_attack_1.ogg",
+        "sfx/bat_attack_2.ogg"
+      ],
+      "volume": 0.4
+    },
+    "bat_hurt": {
+      "files": [
+        "sfx/bat_hurt_0.ogg",
+        "sfx/bat_hurt_1.ogg",
+        "sfx/bat_hurt_2.ogg"
+      ],
+      "volume": 0.4
+    },
+    "bat_die": {
+      "files": [
+        "sfx/bat_die_0.ogg",
+        "sfx/bat_die_1.ogg"
+      ],
+      "volume": 0.45
+    },
+    "rock_crab_idle": {
+      "files": [
+        "sfx/rock_crab_idle_0.ogg",
+        "sfx/rock_crab_idle_1.ogg",
+        "sfx/rock_crab_idle_2.ogg"
+      ],
+      "volume": 0.25
+    },
+    "rock_crab_aggro": {
+      "files": [
+        "sfx/rock_crab_aggro_0.ogg",
+        "sfx/rock_crab_aggro_1.ogg"
+      ],
+      "volume": 0.4
+    },
+    "rock_crab_attack": {
+      "files": [
+        "sfx/rock_crab_attack_0.ogg",
+        "sfx/rock_crab_attack_1.ogg",
+        "sfx/rock_crab_attack_2.ogg",
+        "sfx/rock_crab_attack_3.ogg"
+      ],
+      "volume": 0.45
+    },
+    "rock_crab_hurt": {
+      "files": [
+        "sfx/rock_crab_hurt_0.ogg",
+        "sfx/rock_crab_hurt_1.ogg",
+        "sfx/rock_crab_hurt_2.ogg"
+      ],
+      "volume": 0.4
+    },
+    "rock_crab_die": {
+      "files": [
+        "sfx/rock_crab_die_0.ogg",
+        "sfx/rock_crab_die_1.ogg"
+      ],
+      "volume": 0.45
+    }
+  },
+  "missing": []
+}

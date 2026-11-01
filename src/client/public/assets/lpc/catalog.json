@@ -1,0 +1,6855 @@
+{
+ "meta": {
+  "style": "Liberated Pixel Cup (LPC)",
+  "tileSize": 32,
+  "characterFrame": 64,
+  "coords": "All rects are [x,y,w,h] in pixels of the referenced PNG (paths relative to this catalog). anchor = feet/ground point in px relative to the rect origin. footprintTiles = blocking footprint in 32px tiles, centered horizontally on the anchor, extending upward from it.",
+  "characterBases": "All humanoids use the same Universal-LPC adult base family (male / female / teen bodies, human heads, generator palettes). Pip (kid) uses the teen body + small male head instead of the chibi child body so proportions and outlines match.",
+  "characterLayout": "Composited LPC rows: walk rows 0-3 (up,left,down,right; 9 frames, frame 0 = standing), slash rows 4-7 (up,left,down,right; 6 frames). idle = walk frame 0.",
+  "credits": "CREDITS.md"
+ },
+ "characters": {
+  "player_1": {
+   "file": "characters/player_1.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": null,
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "player_2": {
+   "file": "characters/player_2.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": null,
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "player_3": {
+   "file": "characters/player_3.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": null,
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "player_4": {
+   "file": "characters/player_4.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": null,
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "villager_old": {
+   "file": "characters/villager_old.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Mayor Bram",
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "villager_woman": {
+   "file": "characters/villager_woman.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Odette",
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "smith": {
+   "file": "characters/smith.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Fenwick",
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "villager_woman2": {
+   "file": "characters/villager_woman2.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Rue",
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "kid": {
+   "file": "characters/kid.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Pip",
+   "body": "teen",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "fisher": {
+   "file": "characters/fisher.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Marlo",
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "monk": {
+   "file": "characters/monk.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Sable",
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "villager_woman3": {
+   "file": "characters/villager_woman3.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Iris",
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "miner": {
+   "file": "characters/miner.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Grumm",
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "explorer": {
+   "file": "characters/explorer.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Tess",
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  }
+ },
+ "terrain": {
+  "grass": {
+   "file": "terrain/terrain_summer.png",
+   "tile": [
+    96,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     128,
+     32,
+     32,
+     32
+    ],
+    [
+     160,
+     32,
+     32,
+     32
+    ],
+    [
+     96,
+     64,
+     32,
+     32
+    ],
+    [
+     128,
+     64,
+     32,
+     32
+    ],
+    [
+     160,
+     64,
+     32,
+     32
+    ]
+   ],
+   "edges": {
+    "layout": "LPC 3x3 overlay blob + 2x2 inner corners. Grass with transparent surroundings; draw over any base tile.",
+    "outer3x3": [
+     0,
+     0,
+     96,
+     96
+    ],
+    "inner2x2": [
+     0,
+     192,
+     64,
+     64
+    ],
+    "overDirt": {
+     "note": "grass ring pre-composited over dirt (dirt patch inside grass)",
+     "outer3x3": [
+      192,
+      0,
+      96,
+      96
+     ],
+     "inner2x2": [
+      192,
+      96,
+      64,
+      64
+     ]
+    },
+    "overSand": {
+     "outer3x3": [
+      192,
+      160,
+      96,
+      96
+     ],
+     "inner2x2": [
+      192,
+      256,
+      64,
+      64
+     ]
+    }
+   }
+  },
+  "dirt": {
+   "file": "terrain/terrain_summer.png",
+   "tile": [
+    96,
+    96,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     128,
+     96,
+     32,
+     32
+    ],
+    [
+     160,
+     96,
+     32,
+     32
+    ],
+    [
+     96,
+     128,
+     32,
+     32
+    ],
+    [
+     128,
+     128,
+     32,
+     32
+    ],
+    [
+     160,
+     128,
+     32,
+     32
+    ]
+   ],
+   "edges": {
+    "note": "Use grass.edges.overDirt for grass/dirt transitions."
+   }
+  },
+  "sand": {
+   "file": "terrain/terrain_summer.png",
+   "tile": [
+    96,
+    160,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     128,
+     160,
+     32,
+     32
+    ],
+    [
+     160,
+     160,
+     32,
+     32
+    ],
+    [
+     96,
+     192,
+     32,
+     32
+    ],
+    [
+     128,
+     192,
+     32,
+     32
+    ]
+   ]
+  },
+  "water": {
+   "file": "terrain/terrain_summer.png",
+   "tile": [
+    32,
+    352,
+    32,
+    32
+   ],
+   "edges": {
+    "layout": "3x3 pond block (center = open water) + 2x2 inner corners (land island in water). The *Overlay3x3 blocks are the same banks with a transparent centre, to draw over a water base tile.",
+    "grassBank3x3": [
+     0,
+     320,
+     96,
+     96
+    ],
+    "grassBankOverlay3x3": [
+     96,
+     320,
+     96,
+     96
+    ],
+    "grassInner2x2": [
+     0,
+     416,
+     64,
+     64
+    ],
+    "dirtBank3x3": [
+     192,
+     320,
+     96,
+     96
+    ],
+    "dirtBankOverlay3x3": [
+     288,
+     320,
+     96,
+     96
+    ],
+    "dirtInner2x2": [
+     192,
+     416,
+     64,
+     64
+    ]
+   },
+   "deep": [
+    384,
+    512,
+    64,
+    64
+   ]
+  },
+  "stone": {
+   "file": "terrain/castlefloors.png",
+   "tile": [
+    160,
+    160,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     224,
+     160,
+     32,
+     32
+    ],
+    [
+     160,
+     224,
+     32,
+     32
+    ],
+    [
+     192,
+     224,
+     32,
+     32
+    ]
+   ],
+   "note": "cobbled stone / cave floor"
+  },
+  "wood": {
+   "file": "terrain/wood_floor_a.png",
+   "tile": [
+    64,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     64,
+     64,
+     32,
+     32
+    ],
+    [
+     64,
+     0,
+     32,
+     32
+    ]
+   ],
+   "note": "plank floor; each 32px column of the sheet is a different stain, so variants stay in the x=64 column"
+  },
+  "tilled": {
+   "file": "terrain/tilled_soil.png",
+   "tile": [
+    32,
+    32,
+    32,
+    32
+   ],
+   "edges": {
+    "layout": "3x3 overlay blob (transparent outside) + 2x2 inner corners",
+    "outer3x3": [
+     0,
+     0,
+     96,
+     96
+    ],
+    "inner2x2": [
+     96,
+     64,
+     64,
+     64
+    ],
+    "wetOverlay3x3": [
+     160,
+     0,
+     96,
+     96
+    ]
+   }
+  },
+  "tilled_wet": {
+   "file": "terrain/tilled_soil_wet.png",
+   "tile": [
+    32,
+    32,
+    32,
+    32
+   ],
+   "edges": {
+    "outer3x3": [
+     0,
+     0,
+     96,
+     96
+    ],
+    "inner2x2": [
+     96,
+     64,
+     64,
+     64
+    ]
+   },
+   "note": "derived: dry tilled soil + the sheet's semi-transparent wet overlay"
+  },
+  "cave_wall": {
+   "file": "terrain/cliff_summer.png",
+   "tile": [
+    0,
+    320,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     160,
+     320,
+     32,
+     32
+    ],
+    [
+     0,
+     352,
+     32,
+     32
+    ]
+   ],
+   "caveEntrance": [
+    192,
+    288,
+    128,
+    96
+   ],
+   "cliffLadder": [
+    352,
+    288,
+    32,
+    96
+   ],
+   "edges": {
+    "layout": "Cliff autotile: rows 0-255 are cliff top/edge pieces over dirt (y 0-159) and grass (y 160-255); rows 288-415 are cliff faces."
+   }
+  },
+  "wall": {
+   "file": "terrain/jagged_stone_walls.png",
+   "tile": [
+    128,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     96,
+     32,
+     32,
+     32
+    ],
+    [
+     160,
+     32,
+     32,
+     32
+    ]
+   ],
+   "top": [
+    128,
+    0,
+    32,
+    32
+   ],
+   "base": [
+    128,
+    64,
+    32,
+    32
+   ],
+   "palettes": {
+    "cream": [
+     0,
+     0,
+     96,
+     96
+    ],
+    "mauve": [
+     96,
+     0,
+     96,
+     96
+    ],
+    "slate": [
+     0,
+     96,
+     96,
+     96
+    ],
+    "clay": [
+     96,
+     96,
+     96,
+     96
+    ],
+    "dark": [
+     0,
+     192,
+     96,
+     96
+    ],
+    "ochre": [
+     96,
+     192,
+     96,
+     96
+    ]
+   },
+   "note": "each palette block is 3x3: top row cap, middle fill, bottom row base"
+  }
+ },
+ "crops": {
+  "turnip": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     32,
+     0,
+     32,
+     64
+    ],
+    [
+     32,
+     64,
+     32,
+     64
+    ],
+    [
+     32,
+     128,
+     32,
+     64
+    ],
+    [
+     32,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "source": "potato",
+   "substitute": "No LPC turnip growth stages exist; uses Daneeklu potato plant.",
+   "shadow": "small"
+  },
+  "carrot": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     64,
+     0,
+     32,
+     64
+    ],
+    [
+     64,
+     64,
+     32,
+     64
+    ],
+    [
+     64,
+     128,
+     32,
+     64
+    ],
+    [
+     64,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "source": "carrot",
+   "shadow": "small"
+  },
+  "pumpkin": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     160,
+     0,
+     32,
+     64
+    ],
+    [
+     160,
+     64,
+     32,
+     64
+    ],
+    [
+     160,
+     128,
+     32,
+     64
+    ],
+    [
+     160,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "source": "zucchini",
+   "substitute": "No LPC pumpkin growth stages exist; uses Daneeklu zucchini plant.",
+   "shadow": "small"
+  },
+  "strawberry": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     0,
+     0,
+     32,
+     64
+    ],
+    [
+     0,
+     64,
+     32,
+     64
+    ],
+    [
+     0,
+     128,
+     32,
+     64
+    ],
+    [
+     0,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "source": "tomato",
+   "substitute": "No LPC strawberry growth stages exist; uses Daneeklu tomato plant.",
+   "shadow": "small"
+  },
+  "extra_tomato": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     0,
+     0,
+     32,
+     64
+    ],
+    [
+     0,
+     64,
+     32,
+     64
+    ],
+    [
+     0,
+     128,
+     32,
+     64
+    ],
+    [
+     0,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "harvested": [
+    0,
+    256,
+    32,
+    64
+   ],
+   "icon": [
+    0,
+    352,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "extra_potato": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     32,
+     0,
+     32,
+     64
+    ],
+    [
+     32,
+     64,
+     32,
+     64
+    ],
+    [
+     32,
+     128,
+     32,
+     64
+    ],
+    [
+     32,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "harvested": [
+    32,
+    256,
+    32,
+    64
+   ],
+   "icon": [
+    32,
+    352,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "extra_carrot": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     64,
+     0,
+     32,
+     64
+    ],
+    [
+     64,
+     64,
+     32,
+     64
+    ],
+    [
+     64,
+     128,
+     32,
+     64
+    ],
+    [
+     64,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "harvested": [
+    64,
+    256,
+    32,
+    64
+   ],
+   "icon": [
+    64,
+    352,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "extra_artichoke": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     96,
+     0,
+     32,
+     64
+    ],
+    [
+     96,
+     64,
+     32,
+     64
+    ],
+    [
+     96,
+     128,
+     32,
+     64
+    ],
+    [
+     96,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "harvested": [
+    96,
+    256,
+    32,
+    64
+   ],
+   "icon": [
+    96,
+    352,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "extra_pepper": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     128,
+     0,
+     32,
+     64
+    ],
+    [
+     128,
+     64,
+     32,
+     64
+    ],
+    [
+     128,
+     128,
+     32,
+     64
+    ],
+    [
+     128,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "harvested": [
+    128,
+    256,
+    32,
+    64
+   ],
+   "icon": [
+    128,
+    352,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "extra_zucchini": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     160,
+     0,
+     32,
+     64
+    ],
+    [
+     160,
+     64,
+     32,
+     64
+    ],
+    [
+     160,
+     128,
+     32,
+     64
+    ],
+    [
+     160,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "harvested": [
+    160,
+    256,
+    32,
+    64
+   ],
+   "icon": [
+    160,
+    352,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "extra_corn": {
+   "file": "crops/farming_plants.png",
+   "stages": [
+    [
+     192,
+     0,
+     32,
+     64
+    ],
+    [
+     192,
+     64,
+     32,
+     64
+    ],
+    [
+     192,
+     128,
+     32,
+     64
+    ],
+    [
+     192,
+     192,
+     32,
+     64
+    ]
+   ],
+   "stageNames": [
+    "seed",
+    "sprout",
+    "growing",
+    "ready"
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "harvested": [
+    192,
+    256,
+    32,
+    64
+   ],
+   "icon": [
+    192,
+    352,
+    32,
+    32
+   ],
+   "note": "corn is taller than 64px in later stages; rect clips its top slightly",
+   "shadow": "small"
+  }
+ },
+ "plants": {
+  "tree_oak": {
+   "file": "plants/trees_summer.png",
+   "rect": [
+    129,
+    16,
+    94,
+    93
+   ],
+   "anchor": [
+    47,
+    87
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "tree"
+  },
+  "tree_pine": {
+   "file": "plants/trees_summer.png",
+   "rect": [
+    132,
+    389,
+    85,
+    104
+   ],
+   "anchor": [
+    42,
+    98
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "tree"
+  },
+  "tree_dead": {
+   "file": "plants/trees_summer.png",
+   "rect": [
+    3,
+    274,
+    90,
+    123
+   ],
+   "anchor": [
+    45,
+    117
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "tree"
+  },
+  "bush": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "bush_leafy": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    64,
+    0,
+    32,
+    31
+   ],
+   "anchor": [
+    16,
+    29
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "shrub_tall": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    2,
+    70,
+    29,
+    57
+   ],
+   "anchor": [
+    14,
+    55
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "fern": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    160,
+    76,
+    87,
+    52
+   ],
+   "anchor": [
+    43,
+    50
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "shadow": "medium"
+  },
+  "herb_plant": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    160,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "tall_grass": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    355,
+    0,
+    25,
+    53
+   ],
+   "anchor": [
+    12,
+    51
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "lilypad": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    386,
+    74,
+    26,
+    16
+   ],
+   "anchor": [
+    13,
+    14
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "flower_bush_pink": {
+   "file": "plants/flowers.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "flower_bush_red": {
+   "file": "plants/flowers.png",
+   "rect": [
+    64,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "flower_bush_yellow": {
+   "file": "plants/flowers.png",
+   "rect": [
+    160,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "flowers_white": {
+   "file": "plants/flowers.png",
+   "rect": [
+    8,
+    99,
+    16,
+    21
+   ],
+   "anchor": [
+    8,
+    19
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "flowers_blue": {
+   "file": "plants/flowers.png",
+   "rect": [
+    104,
+    99,
+    16,
+    21
+   ],
+   "anchor": [
+    8,
+    19
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "flowers_orange": {
+   "file": "plants/flowers.png",
+   "rect": [
+    200,
+    99,
+    16,
+    21
+   ],
+   "anchor": [
+    8,
+    19
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "mushroom_red": {
+   "file": "plants/mushrooms.png",
+   "rect": [
+    106,
+    3,
+    12,
+    18
+   ],
+   "anchor": [
+    6,
+    16
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "mushroom_brown": {
+   "file": "plants/mushrooms.png",
+   "rect": [
+    138,
+    3,
+    12,
+    18
+   ],
+   "anchor": [
+    6,
+    16
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "mushroom_cluster": {
+   "file": "plants/mushrooms.png",
+   "rect": [
+    6,
+    98,
+    18,
+    23
+   ],
+   "anchor": [
+    9,
+    21
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "wildflowers": {
+   "file": "plants/wildflowers_summer.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "note": "small ground-cover sprigs, 32x32 cells, rows = colors"
+  }
+ },
+ "buildings": {
+  "house_small": {
+   "file": "buildings/brick_house_b.png",
+   "rect": [
+    23,
+    0,
+    144,
+    192
+   ],
+   "anchor": [
+    72,
+    190
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 3
+   },
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_large": {
+   "file": "buildings/paneled_house_a.png",
+   "rect": [
+    0,
+    0,
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    158
+   ],
+   "footprintTiles": {
+    "w": 5,
+    "h": 3
+   },
+   "note": "Paneled House A",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "town_hall": {
+   "file": "buildings/town_hall.png",
+   "rect": [
+    24,
+    0,
+    211,
+    201
+   ],
+   "anchor": [
+    105,
+    199
+   ],
+   "footprintTiles": {
+    "w": 8,
+    "h": 3
+   },
+   "note": "derived: Brick House A + red banners",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "inn": {
+   "file": "buildings/inn.png",
+   "rect": [
+    0,
+    0,
+    184,
+    160
+   ],
+   "anchor": [
+    92,
+    158
+   ],
+   "footprintTiles": {
+    "w": 5,
+    "h": 3
+   },
+   "note": "derived: Paneled House A + hanging INN sign",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "blacksmith": {
+   "file": "buildings/blacksmith.png",
+   "rect": [
+    23,
+    0,
+    233,
+    192
+   ],
+   "anchor": [
+    116,
+    190
+   ],
+   "footprintTiles": {
+    "w": 8,
+    "h": 3
+   },
+   "note": "derived: Brick House B + open forge shed, anvil, smith sign",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "cottage": {
+   "file": "buildings/cottage.png",
+   "rect": [
+    23,
+    0,
+    144,
+    192
+   ],
+   "anchor": [
+    72,
+    190
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 3
+   },
+   "note": "derived: Brick House B hue-shifted (ochre walls)",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "market_stall": {
+   "file": "buildings/market_stall.png",
+   "rect": [
+    1,
+    0,
+    91,
+    81
+   ],
+   "anchor": [
+    45,
+    79
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 2
+   },
+   "note": "wooden market booth with shutters (decorations-medieval)",
+   "keeper": [
+    45,
+    46
+   ],
+   "frontOverlay": [
+    18,
+    40,
+    62,
+    41
+   ],
+   "keeperNote": "keeper = feet point (relative to rect origin) for a shopkeeper standing behind the counter. Draw order: stall rect, then the keeper NPC, then frontOverlay (absolute rect in the same PNG, the counter) on top at the same offset, so the counter hides the keeper's legs.",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_large_brick": {
+   "file": "buildings/brick_house_a.png",
+   "rect": [
+    24,
+    0,
+    208,
+    201
+   ],
+   "anchor": [
+    104,
+    199
+   ],
+   "footprintTiles": {
+    "w": 8,
+    "h": 3
+   },
+   "doorHint": "door is on the front (bottom) face"
+  }
+ },
+ "props": {
+  "tree": {
+   "file": "plants/trees_summer.png",
+   "rect": [
+    129,
+    16,
+    94,
+    93
+   ],
+   "anchor": [
+    47,
+    87
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "alias": "plants.tree_oak",
+   "shadow": "tree"
+  },
+  "bush": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "alias": "plants.bush",
+   "shadow": "small"
+  },
+  "rock_deco": {
+   "file": "props/rocks_grasslands.png",
+   "rect": [
+    130,
+    3,
+    60,
+    55
+   ],
+   "anchor": [
+    30,
+    53
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "shadow": "medium"
+  },
+  "rock_large": {
+   "file": "props/rocks_grasslands.png",
+   "rect": [
+    0,
+    0,
+    64,
+    91
+   ],
+   "anchor": [
+    32,
+    88
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "note": "big boulder only; the flat rock below it in the sheet is a separate sprite",
+   "shadow": "medium"
+  },
+  "house_small": {
+   "file": "buildings/brick_house_b.png",
+   "rect": [
+    23,
+    0,
+    144,
+    192
+   ],
+   "anchor": [
+    72,
+    190
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 3
+   },
+   "doorHint": "door is on the front (bottom) face",
+   "alias": "buildings.house_small"
+  },
+  "house_large": {
+   "file": "buildings/paneled_house_a.png",
+   "rect": [
+    0,
+    0,
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    158
+   ],
+   "footprintTiles": {
+    "w": 5,
+    "h": 3
+   },
+   "note": "Paneled House A",
+   "doorHint": "door is on the front (bottom) face",
+   "alias": "buildings.house_large"
+  },
+  "town_hall": {
+   "file": "buildings/town_hall.png",
+   "rect": [
+    24,
+    0,
+    211,
+    201
+   ],
+   "anchor": [
+    105,
+    199
+   ],
+   "footprintTiles": {
+    "w": 8,
+    "h": 3
+   },
+   "note": "derived: Brick House A + red banners",
+   "doorHint": "door is on the front (bottom) face",
+   "alias": "buildings.town_hall"
+  },
+  "inn": {
+   "file": "buildings/inn.png",
+   "rect": [
+    0,
+    0,
+    184,
+    160
+   ],
+   "anchor": [
+    92,
+    158
+   ],
+   "footprintTiles": {
+    "w": 5,
+    "h": 3
+   },
+   "note": "derived: Paneled House A + hanging INN sign",
+   "doorHint": "door is on the front (bottom) face",
+   "alias": "buildings.inn"
+  },
+  "blacksmith": {
+   "file": "buildings/blacksmith.png",
+   "rect": [
+    23,
+    0,
+    233,
+    192
+   ],
+   "anchor": [
+    116,
+    190
+   ],
+   "footprintTiles": {
+    "w": 8,
+    "h": 3
+   },
+   "note": "derived: Brick House B + open forge shed, anvil, smith sign",
+   "doorHint": "door is on the front (bottom) face",
+   "alias": "buildings.blacksmith"
+  },
+  "market_stall": {
+   "file": "buildings/market_stall.png",
+   "rect": [
+    1,
+    0,
+    91,
+    81
+   ],
+   "anchor": [
+    45,
+    79
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 2
+   },
+   "note": "wooden market booth with shutters (decorations-medieval)",
+   "keeper": [
+    45,
+    46
+   ],
+   "frontOverlay": [
+    18,
+    40,
+    62,
+    41
+   ],
+   "keeperNote": "keeper = feet point (relative to rect origin) for a shopkeeper standing behind the counter. Draw order: stall rect, then the keeper NPC, then frontOverlay (absolute rect in the same PNG, the counter) on top at the same offset, so the counter hides the keeper's legs.",
+   "doorHint": "door is on the front (bottom) face",
+   "alias": "buildings.market_stall"
+  },
+  "cottage": {
+   "file": "buildings/cottage.png",
+   "rect": [
+    23,
+    0,
+    144,
+    192
+   ],
+   "anchor": [
+    72,
+    190
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 3
+   },
+   "note": "derived: Brick House B hue-shifted (ochre walls)",
+   "doorHint": "door is on the front (bottom) face",
+   "alias": "buildings.cottage"
+  },
+  "fountain": {
+   "file": "props/fountain_a.png",
+   "rect": [
+    0,
+    0,
+    64,
+    82
+   ],
+   "anchor": [
+    32,
+    80
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 2
+   },
+   "shadow": "medium"
+  },
+  "notice_board": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    225,
+    160,
+    30,
+    32
+   ],
+   "anchor": [
+    15,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "sign_post": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    193,
+    128,
+    30,
+    32
+   ],
+   "anchor": [
+    15,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "labelAnchor": [
+    15,
+    9
+   ],
+   "labelNote": "Arrow board (~30x10 px) is too small for text: draw the destination label on a small plate centred horizontally on labelAnchor, just above the sign (e.g. bottom of plate at labelAnchor.y - 6).",
+   "shadow": "character"
+  },
+  "well": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    448,
+    417,
+    64,
+    95
+   ],
+   "anchor": [
+    32,
+    93
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 2
+   },
+   "shadow": "medium"
+  },
+  "shipping_bin": {
+   "file": "props/chest.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "frames": {
+    "closed": [
+     0,
+     0,
+     32,
+     32
+    ],
+    "opening": [
+     0,
+     32,
+     32,
+     32
+    ],
+    "open": [
+     0,
+     64,
+     32,
+     32
+    ]
+   },
+   "shadow": "character"
+  },
+  "fence_deco": {
+   "file": "props/plain_fence_a.png",
+   "rect": [
+    11,
+    64,
+    74,
+    32
+   ],
+   "anchor": [
+    37,
+    30
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "shadow": "large"
+  },
+  "dock": {
+   "file": "props/wood_bridge_a.png",
+   "rect": [
+    0,
+    0,
+    96,
+    80
+   ],
+   "anchor": [
+    48,
+    78
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 2
+   },
+   "walkable": true
+  },
+  "shrine": {
+   "file": "props/shrine.png",
+   "rect": [
+    0,
+    8,
+    77,
+    101
+   ],
+   "anchor": [
+    38,
+    99
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 2
+   },
+   "note": "derived: stone altar + statue",
+   "shadow": "large"
+  },
+  "bridge_broken": {
+   "file": "props/bridge_broken.png",
+   "rect": [
+    0,
+    0,
+    96,
+    80
+   ],
+   "anchor": [
+    48,
+    78
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 2
+   },
+   "shadow": "large"
+  },
+  "lantern_post": {
+   "file": "props/lighting_outdoors.png",
+   "rect": [
+    7,
+    4,
+    18,
+    80
+   ],
+   "anchor": [
+    9,
+    78
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "lantern_post_unlit": {
+   "file": "props/lighting_outdoors.png",
+   "rect": [
+    39,
+    4,
+    18,
+    80
+   ],
+   "anchor": [
+    9,
+    78
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "ladder": {
+   "file": "props/ladder.png",
+   "rect": [
+    3,
+    7,
+    26,
+    83
+   ],
+   "anchor": [
+    13,
+    81
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "walkable": true
+  },
+  "campfire": {
+   "file": "props/fire_camp.png",
+   "rect": [
+    0,
+    32,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "frames": [
+    [
+     0,
+     32,
+     32,
+     32
+    ],
+    [
+     32,
+     32,
+     32,
+     32
+    ],
+    [
+     64,
+     32,
+     32,
+     32
+    ],
+    [
+     96,
+     32,
+     32,
+     32
+    ]
+   ],
+   "unlit": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "shadow": "character"
+  },
+  "barrel": {
+   "file": "props/barrel.png",
+   "rect": [
+    2,
+    10,
+    28,
+    37
+   ],
+   "anchor": [
+    14,
+    35
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "crate": {
+   "file": "props/crate.png",
+   "rect": [
+    0,
+    32,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "woodpile": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    354,
+    657,
+    38,
+    46
+   ],
+   "anchor": [
+    19,
+    44
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "hay_bale": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    128,
+    704,
+    64,
+    32
+   ],
+   "anchor": [
+    32,
+    30
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "shadow": "medium"
+  },
+  "anvil": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    451,
+    744,
+    26,
+    17
+   ],
+   "anchor": [
+    13,
+    15
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "wheelbarrow": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    224,
+    647,
+    64,
+    45
+   ],
+   "anchor": [
+    32,
+    43
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "shadow": "medium"
+  },
+  "gravestone": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    36,
+    135,
+    23,
+    19
+   ],
+   "anchor": [
+    11,
+    17
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "statue": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    4,
+    294,
+    24,
+    58
+   ],
+   "anchor": [
+    12,
+    56
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "rowboat": {
+   "file": "props/farming_fishing.png",
+   "rect": [
+    225,
+    448,
+    123,
+    63
+   ],
+   "anchor": [
+    61,
+    61
+   ],
+   "footprintTiles": {
+    "w": 4,
+    "h": 2
+   },
+   "shadow": "large"
+  },
+  "banner_red": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    96,
+    1218,
+    32,
+    62
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "sign_inn": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    256,
+    35,
+    32,
+    28
+   ],
+   "anchor": [
+    16,
+    26
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "sign_smith": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    320,
+    35,
+    32,
+    28
+   ],
+   "anchor": [
+    16,
+    26
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "cave_entrance": {
+   "file": "terrain/cliff_summer.png",
+   "rect": [
+    192,
+    288,
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    94
+   ],
+   "footprintTiles": {
+    "w": 4,
+    "h": 1
+   }
+  },
+  "fireplace": {
+   "file": "interior/kit.png",
+   "rect": [
+    0,
+    0,
+    80,
+    74
+   ],
+   "anchor": [
+    40,
+    73
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "frames": [
+    [
+     0,
+     0,
+     80,
+     74
+    ],
+    [
+     82,
+     0,
+     80,
+     74
+    ],
+    [
+     164,
+     0,
+     80,
+     74
+    ]
+   ],
+   "unlit": [
+    246,
+    0,
+    80,
+    74
+   ],
+   "shadow": "medium"
+  },
+  "forge": {
+   "file": "interior/kit.png",
+   "rect": [
+    148,
+    76,
+    128,
+    116
+   ],
+   "anchor": [
+    64,
+    115
+   ],
+   "footprintTiles": {
+    "w": 4,
+    "h": 3
+   },
+   "frames": [
+    [
+     148,
+     76,
+     128,
+     116
+    ],
+    [
+     278,
+     76,
+     128,
+     116
+    ],
+    [
+     0,
+     194,
+     128,
+     116
+    ],
+    [
+     130,
+     194,
+     128,
+     116
+    ]
+   ],
+   "unlit": [
+    260,
+    194,
+    128,
+    116
+   ],
+   "shadow": "medium"
+  },
+  "hearth": {
+   "file": "interior/kit.png",
+   "rect": [
+    328,
+    0,
+    72,
+    70
+   ],
+   "anchor": [
+    36,
+    69
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "frames": [
+    [
+     328,
+     0,
+     72,
+     70
+    ],
+    [
+     402,
+     0,
+     72,
+     70
+    ],
+    [
+     0,
+     76,
+     72,
+     70
+    ]
+   ],
+   "unlit": [
+    74,
+    76,
+    72,
+    70
+   ],
+   "shadow": "medium"
+  },
+  "iwall_plaster_plain": {
+   "file": "interior/walls.png",
+   "rect": [
+    0,
+    0,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_plaster_window": {
+   "file": "interior/walls.png",
+   "rect": [
+    34,
+    0,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   },
+   "variants": {
+    "night": [
+     136,
+     0,
+     32,
+     96
+    ]
+   }
+  },
+  "iwall_plaster_shelf": {
+   "file": "interior/walls.png",
+   "rect": [
+    68,
+    0,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_plaster_art": {
+   "file": "interior/walls.png",
+   "rect": [
+    102,
+    0,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_timber_plain": {
+   "file": "interior/walls.png",
+   "rect": [
+    0,
+    98,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_timber_window": {
+   "file": "interior/walls.png",
+   "rect": [
+    34,
+    98,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   },
+   "variants": {
+    "night": [
+     170,
+     0,
+     32,
+     96
+    ]
+   }
+  },
+  "iwall_timber_shelf": {
+   "file": "interior/walls.png",
+   "rect": [
+    68,
+    98,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_timber_art": {
+   "file": "interior/walls.png",
+   "rect": [
+    102,
+    98,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_stone_plain": {
+   "file": "interior/walls.png",
+   "rect": [
+    0,
+    196,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_stone_window": {
+   "file": "interior/walls.png",
+   "rect": [
+    34,
+    196,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   },
+   "variants": {
+    "night": [
+     204,
+     0,
+     32,
+     96
+    ]
+   }
+  },
+  "iwall_stone_shelf": {
+   "file": "interior/walls.png",
+   "rect": [
+    68,
+    196,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_stone_art": {
+   "file": "interior/walls.png",
+   "rect": [
+    102,
+    196,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_log_plain": {
+   "file": "interior/walls.png",
+   "rect": [
+    0,
+    294,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_log_window": {
+   "file": "interior/walls.png",
+   "rect": [
+    34,
+    294,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   },
+   "variants": {
+    "night": [
+     238,
+     0,
+     32,
+     96
+    ]
+   }
+  },
+  "iwall_log_shelf": {
+   "file": "interior/walls.png",
+   "rect": [
+    68,
+    294,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "iwall_log_art": {
+   "file": "interior/walls.png",
+   "rect": [
+    102,
+    294,
+    32,
+    96
+   ],
+   "anchor": [
+    16,
+    95
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 3
+   }
+  },
+  "stairs_up": {
+   "file": "interior/walls.png",
+   "rect": [
+    136,
+    98,
+    64,
+    96
+   ],
+   "anchor": [
+    32,
+    95
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 3
+   }
+  },
+  "doormat": {
+   "file": "interior/walls.png",
+   "rect": [
+    204,
+    98,
+    30,
+    20
+   ],
+   "anchor": [
+    15,
+    19
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "walkable": true
+  },
+  "forge_hood": {
+   "file": "interior/kit.png",
+   "rect": [
+    0,
+    312,
+    128,
+    96
+   ],
+   "anchor": [
+    64,
+    95
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "note": "optional smoke hood; draw above the forge, its anchor on the forge anchor minus ~48px"
+  },
+  "wall_torch": {
+   "file": "interior/kit.png",
+   "rect": [
+    130,
+    312,
+    10,
+    32
+   ],
+   "anchor": [
+    5,
+    31
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "frames": [
+    [
+     130,
+     312,
+     10,
+     32
+    ],
+    [
+     142,
+     312,
+     10,
+     32
+    ],
+    [
+     154,
+     312,
+     10,
+     32
+    ]
+   ],
+   "unlit": [
+    166,
+    312,
+    10,
+    32
+   ],
+   "walkable": true,
+   "wallMounted": true,
+   "light": "torch"
+  },
+  "wall_sconce": {
+   "file": "interior/kit.png",
+   "rect": [
+    178,
+    312,
+    20,
+    28
+   ],
+   "anchor": [
+    10,
+    27
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true,
+   "light": "lamp"
+  },
+  "wall_lamp_double": {
+   "file": "interior/kit.png",
+   "rect": [
+    200,
+    312,
+    32,
+    19
+   ],
+   "anchor": [
+    16,
+    18
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true,
+   "light": "lamp"
+  },
+  "candle": {
+   "file": "interior/kit.png",
+   "rect": [
+    234,
+    312,
+    10,
+    20
+   ],
+   "anchor": [
+    5,
+    19
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "frames": [
+    [
+     234,
+     312,
+     10,
+     20
+    ],
+    [
+     246,
+     312,
+     10,
+     20
+    ]
+   ],
+   "unlit": [
+    258,
+    312,
+    10,
+    20
+   ],
+   "walkable": true,
+   "light": "candle"
+  },
+  "table_lamp": {
+   "file": "interior/kit.png",
+   "rect": [
+    270,
+    312,
+    24,
+    31
+   ],
+   "anchor": [
+    12,
+    30
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "light": "lamp"
+  },
+  "painting_landscape": {
+   "file": "interior/kit.png",
+   "rect": [
+    296,
+    312,
+    57,
+    25
+   ],
+   "anchor": [
+    28,
+    24
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "painting_sea": {
+   "file": "interior/kit.png",
+   "rect": [
+    355,
+    312,
+    44,
+    32
+   ],
+   "anchor": [
+    22,
+    31
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "painting_portrait": {
+   "file": "interior/kit.png",
+   "rect": [
+    401,
+    312,
+    29,
+    49
+   ],
+   "anchor": [
+    14,
+    48
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "painting_flowers": {
+   "file": "interior/kit.png",
+   "rect": [
+    432,
+    312,
+    29,
+    40
+   ],
+   "anchor": [
+    14,
+    39
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "mirror": {
+   "file": "interior/kit.png",
+   "rect": [
+    463,
+    312,
+    22,
+    30
+   ],
+   "anchor": [
+    11,
+    29
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "window": {
+   "file": "interior/kit.png",
+   "rect": [
+    0,
+    410,
+    32,
+    50
+   ],
+   "anchor": [
+    16,
+    49
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "variants": {
+    "night": [
+     34,
+     410,
+     32,
+     50
+    ]
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "window_stone": {
+   "file": "interior/kit.png",
+   "rect": [
+    68,
+    410,
+    32,
+    60
+   ],
+   "anchor": [
+    16,
+    59
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "variants": {
+    "night": [
+     102,
+     410,
+     32,
+     60
+    ]
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "wall_shelf": {
+   "file": "interior/kit.png",
+   "rect": [
+    136,
+    410,
+    64,
+    21
+   ],
+   "anchor": [
+    32,
+    20
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "wall_tool_rack": {
+   "file": "interior/kit.png",
+   "rect": [
+    202,
+    410,
+    93,
+    14
+   ],
+   "anchor": [
+    46,
+    13
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "wall_pans": {
+   "file": "interior/kit.png",
+   "rect": [
+    297,
+    410,
+    32,
+    27
+   ],
+   "anchor": [
+    16,
+    26
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "curtains": {
+   "file": "interior/kit.png",
+   "rect": [
+    331,
+    410,
+    96,
+    64
+   ],
+   "anchor": [
+    48,
+    63
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true,
+   "note": "red drapes to hang around a window piece"
+  },
+  "notice_board_wall": {
+   "file": "interior/kit.png",
+   "rect": [
+    429,
+    410,
+    24,
+    24
+   ],
+   "anchor": [
+    12,
+    23
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "wallMounted": true
+  },
+  "wardrobe": {
+   "file": "interior/kit.png",
+   "rect": [
+    0,
+    476,
+    64,
+    65
+   ],
+   "anchor": [
+    32,
+    64
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "shadow": "medium"
+  },
+  "workbench": {
+   "file": "interior/kit.png",
+   "rect": [
+    66,
+    476,
+    77,
+    52
+   ],
+   "anchor": [
+    38,
+    51
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "shadow": "medium"
+  },
+  "bellows": {
+   "file": "interior/kit.png",
+   "rect": [
+    145,
+    476,
+    43,
+    20
+   ],
+   "anchor": [
+    21,
+    19
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "barrel_stack": {
+   "file": "interior/kit.png",
+   "rect": [
+    190,
+    476,
+    48,
+    61
+   ],
+   "anchor": [
+    24,
+    60
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "shadow": "medium",
+   "note": "kegs"
+  },
+  "barrel_water": {
+   "file": "interior/kit.png",
+   "rect": [
+    240,
+    476,
+    28,
+    38
+   ],
+   "anchor": [
+    14,
+    37
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "sack": {
+   "file": "interior/kit.png",
+   "rect": [
+    270,
+    476,
+    23,
+    21
+   ],
+   "anchor": [
+    11,
+    20
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "basket": {
+   "file": "interior/kit.png",
+   "rect": [
+    295,
+    476,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    63
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "kitchen_sink": {
+   "file": "interior/kit.png",
+   "rect": [
+    329,
+    476,
+    64,
+    36
+   ],
+   "anchor": [
+    32,
+    35
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 1
+   },
+   "shadow": "medium"
+  },
+  "market_shelf": {
+   "file": "interior/kit.png",
+   "rect": [
+    395,
+    476,
+    95,
+    46
+   ],
+   "anchor": [
+    47,
+    45
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "shadow": "large"
+  },
+  "shop_counter": {
+   "file": "interior/kit.png",
+   "rect": [
+    0,
+    543,
+    95,
+    46
+   ],
+   "anchor": [
+    47,
+    45
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "shadow": "large",
+   "note": "counter with cash box (no LPC scale exists)"
+  },
+  "cash_box": {
+   "file": "interior/kit.png",
+   "rect": [
+    97,
+    543,
+    19,
+    14
+   ],
+   "anchor": [
+    9,
+    13
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "tabletop": true
+  },
+  "plate": {
+   "file": "interior/kit.png",
+   "rect": [
+    118,
+    543,
+    20,
+    12
+   ],
+   "anchor": [
+    10,
+    11
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "tabletop": true
+  },
+  "bowl": {
+   "file": "interior/kit.png",
+   "rect": [
+    140,
+    543,
+    18,
+    14
+   ],
+   "anchor": [
+    9,
+    13
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "tabletop": true
+  },
+  "place_setting": {
+   "file": "interior/kit.png",
+   "rect": [
+    160,
+    543,
+    24,
+    19
+   ],
+   "anchor": [
+    12,
+    18
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "tabletop": true
+  },
+  "mugs": {
+   "file": "interior/kit.png",
+   "rect": [
+    186,
+    543,
+    23,
+    14
+   ],
+   "anchor": [
+    11,
+    13
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "tabletop": true
+  },
+  "bottle": {
+   "file": "interior/kit.png",
+   "rect": [
+    211,
+    543,
+    6,
+    18
+   ],
+   "anchor": [
+    3,
+    17
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "tabletop": true
+  },
+  "bread": {
+   "file": "interior/kit.png",
+   "rect": [
+    219,
+    543,
+    16,
+    11
+   ],
+   "anchor": [
+    8,
+    10
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "tabletop": true
+  },
+  "produce_pile": {
+   "file": "interior/kit.png",
+   "rect": [
+    237,
+    543,
+    31,
+    29
+   ],
+   "anchor": [
+    15,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "mine_cart": {
+   "file": "interior/kit.png",
+   "rect": [
+    270,
+    543,
+    32,
+    30
+   ],
+   "anchor": [
+    16,
+    29
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "bar_counter": {
+   "anchor": [
+    48,
+    45
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 3
+   },
+   "rect": [
+    158,
+    271,
+    96,
+    46
+   ],
+   "shadow": "medium",
+   "surface": [
+    1,
+    1,
+    94,
+    16
+   ]
+  },
+  "bar_stool": {
+   "anchor": [
+    12,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    349,
+    322,
+    24,
+    32
+   ],
+   "shadow": "small"
+  },
+  "bed_blue": {
+   "anchor": [
+    26,
+    87
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 2
+   },
+   "rect": [
+    130,
+    0,
+    52,
+    88
+   ],
+   "shadow": "medium"
+  },
+  "bed_brown": {
+   "anchor": [
+    26,
+    87
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 2
+   },
+   "rect": [
+    184,
+    0,
+    52,
+    88
+   ],
+   "shadow": "medium"
+  },
+  "bed_cream": {
+   "anchor": [
+    26,
+    87
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 2
+   },
+   "rect": [
+    238,
+    0,
+    52,
+    88
+   ],
+   "shadow": "medium"
+  },
+  "bed_green": {
+   "anchor": [
+    26,
+    87
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 2
+   },
+   "rect": [
+    292,
+    0,
+    52,
+    88
+   ],
+   "shadow": "medium"
+  },
+  "bed_grey": {
+   "anchor": [
+    26,
+    87
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 2
+   },
+   "rect": [
+    346,
+    0,
+    52,
+    88
+   ],
+   "shadow": "medium"
+  },
+  "bed_red": {
+   "anchor": [
+    26,
+    87
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 2
+   },
+   "rect": [
+    400,
+    0,
+    52,
+    88
+   ],
+   "shadow": "medium"
+  },
+  "bed_yellow": {
+   "anchor": [
+    26,
+    87
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 2
+   },
+   "rect": [
+    454,
+    0,
+    52,
+    88
+   ],
+   "shadow": "medium"
+  },
+  "bookshelf": {
+   "anchor": [
+    16,
+    68
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    326,
+    118,
+    32,
+    69
+   ],
+   "shadow": "small"
+  },
+  "cauldron": {
+   "anchor": [
+    13,
+    29
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    170,
+    364,
+    27,
+    30
+   ],
+   "shadow": "small"
+  },
+  "chair_down": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    375,
+    322,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "chair_left": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    409,
+    322,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "chair_right": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    443,
+    322,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "chair_up": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "frontAligned": true,
+   "frontOverlay": [
+    0,
+    364,
+    32,
+    32
+   ],
+   "rect": [
+    477,
+    322,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "chest": {
+   "anchor": [
+    14,
+    26
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    233,
+    364,
+    28,
+    27
+   ],
+   "shadow": "small"
+  },
+  "clock": {
+   "anchor": [
+    9,
+    70
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    232,
+    118,
+    18,
+    71
+   ],
+   "shadow": "small"
+  },
+  "coal_pile": {
+   "anchor": [
+    25,
+    35
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 2
+   },
+   "rect": [
+    200,
+    322,
+    51,
+    36
+   ],
+   "shadow": "medium"
+  },
+  "cupboard": {
+   "anchor": [
+    16,
+    68
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    360,
+    118,
+    32,
+    69
+   ],
+   "shadow": "small"
+  },
+  "dish_cabinet": {
+   "anchor": [
+    16,
+    68
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    394,
+    118,
+    32,
+    69
+   ],
+   "shadow": "small"
+  },
+  "dresser": {
+   "anchor": [
+    31,
+    39
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 2
+   },
+   "rect": [
+    0,
+    322,
+    62,
+    40
+   ],
+   "shadow": "medium"
+  },
+  "fish_crate": {
+   "anchor": [
+    16,
+    37
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    132,
+    322,
+    32,
+    38
+   ],
+   "shadow": "small"
+  },
+  "floor_lamp": {
+   "anchor": [
+    12,
+    48
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    449,
+    205,
+    24,
+    49
+   ],
+   "shadow": "small"
+  },
+  "flower_vase": {
+   "anchor": [
+    11,
+    24
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    263,
+    364,
+    22,
+    25
+   ],
+   "shadow": "small"
+  },
+  "grindstone": {
+   "anchor": [
+    16,
+    29
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    199,
+    364,
+    32,
+    30
+   ],
+   "shadow": "small"
+  },
+  "herb_box": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    34,
+    364,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "herb_box_flowers": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    68,
+    364,
+    32,
+    32
+   ],
+   "shadow": "small"
+  },
+  "kitchen_counter": {
+   "anchor": [
+    32,
+    35
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 2
+   },
+   "rect": [
+    253,
+    322,
+    64,
+    36
+   ],
+   "shadow": "medium"
+  },
+  "mayor_desk": {
+   "anchor": [
+    48,
+    48
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 3
+   },
+   "rect": [
+    0,
+    271,
+    96,
+    49
+   ],
+   "shadow": "medium",
+   "surface": [
+    1,
+    14,
+    94,
+    14
+   ]
+  },
+  "meeting_table": {
+   "anchor": [
+    40,
+    73
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 3
+   },
+   "rect": [
+    150,
+    118,
+    80,
+    74
+   ],
+   "shadow": "medium",
+   "surface": [
+    1,
+    1,
+    78,
+    53
+   ]
+  },
+  "ore_crate": {
+   "anchor": [
+    16,
+    37
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    166,
+    322,
+    32,
+    38
+   ],
+   "shadow": "small"
+  },
+  "potted_plant": {
+   "anchor": [
+    16,
+    43
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    256,
+    271,
+    32,
+    44
+   ],
+   "shadow": "small"
+  },
+  "potted_tree": {
+   "anchor": [
+    16,
+    76
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    34,
+    118,
+    32,
+    77
+   ],
+   "shadow": "small"
+  },
+  "produce_basket": {
+   "anchor": [
+    16,
+    39
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    64,
+    322,
+    32,
+    40
+   ],
+   "shadow": "small"
+  },
+  "rug_red": {
+   "anchor": [
+    80,
+    64
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 5
+   },
+   "rect": [
+    0,
+    205,
+    160,
+    64
+   ]
+  },
+  "rug_vine": {
+   "anchor": [
+    80,
+    64
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 2,
+    "w": 5
+   },
+   "rect": [
+    162,
+    205,
+    160,
+    64
+   ]
+  },
+  "smith_anvil": {
+   "anchor": [
+    16,
+    23
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    287,
+    364,
+    32,
+    24
+   ],
+   "shadow": "small"
+  },
+  "smith_bench": {
+   "anchor": [
+    30,
+    63
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 2
+   },
+   "rect": [
+    324,
+    205,
+    61,
+    64
+   ],
+   "shadow": "medium"
+  },
+  "stove": {
+   "anchor": [
+    16,
+    84
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    0,
+    118,
+    32,
+    85
+   ],
+   "shadow": "small"
+  },
+  "table_long": {
+   "anchor": [
+    40,
+    41
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 3
+   },
+   "rect": [
+    290,
+    271,
+    80,
+    42
+   ],
+   "shadow": "medium",
+   "surface": [
+    1,
+    1,
+    78,
+    21
+   ]
+  },
+  "table_long_meal": {
+   "anchor": [
+    40,
+    41
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 3
+   },
+   "rect": [
+    372,
+    271,
+    80,
+    42
+   ],
+   "shadow": "medium",
+   "surface": [
+    1,
+    1,
+    78,
+    21
+   ]
+  },
+  "table_round": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    102,
+    364,
+    32,
+    32
+   ],
+   "shadow": "small",
+   "surface": [
+    4,
+    2,
+    24,
+    16
+   ]
+  },
+  "table_round_meal": {
+   "anchor": [
+    16,
+    31
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    136,
+    364,
+    32,
+    32
+   ],
+   "shadow": "small",
+   "surface": [
+    4,
+    2,
+    24,
+    16
+   ]
+  },
+  "tool_rack": {
+   "anchor": [
+    30,
+    49
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 2
+   },
+   "rect": [
+    387,
+    205,
+    60,
+    50
+   ],
+   "shadow": "medium"
+  },
+  "toy_chest": {
+   "anchor": [
+    14,
+    34
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    319,
+    322,
+    28,
+    35
+   ],
+   "shadow": "small"
+  },
+  "veg_crate": {
+   "anchor": [
+    16,
+    39
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 1
+   },
+   "rect": [
+    98,
+    322,
+    32,
+    40
+   ],
+   "shadow": "small"
+  },
+  "writing_desk": {
+   "anchor": [
+    29,
+    48
+   ],
+   "file": "furniture/interiors.png",
+   "footprintTiles": {
+    "h": 1,
+    "w": 2
+   },
+   "rect": [
+    98,
+    271,
+    58,
+    49
+   ],
+   "shadow": "medium",
+   "surface": [
+    1,
+    14,
+    56,
+    13
+   ]
+  }
+ },
+ "ores": {
+  "rock_stone": {
+   "file": "ores/ore_stone.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": [
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     0,
+     32,
+     32,
+     32
+    ],
+    [
+     32,
+     32,
+     32,
+     32
+    ]
+   ],
+   "shadow": "character"
+  },
+  "rock_copper": {
+   "file": "ores/ore_copper.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": [
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     0,
+     32,
+     32,
+     32
+    ],
+    [
+     32,
+     32,
+     32,
+     32
+    ]
+   ],
+   "shadow": "character"
+  },
+  "rock_iron": {
+   "file": "ores/ore_iron.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": [
+    [
+     0,
+     32,
+     32,
+     32
+    ],
+    [
+     32,
+     32,
+     32,
+     32
+    ]
+   ],
+   "shadow": "character"
+  },
+  "rock_gem": {
+   "file": "ores/ore_silver.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    28
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": [
+    [
+     0,
+     0,
+     32,
+     32
+    ],
+    [
+     0,
+     32,
+     32,
+     32
+    ]
+   ],
+   "note": "silver-ore node with pale blue crystals used as gem node",
+   "shadow": "character"
+  }
+ },
+ "monsters": {
+  "slime": {
+   "file": "monsters/slime.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    16,
+    30
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 3
+     },
+     "left": {
+      "row": 1,
+      "frames": 3
+     },
+     "down": {
+      "row": 2,
+      "frames": 3
+     },
+     "right": {
+      "row": 3,
+      "frames": 3
+     }
+    }
+   },
+   "shadow": "character"
+  },
+  "bat": {
+   "file": "monsters/bat.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    16,
+    30
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 3
+     },
+     "left": {
+      "row": 1,
+      "frames": 3
+     },
+     "down": {
+      "row": 2,
+      "frames": 3
+     },
+     "right": {
+      "row": 3,
+      "frames": 3
+     }
+    }
+   },
+   "note": "flying: anchor is the ground point under the bat (frame bottom); in-frame black shadow removed, use shadows.small at the anchor; draw the sprite `hover` px higher than the anchor so the shadow sits visibly below it",
+   "shadow": "small",
+   "flying": true,
+   "hover": 10
+  },
+  "rock_crab": {
+   "file": "monsters/spider_grey.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    32,
+    52
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "col": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 1,
+      "col": 4,
+      "frames": 6
+     },
+     "down": {
+      "row": 2,
+      "col": 4,
+      "frames": 6
+     },
+     "right": {
+      "row": 3,
+      "col": 4,
+      "frames": 6
+     }
+    },
+    "attack": {
+     "up": {
+      "row": 0,
+      "col": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "col": 0,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "col": 0,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "col": 0,
+      "frames": 4
+     }
+    },
+    "death": {
+     "row": 4,
+     "col": 0,
+     "frames": 4
+    }
+   },
+   "substitute": "No LPC crab exists; Redshrike grey spider (stone-coloured carapace) stands in for rock_crab.",
+   "shadow": "medium"
+  }
+ },
+ "furniture": {
+  "chair_wood": {
+   "file": "furniture/chair_dining_a.png",
+   "rect": [
+    3,
+    128,
+    26,
+    32
+   ],
+   "anchor": [
+    13,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": {
+    "left": [
+     32,
+     128,
+     32,
+     32
+    ],
+    "back": [
+     192,
+     128,
+     32,
+     32
+    ]
+   },
+   "shadow": "character"
+  },
+  "table_wood": {
+   "file": "furniture/table_rough_wood.png",
+   "rect": [
+    8,
+    86,
+    80,
+    42
+   ],
+   "anchor": [
+    40,
+    40
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "shadow": "large"
+  },
+  "table_round": {
+   "file": "furniture/table_rough_wood.png",
+   "rect": [
+    96,
+    32,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    30
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "bed_simple": {
+   "file": "furniture/beds_single_c.png",
+   "rect": [
+    0,
+    25,
+    64,
+    87
+   ],
+   "anchor": [
+    32,
+    85
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 3
+   },
+   "shadow": "medium"
+  },
+  "rug": {
+   "file": "furniture/rug_swirling_vine.png",
+   "rect": [
+    0,
+    0,
+    160,
+    64
+   ],
+   "anchor": [
+    80,
+    62
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "variants": {
+    "red": [
+     0,
+     64,
+     160,
+     64
+    ]
+   }
+  },
+  "lamp": {
+   "file": "furniture/lighting_floor.png",
+   "rect": [
+    4,
+    2,
+    24,
+    49
+   ],
+   "anchor": [
+    12,
+    47
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small"
+  },
+  "fence": {
+   "file": "props/plain_fence_a.png",
+   "rect": [
+    11,
+    1,
+    74,
+    31
+   ],
+   "anchor": [
+    37,
+    29
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 1
+   },
+   "pieces": {
+    "post": [
+     128,
+     64,
+     32,
+     64
+    ],
+    "horizontalLong": [
+     0,
+     64,
+     96,
+     32
+    ]
+   },
+   "shadow": "large"
+  },
+  "scarecrow": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    320,
+    130,
+    32,
+    62
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "character"
+  },
+  "flower_pot": {
+   "file": "furniture/planter.png",
+   "rect": [
+    128,
+    40,
+    32,
+    44
+   ],
+   "anchor": [
+    16,
+    42
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "potted fern (planter sheet top-row pieces are flower overlays for the vases)",
+   "shadow": "character"
+  }
+ },
+ "icons": {
+  "hoe": {
+   "file": "icons/items1.png",
+   "rect": [
+    352,
+    0,
+    32,
+    32
+   ]
+  },
+  "watering_can": {
+   "file": "icons/buckets.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "substitute": "No LPC watering can; wooden bucket used."
+  },
+  "pickaxe": {
+   "file": "icons/items1.png",
+   "rect": [
+    96,
+    0,
+    32,
+    32
+   ]
+  },
+  "pickaxe_iron": {
+   "file": "icons/items1.png",
+   "rect": [
+    96,
+    0,
+    32,
+    32
+   ],
+   "note": "same sprite as pickaxe (only one LPC pickaxe icon); tint in client if needed"
+  },
+  "sword_wood": {
+   "file": "icons/items1.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "note": "plain short sword"
+  },
+  "sword_copper": {
+   "file": "icons/items1.png",
+   "rect": [
+    480,
+    160,
+    32,
+    32
+   ],
+   "note": "gold/bronze-hilted sword"
+  },
+  "seed_turnip": {
+   "file": "icons/grains_grasses.png",
+   "rect": [
+    64,
+    32,
+    32,
+    32
+   ],
+   "substitute": "grain pile"
+  },
+  "seed_carrot": {
+   "file": "icons/grains_grasses.png",
+   "rect": [
+    160,
+    32,
+    32,
+    32
+   ],
+   "substitute": "grain pile"
+  },
+  "seed_pumpkin": {
+   "file": "icons/grains_grasses.png",
+   "rect": [
+    128,
+    32,
+    32,
+    32
+   ],
+   "substitute": "grain pile"
+  },
+  "seed_strawberry": {
+   "file": "icons/grains_grasses.png",
+   "rect": [
+    192,
+    32,
+    32,
+    32
+   ],
+   "substitute": "grain pile"
+  },
+  "turnip": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    192,
+    32,
+    32,
+    32
+   ],
+   "substitute": "radish"
+  },
+  "carrot": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    96,
+    0,
+    32,
+    32
+   ]
+  },
+  "pumpkin": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    128,
+    0,
+    32,
+    32
+   ]
+  },
+  "strawberry": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ]
+  },
+  "stone": {
+   "file": "ores/ore_stone.png",
+   "rect": [
+    0,
+    96,
+    32,
+    32
+   ]
+  },
+  "ore_copper": {
+   "file": "ores/ore_copper.png",
+   "rect": [
+    32,
+    64,
+    32,
+    32
+   ]
+  },
+  "ore_iron": {
+   "file": "ores/ore_iron.png",
+   "rect": [
+    0,
+    64,
+    32,
+    32
+   ]
+  },
+  "gem_crystal": {
+   "file": "ores/ore_silver.png",
+   "rect": [
+    0,
+    64,
+    32,
+    32
+   ]
+  },
+  "wood": {
+   "file": "icons/lumber.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ]
+  },
+  "crab_shell": {
+   "file": "icons/seafood_a.png",
+   "rect": [
+    352,
+    0,
+    32,
+    32
+   ],
+   "note": "whole crab"
+  },
+  "herb_mint": {
+   "file": "icons/medicinal_herbs.png",
+   "rect": [
+    0,
+    32,
+    32,
+    32
+   ]
+  },
+  "mushroom": {
+   "file": "plants/mushrooms.png",
+   "rect": [
+    96,
+    0,
+    32,
+    32
+   ]
+  },
+  "fish_trout": {
+   "file": "icons/seafood_a.png",
+   "rect": [
+    128,
+    0,
+    32,
+    32
+   ]
+  },
+  "tomato": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ]
+  },
+  "potato": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    32,
+    32,
+    32,
+    32
+   ]
+  },
+  "apple": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    64,
+    0,
+    32,
+    32
+   ]
+  },
+  "corn": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    224,
+    32,
+    32,
+    32
+   ]
+  },
+  "eggplant": {
+   "file": "icons/veggies_shadowless.png",
+   "rect": [
+    160,
+    32,
+    32,
+    32
+   ]
+  },
+  "ingot_copper": {
+   "file": "ores/ore_copper.png",
+   "rect": [
+    96,
+    64,
+    32,
+    32
+   ]
+  },
+  "ingot_iron": {
+   "file": "ores/ore_iron.png",
+   "rect": [
+    64,
+    64,
+    32,
+    32
+   ]
+  },
+  "axe": {
+   "file": "icons/items1.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ]
+  },
+  "shovel": {
+   "file": "icons/items1.png",
+   "rect": [
+    32,
+    256,
+    32,
+    32
+   ]
+  },
+  "slime_gel": {
+   "file": "icons/extra_icons.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ]
+  },
+  "bat_wing": {
+   "file": "icons/extra_icons.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ]
+  },
+  "quality_silver": {
+   "file": "icons/extra_icons.png",
+   "rect": [
+    64,
+    0,
+    16,
+    16
+   ],
+   "note": "badge drawn over the bottom-left of an item icon"
+  },
+  "quality_gold": {
+   "file": "icons/extra_icons.png",
+   "rect": [
+    80,
+    0,
+    16,
+    16
+   ],
+   "note": "badge drawn over the bottom-left of an item icon"
+  }
+ },
+ "shadows": {
+  "file": "props/shadow.png",
+  "rects": {
+   "small": [
+    2,
+    2,
+    18,
+    7
+   ],
+   "character": [
+    24,
+    2,
+    28,
+    10
+   ],
+   "medium": [
+    56,
+    2,
+    40,
+    14
+   ],
+   "large": [
+    100,
+    2,
+    60,
+    20
+   ],
+   "tree": [
+    164,
+    2,
+    80,
+    24
+   ]
+  },
+  "note": "Flat two-step LPC-style drop shadows (LPC shadow colour #322125 at ~30-47% alpha). Draw centred on an entity's anchor (ground/feet point), before the entity. Flying entities keep the shadow on the ground at the anchor while the sprite floats above.",
+  "character": [
+   24,
+   2,
+   28,
+   10
+  ],
+  "small": [
+   2,
+   2,
+   18,
+   7
+  ],
+  "large": [
+   100,
+   2,
+   60,
+   20
+  ],
+  "medium": [
+   56,
+   2,
+   40,
+   14
+  ],
+  "tree": [
+   164,
+   2,
+   80,
+   24
+  ]
+ },
+ "interior": {
+  "walls": {
+   "note": "Room shell, seen from inside. North wall = a row of 1x3 props iwall_<style>_<feature> (32x96: 16px wall-top cap, wall face, skirting) whose bottom row sits on the room's first floor row; stairs_up replaces two of them. Side/south walls are only their tops seen from above: draw the border3x3 pieces (transparent centre, overlay on the floor tiles). corner_nw/wall_n_top/corner_ne go on the row above the north wall pieces, wall_w/wall_e down the side columns, corner_sw/wall_s_cap/corner_se along the bottom row (leave a gap in wall_s_cap for the exit door). Inner thickness is ~16px of each 32px piece.",
+   "styles": {
+    "plaster": {
+     "file": "interior/walls.png",
+     "border3x3": [
+      98,
+      392,
+      96,
+      96
+     ],
+     "pieces": {
+      "corner_nw": [
+       98,
+       392,
+       32,
+       32
+      ],
+      "wall_n_top": [
+       130,
+       392,
+       32,
+       32
+      ],
+      "corner_ne": [
+       162,
+       392,
+       32,
+       32
+      ],
+      "wall_w": [
+       98,
+       424,
+       32,
+       32
+      ],
+      "wall_e": [
+       162,
+       424,
+       32,
+       32
+      ],
+      "corner_sw": [
+       98,
+       456,
+       32,
+       32
+      ],
+      "wall_s_cap": [
+       130,
+       456,
+       32,
+       32
+      ],
+      "corner_se": [
+       162,
+       456,
+       32,
+       32
+      ]
+     }
+    },
+    "timber": {
+     "file": "interior/walls.png",
+     "border3x3": [
+      0,
+      392,
+      96,
+      96
+     ],
+     "pieces": {
+      "corner_nw": [
+       0,
+       392,
+       32,
+       32
+      ],
+      "wall_n_top": [
+       32,
+       392,
+       32,
+       32
+      ],
+      "corner_ne": [
+       64,
+       392,
+       32,
+       32
+      ],
+      "wall_w": [
+       0,
+       424,
+       32,
+       32
+      ],
+      "wall_e": [
+       64,
+       424,
+       32,
+       32
+      ],
+      "corner_sw": [
+       0,
+       456,
+       32,
+       32
+      ],
+      "wall_s_cap": [
+       32,
+       456,
+       32,
+       32
+      ],
+      "corner_se": [
+       64,
+       456,
+       32,
+       32
+      ]
+     }
+    },
+    "log": {
+     "file": "interior/walls.png",
+     "border3x3": [
+      0,
+      392,
+      96,
+      96
+     ],
+     "pieces": {
+      "corner_nw": [
+       0,
+       392,
+       32,
+       32
+      ],
+      "wall_n_top": [
+       32,
+       392,
+       32,
+       32
+      ],
+      "corner_ne": [
+       64,
+       392,
+       32,
+       32
+      ],
+      "wall_w": [
+       0,
+       424,
+       32,
+       32
+      ],
+      "wall_e": [
+       64,
+       424,
+       32,
+       32
+      ],
+      "corner_sw": [
+       0,
+       456,
+       32,
+       32
+      ],
+      "wall_s_cap": [
+       32,
+       456,
+       32,
+       32
+      ],
+      "corner_se": [
+       64,
+       456,
+       32,
+       32
+      ]
+     }
+    },
+    "stone": {
+     "file": "interior/walls.png",
+     "border3x3": [
+      196,
+      392,
+      96,
+      96
+     ],
+     "pieces": {
+      "corner_nw": [
+       196,
+       392,
+       32,
+       32
+      ],
+      "wall_n_top": [
+       228,
+       392,
+       32,
+       32
+      ],
+      "corner_ne": [
+       260,
+       392,
+       32,
+       32
+      ],
+      "wall_w": [
+       196,
+       424,
+       32,
+       32
+      ],
+      "wall_e": [
+       260,
+       424,
+       32,
+       32
+      ],
+      "corner_sw": [
+       196,
+       456,
+       32,
+       32
+      ],
+      "wall_s_cap": [
+       228,
+       456,
+       32,
+       32
+      ],
+      "corner_se": [
+       260,
+       456,
+       32,
+       32
+      ]
+     }
+    }
+   }
+  },
+  "floor_wood_dark": {
+   "file": "terrain/wood_floor_a.png",
+   "tile": [
+    32,
+    0,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     32,
+     32,
+     32,
+     32
+    ],
+    [
+     32,
+     64,
+     32,
+     32
+    ]
+   ],
+   "note": "dark walnut stain"
+  },
+  "floor_wood": {
+   "file": "terrain/wood_floor_a.png",
+   "tile": [
+    64,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     64,
+     64,
+     32,
+     32
+    ],
+    [
+     64,
+     0,
+     32,
+     32
+    ]
+   ],
+   "note": "medium oak (same as terrain.wood)"
+  },
+  "floor_wood_light": {
+   "file": "terrain/wood_floor_a.png",
+   "tile": [
+    128,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     128,
+     64,
+     32,
+     32
+    ],
+    [
+     128,
+     0,
+     32,
+     32
+    ]
+   ],
+   "note": "light pine"
+  },
+  "floor_wood_red": {
+   "file": "terrain/wood_floor_a.png",
+   "tile": [
+    0,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     0,
+     64,
+     32,
+     32
+    ],
+    [
+     0,
+     0,
+     32,
+     32
+    ]
+   ],
+   "note": "red mahogany"
+  },
+  "floor_parquet": {
+   "file": "interior/floor_herringbone.png",
+   "tile": [
+    64,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     64,
+     0,
+     32,
+     32
+    ],
+    [
+     64,
+     64,
+     32,
+     32
+    ]
+   ],
+   "note": "herringbone oak parquet (town hall); x=0 grey, x=32 slate versions"
+  },
+  "floor_stone": {
+   "file": "interior/floor_tile_a.png",
+   "tile": [
+    32,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     32,
+     64,
+     32,
+     32
+    ],
+    [
+     32,
+     96,
+     32,
+     32
+    ]
+   ],
+   "note": "grey flagstones (smithy, cellar); x=0 sand, x=64 slate versions. terrain.stone (cobbles) also works."
+  },
+  "floor_tile": {
+   "file": "interior/floor_tile_c.png",
+   "tile": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     0,
+     32,
+     32,
+     32
+    ],
+    [
+     32,
+     32,
+     32,
+     32
+    ]
+   ],
+   "note": "kitchen tiles, beige"
+  },
+  "floor_tile_checker": {
+   "file": "interior/floor_diamond.png",
+   "tile": [
+    0,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     0,
+     64,
+     32,
+     32
+    ]
+   ],
+   "note": "diamond checker tiles; each 32px column is one colour (0 cream/grey ... 224 red)",
+   "colors": {
+    "cream": 0,
+    "grey": 32,
+    "navy": 64,
+    "lilac": 96,
+    "teal": 128,
+    "green": 160,
+    "gold": 192,
+    "red": 224
+   }
+  },
+  "floor_carpet": {
+   "file": "interior/floor_carpet.png",
+   "tile": [
+    64,
+    32,
+    32,
+    32
+   ],
+   "variants": [
+    [
+     128,
+     0,
+     32,
+     32
+    ]
+   ],
+   "edges": {
+    "layout": "LPC 3x3 carpet with gold border (full tiles, not overlays). centre tile repeats.",
+    "outer3x3": [
+     32,
+     0,
+     96,
+     96
+    ],
+    "rose3x3": [
+     32,
+     96,
+     96,
+     96
+    ],
+    "blue3x3": [
+     256,
+     0,
+     96,
+     96
+    ]
+   },
+   "note": "cream floral wall-to-wall carpet; rose and blue/grey colourways below/right"
+  }
+ },
+ "lights": {
+  "file": "interior/lights.png",
+  "note": "Soft radial light glows (own-made, CC0), banded in 6 alpha steps. Draw centred on the light source with additive or screen blend over a night/interior darkness overlay; scale freely. radiusPx is the native radius in source px.",
+  "candle": {
+   "rect": [
+    0,
+    0,
+    48,
+    48
+   ],
+   "radiusPx": 24
+  },
+  "lamp": {
+   "rect": [
+    50,
+    0,
+    96,
+    96
+   ],
+   "radiusPx": 48
+  },
+  "lantern": {
+   "rect": [
+    148,
+    0,
+    128,
+    128
+   ],
+   "radiusPx": 64
+  },
+  "torch": {
+   "rect": [
+    278,
+    0,
+    128,
+    128
+   ],
+   "radiusPx": 64
+  },
+  "campfire": {
+   "rect": [
+    408,
+    0,
+    192,
+    192
+   ],
+   "radiusPx": 96
+  },
+  "fireplace": {
+   "rect": [
+    602,
+    0,
+    192,
+    192
+   ],
+   "radiusPx": 96
+  },
+  "forge": {
+   "rect": [
+    796,
+    0,
+    256,
+    256
+   ],
+   "radiusPx": 128
+  },
+  "window": {
+   "rect": [
+    1054,
+    0,
+    96,
+    96
+   ],
+   "radiusPx": 48
+  }
+ },
+ "missing": {
+  "icons.watering_can": "No LPC watering can; bucket substitute provided under icons.watering_can.",
+  "crops.turnip/pumpkin/strawberry": "No LPC growth-stage sheets for these; potato/zucchini/tomato plants substituted (see crops.*.substitute).",
+  "monsters.rock_crab": "No LPC crab; grey spider substituted.",
+  "icons.pickaxe_iron": "Only one LPC pickaxe icon exists; reused.",
+  "characters.idle": "LPC idle sheets were missing for several clothing layers; idle uses walk frame 0.",
+  "monsters.larger_slime_bat": "The only LPC slime and bat are CharlesGabriel's official LPC base creatures (32x32 frames, same 1x pixel density, outline and shading as the 64x64 characters; just physically small). No larger LPC slime/bat exists in the reachable sources and upscaling would break the style, so they are kept at native size.",
+  "props.weapon_rack": "No LPC weapon rack in the reachable sources; use props.wall_tool_rack (smithing tools on a wall rack).",
+  "props.scale": "No LPC shop scale; props.shop_counter carries a cash box instead.",
+  "furniture.bed_double": "ElizaWy double beds come as separate frame/headboard/blanket layers; not assembled yet (single beds bed_<colour> exist).",
+  "props.bar_counter_segments": "bar_counter is one 3-tile piece; no separate left/middle/right segments yet."
+ },
+ "substitutions": {
+  "turnip": "radish",
+  "pumpkin": "No LPC pumpkin growth stages exist; uses Daneeklu zucchini plant.",
+  "strawberry": "No LPC strawberry growth stages exist; uses Daneeklu tomato plant.",
+  "watering_can": "No LPC watering can; wooden bucket used.",
+  "seed_turnip": "grain pile",
+  "seed_carrot": "grain pile",
+  "seed_pumpkin": "grain pile",
+  "seed_strawberry": "grain pile",
+  "rock_crab": "No LPC crab exists; Redshrike grey spider (stone-coloured carapace) stands in for rock_crab.",
+  "mine_cart": "Own-made (CC0) iron mine cart with ore, drawn in the LPC palette; no LPC cart exists.",
+  "slime_gel": "Own-made (CC0) gel blob in the LPC slime palette.",
+  "bat_wing": "Left wing cut from the LPC bat sprite (CharlesGabriel)."
+ }
+}

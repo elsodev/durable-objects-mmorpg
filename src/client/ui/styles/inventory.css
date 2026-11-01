@@ -1,0 +1,113 @@
+/* Inventory panel. Base look (.dm-panel, .dm-slot) and variables come from theme.css. */
+#inventory-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -55%);
+  pointer-events: auto;
+  padding: 10px 12px 12px;
+  z-index: 20;
+  max-width: calc(100vw - 32px);
+  user-select: none;
+}
+#inventory-panel[hidden] { display: none; }
+
+.inv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.inv-title {
+  margin: 0;
+  font-size: 16px;
+  color: var(--dm-text, #fff8e7);
+  letter-spacing: 0.5px;
+}
+.inv-close {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--dm-border, #3b2b25);
+  border-radius: 6px;
+  background: var(--dm-panel-2, #6b4a3a);
+  color: var(--dm-text, #fff8e7);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.inv-close:hover { filter: brightness(1.15); }
+
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--inv-cols, 6), var(--dm-slot-size, 48px));
+  gap: 4px;
+}
+
+.inv-slot {
+  position: relative;
+  width: var(--dm-slot-size, 48px);
+  height: var(--dm-slot-size, 48px);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.inv-slot.is-empty { cursor: default; opacity: 0.7; }
+.inv-slot:not(.is-empty):hover,
+.inv-slot:focus-visible { outline: 2px solid var(--dm-accent, #f5c84c); outline-offset: -2px; }
+
+.inv-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.inv-icon[hidden] { display: none; }
+
+.inv-qty {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--dm-text, #fff8e7);
+  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  pointer-events: none;
+}
+
+.inv-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--dm-gold, #f5c84c);
+  font-weight: bold;
+}
+.inv-coin-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--dm-gold, #f5c84c);
+  border: 2px solid #8a5a17;
+}
+
+.inv-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 6px));
+  min-width: 120px;
+  max-width: 220px;
+  padding: 6px 8px;
+  pointer-events: none;
+  z-index: 1;
+  font-size: 12px;
+}
+.inv-tooltip[hidden] { display: none; }
+.inv-tip-name { font-weight: bold; color: var(--dm-text, #fff8e7); }
+.inv-tip-desc { margin-top: 2px; color: var(--dm-text-dim, #e8d9c0); }
+.inv-tip-desc[hidden] { display: none; }
+.inv-tip-price { margin-top: 4px; color: var(--dm-gold, #f5c84c); }
+
+@media (max-width: 420px) {
+  #inventory-panel { --dm-slot-size: 40px; }
+}

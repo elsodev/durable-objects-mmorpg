@@ -1,0 +1,11 @@
+{
+  // Worker + Durable Objects + shared code + tests: Workers globals, no DOM.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src/worker", "src/shared", "test"],
+  // Client-module tests import DOM code; they are checked by tsconfig.client.json.
+  "exclude": ["test/fe-*.test.ts"]
+}

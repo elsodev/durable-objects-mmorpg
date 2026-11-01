@@ -1,0 +1,15 @@
+# Local secrets for `wrangler dev`. Copy to .dev.vars (git-ignored) and fill in BETTER_AUTH_SECRET.
+# Generate it with: openssl rand -base64 32
+# The Worker refuses to serve /api and /ws if the secret is empty, shorter than 32 chars, or a placeholder.
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=http://localhost:8787
+
+# Optional: TypeSafe API key for typed NPC decisions (Jev). Without it NPCs use rule-based decisions.
+TYPESAFE_API_KEY=
+
+# Turnstile captcha. Leave both empty locally: `npm run dev:local` turns the captcha off.
+# In production set TURNSTILE_SITE_KEY in wrangler.jsonc vars and `wrangler secret put TURNSTILE_SECRET_KEY`.
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
+# `npm run dev` (no --env local) needs this to allow sign-in without a Turnstile secret.
+# CAPTCHA_DISABLED=1

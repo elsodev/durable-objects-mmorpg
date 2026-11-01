@@ -1,0 +1,97 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "durable-mmo",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // @cloudflare/think pulls agents/skills/runner, whose optional `just-bash` peer is 21 MB.
+  // NPC agents use no skills, so a throwing stub stands in for it.
+  "alias": { "just-bash": "./src/worker/npc/think/just-bash-stub.ts" },
+  // Built PixiJS client (vite build -> dist). /api/*, /ws/* and /files/* (R2) hit the Worker first;
+  // everything else is a static asset with SPA fallback.
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/ws/*", "/files/*"]
+  },
+  // Keep in sync with src/worker/env.ts. ZoneRoom = shared zones, HomeRoom = one per player,
+  // AiBudget = one global daily NPC AI spend limiter, SocialRoom = global world chat/presence,
+  // NpcAgent = one Think agent per (NPC, player).
+  "durable_objects": {
+    "bindings": [
+      { "name": "ZONE", "class_name": "ZoneRoom" },
+      { "name": "HOME", "class_name": "HomeRoom" },
+      { "name": "AI_BUDGET", "class_name": "AiBudget" },
+      { "name": "SOCIAL", "class_name": "SocialRoom" },
+      { "name": "NPC_AGENT", "class_name": "NpcAgent" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ZoneRoom", "HomeRoom"] },
+    { "tag": "v2", "new_sqlite_classes": ["AiBudget"] },
+    { "tag": "v3-social", "new_sqlite_classes": ["SocialRoom"] },
+    { "tag": "v4-npc-agent", "new_sqlite_classes": ["NpcAgent"] }
+  ],
+  // Better Auth tables live here. Create with: wrangler d1 create durable-mmo-auth
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "durable-mmo-auth",
+      "database_id": "REPLACE_WITH_YOUR_D1_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Game assets and player uploads, served by the Worker at /files/*.
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "durable-mmo-files" }],
+  // Workers AI drives the NPCs.
+  "ai": { "binding": "AI" },
+  "vars": {
+    "NPC_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+    // NpcAgent (Project Think) turns call tools, so they use a function-calling model.
+    "NPC_AGENT_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
+    "NPC_AI_MODE": "on",
+    "AI_DAILY_NEURONS": "9000",
+    // Public Turnstile site key. The secret goes in: wrangler secret put TURNSTILE_SECRET_KEY
+    "TURNSTILE_SITE_KEY": "REPLACE_WITH_YOUR_TURNSTILE_SITE_KEY"
+  },
+  // Daily guest cleanup (src/worker/cron.ts).
+  "triggers": { "crons": ["17 4 * * *"] },
+  "observability": { "enabled": true },
+  "env": {
+    // `npm run dev:local`: runs without a Cloudflare login. No AI binding, scripted NPC lines,
+    // captcha disabled (empty Turnstile keys). Named envs do not inherit bindings, so they are repeated here.
+    "local": {
+      "durable_objects": {
+        "bindings": [
+          { "name": "ZONE", "class_name": "ZoneRoom" },
+          { "name": "HOME", "class_name": "HomeRoom" },
+          { "name": "AI_BUDGET", "class_name": "AiBudget" },
+          { "name": "SOCIAL", "class_name": "SocialRoom" },
+          { "name": "NPC_AGENT", "class_name": "NpcAgent" }
+        ]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "durable-mmo-auth",
+          "database_id": "REPLACE_WITH_YOUR_D1_ID",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "durable-mmo-files" }],
+      "vars": {
+        "NPC_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+        "NPC_AI_MODE": "off",
+        // Local test commands: at home "/day" ends the day (like sleeping), "/time 21" sets the home clock;
+        // in a shared zone "/hour N" runs NPC routines as if it were N o'clock UTC. Never set in production.
+        "DEV_TOOLS": "on",
+        "AI_DAILY_NEURONS": "9000",
+        "TURNSTILE_SITE_KEY": "",
+        "TURNSTILE_SECRET_KEY": "",
+        "DMMO_ENV": "local"
+      },
+      "triggers": { "crons": ["17 4 * * *"] }
+    }
+  }
+}

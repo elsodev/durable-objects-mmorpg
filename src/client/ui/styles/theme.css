@@ -1,0 +1,306 @@
+/* Mossbrook theme: palette, fonts and the shared panel/button/slot classes used by every UI module. */
+:root {
+  /* palette */
+  --dm-cream: #f6eed8;
+  --dm-cream-2: #ece0c0;
+  --dm-parchment: #e3d3a8;
+  --dm-moss: #5d8a3c;
+  --dm-moss-dark: #3f6528;
+  --dm-moss-light: #8cb85a;
+  --dm-forest: #1d2b1f;
+  --dm-wood: #8a5a34;
+  --dm-wood-dark: #5a3920;
+  --dm-wood-light: #b07a48;
+  --dm-berry: #c0395a;
+  --dm-berry-dark: #8e2440;
+  --dm-sky: #6fa8c8;
+  --dm-gold: #e8b33a;
+  --dm-ink: #3a2a1c;
+  --dm-ink-soft: #6b5640;
+
+  /* semantic */
+  --dm-bg: var(--dm-forest);
+  --dm-text: var(--dm-ink);
+  --dm-text-on-dark: var(--dm-cream);
+  --dm-text-dim: var(--dm-ink-soft);
+  --dm-panel: var(--dm-cream);
+  --dm-panel-bg: var(--dm-panel);
+  --dm-panel-2: var(--dm-parchment);
+  --dm-border: var(--dm-wood-dark);
+  --dm-panel-border: var(--dm-border);
+  --dm-panel-inner: var(--dm-wood-light);
+  --dm-accent: var(--dm-berry);
+  --dm-ok: var(--dm-moss);
+  --dm-error: var(--dm-berry);
+  --dm-loot: var(--dm-gold);
+  --dm-overlay: rgba(20, 28, 20, 0.55);
+  --dm-panel-light: #fbf3dc;
+  --dm-border-soft: #a8865a;
+  --dm-input-bg: #fffaf0;
+  --dm-error-bg: #f6d2c8;
+  --dm-line: rgba(90, 60, 30, 0.2);
+  --dm-coin: #b8860b;
+  /* translucent chat log over the game */
+  --dm-chat-bg: rgba(20, 16, 12, 0.75);
+  --dm-chat-bg-soft: rgba(20, 16, 12, 0.55);
+  --dm-chat-border: rgba(244, 234, 216, 0.25);
+  --dm-chat-npc: #e9dcb8;
+  --dm-chat-muted: #b9c9a5;
+  /* solid chat panel while hovered/focused */
+  --dm-chat-solid: #2a2119;
+
+  /* type */
+  --dm-font-pixel: "Pixelify Sans", "Press Start 2P", ui-monospace, monospace;
+  --dm-font-heading: var(--dm-font-pixel);
+  --dm-font-body: "Nunito", "Trebuchet MS", system-ui, sans-serif;
+  --dm-fs-sm: 13px;
+  --dm-fs: 15px;
+  --dm-fs-lg: 18px;
+
+  /* shape */
+  --dm-radius: 6px;
+  --dm-border-w: 3px;
+  --dm-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 8px 18px rgba(0, 0, 0, 0.25);
+  --dm-slot-size: 48px;
+  --dm-slot: var(--dm-slot-size);
+  --dm-gap: 8px;
+  --dm-z-hud: 10;
+  --dm-z-panel: 20;
+  --dm-z-dialog: 40;
+  --dm-z-notice: 60;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--dm-bg);
+  color: var(--dm-text-on-dark);
+  font-family: var(--dm-font-body);
+  font-size: var(--dm-fs);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+#game {
+  position: absolute;
+  inset: 0;
+}
+#game canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ---------- shared components ---------- */
+.dm-panel {
+  pointer-events: auto;
+  box-sizing: border-box;
+  background: var(--dm-panel-bg);
+  color: var(--dm-text);
+  border: var(--dm-border-w) solid var(--dm-panel-border);
+  border-radius: var(--dm-radius);
+  box-shadow: inset 0 0 0 2px var(--dm-panel-inner), var(--dm-shadow);
+  padding: 12px 14px;
+}
+.dm-panel h1,
+.dm-panel h2,
+.dm-panel h3,
+.dm-title {
+  font-family: var(--dm-font-pixel);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--dm-wood-dark);
+  margin: 0 0 10px;
+  font-size: var(--dm-fs-lg);
+}
+.dm-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dm-gap);
+  margin-bottom: 10px;
+}
+.dm-panel-header > .dm-title {
+  margin: 0;
+}
+
+.dm-btn {
+  pointer-events: auto;
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs-sm);
+  line-height: 1;
+  color: var(--dm-ink);
+  background: var(--dm-cream-2);
+  border: 2px solid var(--dm-wood-dark);
+  border-radius: 4px;
+  padding: 7px 12px;
+  box-shadow: 0 2px 0 var(--dm-wood-dark);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 60ms ease, filter 80ms ease;
+}
+.dm-btn:hover {
+  filter: brightness(1.06);
+}
+.dm-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--dm-wood-dark);
+}
+.dm-btn:focus-visible,
+.dm-slot:focus-visible,
+.dm-close:focus-visible {
+  outline: 2px solid var(--dm-sky);
+  outline-offset: 2px;
+}
+.dm-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+.dm-btn-primary {
+  color: var(--dm-cream);
+  background: var(--dm-moss);
+  border-color: var(--dm-moss-dark);
+  box-shadow: 0 2px 0 var(--dm-moss-dark);
+}
+.dm-btn-accent {
+  color: var(--dm-cream);
+  background: var(--dm-berry);
+  border-color: var(--dm-berry-dark);
+  box-shadow: 0 2px 0 var(--dm-berry-dark);
+}
+.dm-btn-small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.dm-close {
+  pointer-events: auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-family: var(--dm-font-pixel);
+  font-size: 15px;
+  line-height: 22px;
+  text-align: center;
+  color: var(--dm-cream);
+  background: var(--dm-berry);
+  border: 2px solid var(--dm-berry-dark);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.dm-close:hover {
+  filter: brightness(1.1);
+}
+
+.dm-slot {
+  pointer-events: auto;
+  position: relative;
+  box-sizing: border-box;
+  width: var(--dm-slot);
+  height: var(--dm-slot);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dm-parchment);
+  border: 2px solid var(--dm-wood);
+  border-radius: 4px;
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+.dm-slot:hover {
+  border-color: var(--dm-wood-dark);
+  filter: brightness(1.05);
+}
+.dm-slot.selected,
+.dm-slot[aria-pressed="true"] {
+  border-color: var(--dm-gold);
+  box-shadow: 0 0 0 2px var(--dm-gold), inset 0 2px 0 rgba(0, 0, 0, 0.12);
+}
+.dm-slot img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.dm-slot .dm-qty {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-family: var(--dm-font-pixel);
+  font-size: 12px;
+  color: var(--dm-cream);
+  text-shadow: 1px 1px 0 var(--dm-ink), -1px 1px 0 var(--dm-ink), 1px -1px 0 var(--dm-ink), -1px -1px 0 var(--dm-ink);
+  pointer-events: none;
+}
+.dm-slot .dm-key {
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  font-family: var(--dm-font-pixel);
+  font-size: 10px;
+  color: var(--dm-ink-soft);
+  pointer-events: none;
+}
+
+/* Modal dialog: centered panel over a dim backdrop. Use .dm-dialog on the backdrop and .dm-panel inside. */
+.dm-dialog {
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  z-index: var(--dm-z-dialog);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dm-overlay);
+  padding: 16px;
+  box-sizing: border-box;
+}
+.dm-dialog[hidden],
+.dm-panel[hidden] {
+  display: none;
+}
+.dm-dialog > .dm-panel {
+  max-width: min(520px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.dm-input {
+  box-sizing: border-box;
+  font-family: var(--dm-font-body);
+  font-size: var(--dm-fs);
+  color: var(--dm-ink);
+  background: #fffaf0;
+  border: 2px solid var(--dm-wood);
+  border-radius: 4px;
+  padding: 7px 9px;
+}
+.dm-input:focus {
+  outline: none;
+  border-color: var(--dm-moss);
+}
+
+.dm-muted {
+  color: var(--dm-ink-soft);
+  font-size: var(--dm-fs-sm);
+}
+.dm-coin {
+  color: var(--dm-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-btn {
+    transition: none;
+  }
+}

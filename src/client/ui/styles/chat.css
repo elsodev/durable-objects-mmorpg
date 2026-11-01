@@ -1,0 +1,242 @@
+/* Chat box: compact and translucent while idle; taller, solid and scrollable on hover/focus. */
+.chat {
+  --chat-line: 18px;
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  width: min(380px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  font-family: var(--dm-font-body, system-ui, sans-serif);
+  font-size: 13px;
+  line-height: var(--chat-line);
+  z-index: 10;
+}
+
+/* ---------- tabs ---------- */
+.chat-tabs {
+  display: flex;
+  gap: 3px;
+  pointer-events: auto;
+  opacity: 0.75;
+  transition: opacity 0.3s ease;
+}
+.chat-tab {
+  position: relative;
+  padding: 2px 9px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dm-text-on-dark, #f4ead8);
+  background: var(--dm-chat-bg-soft, rgba(20, 16, 12, 0.55));
+  border: 1px solid var(--dm-chat-border, rgba(244, 234, 216, 0.25));
+  border-radius: var(--dm-radius, 6px) var(--dm-radius, 6px) 0 0;
+  cursor: pointer;
+}
+.chat-tab.active {
+  background: var(--dm-chat-solid, #2a2119);
+  border-color: var(--dm-gold, #e9b44c);
+  color: #fff;
+}
+.chat-dot {
+  display: none;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dm-berry, #c0395a);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.chat-tab.unread .chat-dot {
+  display: block;
+}
+
+/* ---------- log ---------- */
+.chat-log {
+  height: calc(var(--chat-line) * 6 + 12px);
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  padding: 6px 8px;
+  border-radius: 0 var(--dm-radius, 6px) var(--dm-radius, 6px) var(--dm-radius, 6px);
+  background: var(--dm-chat-bg-soft, rgba(20, 16, 12, 0.55));
+  color: var(--dm-text-on-dark, #f4ead8);
+  pointer-events: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(244, 234, 216, 0.4) transparent;
+  transition: height 0.18s ease, opacity 0.6s ease, background-color 0.18s ease;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+
+/* Hover, focus or an open picker: ~16 lines, solid panel, scrollable history. */
+.chat:hover .chat-log,
+.chat:focus-within .chat-log,
+.chat.chat-open .chat-log {
+  height: calc(var(--chat-line) * 16 + 12px);
+  overflow-y: auto;
+  background: var(--dm-chat-solid, #2a2119);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  opacity: 1;
+}
+.chat:hover .chat-tabs,
+.chat:focus-within .chat-tabs,
+.chat.chat-open .chat-tabs {
+  opacity: 1;
+}
+
+/* Tab filters (system lines show everywhere). */
+.chat-log[data-tab="world"] .chat-line:not([data-ch="world"]):not([data-ch="system"]),
+.chat-log[data-tab="zone"] .chat-line:not([data-ch="zone"]):not([data-ch="system"]),
+.chat-log[data-tab="pm"] .chat-line:not([data-ch="pm"]):not([data-ch="system"]) {
+  display: none;
+}
+
+.chat-line {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.chat-name {
+  font-weight: 700;
+  cursor: pointer;
+}
+.chat-name:hover {
+  text-decoration: underline;
+}
+.chat-tag {
+  font-weight: 700;
+  font-size: 11px;
+}
+.chat-ch-world .chat-tag {
+  color: #8fd0ff;
+}
+.chat-ch-pm .chat-tag,
+.chat-ch-pm .chat-text {
+  color: #f6a8e0;
+}
+.chat-npc .chat-text {
+  font-style: italic;
+  color: var(--dm-chat-npc, #e9dcb8);
+}
+.chat-system {
+  color: var(--dm-chat-muted, #b9c9a5);
+  font-style: italic;
+}
+
+/* ---------- input row ---------- */
+.chat-row {
+  display: flex;
+  gap: 4px;
+  pointer-events: auto;
+}
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font: inherit;
+  color: var(--dm-text-on-dark, #f4ead8);
+  background: var(--dm-chat-bg, rgba(20, 16, 12, 0.75));
+  border: 1px solid var(--dm-chat-border, rgba(244, 234, 216, 0.25));
+  border-radius: var(--dm-radius, 6px);
+  outline: none;
+  opacity: 0.6;
+  transition: opacity 0.6s ease, border-color 0.15s ease;
+}
+.chat:hover .chat-input,
+.chat-input:focus {
+  opacity: 1;
+  background: var(--dm-chat-solid, #2a2119);
+}
+.chat-input:focus {
+  border-color: var(--dm-gold, #e9b44c);
+}
+.chat-emote-btn {
+  flex: none;
+  width: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--dm-chat-bg, rgba(20, 16, 12, 0.75));
+  border: 1px solid var(--dm-chat-border, rgba(244, 234, 216, 0.25));
+  border-radius: var(--dm-radius, 6px);
+  cursor: pointer;
+  opacity: 0.75;
+}
+.chat-emote-btn:hover,
+.chat-emote-btn[aria-expanded="true"] {
+  opacity: 1;
+  border-color: var(--dm-gold, #e9b44c);
+}
+.chat-emote-btn img,
+.chat-emote img {
+  image-rendering: pixelated;
+  display: block;
+}
+.chat-emote-btn img {
+  width: 24px;
+  height: 24px;
+}
+
+/* ---------- emote picker ---------- */
+.chat-emotes {
+  position: absolute;
+  right: 0;
+  bottom: 40px;
+  display: grid;
+  grid-template-columns: repeat(6, 40px);
+  gap: 4px;
+  padding: 6px;
+  pointer-events: auto;
+  background: var(--dm-chat-solid, #2a2119);
+  border: 1px solid var(--dm-gold, #e9b44c);
+  border-radius: var(--dm-radius, 6px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+.chat-emote {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--dm-cream, #f6eed8);
+  border: 1px solid var(--dm-wood-dark, #5a3920);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.chat-emote:hover,
+.chat-emote:focus-visible {
+  background: #fff;
+  outline: 2px solid var(--dm-gold, #e9b44c);
+}
+.chat-emote img {
+  width: 36px;
+  height: 36px;
+}
+
+/* Idle: fade back so the game shows through. */
+.chat-idle .chat-log {
+  opacity: 0.35;
+}
+.chat-idle .chat-input:not(:focus),
+.chat-idle .chat-tabs,
+.chat-idle .chat-emote-btn {
+  opacity: 0.3;
+}
+
+@media (max-width: 480px) {
+  .chat {
+    --chat-line: 16px;
+  }
+  .chat:hover .chat-log,
+  .chat:focus-within .chat-log,
+  .chat.chat-open .chat-log {
+    height: calc(var(--chat-line) * 10 + 12px);
+  }
+  .chat-emotes {
+    grid-template-columns: repeat(4, 40px);
+  }
+}

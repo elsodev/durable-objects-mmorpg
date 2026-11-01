@@ -1,0 +1,988 @@
+{
+ "frameW": 64,
+ "frameH": 64,
+ "sheetW": 576,
+ "sheetH": 512,
+ "layout": {
+  "walk": {
+   "up": {
+    "row": 0,
+    "frames": 9
+   },
+   "left": {
+    "row": 1,
+    "frames": 9
+   },
+   "down": {
+    "row": 2,
+    "frames": 9
+   },
+   "right": {
+    "row": 3,
+    "frames": 9
+   }
+  },
+  "slash": {
+   "up": {
+    "row": 4,
+    "frames": 6
+   },
+   "left": {
+    "row": 5,
+    "frames": 6
+   },
+   "down": {
+    "row": 6,
+    "frames": 6
+   },
+   "right": {
+    "row": 7,
+    "frames": 6
+   }
+  },
+  "idle": {
+   "up": {
+    "row": 0,
+    "col": 0,
+    "frames": 1
+   },
+   "left": {
+    "row": 1,
+    "col": 0,
+    "frames": 1
+   },
+   "down": {
+    "row": 2,
+    "col": 0,
+    "frames": 1
+   },
+   "right": {
+    "row": 3,
+    "col": 0,
+    "frames": 1
+   }
+  }
+ },
+ "anchor": [
+  32,
+  60
+ ],
+ "order": [
+  "body",
+  "eyes",
+  "shoes",
+  "bottom",
+  "top",
+  "hair"
+ ],
+ "bodies": [
+  {
+   "id": "male",
+   "label": "Male"
+  },
+  {
+   "id": "male_slim",
+   "label": "Male (slim)"
+  },
+  {
+   "id": "female",
+   "label": "Female"
+  }
+ ],
+ "defaults": {
+  "body": "male",
+  "skin": "light",
+  "eyes": "brown",
+  "hairStyle": "short",
+  "hairColor": "chestnut",
+  "top": "teal_longsleeve",
+  "bottom": "brown_pants",
+  "shoes": "brown_shoes"
+ },
+ "options": {
+  "body": [
+   {
+    "id": "male",
+    "label": "Male"
+   },
+   {
+    "id": "male_slim",
+    "label": "Male (slim)"
+   },
+   {
+    "id": "female",
+    "label": "Female"
+   }
+  ],
+  "skin": [
+   {
+    "id": "light",
+    "label": "Fair",
+    "swatch": "#f9d5ba"
+   },
+   {
+    "id": "amber",
+    "label": "Warm",
+    "swatch": "#fdd082"
+   },
+   {
+    "id": "olive",
+    "label": "Olive",
+    "swatch": "#d38b59"
+   },
+   {
+    "id": "brown",
+    "label": "Brown",
+    "swatch": "#9c663e"
+   },
+   {
+    "id": "black",
+    "label": "Deep",
+    "swatch": "#603429"
+   }
+  ],
+  "eyes": [
+   {
+    "id": "brown",
+    "label": "Brown",
+    "swatch": "#544c2e"
+   },
+   {
+    "id": "blue",
+    "label": "Blue",
+    "swatch": "#5686ae"
+   },
+   {
+    "id": "green",
+    "label": "Green",
+    "swatch": "#53b351"
+   },
+   {
+    "id": "hazel",
+    "label": "Hazel",
+    "swatch": "#ad844f"
+   },
+   {
+    "id": "gray",
+    "label": "Gray",
+    "swatch": "#8b8979"
+   }
+  ],
+  "hairStyle": [
+   {
+    "id": "short",
+    "label": "Short"
+   },
+   {
+    "id": "curly",
+    "label": "Curly"
+   },
+   {
+    "id": "bob",
+    "label": "Bob"
+   },
+   {
+    "id": "bun",
+    "label": "Bun"
+   },
+   {
+    "id": "long",
+    "label": "Long"
+   }
+  ],
+  "hairColor": [
+   {
+    "id": "chestnut",
+    "label": "Chestnut",
+    "swatch": "#81310a"
+   },
+   {
+    "id": "black",
+    "label": "Black",
+    "swatch": "#071f2a"
+   },
+   {
+    "id": "blonde",
+    "label": "Blonde",
+    "swatch": "#e09e2b"
+   },
+   {
+    "id": "ginger",
+    "label": "Ginger",
+    "swatch": "#cc6901"
+   },
+   {
+    "id": "dark_brown",
+    "label": "Dark Brown",
+    "swatch": "#421603"
+   }
+  ],
+  "top": [
+   {
+    "id": "teal_longsleeve",
+    "label": "Teal Longsleeve",
+    "swatch": "#0098b2"
+   },
+   {
+    "id": "red_tshirt",
+    "label": "Red T-Shirt",
+    "swatch": "#ab1e1e"
+   },
+   {
+    "id": "green_polo",
+    "label": "Green Polo",
+    "swatch": "#134507"
+   },
+   {
+    "id": "sky_vneck",
+    "label": "Sky V-Neck",
+    "swatch": "#c6eefd"
+   },
+   {
+    "id": "mustard_cardigan",
+    "label": "Mustard Cardigan",
+    "swatch": "#f3c03f"
+   }
+  ],
+  "bottom": [
+   {
+    "id": "brown_pants",
+    "label": "Brown Pants",
+    "swatch": "#744b30"
+   },
+   {
+    "id": "navy_cuffed",
+    "label": "Navy Cuffed Pants",
+    "swatch": "#3c49ad"
+   },
+   {
+    "id": "tan_shorts",
+    "label": "Tan Shorts",
+    "swatch": "#b7996a"
+   },
+   {
+    "id": "forest_skirt",
+    "label": "Forest Skirt",
+    "swatch": "#134507"
+   },
+   {
+    "id": "slate_pants",
+    "label": "Slate Trousers",
+    "swatch": "#b3afa1"
+   }
+  ],
+  "shoes": [
+   {
+    "id": "brown_shoes",
+    "label": "Brown Shoes",
+    "swatch": "#744b30"
+   },
+   {
+    "id": "black_shoes",
+    "label": "Black Shoes",
+    "swatch": "#4a5057"
+   },
+   {
+    "id": "tan_ghillies",
+    "label": "Tan Ghillies",
+    "swatch": "#b7996a"
+   }
+  ]
+ },
+ "files": {
+  "male": {
+   "skin": {
+    "light": "male/body/skin_light.png",
+    "amber": "male/body/skin_amber.png",
+    "olive": "male/body/skin_olive.png",
+    "brown": "male/body/skin_brown.png",
+    "black": "male/body/skin_black.png"
+   },
+   "eyes": {
+    "brown": "shared/eyes/eyes_brown.png",
+    "blue": "shared/eyes/eyes_blue.png",
+    "green": "shared/eyes/eyes_green.png",
+    "hazel": "shared/eyes/eyes_hazel.png",
+    "gray": "shared/eyes/eyes_gray.png"
+   },
+   "hair": {
+    "short:chestnut": "shared/hair/short_chestnut.png",
+    "short:black": "shared/hair/short_black.png",
+    "short:blonde": "shared/hair/short_blonde.png",
+    "short:ginger": "shared/hair/short_ginger.png",
+    "short:dark_brown": "shared/hair/short_dark_brown.png",
+    "curly:chestnut": "shared/hair/curly_chestnut.png",
+    "curly:black": "shared/hair/curly_black.png",
+    "curly:blonde": "shared/hair/curly_blonde.png",
+    "curly:ginger": "shared/hair/curly_ginger.png",
+    "curly:dark_brown": "shared/hair/curly_dark_brown.png",
+    "bob:chestnut": "shared/hair/bob_chestnut.png",
+    "bob:black": "shared/hair/bob_black.png",
+    "bob:blonde": "shared/hair/bob_blonde.png",
+    "bob:ginger": "shared/hair/bob_ginger.png",
+    "bob:dark_brown": "shared/hair/bob_dark_brown.png",
+    "bun:chestnut": "shared/hair/bun_chestnut.png",
+    "bun:black": "shared/hair/bun_black.png",
+    "bun:blonde": "shared/hair/bun_blonde.png",
+    "bun:ginger": "shared/hair/bun_ginger.png",
+    "bun:dark_brown": "shared/hair/bun_dark_brown.png",
+    "long:chestnut": "shared/hair/long_chestnut.png",
+    "long:black": "shared/hair/long_black.png",
+    "long:blonde": "shared/hair/long_blonde.png",
+    "long:ginger": "shared/hair/long_ginger.png",
+    "long:dark_brown": "shared/hair/long_dark_brown.png"
+   },
+   "top": {
+    "teal_longsleeve": "male/top/teal_longsleeve.png",
+    "red_tshirt": "male/top/red_tshirt.png",
+    "green_polo": "male/top/green_polo.png",
+    "sky_vneck": "male/top/sky_vneck.png",
+    "mustard_cardigan": "male/top/mustard_cardigan.png"
+   },
+   "bottom": {
+    "brown_pants": "male/bottom/brown_pants.png",
+    "navy_cuffed": "male/bottom/navy_cuffed.png",
+    "tan_shorts": "male/bottom/tan_shorts.png",
+    "forest_skirt": "male/bottom/forest_skirt.png",
+    "slate_pants": "male/bottom/slate_pants.png"
+   },
+   "shoes": {
+    "brown_shoes": "male/shoes/brown_shoes.png",
+    "black_shoes": "male/shoes/black_shoes.png",
+    "tan_ghillies": "male/shoes/tan_ghillies.png"
+   }
+  },
+  "male_slim": {
+   "skin": {
+    "light": "male_slim/body/skin_light.png",
+    "amber": "male_slim/body/skin_amber.png",
+    "olive": "male_slim/body/skin_olive.png",
+    "brown": "male_slim/body/skin_brown.png",
+    "black": "male_slim/body/skin_black.png"
+   },
+   "eyes": {
+    "brown": "shared/eyes/eyes_brown.png",
+    "blue": "shared/eyes/eyes_blue.png",
+    "green": "shared/eyes/eyes_green.png",
+    "hazel": "shared/eyes/eyes_hazel.png",
+    "gray": "shared/eyes/eyes_gray.png"
+   },
+   "hair": {
+    "short:chestnut": "shared/hair/short_chestnut.png",
+    "short:black": "shared/hair/short_black.png",
+    "short:blonde": "shared/hair/short_blonde.png",
+    "short:ginger": "shared/hair/short_ginger.png",
+    "short:dark_brown": "shared/hair/short_dark_brown.png",
+    "curly:chestnut": "shared/hair/curly_chestnut.png",
+    "curly:black": "shared/hair/curly_black.png",
+    "curly:blonde": "shared/hair/curly_blonde.png",
+    "curly:ginger": "shared/hair/curly_ginger.png",
+    "curly:dark_brown": "shared/hair/curly_dark_brown.png",
+    "bob:chestnut": "shared/hair/bob_chestnut.png",
+    "bob:black": "shared/hair/bob_black.png",
+    "bob:blonde": "shared/hair/bob_blonde.png",
+    "bob:ginger": "shared/hair/bob_ginger.png",
+    "bob:dark_brown": "shared/hair/bob_dark_brown.png",
+    "bun:chestnut": "shared/hair/bun_chestnut.png",
+    "bun:black": "shared/hair/bun_black.png",
+    "bun:blonde": "shared/hair/bun_blonde.png",
+    "bun:ginger": "shared/hair/bun_ginger.png",
+    "bun:dark_brown": "shared/hair/bun_dark_brown.png",
+    "long:chestnut": "shared/hair/long_chestnut.png",
+    "long:black": "shared/hair/long_black.png",
+    "long:blonde": "shared/hair/long_blonde.png",
+    "long:ginger": "shared/hair/long_ginger.png",
+    "long:dark_brown": "shared/hair/long_dark_brown.png"
+   },
+   "top": {
+    "teal_longsleeve": "male_slim/top/teal_longsleeve.png",
+    "red_tshirt": "male_slim/top/red_tshirt.png",
+    "green_polo": "male_slim/top/green_polo.png",
+    "sky_vneck": "male_slim/top/sky_vneck.png",
+    "mustard_cardigan": "male_slim/top/mustard_cardigan.png"
+   },
+   "bottom": {
+    "brown_pants": "shared/bottom/brown_pants.png",
+    "navy_cuffed": "shared/bottom/navy_cuffed.png",
+    "tan_shorts": "shared/bottom/tan_shorts.png",
+    "forest_skirt": "shared/bottom/forest_skirt.png",
+    "slate_pants": "shared/bottom/slate_pants.png"
+   },
+   "shoes": {
+    "brown_shoes": "shared/shoes/brown_shoes.png",
+    "black_shoes": "shared/shoes/black_shoes.png",
+    "tan_ghillies": "shared/shoes/tan_ghillies.png"
+   }
+  },
+  "female": {
+   "skin": {
+    "light": "female/body/skin_light.png",
+    "amber": "female/body/skin_amber.png",
+    "olive": "female/body/skin_olive.png",
+    "brown": "female/body/skin_brown.png",
+    "black": "female/body/skin_black.png"
+   },
+   "eyes": {
+    "brown": "shared/eyes/eyes_brown.png",
+    "blue": "shared/eyes/eyes_blue.png",
+    "green": "shared/eyes/eyes_green.png",
+    "hazel": "shared/eyes/eyes_hazel.png",
+    "gray": "shared/eyes/eyes_gray.png"
+   },
+   "hair": {
+    "short:chestnut": "shared/hair/short_chestnut.png",
+    "short:black": "shared/hair/short_black.png",
+    "short:blonde": "shared/hair/short_blonde.png",
+    "short:ginger": "shared/hair/short_ginger.png",
+    "short:dark_brown": "shared/hair/short_dark_brown.png",
+    "curly:chestnut": "shared/hair/curly_chestnut.png",
+    "curly:black": "shared/hair/curly_black.png",
+    "curly:blonde": "shared/hair/curly_blonde.png",
+    "curly:ginger": "shared/hair/curly_ginger.png",
+    "curly:dark_brown": "shared/hair/curly_dark_brown.png",
+    "bob:chestnut": "shared/hair/bob_chestnut.png",
+    "bob:black": "shared/hair/bob_black.png",
+    "bob:blonde": "shared/hair/bob_blonde.png",
+    "bob:ginger": "shared/hair/bob_ginger.png",
+    "bob:dark_brown": "shared/hair/bob_dark_brown.png",
+    "bun:chestnut": "shared/hair/bun_chestnut.png",
+    "bun:black": "shared/hair/bun_black.png",
+    "bun:blonde": "shared/hair/bun_blonde.png",
+    "bun:ginger": "shared/hair/bun_ginger.png",
+    "bun:dark_brown": "shared/hair/bun_dark_brown.png",
+    "long:chestnut": "shared/hair/long_chestnut.png",
+    "long:black": "shared/hair/long_black.png",
+    "long:blonde": "shared/hair/long_blonde.png",
+    "long:ginger": "shared/hair/long_ginger.png",
+    "long:dark_brown": "shared/hair/long_dark_brown.png"
+   },
+   "top": {
+    "teal_longsleeve": "female/top/teal_longsleeve.png",
+    "red_tshirt": "female/top/red_tshirt.png",
+    "green_polo": "female/top/green_polo.png",
+    "sky_vneck": "female/top/sky_vneck.png",
+    "mustard_cardigan": "female/top/mustard_cardigan.png"
+   },
+   "bottom": {
+    "brown_pants": "shared/bottom/brown_pants.png",
+    "navy_cuffed": "shared/bottom/navy_cuffed.png",
+    "tan_shorts": "shared/bottom/tan_shorts.png",
+    "forest_skirt": "shared/bottom/forest_skirt.png",
+    "slate_pants": "shared/bottom/slate_pants.png"
+   },
+   "shoes": {
+    "brown_shoes": "shared/shoes/brown_shoes.png",
+    "black_shoes": "shared/shoes/black_shoes.png",
+    "tan_ghillies": "shared/shoes/tan_ghillies.png"
+   }
+  }
+ },
+ "actionFiles": {
+  "male": {
+   "skin": {
+    "light": "male/body/skin_light.act.png",
+    "amber": "male/body/skin_amber.act.png",
+    "olive": "male/body/skin_olive.act.png",
+    "brown": "male/body/skin_brown.act.png",
+    "black": "male/body/skin_black.act.png"
+   },
+   "eyes": {
+    "brown": "shared/eyes/eyes_brown.act.png",
+    "blue": "shared/eyes/eyes_blue.act.png",
+    "green": "shared/eyes/eyes_green.act.png",
+    "hazel": "shared/eyes/eyes_hazel.act.png",
+    "gray": "shared/eyes/eyes_gray.act.png"
+   },
+   "hair": {
+    "short:chestnut": "shared/hair/short_chestnut.act.png",
+    "short:black": "shared/hair/short_black.act.png",
+    "short:blonde": "shared/hair/short_blonde.act.png",
+    "short:ginger": "shared/hair/short_ginger.act.png",
+    "short:dark_brown": "shared/hair/short_dark_brown.act.png",
+    "curly:chestnut": "shared/hair/curly_chestnut.act.png",
+    "curly:black": "shared/hair/curly_black.act.png",
+    "curly:blonde": "shared/hair/curly_blonde.act.png",
+    "curly:ginger": "shared/hair/curly_ginger.act.png",
+    "curly:dark_brown": "shared/hair/curly_dark_brown.act.png",
+    "bob:chestnut": "shared/hair/bob_chestnut.act.png",
+    "bob:black": "shared/hair/bob_black.act.png",
+    "bob:blonde": "shared/hair/bob_blonde.act.png",
+    "bob:ginger": "shared/hair/bob_ginger.act.png",
+    "bob:dark_brown": "shared/hair/bob_dark_brown.act.png",
+    "bun:chestnut": "shared/hair/bun_chestnut.act.png",
+    "bun:black": "shared/hair/bun_black.act.png",
+    "bun:blonde": "shared/hair/bun_blonde.act.png",
+    "bun:ginger": "shared/hair/bun_ginger.act.png",
+    "bun:dark_brown": "shared/hair/bun_dark_brown.act.png",
+    "long:chestnut": "shared/hair/long_chestnut.act.png",
+    "long:black": "shared/hair/long_black.act.png",
+    "long:blonde": "shared/hair/long_blonde.act.png",
+    "long:ginger": "shared/hair/long_ginger.act.png",
+    "long:dark_brown": "shared/hair/long_dark_brown.act.png"
+   },
+   "top": {
+    "teal_longsleeve": "male/top/teal_longsleeve.act.png",
+    "red_tshirt": "male/top/red_tshirt.act.png",
+    "green_polo": "male/top/green_polo.act.png",
+    "sky_vneck": "male/top/sky_vneck.act.png",
+    "mustard_cardigan": "male/top/mustard_cardigan.act.png"
+   },
+   "bottom": {
+    "brown_pants": "male/bottom/brown_pants.act.png",
+    "navy_cuffed": "male/bottom/navy_cuffed.act.png",
+    "tan_shorts": "male/bottom/tan_shorts.act.png",
+    "forest_skirt": "male/bottom/forest_skirt.act.png",
+    "slate_pants": "male/bottom/slate_pants.act.png"
+   },
+   "shoes": {
+    "brown_shoes": "male/shoes/brown_shoes.act.png",
+    "black_shoes": "male/shoes/black_shoes.act.png",
+    "tan_ghillies": "male/shoes/tan_ghillies.act.png"
+   }
+  },
+  "male_slim": {
+   "skin": {
+    "light": "male_slim/body/skin_light.act.png",
+    "amber": "male_slim/body/skin_amber.act.png",
+    "olive": "male_slim/body/skin_olive.act.png",
+    "brown": "male_slim/body/skin_brown.act.png",
+    "black": "male_slim/body/skin_black.act.png"
+   },
+   "eyes": {
+    "brown": "shared/eyes/eyes_brown.act.png",
+    "blue": "shared/eyes/eyes_blue.act.png",
+    "green": "shared/eyes/eyes_green.act.png",
+    "hazel": "shared/eyes/eyes_hazel.act.png",
+    "gray": "shared/eyes/eyes_gray.act.png"
+   },
+   "hair": {
+    "short:chestnut": "shared/hair/short_chestnut.act.png",
+    "short:black": "shared/hair/short_black.act.png",
+    "short:blonde": "shared/hair/short_blonde.act.png",
+    "short:ginger": "shared/hair/short_ginger.act.png",
+    "short:dark_brown": "shared/hair/short_dark_brown.act.png",
+    "curly:chestnut": "shared/hair/curly_chestnut.act.png",
+    "curly:black": "shared/hair/curly_black.act.png",
+    "curly:blonde": "shared/hair/curly_blonde.act.png",
+    "curly:ginger": "shared/hair/curly_ginger.act.png",
+    "curly:dark_brown": "shared/hair/curly_dark_brown.act.png",
+    "bob:chestnut": "shared/hair/bob_chestnut.act.png",
+    "bob:black": "shared/hair/bob_black.act.png",
+    "bob:blonde": "shared/hair/bob_blonde.act.png",
+    "bob:ginger": "shared/hair/bob_ginger.act.png",
+    "bob:dark_brown": "shared/hair/bob_dark_brown.act.png",
+    "bun:chestnut": "shared/hair/bun_chestnut.act.png",
+    "bun:black": "shared/hair/bun_black.act.png",
+    "bun:blonde": "shared/hair/bun_blonde.act.png",
+    "bun:ginger": "shared/hair/bun_ginger.act.png",
+    "bun:dark_brown": "shared/hair/bun_dark_brown.act.png",
+    "long:chestnut": "shared/hair/long_chestnut.act.png",
+    "long:black": "shared/hair/long_black.act.png",
+    "long:blonde": "shared/hair/long_blonde.act.png",
+    "long:ginger": "shared/hair/long_ginger.act.png",
+    "long:dark_brown": "shared/hair/long_dark_brown.act.png"
+   },
+   "top": {
+    "teal_longsleeve": "male_slim/top/teal_longsleeve.act.png",
+    "red_tshirt": "male_slim/top/red_tshirt.act.png",
+    "green_polo": "male_slim/top/green_polo.act.png",
+    "sky_vneck": "male_slim/top/sky_vneck.act.png",
+    "mustard_cardigan": "male_slim/top/mustard_cardigan.act.png"
+   },
+   "bottom": {
+    "brown_pants": "shared/bottom/brown_pants.act.png",
+    "navy_cuffed": "shared/bottom/navy_cuffed.act.png",
+    "tan_shorts": "shared/bottom/tan_shorts.act.png",
+    "forest_skirt": "shared/bottom/forest_skirt.act.png",
+    "slate_pants": "shared/bottom/slate_pants.act.png"
+   },
+   "shoes": {
+    "brown_shoes": "male_slim/shoes/brown_shoes.act.png",
+    "black_shoes": "male_slim/shoes/black_shoes.act.png",
+    "tan_ghillies": "male_slim/shoes/tan_ghillies.act.png"
+   }
+  },
+  "female": {
+   "skin": {
+    "light": "female/body/skin_light.act.png",
+    "amber": "female/body/skin_amber.act.png",
+    "olive": "female/body/skin_olive.act.png",
+    "brown": "female/body/skin_brown.act.png",
+    "black": "female/body/skin_black.act.png"
+   },
+   "eyes": {
+    "brown": "female/eyes/eyes_brown.act.png",
+    "blue": "female/eyes/eyes_blue.act.png",
+    "green": "female/eyes/eyes_green.act.png",
+    "hazel": "female/eyes/eyes_hazel.act.png",
+    "gray": "female/eyes/eyes_gray.act.png"
+   },
+   "hair": {
+    "short:chestnut": "shared/hair/short_chestnut.act.png",
+    "short:black": "shared/hair/short_black.act.png",
+    "short:blonde": "shared/hair/short_blonde.act.png",
+    "short:ginger": "shared/hair/short_ginger.act.png",
+    "short:dark_brown": "shared/hair/short_dark_brown.act.png",
+    "curly:chestnut": "shared/hair/curly_chestnut.act.png",
+    "curly:black": "shared/hair/curly_black.act.png",
+    "curly:blonde": "shared/hair/curly_blonde.act.png",
+    "curly:ginger": "shared/hair/curly_ginger.act.png",
+    "curly:dark_brown": "shared/hair/curly_dark_brown.act.png",
+    "bob:chestnut": "shared/hair/bob_chestnut.act.png",
+    "bob:black": "shared/hair/bob_black.act.png",
+    "bob:blonde": "shared/hair/bob_blonde.act.png",
+    "bob:ginger": "shared/hair/bob_ginger.act.png",
+    "bob:dark_brown": "shared/hair/bob_dark_brown.act.png",
+    "bun:chestnut": "shared/hair/bun_chestnut.act.png",
+    "bun:black": "shared/hair/bun_black.act.png",
+    "bun:blonde": "shared/hair/bun_blonde.act.png",
+    "bun:ginger": "shared/hair/bun_ginger.act.png",
+    "bun:dark_brown": "shared/hair/bun_dark_brown.act.png",
+    "long:chestnut": "shared/hair/long_chestnut.act.png",
+    "long:black": "shared/hair/long_black.act.png",
+    "long:blonde": "shared/hair/long_blonde.act.png",
+    "long:ginger": "shared/hair/long_ginger.act.png",
+    "long:dark_brown": "shared/hair/long_dark_brown.act.png"
+   },
+   "top": {
+    "teal_longsleeve": "female/top/teal_longsleeve.act.png",
+    "red_tshirt": "female/top/red_tshirt.act.png",
+    "green_polo": "female/top/green_polo.act.png",
+    "sky_vneck": "female/top/sky_vneck.act.png",
+    "mustard_cardigan": "female/top/mustard_cardigan.act.png"
+   },
+   "bottom": {
+    "brown_pants": "shared/bottom/brown_pants.act.png",
+    "navy_cuffed": "shared/bottom/navy_cuffed.act.png",
+    "tan_shorts": "shared/bottom/tan_shorts.act.png",
+    "forest_skirt": "shared/bottom/forest_skirt.act.png",
+    "slate_pants": "shared/bottom/slate_pants.act.png"
+   },
+   "shoes": {
+    "brown_shoes": "female/shoes/brown_shoes.act.png",
+    "black_shoes": "female/shoes/black_shoes.act.png",
+    "tan_ghillies": "female/shoes/tan_ghillies.act.png"
+   }
+  }
+ },
+ "anims": {
+  "walk": {
+   "sheet": "base",
+   "row": 0,
+   "rows": 4,
+   "frames": 9
+  },
+  "slash": {
+   "sheet": "base",
+   "row": 4,
+   "rows": 4,
+   "frames": 6
+  },
+  "thrust": {
+   "sheet": "act",
+   "row": 0,
+   "rows": 4,
+   "frames": 8
+  },
+  "sit": {
+   "sheet": "act",
+   "row": 4,
+   "rows": 4,
+   "frames": 3
+  },
+  "hurt": {
+   "sheet": "act",
+   "row": 8,
+   "rows": 1,
+   "frames": 6
+  }
+ },
+ "actions": {
+  "hoe": {
+   "frameSize": 64,
+   "frames": [
+    "thrust,0",
+    "thrust,1",
+    "thrust,2",
+    "thrust,3",
+    "thrust,4",
+    "thrust,5",
+    "thrust,6",
+    "thrust,7"
+   ],
+   "ms": 70,
+   "source": "generator thrust (Hoe tool)"
+  },
+  "watering": {
+   "frameSize": 64,
+   "frames": [
+    "thrust,0",
+    "thrust,1",
+    "thrust,4",
+    "thrust,4",
+    "thrust,4",
+    "thrust,4",
+    "thrust,5"
+   ],
+   "ms": 120,
+   "source": "generator 'watering' animation (thrust frames 0,1,4,4,4,4,5)"
+  },
+  "smash": {
+   "frameSize": 128,
+   "frames": [
+    "slash,5",
+    "slash,5",
+    "slash,4",
+    "slash,4",
+    "slash,3",
+    "slash,1",
+    "slash,0",
+    "slash,0",
+    "slash,0",
+    "slash,0"
+   ],
+   "ms": 60,
+   "source": "generator 'tool_axe' custom animation"
+  },
+  "sword": {
+   "frameSize": 128,
+   "frames": [
+    "slash,0",
+    "slash,1",
+    "slash,2",
+    "slash,3",
+    "slash,4",
+    "slash,5"
+   ],
+   "ms": 60,
+   "source": "generator 'slash_128' custom animation"
+  },
+  "fishing": {
+   "frameSize": 128,
+   "frames": [
+    "thrust,0",
+    "thrust,1",
+    "thrust,2",
+    "thrust,3",
+    "thrust,4",
+    "thrust,5",
+    "thrust,4",
+    "thrust,4",
+    "thrust,4",
+    "thrust,5",
+    "thrust,4",
+    "thrust,2",
+    "thrust,3"
+   ],
+   "ms": 120,
+   "source": "generator 'tool_rod' custom animation"
+  },
+  "sit": {
+   "frameSize": 64,
+   "frames": [
+    "sit,2"
+   ],
+   "ms": 200,
+   "hold": true,
+   "source": "generator sit animation, frame 2 (seated on a chair/bench)"
+  },
+  "sit_ground": {
+   "frameSize": 64,
+   "frames": [
+    "sit,0"
+   ],
+   "ms": 200,
+   "hold": true,
+   "source": "generator sit animation, frame 0 (seated on the ground)"
+  },
+  "harvest": {
+   "frameSize": 64,
+   "frames": [
+    "walk,0",
+    "sit,1",
+    "sit,1",
+    "sit,1",
+    "walk,0"
+   ],
+   "ms": 110,
+   "source": "walk stand + generator sit kneel frame"
+  },
+  "hurt": {
+   "frameSize": 64,
+   "frames": [
+    "hurt,0",
+    "hurt,1",
+    "hurt,2",
+    "hurt,1",
+    "hurt,0"
+   ],
+   "ms": 80,
+   "source": "generator hurt frames 0-2 (flinch)"
+  },
+  "faint": {
+   "frameSize": 64,
+   "frames": [
+    "hurt,0",
+    "hurt,1",
+    "hurt,2",
+    "hurt,3",
+    "hurt,4",
+    "hurt,5"
+   ],
+   "ms": 130,
+   "hold": true,
+   "source": "generator hurt animation"
+  }
+ },
+ "tools": {
+  "hoe": {
+   "action": "hoe",
+   "bg": "tools/hoe.bg.png",
+   "fg": "tools/hoe.fg.png"
+  },
+  "watering_can": {
+   "action": "watering",
+   "bg": "tools/watering_can.bg.png",
+   "fg": "tools/watering_can.fg.png"
+  },
+  "pickaxe": {
+   "action": "smash",
+   "bg": "tools/pickaxe.bg.png",
+   "fg": "tools/pickaxe.fg.png"
+  },
+  "pickaxe_iron": {
+   "action": "smash",
+   "bg": "tools/pickaxe_iron.bg.png",
+   "fg": "tools/pickaxe_iron.fg.png"
+  },
+  "axe": {
+   "action": "smash",
+   "bg": "tools/axe.bg.png",
+   "fg": "tools/axe.fg.png"
+  },
+  "sword_wood": {
+   "action": "sword",
+   "bg": "tools/sword_wood.bg.png",
+   "fg": "tools/sword_wood.fg.png"
+  },
+  "sword_copper": {
+   "action": "sword",
+   "bg": "tools/sword_copper.bg.png",
+   "fg": "tools/sword_copper.fg.png"
+  },
+  "fishing_rod": {
+   "action": "fishing",
+   "bg": "tools/fishing_rod.bg.png",
+   "fg": "tools/fishing_rod.fg.png"
+  }
+ },
+ "characters": {
+  "player_1": {
+   "base": "../characters/player_1.png",
+   "act": "../characters/player_1.act.png",
+   "missing": [],
+   "derivedSit": []
+  },
+  "player_2": {
+   "base": "../characters/player_2.png",
+   "act": "../characters/player_2.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/shirts/torso_clothes_tunic"
+   ]
+  },
+  "player_3": {
+   "base": "../characters/player_3.png",
+   "act": "../characters/player_3.act.png",
+   "missing": [],
+   "derivedSit": []
+  },
+  "player_4": {
+   "base": "../characters/player_4.png",
+   "act": "../characters/player_4.act.png",
+   "missing": [],
+   "derivedSit": []
+  },
+  "villager_old": {
+   "base": "../characters/villager_old.png",
+   "act": "../characters/villager_old.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/jacket/torso_jacket_frock"
+   ]
+  },
+  "villager_woman": {
+   "base": "../characters/villager_woman.png",
+   "act": "../characters/villager_woman.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/aprons/torso_aprons_apron_full",
+    "torso/shirts/torso_clothes_blouse"
+   ]
+  },
+  "smith": {
+   "base": "../characters/smith.png",
+   "act": "../characters/smith.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/aprons/torso_aprons_apron"
+   ]
+  },
+  "villager_woman2": {
+   "base": "../characters/villager_woman2.png",
+   "act": "../characters/villager_woman2.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/shirts/torso_clothes_corset"
+   ]
+  },
+  "kid": {
+   "base": "../characters/kid.png",
+   "act": "../characters/kid.act.png",
+   "missing": [],
+   "derivedSit": []
+  },
+  "fisher": {
+   "base": "../characters/fisher.png",
+   "act": "../characters/fisher.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/vest/torso_clothes_vest"
+   ]
+  },
+  "monk": {
+   "base": "../characters/monk.png",
+   "act": "../characters/monk.act.png",
+   "missing": [
+    "fishing",
+    "hoe",
+    "watering"
+   ],
+   "derivedSit": [
+    "torso/shirts/torso_clothes_robe"
+   ]
+  },
+  "villager_woman3": {
+   "base": "../characters/villager_woman3.png",
+   "act": "../characters/villager_woman3.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/dresses/dress_sash"
+   ]
+  },
+  "miner": {
+   "base": "../characters/miner.png",
+   "act": "../characters/miner.act.png",
+   "missing": [],
+   "derivedSit": []
+  },
+  "explorer": {
+   "base": "../characters/explorer.png",
+   "act": "../characters/explorer.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/shirts/torso_clothes_corset"
+   ]
+  }
+ }
+}

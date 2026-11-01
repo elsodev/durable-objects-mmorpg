@@ -1,0 +1,286 @@
+/* HUD shell layout. The root ignores the pointer so clicks reach the game; panels opt back in. */
+.dm-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--dm-z-hud);
+  user-select: none;
+}
+.dm-hud [hidden] {
+  display: none !important;
+}
+
+/* Sub-module layers fill the screen; their own panels (.dm-panel / .dm-dialog) take the pointer. */
+.hud-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hud-layer-inventory,
+.hud-layer-goals {
+  z-index: var(--dm-z-panel);
+}
+.hud-layer-shop,
+.hud-layer-account {
+  z-index: var(--dm-z-dialog);
+}
+.hud-layer-notices {
+  z-index: var(--dm-z-notice);
+}
+.hud-layer-chat {
+  inset: auto auto 12px 12px;
+  width: min(360px, calc(100vw - 24px));
+}
+
+/* ---------- status (top-left) ---------- */
+.hud-status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  min-width: 150px;
+}
+.hud-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hud-status-small {
+  font-size: var(--dm-fs-sm);
+  color: var(--dm-text-dim);
+}
+.hud-zone {
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs-lg);
+  color: var(--dm-wood-dark);
+}
+.hud-conn {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+.conn-online {
+  background: var(--dm-moss-light);
+}
+.conn-connecting {
+  background: var(--dm-gold);
+  animation: hud-pulse 1s ease-in-out infinite;
+}
+.conn-offline {
+  background: var(--dm-berry);
+  animation: hud-pulse 0.6s ease-in-out infinite;
+}
+@keyframes hud-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.hud-coin-icon {
+  /* A gold coin with a rim and a stamped centre (the pixel font's 5 reads as "$" next to a plain dot). */
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #f7d774 0 3px, #e0b43c 3px 4px, #f2c94c 4px);
+  border: 1px solid #8a6216;
+  box-shadow: inset -1px -2px 0 rgba(138, 98, 22, 0.55), inset 1px 1px 0 rgba(255, 246, 200, 0.7);
+}
+.hud-coins {
+  font-family: var(--dm-font-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--dm-wood-dark);
+  min-width: 3ch;
+}
+.hud-ping {
+  margin-left: auto;
+  font-family: var(--dm-font-pixel);
+}
+.hud-ping[data-level="good"] {
+  color: var(--dm-moss);
+}
+.hud-ping[data-level="ok"] {
+  color: #b8861f;
+}
+.hud-ping[data-level="bad"] {
+  color: var(--dm-berry);
+}
+
+.hud-hp {
+  display: flex;
+  gap: 2px;
+  min-height: 16px;
+}
+.hud-heart {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  background-size: 16px 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath fill='%235a3920' d='M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1z'/%3E%3Cpath fill='%23c9b98f' d='M1 2h2v1h2V2h2v2H6v1H5v1H3V5H2V4H1z'/%3E%3C/svg%3E");
+}
+.hud-heart.full {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath fill='%235a3920' d='M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1z'/%3E%3Cpath fill='%23c0395a' d='M1 2h2v1h2V2h2v2H6v1H5v1H3V5H2V4H1z'/%3E%3Cpath fill='%23f08aa0' d='M2 2h1v1H2z'/%3E%3C/svg%3E");
+}
+.hud-heart.half {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath fill='%235a3920' d='M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1z'/%3E%3Cpath fill='%23c9b98f' d='M1 2h2v1h2V2h2v2H6v1H5v1H3V5H2V4H1z'/%3E%3Cpath fill='%23c0395a' d='M1 2h2v1h1v3H3V5H2V4H1z'/%3E%3C/svg%3E");
+}
+.hud-hp.low .hud-heart.full,
+.hud-hp.low .hud-heart.half {
+  animation: hud-pulse 0.8s ease-in-out infinite;
+}
+
+/* ---------- menu (top-right) ---------- */
+.hud-menu {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(100vw - 200px);
+}
+.hud-guest {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 6px;
+  margin-right: 2px;
+  border-right: 2px solid var(--dm-panel-2);
+}
+.hud-guest-label {
+  font-family: var(--dm-font-pixel);
+  font-size: 12px;
+  color: var(--dm-cream);
+  background: var(--dm-wood);
+  border-radius: 3px;
+  padding: 3px 6px;
+}
+
+/* ---------- build banner ---------- */
+.hud-build-banner {
+  /* Above the hotbar: at the top it covered the menu buttons on 1280 px wide screens. */
+  position: absolute;
+  bottom: calc(var(--dm-slot-size, 48px) + 36px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-color: var(--dm-moss-dark);
+  box-shadow: inset 0 0 0 2px var(--dm-moss-light), var(--dm-shadow);
+}
+.hud-build-banner .dm-title {
+  margin: 0;
+  color: var(--dm-moss-dark);
+}
+
+/* ---------- hotbar ---------- */
+.hud-hotbar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: var(--dm-wood);
+  border-color: var(--dm-wood-dark);
+  box-shadow: inset 0 0 0 2px var(--dm-wood-light), var(--dm-shadow);
+}
+.hud-slot.empty {
+  opacity: 0.85;
+}
+.hud-slot-letter {
+  font-family: var(--dm-font-pixel);
+  font-size: 18px;
+  color: var(--dm-wood-dark);
+}
+
+.dm-hud.offline .hud-hotbar {
+  filter: grayscale(0.6);
+}
+
+/* Narrow screens: chat sits above the hotbar, the menu wraps under the status. */
+@media (max-width: 760px) {
+  .dm-hud {
+    --dm-slot-size: 40px;
+  }
+  .hud-layer-chat {
+    bottom: calc(var(--dm-slot-size) + 36px);
+  }
+  .hud-menu {
+    top: auto;
+    bottom: calc(var(--dm-slot-size) + 36px);
+    max-width: calc(100vw - 24px);
+  }
+  .hud-build-banner {
+    top: auto;
+    bottom: calc(var(--dm-slot-size) + 36px);
+    flex-wrap: wrap;
+    max-width: calc(100vw - 24px);
+  }
+  .hud-build-banner .dm-muted {
+    display: none;
+  }
+}
+
+/* ---------- global stats (top-right, under the menu) ---------- */
+.hud-stats {
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 10px;
+  font-family: var(--dm-font-pixel);
+  font-size: 12px;
+  line-height: 16px;
+  min-width: 150px;
+}
+.hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.hud-stat-value {
+  font-weight: 700;
+  min-width: 2ch;
+  text-align: right;
+}
+.hud-stat-label {
+  color: var(--dm-text-dim);
+}
+.hud-stat-icon {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  image-rendering: pixelated;
+  background-size: 100% 100%;
+}
+/* Tiny pixel icons: green dot (online), house-ish pin (zone), wheat (today). */
+.hud-stat-online .hud-stat-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 5' shape-rendering='crispEdges'%3E%3Cpath fill='%233f6528' d='M1 0h3v1h1v3H4v1H1V4H0V1h1z'/%3E%3Cpath fill='%238cb85a' d='M1 1h3v3H1z'/%3E%3C/svg%3E");
+}
+.hud-stat-zone .hud-stat-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 5' shape-rendering='crispEdges'%3E%3Cpath fill='%235a3920' d='M2 0h1v1h1v1h1v3H0V2h1V1h1z'/%3E%3Cpath fill='%23e8b33a' d='M1 2h3v2H1z'/%3E%3C/svg%3E");
+}
+.hud-stat-today .hud-stat-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 5' shape-rendering='crispEdges'%3E%3Cpath fill='%23e8b33a' d='M2 0h1v3H2zM0 1h1v1h1v1H1V2H0zM4 1h1v1H4v1H3V2h1z'/%3E%3Cpath fill='%235d8a3c' d='M2 3h1v2H2z'/%3E%3C/svg%3E");
+}
+@media (max-width: 760px) {
+  .hud-stats {
+    top: 64px;
+    right: 12px;
+  }
+}

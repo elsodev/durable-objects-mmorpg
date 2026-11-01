@@ -1,0 +1,11 @@
+{
+  // Combined check kept so `npx tsc --noEmit` still covers everything. It merges DOM and Workers
+  // globals, so `npm run typecheck` additionally checks tsconfig.worker.json (no DOM) and
+  // tsconfig.client.json (no Workers types) to catch code that only typechecks in the merged set.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src", "test"]
+}

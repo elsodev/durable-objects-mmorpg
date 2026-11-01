@@ -1,0 +1,74 @@
+/* Credits dialog. Sits above the start screen (z-index 50) as well as the HUD. */
+.credits-dialog {
+  z-index: 70;
+}
+.credits-dialog > .credits-panel {
+  width: min(640px, 100%);
+  max-width: min(640px, 100%);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.credits-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  font-size: var(--dm-fs-sm, 13px);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.credits-body:focus-visible {
+  outline: 2px solid var(--dm-accent, #c0395a);
+  outline-offset: 2px;
+}
+.credits-body p {
+  margin: 0 0 8px;
+}
+.dm-panel .credits-h {
+  font-size: var(--dm-fs, 15px);
+  margin: 14px 0 6px;
+}
+.credits-group {
+  margin: 10px 0 4px;
+  font-size: var(--dm-fs-sm, 13px);
+  color: var(--dm-wood-dark, #5a3920);
+  text-transform: capitalize;
+}
+.credits-notices {
+  border-left: 3px solid var(--dm-moss, #5d8a3c);
+  padding: 4px 0 4px 10px;
+  background: rgba(93, 138, 60, 0.08);
+}
+.credits-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.credits-entry {
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(90, 57, 32, 0.2);
+}
+.credits-name {
+  font-weight: 600;
+}
+.credits-license {
+  display: block;
+  color: var(--dm-ink-soft, #6b5338);
+  font-size: 12px;
+}
+.credits-sa {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  background: var(--dm-gold, #c9962c);
+  color: #2a1d10;
+}
+.credits-link {
+  color: var(--dm-wood-dark, #5a3920);
+}
+.credits-open {
+  pointer-events: auto;
+}
