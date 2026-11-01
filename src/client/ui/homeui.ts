@@ -240,10 +240,10 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       for (const l of items) {
         const li = el("li", "home-line");
         const { name, quality } = itemLabel(l.item);
-        add(li, icon(l.item), el("span", "home-line-name", quality ? `${name} (${quality})` : name), el("span", "home-line-qty", `×${l.qty}`), el("span", "home-line-coins", `${l.coins}g`));
+        add(li, icon(l.item), el("span", "home-line-name", quality ? `${name} (${quality})` : name), el("span", "home-line-qty", `×${l.qty}`), el("span", "home-line-coins", `${l.coins} c`));
         binList.appendChild(li);
       }
-      binTotal.textContent = `Tonight: ${total}g`;
+      binTotal.textContent = `Tonight: ${total} c`;
       takeBack.disabled = items.length === 0;
       if (open) bin.hidden = false;
     },
@@ -313,7 +313,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
             const { name, quality } = itemLabel(l.item);
             const iconCell = el("td");
             iconCell.appendChild(icon(l.item));
-            add(tr, iconCell, el("td", "", name), el("td", `q-${quality.toLowerCase() || "normal"}`, quality || "Normal"), el("td", "", `${l.qty}`), el("td", "", `${l.coins}g`));
+            add(tr, iconCell, el("td", "", name), el("td", `q-${quality.toLowerCase() || "normal"}`, quality || "Normal"), el("td", "", `${l.qty}`), el("td", "", `${l.coins} c`));
             table.appendChild(tr);
           }
           if (summary.lines.length === 0) add(p, el("p", "home-muted", "Nothing was shipped today."));
@@ -332,7 +332,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
           if (summary.reverted > 0) notes.appendChild(el("li", "", `${summary.reverted} patch${summary.reverted === 1 ? "" : "es"} of empty soil went back to grass.`));
           if (summary.passedOut) notes.appendChild(el("li", "is-bad", `You stayed up past 2:00 and lost ${summary.penalty}g.`));
           if (notes.childElementCount > 0) add(p, notes);
-          const total = el("div", "home-summary-total", `Total earned: ${summary.total - summary.penalty}g`);
+          const total = el("div", "home-summary-total", `Total earned: ${summary.total - summary.penalty} c`);
           add(p, total, btn("Good morning!", "dm-btn dm-btn-primary", "summary-ok", () => closeDialog?.()));
         },
         () => undefined,

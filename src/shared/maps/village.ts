@@ -31,15 +31,18 @@ export function buildVillage(): MapData {
   b.reserve(PLAZA);
   b.path([{ x: 0, y: 23 }, { x: 63, y: 23 }], 2);
   b.path([{ x: 31, y: 8 }, { x: 31, y: 47 }], 2);
-  b.path([{ x: 17, y: 20 }, { x: 17, y: 23 }], 2); // inn porch
+  b.path([{ x: 18, y: 20 }, { x: 18, y: 23 }], 2); // inn porch
   b.path([{ x: 33, y: 33 }, { x: 46, y: 33 }], 2); // blacksmith yard
+  b.path([{ x: 45, y: 31 }, { x: 45, y: 33 }], 2); // smithy door
   b.path([{ x: 40, y: 21 }, { x: 52, y: 21 }], 2); // market lane in front of the stalls
   b.path([{ x: 8, y: 9 }, { x: 8, y: 23 }], 2); // north-west cottages
   b.path([{ x: 15, y: 9 }, { x: 15, y: 12 }, { x: 8, y: 12 }], 2);
-  b.path([{ x: 44, y: 9 }, { x: 44, y: 15 }, { x: 53, y: 15 }], 2); // north-east cottages
+  b.path([{ x: 45, y: 9 }, { x: 45, y: 15 }, { x: 53, y: 15 }], 2); // north-east cottages
   b.path([{ x: 53, y: 9 }, { x: 53, y: 23 }], 2);
-  b.path([{ x: 10, y: 25 }, { x: 10, y: 37 }], 2); // south-west cottages
+  b.path([{ x: 10, y: 25 }, { x: 10, y: 38 }, { x: 17, y: 38 }], 2); // south-west cottages
+  b.path([{ x: 8, y: 33 }, { x: 10, y: 33 }], 2);
   b.path([{ x: 33, y: 42 }, { x: 50, y: 42 }], 2); // south-east cottages
+  b.path([{ x: 52, y: 40 }, { x: 52, y: 42 }, { x: 50, y: 42 }], 2);
 
   // ---- square furniture ----
   b.prop("fountain", 30, 19, { id: "fountain" });

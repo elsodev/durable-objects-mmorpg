@@ -217,8 +217,17 @@ export const ALONG_WALL_PROPS: ReadonlySet<string> = new Set([
   "produce_pile",
 ]);
 
+/**
+ * Wall-side things whose art rises well above their one tile (a potted tree, stacked barrels, a
+ * tall basket): on the first floor row they cover the bottom of a window behind them.
+ */
+export const TALL_ALONG_WALL_PROPS: ReadonlySet<string> = new Set(["potted_tree", "barrel_stack", "basket"]);
+/** Tallest of those: its crown also covers a picture, shelf or lamp hung on the wall behind it. */
+export const PICTURE_HIDING_PROPS: ReadonlySet<string> = new Set(["potted_tree"]);
+
 /** Tall furniture backed against the north wall: never stands in front of a window. */
 export const TALL_WALL_PROPS: ReadonlySet<string> = new Set([
+  ...TALL_ALONG_WALL_PROPS,
   "fireplace",
   "hearth",
   "stove",

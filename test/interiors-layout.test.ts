@@ -52,6 +52,15 @@ describe.each(INTERIOR_ZONES)("layout of %s", (zone) => {
     }
   });
 
+  it("hangs no picture, shelf or lamp behind a potted tree", () => {
+    for (const t of map.props.filter((p) => p.type === "potted_tree" && p.y === 3)) {
+      const behind = map.props.filter(
+        (q) => q.x <= t.x && t.x < q.x + q.w && q.y <= 2 && (/_(art|shelf)$/.test(q.type) || WALL_DECOR_PROPS.has(q.type)),
+      );
+      expect(behind.map((q) => q.id), `${zone} ${t.id}`).toEqual([]);
+    }
+  });
+
   it("uses no rainbow rug", () => {
     expect(map.props.some((p) => p.type === "rug_rainbow")).toBe(false);
   });

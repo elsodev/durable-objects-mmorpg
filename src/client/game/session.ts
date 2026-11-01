@@ -1339,7 +1339,21 @@ export async function startSession(
   const refreshPreload = every(400, preloadSelectedTool);
   const refreshStats = every(STATS_MS, requestStats);
 
+  // Pixi applies a resize on its next frame (and the mount can change size without a window
+  // resize), so the camera follows the canvas size read each frame, not window "resize" events.
+  let viewW = -1;
+  let viewH = -1;
+  function syncViewport(): void {
+    const w = game.width();
+    const h = game.height();
+    if (w === viewW && h === viewH) return;
+    viewW = w;
+    viewH = h;
+    camera.resize(w, h);
+  }
+
   function frame(dt: number): void {
+    syncViewport();
     refreshPing(dt);
     refreshStats(dt);
     if (!world || pendingZone) return;
@@ -1383,8 +1397,6 @@ export async function startSession(
     if (msg) send(msg);
   });
 
-  const onResize = () => camera.resize(game.width(), game.height());
-  window.addEventListener("resize", onResize);
   const onEatKey = (e: KeyboardEvent) => {
     if (e.code !== "KeyQ" || typing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     const t = e.target as HTMLElement | null;
@@ -1421,7 +1433,6 @@ export async function startSession(
       tutorial.destroy();
       stopLoop();
       stopDir();
-      window.removeEventListener("resize", onResize);
       window.removeEventListener("keydown", onEatKey);
       homeUi.destroy();
       visitsUi.destroy();

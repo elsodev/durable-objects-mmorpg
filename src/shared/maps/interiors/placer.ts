@@ -6,7 +6,7 @@
 import type { MapData, NpcSpawn } from "../../types";
 import { Rng } from "../rng";
 import type { PropType } from "../props";
-import { INTERIOR_PROP_FOOTPRINTS, NORTH_WALL_PROPS } from "./props";
+import { INTERIOR_PROP_FOOTPRINTS, NORTH_WALL_PROPS, PICTURE_HIDING_PROPS, TALL_WALL_PROPS } from "./props";
 import { Room, type RoomSpec } from "./room";
 import { layoutProblems } from "./rules";
 
@@ -190,7 +190,9 @@ function attempt(spec: RoomSpec, plan: FurnishPlan, rng: Rng): MapData | null {
       for (let x = 0; x + f.w <= w; x++) {
         const touches = x === 0 || y === 0 || x + f.w === w || y + f.h === h;
         const byDoor = y + f.h === h && x <= door + 1 && x + f.w >= door;
-        if (touches && !byDoor && floor.free(x, y, f.w, f.h)) xs.push({ x, y });
+        // A potted tree on the first row stands only before plain wall or a window (which moves away).
+        const hides = y === 0 && PICTURE_HIDING_PROPS.has(t) && Array.from({ length: f.w }, (_, i) => spec.wallPattern?.[x + 1 + i] ?? "p").some((c) => !"pw".includes(c));
+        if (touches && !byDoor && !hides && floor.free(x, y, f.w, f.h)) xs.push({ x, y });
       }
     if (xs.length === 0) return null;
     const p = rng.pick(xs);
@@ -222,7 +224,8 @@ function attempt(spec: RoomSpec, plan: FurnishPlan, rng: Rng): MapData | null {
 
   // Wall hangings: over plain wall pieces with nothing tall standing in front.
   const hung: { type: PropType; x: number }[] = [];
-  const tallAt = (fx: number) => placed.some((p) => NORTH_WALL_PROPS.has(p.type) && p.fy === 0 && fx >= p.fx && fx < p.fx + fp(p.type).w);
+  const tallAt = (fx: number) =>
+    placed.some((p) => (NORTH_WALL_PROPS.has(p.type) || TALL_WALL_PROPS.has(p.type)) && p.fy === 0 && fx >= p.fx && fx < p.fx + fp(p.type).w);
   const plain = (mx: number) => mx >= 1 && mx <= w && "p".includes(spec.wallPattern?.[mx] ?? "p") && !tallAt(mx - 1) && !hung.some((d) => mx >= d.x && mx < d.x + fp(d.type).w);
   for (const t of plan.decor ?? []) {
     const dw = fp(t).w;

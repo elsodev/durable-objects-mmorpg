@@ -219,3 +219,11 @@
   background: rgba(245, 200, 76, 0.28);
 }
 .bond-mark-birthday.is-on { background: rgba(240, 120, 160, 0.4); }
+
+/* Below this width the centred shop and the talk card cover each other: while a shop is open the
+   card steps aside (its line is in the chat log too). */
+@media (max-width: 1240px) {
+  .dm-hud:has(#shop-dialog:not([hidden])) .bond-card {
+    display: none;
+  }
+}

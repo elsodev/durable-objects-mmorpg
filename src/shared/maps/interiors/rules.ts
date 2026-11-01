@@ -4,7 +4,17 @@
 import { buildCollision, canStand, isBlocked } from "../../engine";
 import type { Facing, MapData, MapProp, Seat } from "../../types";
 import { columnsBehindTallFurniture } from "./room";
-import { ALONG_WALL_PROPS, NORTH_WALL_PROPS, SEAT_FACING, SURFACE_PROPS, TABLE_PROPS, TABLETOP_PROPS, WALL_DECOR_PROPS, isBed } from "./props";
+import {
+  ALONG_WALL_PROPS,
+  NORTH_WALL_PROPS,
+  SEAT_FACING,
+  SURFACE_PROPS,
+  TABLE_PROPS,
+  TABLETOP_PROPS,
+  PICTURE_HIDING_PROPS,
+  WALL_DECOR_PROPS,
+  isBed,
+} from "./props";
 
 /** Share of the floor that must stay open (not under furniture; rugs count as open). */
 export const MIN_OPEN_FLOOR = 0.4;
@@ -147,6 +157,17 @@ export function layoutProblems(map: MapData): string[] {
   for (const x of columnsBehindTallFurniture(map)) {
     if (map.props.some((p) => p.x <= x && x < p.x + p.w && p.y <= 2 && (/^iwall_.*_window$/.test(p.type) || p.type === "window")))
       out.push(`window hidden behind furniture at column ${x}`);
+  }
+
+  // A potted tree by the north wall hides no picture, shelf or lamp either.
+  for (const p of map.props) {
+    if (!PICTURE_HIDING_PROPS.has(p.type) || p.y !== floor.y) continue;
+    for (let x = p.x; x < p.x + p.w; x++) {
+      const behind = map.props.find(
+        (q) => q.x <= x && x < q.x + q.w && q.y <= 2 && (/^iwall_.*_(art|shelf)$/.test(q.type) || WALL_DECOR_PROPS.has(q.type)),
+      );
+      if (behind) out.push(`${behind.id} hidden behind ${p.id}`);
+    }
   }
 
   if (exit) {

@@ -60,7 +60,7 @@ export const HOUSE_SPECS: Record<HouseOwner, HouseSpec> = {
       decor: ["painting_flowers", "wall_pans"],
     },
     wander: 2,
-    prefer: { x: 0.8, y: 0.45 },
+    prefer: { x: 0.8, y: 0.6 },
   },
   // The smith: a rack of tools, a strongbox, barrels and crates of stock. Small and plain.
   fenwick: {

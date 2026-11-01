@@ -4,7 +4,8 @@ import { buildCaves } from "../src/shared/maps/caves";
 import { buildHome } from "../src/shared/maps/home";
 import { NPC_SCHEDULE, placeZone } from "../src/shared/npcSchedule";
 import { isFarmable } from "../src/shared/engine";
-import { BLOCKING_GROUND, INTERIOR_ZONES, type MapData, type MapId, type ZoneId } from "../src/shared/types";
+import { BUILDING_DOORS } from "../src/shared/maps/interiors";
+import { BLOCKING_GROUND, Ground, INTERIOR_ZONES, type MapData, type MapId, type ZoneId } from "../src/shared/types";
 
 const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", ...INTERIOR_ZONES];
 const SIZES: Partial<Record<MapId, [number, number]>> = {
@@ -279,5 +280,30 @@ describe("map specifics", () => {
 
   it.runIf(process.env.PRINT_MAPS)("prints maps (debug)", () => {
     for (const z of ZONES) console.log(`\n== ${z} ==\n${mapToAscii(getMap(z))}`);
+  });
+});
+
+describe("village paths", () => {
+  it("lead from every building's door to the main road", () => {
+    const map = getMap("village");
+    const dirt = (x: number, y: number) => x >= 0 && y >= 0 && x < map.width && y < map.height && map.ground[y * map.width + x] === Ground.Dirt;
+    for (const d of BUILDING_DOORS) {
+      // The path passes under or beside the doorstep (or the tile below it) and reaches the square.
+      const start = [1, 2].flatMap((dy) => [0, 1, -1].map((dx) => ({ x: d.door.x + dx, y: d.door.y + dy }))).find((p) => dirt(p.x, p.y));
+      expect(start, `${d.name} doorstep`).toBeDefined();
+      const seen = new Set([`${start!.x},${start!.y}`]);
+      const queue = [start!];
+      for (let i = 0; i < queue.length; i++) {
+        const { x, y } = queue[i]!;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const k = `${x + dx},${y + dy}`;
+          if (dirt(x + dx, y + dy) && !seen.has(k)) {
+            seen.add(k);
+            queue.push({ x: x + dx, y: y + dy });
+          }
+        }
+      }
+      expect(seen.has("31,23"), `${d.name} path reaches the square`).toBe(true);
+    }
   });
 });

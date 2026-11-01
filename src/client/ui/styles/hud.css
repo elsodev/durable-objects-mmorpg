@@ -209,6 +209,14 @@
   filter: grayscale(0.6);
 }
 
+/* Mid-size screens: the centred hotbar reaches under the bottom-left chat, so the chat sits above
+   the hotbar's row instead. */
+@media (min-width: 761px) and (max-width: 1220px) {
+  .hud-layer-chat {
+    bottom: calc(var(--dm-slot-size) + 36px);
+  }
+}
+
 /* Narrow screens, bottom up: the hotbar, the menu as one row that scrolls sideways, then the
    chat. (A wrapped menu grew upwards over the chat, and both took the same spot.) */
 @media (max-width: 760px) {
