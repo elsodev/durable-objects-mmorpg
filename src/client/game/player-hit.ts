@@ -5,11 +5,11 @@ import { userIdOfEntity } from "../../shared/players";
 import type { PlayerHit } from "../ui/player-card-logic";
 
 /** The player behind entity `id` (yourself included, flagged), or null for NPCs, monsters and nothing. */
-export function playerHit(id: string | null, state: Pick<EntityState, "kind" | "name" | "admin"> | undefined, youId: string | null): PlayerHit | null {
+export function playerHit(id: string | null, state: Pick<EntityState, "kind" | "name" | "admin" | "level"> | undefined, youId: string | null): PlayerHit | null {
   if (!id || state?.kind !== "player") return null;
   const userId = userIdOfEntity(id);
   if (!userId) return null;
-  return { entityId: id, userId, name: state.name, self: id === youId, ...(state.admin ? { admin: true } : {}) };
+  return { entityId: id, userId, name: state.name, self: id === youId, ...(state.admin ? { admin: true } : {}), ...(typeof state.level === "number" ? { level: state.level } : {}) };
 }
 
 /** Tiles between two entities' feet. */

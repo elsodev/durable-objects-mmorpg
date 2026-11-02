@@ -1,6 +1,7 @@
 // Pure helpers for the right-click player card (no DOM), tested in test/fe-player-card.test.ts.
 import type { Friendship, PlayerCard } from "../../shared/players";
 import { zoneLabel } from "./friends-logic";
+import { cleanLevel } from "../../shared/leveling";
 
 /** A player under the pointer (GameApi.playerAt). */
 export interface PlayerHit {
@@ -10,6 +11,8 @@ export interface PlayerHit {
   self: boolean;
   /** Wears the admin halo (admins can't be kicked, so the card offers no Kick). */
   admin?: boolean;
+  /** Their level as the world shows it (the card's own number wins once it loads). */
+  level?: number;
 }
 
 /** The card closes once its player is further than this (tiles) from you, or gone. */
@@ -114,4 +117,11 @@ export function statRows(card: PlayerCard | null): [string, string][] {
     ["Ores mined", n(card.stats?.oresMined)],
     ["Friendship", FRIENDSHIP_LABELS[card.friendship]],
   ];
+}
+
+/** The level chip by the name: "Lv 7" from the card, else from the world, else none. */
+export function cardLevel(hit: Pick<PlayerHit, "level"> | null, card: Pick<PlayerCard, "level"> | null): string | null {
+  const raw = typeof card?.level === "number" ? card.level : hit?.level;
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return null;
+  return `Lv ${cleanLevel(raw, 0).level}`;
 }

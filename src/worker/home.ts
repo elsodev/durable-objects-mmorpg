@@ -153,6 +153,9 @@ import { endPose, POSE_ACT, POSE_MIN_INTERVAL_MS, poseRefusal } from "../shared/
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { binPayout, sanitizeBin, shipSlot, unshipLast, type BinEntry } from "./game/shipping";
 import { endHomeDay, type DayEndKind } from "./game/homeDay";
+import { worldDay } from "../shared/calendar";
+import { cleanEpoch, cleanLevel, cleanSales, mergeSales, saleXp, type SalesLedger } from "../shared/leveling";
+import { grantXp, jailProgress, progressOf, progressSave, withXpLine, xpMsg } from "./game/progress";
 import { sanitizeClock } from "./game/homeState";
 import { reportPresence, reportStat } from "./social/hooks";
 import { EMOTE_MIN_INTERVAL_MS } from "../shared/emotes";
@@ -232,6 +235,16 @@ export interface PlayerSave {
   jailedUntil?: number;
   /** Insults the sheriff has let go with a warning (0..3, shared/jail.ts); zones keep it. */
   sheriffStrikes?: number;
+  /** Level and XP into it (shared/leveling.ts). Absent: level 1, no XP. Zones add kill XP. */
+  level?: number;
+  xp?: number;
+  /**
+   * Jailings so far. jail() bumps it as it takes the XP penalty; a zone save still carrying the
+   * old epoch was snapshotted before that and its level/xp are ignored.
+   */
+  levelEpoch?: number;
+  /** Coins sold today (shop counters and the bin), for the daily selling XP cap. */
+  sales?: SalesLedger;
   /**
    * savePlayer: the exit just taken (recorded so the next join may use that spawn).
    * loadPlayer: the pending transfer, if any (consumed by the call).
@@ -688,6 +701,13 @@ export class HomeRoom extends DurableObject<Env> {
     // Zones adopt pets and buy the barn and hens; the home lays and collects the eggs.
     if (save.animals !== undefined) this.save.animals = sanitizeAnimals(save.animals);
     if (save.sheriffStrikes !== undefined) this.save.sheriffStrikes = cleanStrikes(save.sheriffStrikes);
+    if (save.level !== undefined && cleanEpoch(save.levelEpoch) === cleanEpoch(this.save.levelEpoch)) {
+      const lv = cleanLevel(save.level, save.xp);
+      this.save.level = lv.level;
+      this.save.xp = lv.xp;
+    }
+    const sales = mergeSales(cleanSales(this.save.sales), cleanSales(save.sales));
+    if (sales) this.save.sales = sales;
     if (isZoneId(save.zone) && Number.isFinite(save.x) && Number.isFinite(save.y)) {
       this.save.zone = save.zone;
       this.save.x = save.x;
@@ -965,6 +985,10 @@ export class HomeRoom extends DurableObject<Env> {
     if (!isJailed(end, now)) return { ok: false };
     this.save.jailedUntil = end;
     this.save.sheriffStrikes = 0;
+    // The XP penalty: progress toward the next level is lost, the level stays.
+    const progress = progressOf(this.save);
+    const penalty = jailProgress(progress);
+    Object.assign(this.save, progressSave(progress));
     const cell = getMap(JAIL_ZONE).spawns[CELL_SPAWN]!;
     this.save.zone = JAIL_ZONE;
     this.save.x = cell.x;
@@ -975,7 +999,8 @@ export class HomeRoom extends DurableObject<Env> {
     const why = String(text).slice(0, 160);
     const p = this.player;
     if (p && !p.leaving) {
-      send(p.ws, { t: "notice", text: why, kind: "error" });
+      send(p.ws, { t: "notice", text: withXpLine(why, penalty.text), kind: "error" });
+      send(p.ws, penalty.msg);
       this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: JAIL_ZONE, spawn: CELL_SPAWN }, now);
     }
     await this.leaveVisit(ownerId, why);
@@ -1035,7 +1060,7 @@ export class HomeRoom extends DurableObject<Env> {
    */
   async cardPeek(): Promise<CardPeek> {
     if (!this.save) return { homeDay: null, stats: null };
-    return { homeDay: this.clock.day, stats: cleanStats(this.save.stats) };
+    return { homeDay: this.clock.day, stats: cleanStats(this.save.stats), level: progressOf(this.save).level };
   }
 
   /**
@@ -1111,6 +1136,7 @@ export class HomeRoom extends DurableObject<Env> {
       ...(devToolsEnabled(this.env) ? { devTools: true } : {}),
     });
     this.sendMail(p);
+    send(server, xpMsg(progressOf(save)));
     // A day that ended while the owner was away is settled now that home holds the lease again.
     if (dayOver(this.clock, Date.now())) this.endDay("away", Date.now());
     else {
@@ -1338,6 +1364,7 @@ export class HomeRoom extends DurableObject<Env> {
         hp: save.hp,
         maxHp: save.maxHp,
         look: shownLook(save.look),
+        level: progressOf(save).level,
         ...(att.admin ? { admin: true } : {}),
       },
       motion: this.ownerMotion(),
@@ -2044,6 +2071,12 @@ export class HomeRoom extends DurableObject<Env> {
     this.bin = st.bin;
     save.inventory.coins = Math.max(0, save.inventory.coins + res.coinsDelta);
     save.stamina = res.stamina;
+    // The day's sales count toward the owner's level (diminishing: shared/leveling.ts).
+    const sale = saleXp(cleanSales(save.sales), worldDay(now), res.summary.total);
+    if (res.summary.total > 0) save.sales = sale.ledger;
+    const progress = progressOf(save);
+    const shipped = grantXp(progress, sale.xp, "ship");
+    if (shipped) Object.assign(save, progressSave(progress));
     // Rest is the only cure for being worn out.
     delete save.exhausted;
     this.dashCarry = 0;
@@ -2054,6 +2087,13 @@ export class HomeRoom extends DurableObject<Env> {
     // A new morning: the hens lay.
     if (this.settleAnimals(now)) this.sendEggs();
     if (p) this.sendMorning(p, res.summary);
+    if (p && shipped) {
+      send(p.ws, shipped.msg);
+      if (shipped.levelUp !== null) {
+        p.entity.level = shipped.levelUp;
+        this.toAll({ t: "levelUp", id: p.entity.id, level: shipped.levelUp });
+      }
+    }
     void this.scheduleRockAlarm(now);
   }
 

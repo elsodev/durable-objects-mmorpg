@@ -21,8 +21,31 @@ export const SPAWN_NEAR_MARGIN = 12;
 export const SPAWN_CHECK_MS = 2000;
 /** Tries per spawn when looking for a tile away from players. */
 export const SPAWN_TRIES = 12;
-/** Hard cap per zone, whatever the groups say. */
+/** Hard cap per zone, whatever the groups say (zones without a ZONE_MONSTER_CAPS row). */
 export const ZONE_MONSTER_CAP = 60;
+/**
+ * Tighter caps for the hunting grounds, so a crowd can't fill a whole map: the caves' three floors
+ * together never hold more than 28 (their groups' own maxima add up to 42), a deeper cave map 18
+ * (groups: 13..19), riverside 10 (groups: 12). Solo numbers (14 in the caves, 7..9 deeper, 6 by
+ * the river) sit well under these, so a lone hunter never notices them.
+ */
+export const ZONE_MONSTER_CAPS: Partial<Record<SharedZoneId, number>> = { caves: 28, riverside: 10 };
+/** Every deeper cave map (caves_2_* .. caves_4_*). */
+export const CAVE_DEPTH_MONSTER_CAP = 18;
+/**
+ * No monster appears within this many tiles of a map's spawn points or exits: arriving through a
+ * door or a ladder is safe, and the way out is never blocked by a fresh spawn. Kept small because
+ * the deeper floors guard their ladders on purpose: at 4 every group still has over a quarter of
+ * its area to spawn in (test/spawn-caps.test.ts checks every map).
+ */
+export const SPAWN_SAFE_RADIUS = 4;
+/**
+ * A free slot refills more slowly the fuller its group already is: the delay is multiplied by
+ * 1 + RESPAWN_CROWD_SLOWDOWN * alive / target. An emptied camp comes back at the plain pace, a
+ * camp one short of full takes up to 1.5x as long, so killing steadily keeps a few around
+ * without the area filling straight back up.
+ */
+export const RESPAWN_CROWD_SLOWDOWN = 0.5;
 /** A monster above its group's target that has been out of combat this long goes away. */
 export const DESPAWN_IDLE_MS = 30_000;
 

@@ -79,6 +79,9 @@ import { EMOTE_MIN_INTERVAL_MS } from "../shared/emotes";
 import { Motion } from "./game/motion";
 import { chargeDash, spendEnergy, type EnergyChange } from "./game/energy";
 import { CoalescingSaver, SaveDebouncer, type SaveOutcome } from "./game/saver";
+import { grantXp, jailProgress, progressOf, progressSave, withXpLine, xpMsg, type Progress } from "./game/progress";
+import { worldDay } from "../shared/calendar";
+import { cleanSales, monsterXp, saleXp, type SalesLedger, type XpReason } from "../shared/leveling";
 import { CLOSE_ABUSE, SocketLimiter } from "./game/rateLimit";
 import { arrivedFrom, resolveSpawn, routeExit, transferHonoured } from "./game/spawn";
 import { CLOSE_SESSION_ENDED, recheckDue, sessionStillValid } from "./game/session";
@@ -261,6 +264,10 @@ interface ZPlayer {
   jailedUntil?: number;
   /** Insults the sheriff has let go with a warning (saved with the player). */
   strikes: number;
+  /** Level and XP (saved with the player; kills add to it here). */
+  progress: Progress;
+  /** Coins sold today, for the daily selling XP cap (saved with the player). */
+  sales: SalesLedger | null;
 }
 
 interface World {
@@ -515,6 +522,7 @@ export class ZoneRoom extends DurableObject<Env> {
       serverTime: Date.now(),
     });
     this.sendStamina(p);
+    send(server, xpMsg(p.progress));
     this.deliverInvites(p);
     this.startTick();
     // Serving time somewhere else (a reload, an old tab, a jailing while on the way): to the cell.
@@ -557,6 +565,7 @@ export class ZoneRoom extends DurableObject<Env> {
         hp: clampHp(save.hp, maxHp),
         maxHp,
         look: shownLook(save.look),
+        level: progressOf(save).level,
         ...(att.admin ? { admin: true } : {}),
       },
       inv: sanitizeInventory(save.inventory),
@@ -587,6 +596,8 @@ export class ZoneRoom extends DurableObject<Env> {
       caveTrail: sanitizeCaveTrail(save.caveTrail),
       animals: sanitizeAnimals(save.animals),
       strikes: cleanStrikes(save.sheriffStrikes),
+      progress: progressOf(save),
+      sales: cleanSales(save.sales),
     };
     const until = cleanJailUntil(save.jailedUntil, Date.now());
     if (isJailed(until, Date.now())) {
@@ -1020,6 +1031,8 @@ export class ZoneRoom extends DurableObject<Env> {
       caveTrail: p.caveTrail,
       animals: p.animals,
       sheriffStrikes: p.strikes,
+      ...progressSave(p.progress),
+      ...(p.sales ? { sales: p.sales } : {}),
       ...(p.look ? { look: p.look } : {}),
       ...override,
     };
@@ -1293,6 +1306,11 @@ export class ZoneRoom extends DurableObject<Env> {
       p.inv.coins += Number(coinsCmd[1]);
       return this.inventoryChanged(p, `+${coinsCmd[1]} coins (dev)`);
     }
+    const xpCmd = /^\/xp\s+(\d{1,5})$/.exec(text);
+    if (xpCmd && devToolsEnabled(this.env)) {
+      this.giveXp(p, Number(xpCmd[1]), "kill");
+      return p.saveSoon.schedule();
+    }
     // The client sends /invite, /kick and /uninvite over HTTP; never broadcast one that slips through.
     if (parseHomeCommand(text)) return send(p.ws, { t: "notice", text: HOME_COMMAND_NOTICE, kind: "error" });
     const guard = this.chatGuards.get(p.userId, now);
@@ -1389,12 +1407,28 @@ export class ZoneRoom extends DurableObject<Env> {
     void this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: JAIL_ZONE, spawn: CELL_SPAWN });
   }
 
-  /** Locks `p` up until `until` (already saved in their HomeRoom by the caller). */
+  /**
+   * Locks `p` up until `until` (the caller saves the sentence in their HomeRoom, which takes the
+   * same XP penalty there and moves the save's level epoch on with this one).
+   */
   private lockUp(p: ZPlayer, until: number, text: string): void {
     p.jailedUntil = until;
     p.entity.jailed = true;
     p.strikes = 0;
-    this.toCell(p, text);
+    const penalty = jailProgress(p.progress);
+    send(p.ws, penalty.msg);
+    p.saveSoon.schedule();
+    this.toCell(p, withXpLine(text, penalty.text));
+  }
+
+  /** XP for `p` (synchronous; saved with the next save). A level-up plays for everyone here. */
+  private giveXp(p: ZPlayer, amount: number, reason: XpReason, at?: { x: number; y: number }): void {
+    const g = grantXp(p.progress, amount, reason, at);
+    if (!g) return;
+    send(p.ws, g.msg);
+    if (g.levelUp === null) return;
+    p.entity.level = g.levelUp;
+    this.broadcast({ t: "levelUp", id: p.entity.id, level: g.levelUp });
   }
 
   /** Lets `p` go: out of the cell (in the police station), with a notice. */
@@ -1677,6 +1711,7 @@ export class ZoneRoom extends DurableObject<Env> {
         const winner = this.playerByEntity(id);
         if (!winner) continue;
         bumpStat(winner.stats, "monstersDefeated");
+        this.giveXp(winner, monsterXp(h.m.type, h.m.level), "kill", at);
         winner.saveSoon.schedule();
         const items = mergeLoot(rollMonsterDrops(h.m.type, Math.random, dropZoneOf(world.zone), this.rates), rollKillDrop(world.map.drops, Math.random, this.rates));
         if (items.length === 0) continue;
@@ -1838,9 +1873,21 @@ export class ZoneRoom extends DurableObject<Env> {
     if (msg.npc === TOWNHALL_SHOP) return this.onTownhallTrade(p, msg);
     const s = this.shopFor(p, msg.npc);
     if ("error" in s) return this.reject(p, msg, s.error!);
+    const before = p.inv.coins;
     const r = sellTo(p.inv, s.shop, msg.slot, msg.qty);
     if (!r.ok) return this.reject(p, msg, r.reason);
     this.inventoryChanged(p, r.text);
+    this.awardSale(p, p.inv.coins - before);
+  }
+
+  /** Selling XP for `coins` just earned at a counter (diminishing, capped per world day). */
+  private awardSale(p: ZPlayer, coins: number): void {
+    if (coins <= 0) return;
+    const now = Date.now();
+    const r = saleXp(p.sales, worldDay(now), coins);
+    p.sales = r.ledger;
+    this.giveXp(p, r.xp, "sell");
+    p.saveSoon.schedule();
   }
 
   /** Takes one item now (sync) and lets the NPC react; the item is a gift, nothing comes back. */
@@ -2241,9 +2288,11 @@ export class ZoneRoom extends DurableObject<Env> {
   private onTownhallTrade(p: ZPlayer, msg: Extract<ClientMsg, { t: "buy" | "sell" }>): void {
     const desk = this.world?.zone === "int_townhall" ? this.world.map.props.find((pr) => pr.id === TOWNHALL_DESK) : undefined;
     if (!desk || distToRect(p.entity, desk) > SHOP_RANGE) return this.reject(p, msg, "Ask at the town hall desk.");
+    const before = p.inv.coins;
     const r = msg.t === "buy" ? townhallBuy(p.animals, p.inv, msg.item, msg.qty) : townhallSell(p.inv, msg.slot, msg.qty);
     if (!r.ok) return this.reject(p, msg, r.reason);
     this.inventoryChanged(p, r.text);
+    if (msg.t === "sell") this.awardSale(p, p.inv.coins - before);
     // The offers change once the barn is bought or the barn fills up.
     if (msg.t === "buy") this.sendTownhall(p);
   }

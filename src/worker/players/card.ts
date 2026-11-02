@@ -18,6 +18,8 @@ export const PLAYERS_PREFIX = "/api/players/";
 export interface CardPeek {
   homeDay: number | null;
   stats: PlayerStats | null;
+  /** Their level (shared/leveling.ts); absent from homes that predate levels. */
+  level?: number;
 }
 
 export interface CardHomeNamespace {
@@ -62,7 +64,7 @@ async function friendship(db: D1Database, me: string, them: string): Promise<Fri
 async function peek(env: CardEnv, userId: string): Promise<CardPeek> {
   try {
     const r = await env.HOME.get(env.HOME.idFromName(userId)).cardPeek();
-    return { homeDay: r?.homeDay ?? null, stats: r?.stats ?? null };
+    return { homeDay: r?.homeDay ?? null, stats: r?.stats ?? null, ...(typeof r?.level === "number" ? { level: r.level } : {}) };
   } catch (err) {
     // A home that can't answer only costs the card its numbers.
     console.warn("card peek failed", err);
@@ -119,6 +121,7 @@ export async function handlePlayerCard(request: Request, env: CardEnv, user: Aut
     joined: joinDay(row.createdAt),
     homeDay: home.homeDay,
     stats: home.stats,
+    ...(home.level !== undefined ? { level: home.level } : {}),
     friendship: rel,
     muted,
   };

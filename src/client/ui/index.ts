@@ -140,6 +140,8 @@ export interface Hud {
   setAdmin?(on: boolean): void;
   /** Your jail sentence: the countdown plate until `until` (server ms), hidden when null. */
   jail?(until: number | null, serverTime: number): void;
+  /** Your level and XP (#hud-level, top right); `gain` slides the bar with a "+N XP" chip. */
+  setLevel?(view: { level: number; xp: number; next: number }, gain?: number): void;
 }
 
 /**

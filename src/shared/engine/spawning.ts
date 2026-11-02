@@ -1,7 +1,15 @@
 // Player-scaled spawning: how many monsters (or forage) a group wants and where a new one may
 // appear. Pure: callers pass `rand`.
-import type { ForageRule, SpawnTuning } from "../spawns";
-import type { Vec2 } from "../types";
+import {
+  CAVE_DEPTH_MONSTER_CAP,
+  RESPAWN_CROWD_SLOWDOWN,
+  SPAWN_SAFE_RADIUS,
+  ZONE_MONSTER_CAP,
+  ZONE_MONSTER_CAPS,
+  type ForageRule,
+  type SpawnTuning,
+} from "../spawns";
+import { isCaveDepthZone, type MapData, type SharedZoneId, type Vec2 } from "../types";
 import { canStand, type CollisionGrid } from "./collision";
 import { dist } from "./geometry";
 
@@ -11,9 +19,29 @@ export function spawnTarget(t: SpawnTuning, players: number): number {
   return Math.min(t.max, t.base + extra);
 }
 
-/** Refill delay for one free slot: busier areas refill faster, but sublinearly. */
-export function respawnDelayMs(t: SpawnTuning, players: number): number {
-  return t.respawnMs / Math.sqrt(Math.max(1, players));
+/**
+ * Refill delay for one free slot: busier areas refill faster, but sublinearly; a group that
+ * still has `alive` of its `target` up refills slower (RESPAWN_CROWD_SLOWDOWN).
+ */
+export function respawnDelayMs(t: SpawnTuning, players: number, alive = 0, target = 0): number {
+  const full = target > 0 ? Math.min(1, Math.max(0, alive) / target) : 0;
+  return (t.respawnMs / Math.sqrt(Math.max(1, players))) * (1 + RESPAWN_CROWD_SLOWDOWN * full);
+}
+
+/** The live-monster cap of a zone (spawns.ts explains the numbers). */
+export function zoneMonsterCap(zone: SharedZoneId | undefined): number {
+  if (!zone) return ZONE_MONSTER_CAP;
+  return ZONE_MONSTER_CAPS[zone] ?? (isCaveDepthZone(zone) ? CAVE_DEPTH_MONSTER_CAP : ZONE_MONSTER_CAP);
+}
+
+/** Where monsters never appear: a map's spawn points and the centre of each exit. */
+export function safeSpots(map: Pick<MapData, "spawns" | "exits">): Vec2[] {
+  return [...Object.values(map.spawns), ...map.exits.map((e) => ({ x: e.x + e.w / 2, y: e.y + e.h / 2 }))];
+}
+
+/** True when `p` is at least SPAWN_SAFE_RADIUS from every safe spot. */
+export function outsideSafeAreas(p: Vec2, safe: readonly Vec2[], radius = SPAWN_SAFE_RADIUS): boolean {
+  return safe.every((q) => dist(p, q) >= radius);
 }
 
 /** True when `p` is at least `min` tiles from every player. */

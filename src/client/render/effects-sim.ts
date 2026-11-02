@@ -2,8 +2,8 @@
 // randomness passed in, so it is testable and the renderer only mirrors slot state to sprites.
 import type { Vec2 } from "../../shared/types";
 
-export type BurstKind = "dust" | "hit" | "water" | "sparkle";
-export type FloatKind = "info" | "error" | "loot" | "love" | "damage" | "crit" | "miss" | "hurt";
+export type BurstKind = "dust" | "hit" | "water" | "sparkle" | "levelup";
+export type FloatKind = "info" | "error" | "loot" | "love" | "damage" | "crit" | "miss" | "hurt" | "xp";
 
 export interface Particle {
   active: boolean;
@@ -97,6 +97,21 @@ export const BURSTS: Record<BurstKind, BurstSpec> = {
     gravity: -30,
     drag: 0.6,
     jitter: 22,
+    twinkle: true,
+    additive: true,
+  },
+  // Level-up: gold motes drifting up around the character.
+  levelup: {
+    count: [14, 18],
+    colors: [0xffe08a, 0xfff6c8, 0xffd166, 0xffffff],
+    speed: [25, 70],
+    angle: UP,
+    spread: Math.PI * 0.35,
+    life: [0.9, 1.5],
+    size: [3, 5],
+    gravity: -60,
+    drag: 0.5,
+    jitter: 18,
     twinkle: true,
     additive: true,
   },
@@ -232,6 +247,8 @@ export const FLOAT_COLORS: Record<FloatKind, number> = {
   crit: 0xffe14d,
   miss: 0xa8a8b0,
   hurt: 0xff4a4a,
+  // XP: a fresh green, apart from the gold loot and the orange damage.
+  xp: 0xa6e86b,
 };
 
 /** Crits read bigger. */

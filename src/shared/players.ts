@@ -65,6 +65,8 @@ export interface PlayerCard {
   /** The player's home calendar day (days farmed). */
   homeDay: number | null;
   stats: PlayerStats | null;
+  /** Their level (shared/leveling.ts); absent on minimal cards and homes that predate levels. */
+  level?: number;
   friendship: Friendship;
   /** You muted them. */
   muted: boolean;

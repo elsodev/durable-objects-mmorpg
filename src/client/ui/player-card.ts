@@ -14,6 +14,7 @@ import { mutesApi as defaultApi, type MutesApi } from "./mutes-api";
 import {
   CARD_WATCH_MS,
   cardButtons,
+  cardLevel,
   friendButton,
   placeCard,
   presenceLine,
@@ -74,11 +75,17 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
   const head = el("div", "pc-head");
   const portrait = el("div", "pc-portrait");
   const who = el("div", "pc-who");
+  const nameRow = el("div", "pc-name-row");
   const name = el("div", "pc-name");
   name.id = "player-card-name";
+  const lvl = el("span", "pc-level");
+  lvl.id = "player-card-level";
+  lvl.hidden = true;
+  nameRow.appendChild(name);
+  nameRow.appendChild(lvl);
   const status = el("div", "pc-status");
   status.id = "player-card-status";
-  who.appendChild(name);
+  who.appendChild(nameRow);
   who.appendChild(status);
   head.appendChild(portrait);
   head.appendChild(who);
@@ -135,6 +142,9 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
   function render(): void {
     if (!hit) return;
     name.textContent = data?.name ?? hit.name;
+    const level = cardLevel(hit, data);
+    lvl.textContent = level ?? "";
+    lvl.hidden = level === null;
     status.textContent = hit.self && !data ? "You" : presenceLine(data);
     status.dataset.online = String(!!data?.online);
     stats.replaceChildren();

@@ -10,12 +10,15 @@ import {
   MONSTER_STATS,
   levelStats,
   newMonster,
+  outsideSafeAreas,
   pickSpawnPoint,
   provoke,
   respawnDelayMs,
   rollHit,
+  safeSpots,
   spawnTarget,
   stepMonster,
+  zoneMonsterCap,
   type CollisionGrid,
   type Knockback,
   type MonsterState,
@@ -28,7 +31,6 @@ import {
   SPAWN_NEAR_MARGIN,
   SPAWN_TRIES,
   SPAWN_TUNING,
-  ZONE_MONSTER_CAP,
   type SpawnTuning,
 } from "../../shared/spawns";
 
@@ -59,6 +61,10 @@ export class MonsterPool {
   private readonly groups: Group[];
   private seq = 0;
   private nextCheck = 0;
+  /** Spawn points and exits: nothing appears near them (SPAWN_SAFE_RADIUS). */
+  private readonly safe: Vec2[];
+  /** Live monsters this zone may hold at once (zoneMonsterCap). */
+  readonly cap: number;
 
   constructor(
     map: MapData,
@@ -67,6 +73,8 @@ export class MonsterPool {
     zone?: SharedZoneId,
     now = 0,
   ) {
+    this.safe = safeSpots(map);
+    this.cap = zoneMonsterCap(zone);
     const table = zone ? SPAWN_TUNING[zone] : undefined;
     this.groups = map.monsters.map((spec, i) => ({ spec, tune: table?.[i] ?? spec.tuning ?? defaultTuning(spec.count), nextSpawnAt: 0, near: 1 }));
     // A waking zone starts at its base numbers (nobody is in yet).
@@ -116,8 +124,8 @@ export class MonsterPool {
       g.near = near;
       const target = spawnTarget(g.tune, near);
       const count = this.countIn(i);
-      if (count < target && now >= g.nextSpawnAt && this.list.length < ZONE_MONSTER_CAP) {
-        if (this.spawnIn(g, i, live, now, false)) g.nextSpawnAt = now + respawnDelayMs(g.tune, near);
+      if (count < target && now >= g.nextSpawnAt && this.list.length < this.cap) {
+        if (this.spawnIn(g, i, live, now, false)) g.nextSpawnAt = now + respawnDelayMs(g.tune, near, count + 1, target);
       } else if (count > target) {
         const quiet = this.list.findIndex(
           (m) => m.group === i && (m.mode === "idle" || m.mode === "wander" || m.mode === "dormant") && now - m.lastCombatAt >= DESPAWN_IDLE_MS,
@@ -129,7 +137,10 @@ export class MonsterPool {
 
   private spawnIn(g: Group, i: number, players: readonly Vec2[], now: number, initial: boolean): boolean {
     const home = { x: g.spec.x, y: g.spec.y };
-    const p = pickSpawnPoint(home, g.spec.radius, this.grid, players, initial ? 0 : g.tune.minPlayerDist, this.rand, SPAWN_TRIES) ?? (initial ? home : null);
+    const safe = (q: Vec2) => outsideSafeAreas(q, this.safe);
+    const p =
+      pickSpawnPoint(home, g.spec.radius, this.grid, players, initial ? 0 : g.tune.minPlayerDist, this.rand, SPAWN_TRIES, safe) ??
+      (initial ? home : null);
     if (!p) return false;
     this.list.push(newMonster(`m:${++this.seq}`, g.spec.type, p, home, g.spec.radius, i, now, g.spec.level));
     return true;
@@ -194,7 +205,7 @@ export class MonsterPool {
     const i = this.list.indexOf(m);
     if (i >= 0) this.list.splice(i, 1);
     const g = this.groups[m.group];
-    if (g) g.nextSpawnAt = Math.max(g.nextSpawnAt, now + respawnDelayMs(g.tune, g.near));
+    if (g) g.nextSpawnAt = Math.max(g.nextSpawnAt, now + respawnDelayMs(g.tune, g.near, this.countIn(m.group), spawnTarget(g.tune, g.near)));
   }
 }
 

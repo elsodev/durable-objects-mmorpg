@@ -442,8 +442,13 @@ export interface Effects {
   setAmbient(ambient: MapData["ambient"]): void;
   /** A flashlight in the bag: caves are drawn fully lit instead of dark around you. */
   setFlashlight?(on: boolean): void;
-  floatText(at: Vec2, text: string, kind: "info" | "error" | "loot" | "love" | "damage" | "crit" | "miss" | "hurt"): void;
-  burst(at: Vec2, kind: "dust" | "hit" | "water" | "sparkle"): void;
+  floatText(at: Vec2, text: string, kind: "info" | "error" | "loot" | "love" | "damage" | "crit" | "miss" | "hurt" | "xp"): void;
+  burst(at: Vec2, kind: "dust" | "hit" | "water" | "sparkle" | "levelup"): void;
+  /**
+   * The level-up burst over a character: rings, a column of light and "LEVEL UP! / Lv N" rising
+   * off the head. `follow` gives its feet each frame (null once it is gone). `reduced`: no motion.
+   */
+  levelUp?(follow: () => Vec2 | null, level: number, reduced: boolean): void;
   /**
    * Rings spreading on water (watering-can refill). With `sortY` (tiles) they y-sort like a
    * prop standing there (in a well, in front of it but behind you), else they draw above all.

@@ -210,3 +210,11 @@ Added 2026-11-02 for the admin shout banner. Original sounds made for DurableMMO
 |---|---|---|---|---|---|---|
 | `sfx/announce_start.ogg` | Announcement chime (start) | DurableMMO contributors | CC0 1.0 | synthesised | original | none |
 | `sfx/announce_end.ogg` | Announcement chime (end) | DurableMMO contributors | CC0 1.0 | synthesised | original | none |
+
+## Level-up chime
+
+Added 2026-11-02 for the level-up burst. Original sound made for DurableMMO and dedicated to the public domain (CC0 1.0): a rising C major arpeggio (C5 E5 G5 C6) of soft bell tones with a short shimmering chord on top, synthesised from sine partials by a small Python script, then encoded mono 44.1 kHz Ogg Vorbis q4, peak -1 dBFS. No third-party material.
+
+| File | Title | Author | Licence | Original file | Source | Changes |
+|---|---|---|---|---|---|---|
+| `sfx/level_up_0.ogg` | Level-up chime | DurableMMO contributors | CC0 1.0 | synthesised | original | none |

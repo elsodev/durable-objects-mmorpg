@@ -61,6 +61,7 @@ import { afkTimesFromQuery } from "./afk-logic";
 import { installDebug } from "./debug";
 import { createCombatSfx } from "./combat-sfx";
 import { createCombatFx } from "./combat-fx";
+import { createLevelFx } from "./level-fx";
 import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../../shared/spawns";
 import { createInput } from "./input";
 import { every, startLoop } from "./loop";
@@ -222,6 +223,16 @@ export async function startSession(
   const shownHits = new Set<string>();
   const camera: Camera = createCamera(game.layers, { w: game.width(), h: game.height() });
   const combatFx = createCombatFx({ world: () => world, youId: () => store.youId, camera, latest: (id) => store.latest(id) });
+  const levelFx = createLevelFx({
+    world: () => world,
+    hud: { setLevel: (view, gain) => hud.setLevel?.(view, gain) },
+    youId: () => store.youId,
+    you: () => you(),
+    drawnAt: (id) => store.sample(performance.now()).find((e) => e.id === id),
+    playSfx,
+    reducedMotion: () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches,
+    later: (fn, ms) => (ms > 0 ? void setTimeout(fn, ms) : fn()),
+  });
   /** Zones: last stamina the server sent (a gentle warning when it runs low). */
   let zoneStamina: number | null = null;
   /** Worn out or not: prediction speed, the dash notice and the farm lock. */
@@ -1105,6 +1116,12 @@ export async function startSession(
         break;
       case "jail":
         hud.jail?.(msg.until, msg.serverTime);
+        break;
+      case "xp":
+        levelFx.onXp(msg);
+        break;
+      case "levelUp":
+        levelFx.onLevelUp(msg);
         break;
       case "reject":
         onReject(msg);

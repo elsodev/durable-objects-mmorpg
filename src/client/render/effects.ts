@@ -22,6 +22,7 @@ import {
   flicker,
   type FloatEntry,
 } from "./effects-sim";
+import { LEVELUP_LIFE, levelUpFrame, levelUpLines } from "./levelup-fx-logic";
 
 const PARTICLE_CAP = 256;
 const LIGHT_TEX = 256;
@@ -420,6 +421,71 @@ class OneShotLayer {
     });
   }
 
+  /** The level-up burst over whoever `follow` tracks (see levelup-fx-logic.ts). */
+  levelUp(follow: () => Vec2 | null, level: number, reduced: boolean, sparkle: (at: Vec2) => void): void {
+    const node = new Container();
+    const glow = new Graphics();
+    glow.blendMode = "add";
+    const rings = new Graphics();
+    const [top, bottom] = levelUpLines(level);
+    const sign = new Container();
+    const big = new Text({
+      text: top,
+      style: { fontFamily: "Pixelify Sans, monospace", fontSize: 18, fontWeight: "bold", fill: 0xffe14d, stroke: { color: 0x3a2a1c, width: 5, join: "round" }, letterSpacing: 1 },
+    });
+    const small = new Text({
+      text: bottom,
+      style: { fontFamily: "Pixelify Sans, monospace", fontSize: 14, fontWeight: "bold", fill: 0xfff6d8, stroke: { color: 0x3a2a1c, width: 4, join: "round" } },
+    });
+    big.anchor.set(0.5, 1);
+    small.anchor.set(0.5, 0);
+    small.position.set(0, 1);
+    big.roundPixels = true;
+    small.roundPixels = true;
+    sign.addChild(big, small);
+    node.addChild(glow, rings, sign);
+    let bursts = 0;
+    this.add({
+      age: 0,
+      life: LEVELUP_LIFE,
+      node,
+      step(t) {
+        const at = follow();
+        if (!at) {
+          node.visible = false;
+          return;
+        }
+        node.position.set(Math.round(at.x * TILE), Math.round(at.y * TILE));
+        // Sparkles twice: as it starts and as the sign tops out.
+        if (!reduced && bursts < 2 && t >= bursts * 0.22) {
+          bursts++;
+          sparkle(at);
+        }
+        const f = levelUpFrame(t, reduced);
+        glow.clear();
+        if (f.column.alpha > 0) {
+          // A soft column: stacked bands, brightest at the middle.
+          const h = f.column.height * TILE;
+          const w = TILE * 0.9;
+          for (let i = 0; i < 5; i++) {
+            const k = 1 - i / 5;
+            glow.rect(-(w * k) / 2, -h, w * k, h).fill({ color: 0xffd166, alpha: f.column.alpha * 0.22 });
+          }
+          glow.ellipse(0, 0, TILE * 0.8, TILE * 0.32).fill({ color: 0xffe08a, alpha: f.column.alpha * 0.6 });
+        }
+        rings.clear();
+        for (const r of f.rings) {
+          if (r.alpha <= 0) continue;
+          rings.ellipse(0, 0, r.radius * TILE, r.radius * TILE * 0.42).stroke({ color: 0xffe14d, width: 3, alpha: r.alpha });
+          rings.ellipse(0, 0, r.radius * TILE * 0.92, r.radius * TILE * 0.38).stroke({ color: 0xfff6c8, width: 1, alpha: r.alpha * 0.8 });
+        }
+        sign.position.set(0, Math.round(f.sign.dy * TILE));
+        sign.alpha = f.sign.alpha;
+        sign.scale.set(f.sign.scale);
+      },
+    });
+  }
+
   update(dt: number, you: Vec2 | null): void {
     if (this.shots.length === 0) return;
     const keep: OneShot[] = [];
@@ -479,6 +545,10 @@ export const createEffects: CreateEffects = (layers, viewport): Effects => {
     toss(from, to, texture, onLand) {
       if (destroyed) return onLand?.();
       shots.toss(from, to, texture, onLand);
+    },
+    levelUp(follow, level, reduced) {
+      if (destroyed) return;
+      shots.levelUp(follow, level, reduced, (at) => particles.burst(at.x * TILE, at.y * TILE - TILE * 0.3, "levelup"));
     },
     update(dtMs, you) {
       if (destroyed) return;

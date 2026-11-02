@@ -111,6 +111,8 @@ export interface EntityState {
   admin?: boolean;
   /** Players only: serving jail time (shared/jail.ts); clients may mark them. */
   jailed?: boolean;
+  /** Players only: their level (shared/leveling.ts), shown on the player card. */
+  level?: number;
 }
 
 /** Character creator choices; every field is an option id listed in shared/look.ts. */

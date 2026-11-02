@@ -42,6 +42,7 @@ import { parseTradeCommand } from "../../shared/trade";
 import { parseAdminCommand } from "../../shared/admin";
 import { createShoutBanner, type ShoutBanner } from "./shout-banner";
 import { createJailTimer, type JailTimer } from "./jail-timer";
+import { createLevelBadge, type LevelBadge } from "./level-badge";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -274,20 +275,26 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     el("p", { className: "options-keys dm-muted", text: "Keys: I bag · H hearts · O friends · M map · G goals · Esc closes. Drag items between slots; Shift-drag splits a stack." }),
   );
 
-  // --- global stats (top-right, under the menu; shared zones only)
+  // --- level and world stats (top-right, under the menu; the stats in shared zones only)
+  const rightCol = el("div", { id: "hud-right", className: "hud-right" });
+  hud.appendChild(rightCol);
+  const level: LevelBadge | null = safe("level", () => createLevelBadge(rightCol), null);
   const statsEl = el("div", { id: "hud-stats", className: "dm-panel hud-stats" });
   statsEl.setAttribute("aria-label", "Server stats");
   statsEl.hidden = true;
-  hud.appendChild(statsEl);
+  rightCol.appendChild(statsEl);
+  /** Just under the menu, which wraps to two rows on some widths (on narrow screens it moves to the bottom). */
+  function placeRight(): void {
+    const m = topMenu.getBoundingClientRect();
+    rightCol.style.top = m.height > 0 && m.top < 120 ? `${Math.round(m.bottom + 6)}px` : "";
+  }
   let stats: SocialStats | null = null;
   let zoneId: ZoneId | null = null;
   function renderStats(): void {
     const show = statsVisible(zoneId, stats);
     statsEl.hidden = !show;
     if (!show || !stats || !zoneId) return;
-    // Sit just under the menu, which wraps to two rows on some widths (on narrow screens it moves to the bottom).
-    const m = topMenu.getBoundingClientRect();
-    statsEl.style.top = m.height > 0 && m.top < 120 ? `${Math.round(m.bottom + 6)}px` : "";
+    placeRight();
     clear(statsEl);
     for (const r of statRows(stats, zoneId)) {
       statsEl.appendChild(
@@ -921,6 +928,10 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     },
     jail(until, serverTime) {
       jailTimer?.set(until, serverTime);
+    },
+    setLevel(view, gain) {
+      level?.set(view, gain);
+      placeRight();
     },
     setIconSource(src: (item: ItemId) => string) {
       safe("icons", () => setIconSource(src), undefined);

@@ -218,6 +218,12 @@
       ],
       "volume": 0.6
     },
+    "level_up": {
+      "files": [
+        "sfx/level_up_0.ogg"
+      ],
+      "volume": 0.55
+    },
     "error": {
       "files": [
         "sfx/error_0.ogg"

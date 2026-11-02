@@ -261,6 +261,32 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.pc-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.pc-name-row > .pc-name {
+  min-width: 0;
+}
+/* Level chip by the name: the same gold as the HUD level badge. */
+.pc-level {
+  flex: none;
+  padding: 1px 5px;
+  border: 2px solid var(--dm-wood-dark);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #f6cf62 0%, var(--dm-gold) 60%, #c98f1f 100%);
+  box-shadow: inset 0 0 0 1px #fff2b8;
+  font-family: var(--dm-font-pixel);
+  font-size: 12px;
+  line-height: 14px;
+  color: var(--dm-ink);
+  white-space: nowrap;
+}
+.pc-level[hidden] {
+  display: none;
+}
 .pc-status {
   color: var(--dm-text-dim);
   display: flex;

@@ -25,6 +25,7 @@ import type { AnimalView } from "./animals";
 import type { NoticePress, NoticeView } from "./notices";
 import type { ArrangeMove } from "./engine/arrange";
 import type { TradeServerMsg } from "./trade";
+import type { XpReason } from "./leveling";
 
 // ---------------- Client -> Server ----------------
 // Optional `seq` (move/moveTo): client input sequence number, acked in `tick.ack` so the client
@@ -306,6 +307,15 @@ export type ServerMsg =
    * The client shows the countdown from it, offset by `serverTime`.
    */
   | { t: "jail"; until: number | null; serverTime: number }
+  /**
+   * Your level and XP into it (shared/leveling.ts), after welcome and whenever they change.
+   * `next`: XP the current level needs (0 at the cap). `gain`: XP just earned, from `reason`, at
+   * `at` (the monster's spot, for the "+8 XP" float). `up`: levels gained by it. `lost`: XP taken
+   * by the jail penalty.
+   */
+  | { t: "xp"; level: number; xp: number; next: number; gain?: number; reason?: XpReason; at?: { x: number; y: number }; up?: number; lost?: number }
+  /** Someone here (or you) reached `level`: play the level-up burst over entity `id`. */
+  | { t: "levelUp"; id: string; level: number }
   | HomeServerMsg
   | VisitServerMsg
   | TradeServerMsg;
