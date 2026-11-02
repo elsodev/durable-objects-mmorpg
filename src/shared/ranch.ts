@@ -1,4 +1,4 @@
-// Barn, hens and eggs. The barn is bought at the town hall and stands at BARN_SPOT in the yard;
+// Barn, hens and eggs. The barn is bought at the town hall and goes up at BARN_SPOT in the yard (its owner may move it later);
 // hens are bought there too (only with a barn, up to BARN_CAPACITY). Pure rules: the zone buys,
 // HomeRoom lays and collects, both on the same AnimalSave.
 //
@@ -33,8 +33,11 @@ export const BARN_ID = "barn";
 /** Where the barn stands in the yard (top-left of its 4x2 footprint): south of the road, by the pond. */
 export const BARN_SPOT: Vec2 = { x: 6, y: 16 };
 export const BARN_SIZE = { w: 4, h: 2 } as const;
-/** Hens scratch about in front of the barn, and lay there. */
-export const COOP_CENTRE: Vec2 = { x: BARN_SPOT.x + 2, y: BARN_SPOT.y + 3 };
+/** Hens scratch about in front of the barn (top-left `barn`, wherever its owner moved it), and lay there. */
+export function coopCentre(barn: Vec2): Vec2 {
+  return { x: barn.x + 2, y: barn.y + 3 };
+}
+export const COOP_CENTRE: Vec2 = coopCentre(BARN_SPOT);
 export const COOP_RADIUS = 3;
 
 /** What the town hall counter offers you right now: the barn first, then hens; treats always. */

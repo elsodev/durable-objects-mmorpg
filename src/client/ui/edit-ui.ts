@@ -1,5 +1,6 @@
-// House edit mode, DOM side: the Edit button (owner, inside the house), the "Editing your home"
-// banner with Done, the small toolbar that floats by the selection (turn, pick up, deselect),
+// Home edit mode, DOM side: the Edit button (owner, in the house or the yard), the "Editing your
+// home" banner with Done, the small toolbar that floats by the selection (turn, pick up, the
+// whole fence, deselect),
 // and the tray of furniture in your bag that replaces the hotbar while editing. DOM only; every
 // text is set with textContent. The game drives it through EditUi; it calls back through opts.
 import { getItem } from "../../shared/items";
@@ -25,7 +26,12 @@ export interface EditToolbarState {
   name?: string;
   canTurn: boolean;
   canPickUp: boolean;
+  /** One fence piece is selected and it joins others: offer its whole fence. */
+  canWholeFence?: boolean;
 }
+
+/** Where edit mode is working: inside the house, or out in the yard. */
+export type EditScope = "house" | "yard";
 
 export interface EditUiOpts {
   /** The Edit button (or its hotkey): enter or leave edit mode. */
@@ -37,12 +43,14 @@ export interface EditUiOpts {
   setMulti(on: boolean): void;
   /** A tray piece was chosen (null: put the held piece back). */
   hold(slot: number | null): void;
+  /** Grow the selection to the whole fence it is part of. */
+  wholeFence(): void;
 }
 
 export interface EditUi {
   /** Show the Edit button (your own house) or hide it (anywhere else, or visiting). */
   setAvailable(on: boolean): void;
-  setActive(on: boolean): void;
+  setActive(on: boolean, scope?: EditScope): void;
   setMulti(on: boolean): void;
   setTray(items: readonly EditTrayItem[], held: number | null): void;
   /** Place the toolbar with its top-left at `at` (screen px), or hide it (null). */
@@ -83,6 +91,9 @@ function toolBtn(icon: EditIconName, label: string, id: string, title: string, o
   return b;
 }
 
+const HOUSE_HINT = "Drag to move · Shift-click or drag a box for several · R turns · Del picks up";
+const YARD_HINT = "Drag to move · drag a fence out in a run · trees, rocks and the pond stay";
+
 export function createEditUi(root: HTMLElement, opts: EditUiOpts): EditUi {
   const layer = el("div", "hud-layer edit-layer");
   root.appendChild(layer);
@@ -101,8 +112,9 @@ export function createEditUi(root: HTMLElement, opts: EditUiOpts): EditUi {
   banner.setAttribute("role", "status");
   const title = el("div", "edit-banner-title");
   title.appendChild(editIcon("pencil"));
-  title.appendChild(el("span", "dm-title", "Editing your home"));
-  const hint = el("span", "dm-muted edit-banner-hint", "Drag to move · Shift-click or drag a box for several · R turns · Del picks up");
+  const titleText = el("span", "dm-title", "Editing your home");
+  title.appendChild(titleText);
+  const hint = el("span", "dm-muted edit-banner-hint", HOUSE_HINT);
   const multiBtn = btn("Select several", "dm-btn-small edit-multi", "edit-multi", "Tap pieces to add them; drag to draw a box", () => opts.setMulti(!multi));
   multiBtn.setAttribute("aria-pressed", "false");
   const doneBtn = btn("Done", "dm-btn-primary dm-btn-small", "edit-done", "Done editing (Esc)", () => opts.toggle());
@@ -123,8 +135,10 @@ export function createEditUi(root: HTMLElement, opts: EditUiOpts): EditUi {
   const countEl = el("span", "edit-count");
   const turnBtn = toolBtn("turn", "Turn", "edit-rotate", "Turn (R)", () => opts.rotate());
   const pickBtn = toolBtn("bag", "Pick up", "edit-pickup", "Pick up into your bag (Del)", () => opts.pickUp());
+  const fenceBtn = toolBtn("fence", "Whole fence", "edit-whole-fence", "Select the whole fence, to move or pick up the plot's fence at once", () => opts.wholeFence());
   const closeBtn = toolBtn("close", "", "edit-deselect", "Deselect (Esc)", () => opts.deselect());
   bar.appendChild(countEl);
+  bar.appendChild(fenceBtn);
   bar.appendChild(turnBtn);
   bar.appendChild(pickBtn);
   bar.appendChild(closeBtn);
@@ -152,6 +166,7 @@ export function createEditUi(root: HTMLElement, opts: EditUiOpts): EditUi {
     countEl.textContent = state.holding ? (state.name ?? "") : state.count > 1 ? `${state.count} pieces` : "";
     countEl.hidden = !state.holding && state.count <= 1;
     turnBtn.disabled = !state.canTurn;
+    fenceBtn.hidden = state.holding || !state.canWholeFence;
     // Holding a new piece: "Put back" already says it; the cross would say the same again.
     closeBtn.hidden = state.holding;
     bar.classList.toggle("is-docked", state.holding);
@@ -165,7 +180,10 @@ export function createEditUi(root: HTMLElement, opts: EditUiOpts): EditUi {
     setAvailable(on) {
       editBtn.hidden = !on;
     },
-    setActive(on) {
+    setActive(on, scope = "house") {
+      const yard = scope === "yard";
+      titleText.textContent = yard ? "Editing your yard" : "Editing your home";
+      hint.textContent = yard ? YARD_HINT : HOUSE_HINT;
       banner.hidden = !on;
       tray.hidden = !on;
       editBtn.classList.toggle("is-on", on);

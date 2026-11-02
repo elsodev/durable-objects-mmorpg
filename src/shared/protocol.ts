@@ -24,6 +24,7 @@ import type { ChestView } from "./chests";
 import type { AnimalView } from "./animals";
 import type { NoticePress, NoticeView } from "./notices";
 import type { ArrangeMove } from "./engine/arrange";
+import type { YardLayout } from "./yard";
 import type { TradeServerMsg } from "./trade";
 import type { XpReason } from "./leveling";
 
@@ -64,6 +65,18 @@ export type ClientMsg =
   | { t: "moveObjects"; moves: ArrangeMove[]; req?: string }
   /** Home only (edit mode): pick several pieces back into the bag, all or nothing. */
   | { t: "pickupObjects"; ids: string[]; req?: string }
+  /**
+   * Yard edit mode: slide a group of placed pieces by whole tiles, all or nothing. Compact enough
+   * for a plot's whole fence (arrangeLimit in shared/engine/arrange.ts).
+   */
+  | { t: "shiftObjects"; ids: string[]; dx: number; dy: number; req?: string }
+  /**
+   * Yard edit mode: lay `n` pieces from one bag slot in a straight line from (x, y), one tile
+   * apart along (dx, dy) (fences and gates; any other piece only with n = 1). All or nothing.
+   */
+  | { t: "placeRun"; slot: number; x: number; y: number; dx: number; dy: number; n: number; rotation: 0 | 1 | 2 | 3; req?: string }
+  /** Yard edit mode: move the house (top-left of its footprint); its door and doorstep go with it. */
+  | { t: "moveHouse"; x: number; y: number; req?: string }
   /** Shop: buy from an NPC shop. */
   | { t: "buy"; npc: string; item: ItemId; qty: number; req?: string }
   /** Shop: sell from inventory slot to an NPC. */
@@ -197,6 +210,11 @@ export type ServerMsg =
        * house). Walking through the house door sends a new welcome on the same socket.
        */
       homeMap?: HomeMapId;
+      /**
+       * Home yard only: the owner's layout (shared/yard.ts); build the map with applyYard. When the
+       * house moves, everyone in the yard gets a fresh welcome with the new layout.
+       */
+      yard?: YardLayout;
       /** Items on the ground that you can see (zones). */
       ground?: GroundItemView[];
       /** Local dev servers only: the /day, /time and /hour chat commands work here. */

@@ -129,8 +129,11 @@ function canHang(map: MapData, objects: PlacedObject[], r: Rect, ignoreId: strin
   return { ok: true };
 }
 
-/** Floor furniture you walk over (rugs and mats): drawn flat, and other pieces may stand on it. */
+/**
+ * Floor furniture you walk over (rugs and mats): drawn flat, and other pieces may stand on it.
+ * A garden gate is walkable too, but it stands upright and nothing goes on top of it.
+ */
 export function isRug(item: ItemId): boolean {
   const def = getItem(item);
-  return !!def?.walkable && def.placeOn !== "wall";
+  return !!def?.walkable && def.placeOn === "floor";
 }

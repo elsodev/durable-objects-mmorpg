@@ -112,12 +112,12 @@ export function ensureBed(objects: HomeObjects): boolean {
  * Keeps only objects that are valid on their map (sanitised saves and imports): each one must be
  * placeable there given the ones before it. The rest are returned as items.
  */
-export function validateObjects(input: HomeObjects, farm: FarmTile[]): Migrated {
+export function validateObjects(input: HomeObjects, farm: FarmTile[], yard: MapData = HOME_OUT): Migrated {
   const objects = emptyObjects();
   const returned: ItemId[] = [];
   for (const id of ["home_in", "home"] as const) {
     for (const o of input[id]) {
-      if (mapForItem(o.item) === id && fits(homeMap(id), objects[id], id === "home" ? farm : [], o)) objects[id].push(o);
+      if (mapForItem(o.item) === id && fits(id === "home" ? yard : homeMap(id), objects[id], id === "home" ? farm : [], o)) objects[id].push(o);
       else if (!isFixture(o)) returned.push(o.item);
     }
   }

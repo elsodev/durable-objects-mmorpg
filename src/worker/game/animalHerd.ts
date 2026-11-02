@@ -35,7 +35,8 @@ export class AnimalHerd {
 
   constructor(
     private readonly baseGrid: () => CollisionGrid,
-    private readonly exits: readonly MapExit[],
+    /** The map's exits (a function where they can move: a home's house door follows the house). */
+    private readonly exits: readonly MapExit[] | (() => readonly MapExit[]),
     private readonly rand: () => number,
     /** Props whose tall art would hide an animal behind it (trees). */
     private readonly cover: readonly MapProp[] = [],
@@ -43,7 +44,7 @@ export class AnimalHerd {
 
   private walkable(now: number): CollisionGrid {
     if (!this.grid || now - this.gridAt >= GRID_REFRESH_MS) {
-      this.grid = animalGrid(this.baseGrid(), this.exits, this.cover);
+      this.grid = animalGrid(this.baseGrid(), typeof this.exits === "function" ? this.exits() : this.exits, this.cover);
       this.gridAt = now;
     }
     return this.grid;
@@ -60,7 +61,34 @@ export class AnimalHerd {
     }
     const came = specs.filter((s) => !this.members.has(ANIMAL_PREFIX + s.id));
     for (const s of came) this.add(s, now);
+    // A home that moved (the barn did): they wander round the new one from now on.
+    for (const s of specs) {
+      const m = this.members.get(ANIMAL_PREFIX + s.id);
+      if (!m || (m.spec.home.x === s.home.x && m.spec.home.y === s.home.y && m.spec.radius === s.radius)) continue;
+      m.spec = s;
+      m.mind = newAnimalMind(s.species, s.home, s.radius, now, this.rand);
+    }
     return { came, left };
+  }
+
+  /**
+   * The ground changed under the herd (something was built or moved): anyone now standing inside
+   * something solid goes back to a free spot near home, and the walking grid is rebuilt.
+   */
+  resettle(now: number): boolean {
+    this.grid = null;
+    const grid = this.walkable(now);
+    let moved = false;
+    for (const m of this.members.values()) {
+      if (canStand(grid, m.entity.x, m.entity.y)) continue;
+      const at = animalStart(m.spec.home, grid);
+      m.entity.x = at.x;
+      m.entity.y = at.y;
+      m.entity.moving = false;
+      m.mind = newAnimalMind(m.spec.species, m.spec.home, m.spec.radius, now, this.rand);
+      moved = true;
+    }
+    return moved;
   }
 
   add(spec: AnimalSpec, now: number): EntityState {

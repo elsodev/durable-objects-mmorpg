@@ -192,8 +192,8 @@
 
 @media (max-width: 760px) {
   .edit-open {
-    /* Top-right, beside the status panel: the bottom of a phone is the menu, chat and hotbar. */
-    top: 14px;
+    /* Top-right, under the level panel: the bottom of a phone is the menu, chat and hotbar. */
+    top: 120px;
     bottom: auto;
     right: 12px;
     height: 38px;
@@ -227,8 +227,19 @@
   /* Edit mode on a phone: only the room, the banner, the toolbar and the tray. */
   .dm-editing .hud-menu,
   .dm-editing .hud-layer-chat,
-  .dm-editing .hud-status {
+  .dm-editing .hud-status,
+  .dm-editing .hud-right {
     display: none;
+  }
+  /* The bug button steps up off the tray while editing. */
+  .dm-editing .hud-feedback-btn {
+    bottom: calc(var(--dm-slot-size, 48px) + 44px);
+  }
+}
+@media (max-width: 480px) {
+  /* The level shrinks to a chip in the top row: the Edit button sits just below it. */
+  .edit-open {
+    top: 62px;
   }
 }
 

@@ -25,7 +25,7 @@ import { TRAVEL_SPAWN, travelBlock } from "../shared/travel";
 import { CELL_SPAWN, cleanJailUntil, cleanStrikes, isJailed, JAIL_ZONE, JAILED_REFUSAL } from "../shared/jail";
 import { devToolsEnabled, H_VISIT_LOOK, H_VISIT_OWNER, H_VISIT_RETURN, H_VISIT_SPRITE, type Env } from "./env";
 import type { HomeMapId, Inventory, Look, ZoneId } from "../shared/types";
-import { TICK_MS, type EntityState, type Facing, type FarmTile, type MapExit, type PlacedObject, type RockOre, type Vec2 } from "../shared/types";
+import { TICK_MS, type EntityState, type Facing, type FarmTile, type MapExit, type MapProp, type PlacedObject, type RockOre, type Vec2 } from "../shared/types";
 import { parseDropRates, type DropRates } from "../shared/engine/dropRate";
 import type { DaySummary, HomeServerMsg } from "../shared/home";
 import { decodeClient, type ClientMsg, type ImpactStamp, type ServerMsg } from "../shared/protocol";
@@ -54,8 +54,10 @@ import {
   type HomeObjects,
 } from "./home/submaps";
 import { HOME_FAINT_SPAWN } from "../shared/maps/home";
+import { addYardFences, onYardBarnMoved, YARD_REACH } from "./home/yard";
+import { checkHouseMove, checkYardHouse, checkYardMoves, checkYardPlace, sanitizeYard, type YardLayout, type YardWorld } from "../shared/yard";
 import { addAllOrNothing, moveRefusal, pickupRefusal } from "./home/arrange";
-import { checkArrange } from "../shared/engine";
+import { arrangeLimit, checkArrange } from "../shared/engine";
 import { BED_ID, BED_ITEM, ensureBed, HOME_LAYOUT, mapForItem, migrateObjects, validateObjects } from "./home/migrate";
 import { addNote, addParcel, emptyMail, mailMsg, sanitizeMail, takeParcels, type MailState } from "./home/mailbox";
 import { MAILBOX_ID, MAILBOX_TAKE } from "../shared/mail";
@@ -261,6 +263,8 @@ export interface HomeExport {
   objectsIn?: import("../shared/types").PlacedObject[];
   /** What is inside storage furniture (fridges), by object id; absent in older exports. */
   containers?: Containers;
+  /** Where the owner moved their house (shared/yard.ts); absent in older exports. */
+  yard?: YardLayout;
 }
 
 /** The yard (exits, farm, rocks, shipping bin, mailbox). The house inside is HOME_IN (./home/submaps). */
@@ -340,6 +344,8 @@ export class HomeRoom extends DurableObject<Env> {
   /** Placed furniture per home map. */
   private objects: HomeObjects = emptyObjects();
   private objSeq = 0;
+  /** How the owner laid out their yard (the house); this.maps.yard is the map it makes. */
+  private yard: YardLayout = {};
   /** Storage furniture contents (fridges), by object id. */
   private containers: Containers = {};
   private drops = new HomeDrops();
@@ -378,7 +384,7 @@ export class HomeRoom extends DurableObject<Env> {
   private tally = new HarvestTally();
   private chatGuards = new ChatGuards();
   /** Adopted pets and hens wandering the yard (rebuilt from the save; not persisted). */
-  private herd = new AnimalHerd(() => this.maps.grids.home, HOME_MAP.exits, Math.random, HOME_MAP.props);
+  private herd = new AnimalHerd(() => this.maps.grids.home, () => this.maps.yard.exits, Math.random, HOME_MAP.props);
 
   /** Drop-rate multipliers from env (DROP_RATE*), read once per instance. */
   private readonly rates: DropRates;
@@ -411,7 +417,7 @@ export class HomeRoom extends DurableObject<Env> {
         const att = readAttachment(ws);
         if (!att?.visit) continue;
         const map: HomeMapId = att.homeMap ?? "home";
-        const pos = standOn(this.maps.grids[map], map, att.x !== undefined && att.y !== undefined ? { x: att.x, y: att.y } : null);
+        const pos = standOn(this.maps.grids[map], map, att.x !== undefined && att.y !== undefined ? { x: att.x, y: att.y } : null, this.maps.map(map));
         const v = this.visitors.add(ws, att as SocketAttachment & { visit: VisitAttachment }, pos, 0, now);
         v.map = map;
         // Visitors only stay while their host is home and their invite still stands.
@@ -453,6 +459,7 @@ export class HomeRoom extends DurableObject<Env> {
       "mail",
       "containers",
       "drops",
+      "yard",
     ]);
     const owner = got.get("owner");
     this.owner = typeof owner === "string" ? owner : null;
@@ -462,6 +469,8 @@ export class HomeRoom extends DurableObject<Env> {
     this.lease = typeof lease === "string" ? lease : null;
     this.farm = sanitizeFarm(got.get("farm"));
     this.mail = sanitizeMail(got.get("mail"));
+    this.yard = sanitizeYard(got.get("yard"));
+    this.relayYard();
     this.loadObjects(got.get("layout"), got.get("homeObjects"), got.get("objects"), Date.now());
     this.objSeq = objSeqFor(allObjects(this.objects), got.get("objSeq"));
     this.containers = sanitizeContainers(got.get("containers"), allObjects(this.objects));
@@ -478,6 +487,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (this.save) this.ensureFixtures(Date.now());
     const unbroken = this.rocks.load(got.get("rocks") as Record<string, number> | undefined, got.get("rockSpawns"));
     this.trees.load(got.get("trees"));
+    this.relayYard();
     this.maps.rebuild(this.objects, unbroken, this.trees);
     // After a wake the yard's pets and hens start again from their spots.
     if (this.save) this.settleAnimals(Date.now());
@@ -545,7 +555,8 @@ export class HomeRoom extends DurableObject<Env> {
     const restored = this.rocks.respawnDue(this.maps.grids.home, now, this.entities("home"));
     for (const id of restored) this.toMap("home", { t: "rock", id, broken: false });
     if (restored.length > 0) this.persist({ rocks: true });
-    const regrown = this.trees.regrowDue(this.maps.grids.home, now, this.entities("home"));
+    const regrown = this.trees.regrowDue(this.maps.grids.home, now, this.entities("home"), (t) => this.treeSpotTaken(t));
+    if (regrown.length > 0) this.relayYard();
     for (const id of regrown) this.toMap("home", { t: "tree", id, stage: "tree", hits: 0 });
     if (regrown.length > 0) this.persist({ trees: true });
     if (p && !p.leaving && dayOver(this.clock, now)) this.endDay("passout", now);
@@ -563,7 +574,10 @@ export class HomeRoom extends DurableObject<Env> {
       this.giveBack(wardrobe.returned, now, "Your house now has a wardrobe for changing clothes; it stands by the back wall.");
       this.persist({ save: true, mail: true });
     }
-    if (bed || wardrobe.changed) this.persist({ objects: true });
+    // The plot's fence becomes this home's own fence pieces (once), so the owner can rework it.
+    const fenced = addYardFences(this.yard, this.objects, this.farm, this.maps.yard, () => `o${++this.objSeq}`);
+    if (fenced) this.persist({ yard: true });
+    if (bed || wardrobe.changed || fenced) this.persist({ objects: true });
   }
 
   private setTransfer(t: PendingTransfer | null): void {
@@ -576,6 +590,18 @@ export class HomeRoom extends DurableObject<Env> {
     const t = this.transfer;
     if (t) this.setTransfer(null);
     return t;
+  }
+
+  /** The yard map from the owner's layout and the trees cleared away (call rebuildGrid after if it moved anything solid). */
+  private relayYard(): void {
+    this.maps.setYard(this.yard, this.trees.goneIds());
+  }
+
+  /** A cleared tree's tile that is tilled, built on or under the house: the tree waits to regrow. */
+  private treeSpotTaken(t: MapProp): boolean {
+    if (this.farm.some((f) => f.x === t.x && f.y === t.y)) return true;
+    if (this.objects.home.some((o) => pointInRect(objectRect(o.item, o.x, o.y, o.rotation), t.x, t.y))) return true;
+    return this.maps.yard.props.some((p) => p.type !== "tree" && !p.walkable && pointInRect(p, t.x, t.y));
   }
 
   private rebuildGrid(): void {
@@ -594,6 +620,7 @@ export class HomeRoom extends DurableObject<Env> {
     mail?: boolean;
     containers?: boolean;
     drops?: boolean;
+    yard?: boolean;
   }): void {
     const entries: Record<string, unknown> = {};
     if (keys.save && this.save) entries.save = this.save;
@@ -604,6 +631,7 @@ export class HomeRoom extends DurableObject<Env> {
       entries.objSeq = this.objSeq;
     }
     if (keys.mail) entries.mail = this.mail;
+    if (keys.yard) entries.yard = this.yard;
     if (keys.containers) entries.containers = this.containers;
     if (keys.drops) entries.drops = this.drops.record();
     if (keys.rocks) {
@@ -731,6 +759,7 @@ export class HomeRoom extends DurableObject<Env> {
       objects: structuredClone(this.objects.home),
       objectsIn: structuredClone(this.objects.home_in),
       containers: structuredClone(this.containers),
+      yard: structuredClone(this.yard),
     };
   }
 
@@ -753,10 +782,18 @@ export class HomeRoom extends DurableObject<Env> {
     if (look) this.save.look = look;
     if (src.bonds !== undefined) this.save.bonds = sanitizeBonds(src.bonds);
     if (src.animals !== undefined) this.save.animals = sanitizeAnimals(src.animals);
-    this.farm = sanitizeFarm(data?.farm).filter((t) => isFarmable(HOME_MAP, t.x, t.y));
+    // The house goes where it stood, if that is still a valid spot on this yard.
+    const yard = sanitizeYard(data?.yard);
+    this.yard = yard.fenced ? { fenced: true } : {};
+    this.relayYard();
+    if (yard.house && checkHouseMove({ map: this.maps.yard, objects: [], farm: [] }, yard.house).ok) {
+      this.yard.house = yard.house;
+      this.relayYard();
+    }
+    this.farm = sanitizeFarm(data?.farm).filter((t) => isFarmable(this.maps.yard, t.x, t.y));
     // Exports from before the house have one list in the old layout: migrate those.
     const moved = Array.isArray(data?.objectsIn)
-      ? validateObjects({ home: sanitizeObjects(data.objects), home_in: sanitizeObjects(data.objectsIn) }, this.farm)
+      ? validateObjects({ home: sanitizeObjects(data.objects), home_in: sanitizeObjects(data.objectsIn) }, this.farm, this.maps.yard)
       : migrateObjects(sanitizeObjects(data?.objects), this.farm);
     this.objects = moved.objects;
     for (const item of moved.returned) if (!addItem(this.save.inventory, item, 1)) addParcel(this.mail, item);
@@ -780,6 +817,7 @@ export class HomeRoom extends DurableObject<Env> {
       mail: this.mail,
       trees: this.trees.record(),
       containers: this.containers,
+      yard: this.yard,
     });
     await this.ctx.storage.delete("lease");
   }
@@ -797,6 +835,8 @@ export class HomeRoom extends DurableObject<Env> {
     this.lease = null;
     this.farm = [];
     this.objects = emptyObjects();
+    this.yard = {};
+    this.relayYard();
     this.containers = {};
     this.mail = emptyMail();
     this.objSeq = 0;
@@ -808,6 +848,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.inviteTimes = [];
     this.rocks.load(undefined);
     this.trees.load(undefined);
+    this.relayYard();
     this.rebuildGrid();
   }
 
@@ -1104,9 +1145,9 @@ export class HomeRoom extends DurableObject<Env> {
     this.dropPlayer(CLOSE_REPLACED, "Connected from another tab.", true);
 
     // A named spawn needs a matching exit; otherwise resume the saved home position (and map).
-    const spawn = safeSpawnName(HOME_MAP.spawns, id.spawn);
+    const spawn = safeSpawnName(this.maps.yard.spawns, id.spawn);
     const transfer = this.takeTransfer();
-    let arrival = resolveHomeArrival(spawn, save, transfer, Date.now());
+    let arrival = resolveHomeArrival(spawn, save, transfer, Date.now(), this.maps.yard);
     // Fainted in a zone (it recorded that exit): wake up inside, by the bed.
     if (spawn === HOME_FAINT_SPAWN && transfer?.to === "home" && transfer.spawn === HOME_FAINT_SPAWN) {
       const bed = this.bedSide();
@@ -1262,6 +1303,7 @@ export class HomeRoom extends DurableObject<Env> {
       inventory: isVisitor ? VISITOR_INVENTORY : this.save!.inventory,
       farm: yard ? this.farm : [],
       objects: this.objects[who.map],
+      ...(yard ? { yard: this.yard } : {}),
       ground: [...(yard ? eggViews(this.animals(), !isVisitor) : []), ...this.drops.on[who.map].visibleTo(isVisitor ? "" : this.owner!)],
       brokenRocks: yard ? this.rocks.brokenIds() : [],
       trees: yard ? this.trees.stages() : [],
@@ -1294,6 +1336,17 @@ export class HomeRoom extends DurableObject<Env> {
     send(who.ws, this.welcomeFor(who, now));
     if (who === this.player && to === "home") this.sendMail(who);
     this.startTick();
+  }
+
+  /** A fresh welcome for the map `who` is on, as on arrival (the owner also gets bonds and mail). */
+  private rewelcome(who: HPlayer | Visitor, now: number): void {
+    const owner = who === this.player;
+    send(who.ws, {
+      ...this.welcomeFor(who, now),
+      ...(owner ? { bonds: bondList(sanitizeBonds(this.save!.bonds), now) } : {}),
+      ...(owner && devToolsEnabled(this.env) ? { devTools: true } : {}),
+    });
+    if (owner) this.sendMail(who as HPlayer);
   }
 
   private sendMail(p: HPlayer, open = false): void {
@@ -1347,7 +1400,7 @@ export class HomeRoom extends DurableObject<Env> {
     map: HomeMapId = "home",
   ): HPlayer {
     const save = this.save!;
-    const pos = standOn(this.maps.grids[map], map, at);
+    const pos = standOn(this.maps.grids[map], map, at, this.maps.map(map));
     return {
       ws,
       map,
@@ -1565,16 +1618,16 @@ export class HomeRoom extends DurableObject<Env> {
     const acks = new Map<HPlayer | Visitor, number | undefined>();
     acks.set(p, p.motion.step(p.entity, this.maps.grids[p.map], now));
     this.chargeOwnerDash(p, now);
-    const exit = this.sleepAt === null ? exitAt(homeMap(p.map), p.entity.x, p.entity.y) : null;
+    const exit = this.sleepAt === null ? exitAt(this.maps.map(p.map), p.entity.x, p.entity.y) : null;
     if (exit) this.takeExit(p, exit, now);
 
     if (p.leaving) return;
     this.tickDrops(p, now);
     for (const v of this.visitors.all()) {
       const a = v.motion.step(v.entity, this.maps.grids[v.map], now);
-      const vexit = exitAt(homeMap(v.map), v.entity.x, v.entity.y);
+      const vexit = exitAt(this.maps.map(v.map), v.entity.x, v.entity.y);
       const door = vexit ? doorTarget(vexit) : null;
-      if (vexit && door) this.switchMap(v, door, doorArrival(door, vexit.spawn, this.maps.grids[door]), now);
+      if (vexit && door) this.switchMap(v, door, doorArrival(door, vexit.spawn, this.maps.grids[door], this.maps.map(door)), now);
       // The only way out for a visitor is home: any other exit ends the visit.
       else if (vexit) {
         this.endVisit(v, "See you next time!");
@@ -1635,7 +1688,7 @@ export class HomeRoom extends DurableObject<Env> {
     p.motion.stop();
     // House doors: switch home maps on this connection (guests may roam both).
     const door = doorTarget(exit);
-    if (door) return this.switchMap(p, door, doorArrival(door, exit.spawn, this.maps.grids[door]), now);
+    if (door) return this.switchMap(p, door, doorArrival(door, exit.spawn, this.maps.grids[door], this.maps.map(door)), now);
     if (p.guest) {
       // Guests stay home: step them back off the exit and show the sign-up prompt.
       const back = HOME_MAP.spawns[safeSpawnName(HOME_MAP.spawns, "from_village")];
@@ -1748,9 +1801,15 @@ export class HomeRoom extends DurableObject<Env> {
       case "pickup":
       case "moveObjects":
       case "pickupObjects":
+      case "shiftObjects":
+      case "placeRun":
+      case "moveHouse":
         if (now - p.lastBuild < BUILD_COOLDOWN_MS) return this.reject(p, msg, "Too fast.");
         p.lastBuild = now;
         if (msg.t === "place") return this.onPlace(p, msg);
+        if (msg.t === "shiftObjects") return this.onShiftObjects(p, msg);
+        if (msg.t === "placeRun") return this.onPlaceRun(p, msg);
+        if (msg.t === "moveHouse") return this.onMoveHouse(p, msg);
         if (msg.t === "moveObject") return this.onMoveObject(p, msg);
         if (msg.t === "moveObjects") return this.onMoveObjects(p, msg);
         if (msg.t === "pickupObjects") return this.onPickupObjects(p, msg);
@@ -1959,7 +2018,10 @@ export class HomeRoom extends DurableObject<Env> {
     this.startTick();
   }
 
-  /** Local dev only (see devToolsEnabled): "/day" ends the day now, "/time 21" sets the clock, "/give item 3" fills the bag. */
+  /**
+   * Local dev only (see devToolsEnabled): "/day" ends the day now, "/time 21" sets the clock,
+   * "/give item 3" fills the bag, "/barn" builds the barn.
+   */
   private devCommand(p: HPlayer, text: string, now: number): boolean {
     if (text === "/day") {
       this.endDay("sleep", now);
@@ -1971,6 +2033,13 @@ export class HomeRoom extends DurableObject<Env> {
       if (!getItem(item) || !addItem(this.save!.inventory, item, Number(give[2] ?? 1))) {
         send(p.ws, { t: "notice", text: "Usage: /give item_id [qty] (with room in the bag)", kind: "error" });
       } else this.inventoryChanged(p);
+      return true;
+    }
+    if (text === "/barn") {
+      // As if bought at the town hall: the barn goes up in the yard right away.
+      this.animals().barn = true;
+      this.settleAnimals(now);
+      this.toMap("home", { t: "objects", upd: this.objects.home.filter((o) => o.id === BARN_ID), del: [] });
       return true;
     }
     const coins = /^\/coins (\d{1,5})$/.exec(text);
@@ -2210,7 +2279,7 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   private onUnship(p: HPlayer, msg: Extract<ClientMsg, { t: "unship" }>): void {
-    const bin = HOME_MAP.props.find((pr) => pr.type === "shipping_bin");
+    const bin = this.maps.yard.props.find((pr) => pr.type === "shipping_bin");
     if (!bin || p.map !== "home" || distToRect(p.entity, bin) > PROP_REACH + 1) return this.reject(p, msg, "Walk up to the shipping bin.");
     const r = unshipLast(this.save!.inventory, this.bin);
     if (!r.ok) return this.reject(p, msg, r.reason);
@@ -2221,7 +2290,7 @@ export class HomeRoom extends DurableObject<Env> {
 
   /** Watering can refills on water tiles and at the well (shared with the client's refill cue). */
   private isWaterSource(x: number, y: number): boolean {
-    return isWaterSource(HOME_MAP, x, y);
+    return isWaterSource(this.maps.yard, x, y);
   }
 
   /** Turn toward the tile being worked, so tool swings and the refill face the target. */
@@ -2254,9 +2323,9 @@ export class HomeRoom extends DurableObject<Env> {
         tree: tree ? { stage: tree.stage, size: tree.size } : null,
         soil: this.farm.find((t) => t.x === x && t.y === y) ?? null,
         water: this.isWaterSource(x, y),
-        bin: HOME_MAP.props.some((pr) => pr.type === "shipping_bin" && pointInRect(pr, x, y)),
-        farmable: isFarmable(HOME_MAP, x, y, this.objects.home),
-        boulder: boulderAt(HOME_MAP.props, x, y),
+        bin: this.maps.yard.props.some((pr) => pr.type === "shipping_bin" && pointInRect(pr, x, y)),
+        farmable: isFarmable(this.maps.yard, x, y, this.objects.home),
+        boulder: boulderAt(this.maps.yard.props, x, y),
       },
       fnow,
     );
@@ -2429,7 +2498,11 @@ export class HomeRoom extends DurableObject<Env> {
     }
     save.inventory = trial;
     if (stage === "tree") this.trees.fell(tree, now);
-    else this.trees.clearStump(tree, this.maps.grids.home);
+    else {
+      this.trees.clearStump(tree, this.maps.grids.home);
+      // Its tile is open ground now: it may be tilled or built on until the tree grows back.
+      this.relayYard();
+    }
     const next = stage === "tree" ? "stump" : "gone";
     this.toMap("home", { t: "tree", id: tree.id, stage: next, hits: hit.hits, need, drops: drops.map((d) => d.item), ...stamp });
     this.sendHomeState(p);
@@ -2462,7 +2535,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (target.startsWith(GROUND_TARGET_PREFIX)) return this.onEgg(p, target.slice(GROUND_TARGET_PREFIX.length));
     if (target === BARN_ID) return this.onBarn(p);
     const [propId, slotStr] = target.split(":");
-    const prop = homeMap(p.map).props.find((pr) => pr.id === propId);
+    const prop = this.maps.map(p.map).props.find((pr) => pr.id === propId);
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
     if (prop.id === MAILBOX_ID) return this.onMailbox(p, target === MAILBOX_TAKE);
     if (prop.type !== "shipping_bin") return;
@@ -2491,13 +2564,27 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   private inPlaceReach(p: HPlayer, x: number, y: number): boolean {
-    return dist(p.entity, { x: x + 0.5, y: y + 0.5 }) <= PLACE_REACH;
+    return dist(p.entity, { x: x + 0.5, y: y + 0.5 }) <= (p.map === "home" ? YARD_REACH : PLACE_REACH);
   }
 
   private objectsChanged(p: HPlayer, upd: PlacedObject[], del: string[]): void {
     this.rebuildGrid();
     this.toMap(p.map, { t: "objects", upd, del });
     this.persist({ objects: true });
+    const barn = p.map === "home" ? upd.find((o) => o.id === BARN_ID) : undefined;
+    if (barn) this.barnMoved(barn);
+    if (p.map === "home") this.herd.resettle(Date.now());
+  }
+
+  /** The hens follow their barn; eggs it now stands on roll out in front of it. */
+  private barnMoved(barn: PlacedObject): void {
+    if (!this.save) return;
+    const a = this.animals();
+    if (onYardBarnMoved(a, barn, this.maps.grids.home)) {
+      this.persist({ save: true });
+      this.sendEggs();
+    }
+    this.herd.sync(yardAnimals(a, barn), Date.now());
   }
 
   private onPlace(p: HPlayer, msg: Extract<ClientMsg, { t: "place" }>): void {
@@ -2519,10 +2606,28 @@ export class HomeRoom extends DurableObject<Env> {
     this.inventoryChanged(p);
   }
 
+  /**
+   * The yard as edit mode checks it: the owner's layout with cleared trees gone, its pieces,
+   * farmland, unbroken rocks, and the people and animals in it.
+   */
+  private yardWorld(): YardWorld {
+    return {
+      map: this.maps.yard,
+      objects: this.objects.home,
+      farm: this.farm,
+      rocks: this.rocks.unbroken(),
+      occupied: [...this.entities("home"), ...this.herd.entities()],
+    };
+  }
+
   /** Placement on the owner's current map: furniture, people and (in the yard) farm tiles. */
   private canPlaceHere(p: HPlayer, item: string, x: number, y: number, rotation: 0 | 1 | 2 | 3, ignoreId?: string) {
-    const farm = p.map === "home" ? this.farm : [];
-    return canPlace(homeMap(p.map), this.objects[p.map], farm, item, x, y, rotation, {
+    // The yard also keeps everyone, the door, the barn and the well reachable.
+    if (p.map === "home") {
+      return ignoreId ? checkYardMoves(this.yardWorld(), [{ id: ignoreId, x, y, rotation }]) : checkYardPlace(this.yardWorld(), item, [{ x, y }], rotation);
+    }
+    const farm: FarmTile[] = [];
+    return canPlace(this.maps.map(p.map), this.objects[p.map], farm, item, x, y, rotation, {
       ...(ignoreId ? { ignoreId } : {}),
       occupied: this.entities(p.map),
     });
@@ -2532,7 +2637,6 @@ export class HomeRoom extends DurableObject<Env> {
     // Furniture moves within the map it is on.
     const obj = this.objects[p.map].find((o) => o.id === msg.id);
     if (!obj) return this.reject(p, msg, "That isn't here any more.");
-    if (obj.id === BARN_ID) return this.reject(p, msg, "The barn stays where it was built.");
     if (!this.inPlaceReach(p, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
     const ok = this.canPlaceHere(p, obj.item, msg.x, msg.y, msg.rotation, obj.id);
     if (!ok.ok) return this.reject(p, msg, ok.reason);
@@ -2561,12 +2665,14 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   /** Edit mode: several pieces move (or turn) at once, or none do. */
-  private onMoveObjects(p: HPlayer, msg: Extract<ClientMsg, { t: "moveObjects" }>): void {
+  private onMoveObjects(p: HPlayer, msg: Extract<ClientMsg, { t: "moveObjects" }>, from: ClientMsg = msg): void {
     const list = this.objects[p.map];
-    if (msg.moves.some((m) => !this.inPlaceReach(p, m.x, m.y))) return this.reject(p, msg, "Too far away.");
-    const farm = p.map === "home" ? this.farm : [];
-    const ok = checkArrange(homeMap(p.map), list, farm, msg.moves, { occupied: this.entities(p.map), fixed: moveRefusal });
-    if (!ok.ok) return this.reject(p, msg, ok.reason);
+    if (msg.moves.some((m) => !this.inPlaceReach(p, m.x, m.y))) return this.reject(p, from, "Too far away.");
+    const ok =
+      p.map === "home"
+        ? checkYardMoves(this.yardWorld(), msg.moves)
+        : checkArrange(this.maps.map(p.map), list, [], msg.moves, { occupied: this.entities(p.map), fixed: moveRefusal });
+    if (!ok.ok) return this.reject(p, from, ok.reason);
     const moved: PlacedObject[] = [];
     for (const m of msg.moves) {
       const obj = list.find((o) => o.id === m.id)!;
@@ -2576,10 +2682,63 @@ export class HomeRoom extends DurableObject<Env> {
     this.objectsChanged(p, moved, []);
   }
 
+  /** Yard edit mode: a group (a plot's whole fence, say) slides by whole tiles, or stays. */
+  private onShiftObjects(p: HPlayer, msg: Extract<ClientMsg, { t: "shiftObjects" }>): void {
+    const list = this.objects[p.map];
+    const moves = [];
+    for (const id of msg.ids) {
+      const o = list.find((x) => x.id === id);
+      if (!o) return this.reject(p, msg, "That isn't here any more.");
+      moves.push({ id, x: o.x + msg.dx, y: o.y + msg.dy, rotation: o.rotation });
+    }
+    this.onMoveObjects(p, { t: "moveObjects", moves, ...(msg.req ? { req: msg.req } : {}) }, msg);
+  }
+
+  /** Yard edit mode: a straight run of fence (or one piece of anything) from one bag slot. */
+  private onPlaceRun(p: HPlayer, msg: Extract<ClientMsg, { t: "placeRun" }>): void {
+    const inv = this.save!.inventory;
+    const slot = inv.slots[msg.slot];
+    if (!slot) return this.reject(p, msg, "Nothing in that slot.");
+    if (p.map !== "home") return this.reject(p, msg, "Fences go outdoors.");
+    if (slot.item === BARN_ITEM) return this.reject(p, msg, "The town hall builds barns.");
+    if (slot.qty < msg.n) return this.reject(p, msg, `You only have ${slot.qty}.`);
+    const tiles = Array.from({ length: msg.n }, (_, i) => ({ x: msg.x + msg.dx * i, y: msg.y + msg.dy * i }));
+    if (tiles.some((t) => !this.inPlaceReach(p, t.x, t.y))) return this.reject(p, msg, "Too far away.");
+    if (getItem(slot.item)?.kind !== "furniture" || mapForItem(slot.item) !== "home") return this.reject(p, msg, "This goes indoors.");
+    const ok = checkYardPlace(this.yardWorld(), slot.item, tiles, msg.rotation);
+    if (!ok.ok) return this.reject(p, msg, ok.reason);
+    const item = slot.item;
+    if (!removeFromSlot(inv, msg.slot, msg.n)) return this.reject(p, msg, "Nothing in that slot.");
+    const placed = tiles.map((t): PlacedObject => ({ id: `o${++this.objSeq}`, item, x: t.x, y: t.y, rotation: msg.rotation }));
+    this.objects.home.push(...placed);
+    this.objectsChanged(p, placed, []);
+    this.inventoryChanged(p);
+  }
+
+  /**
+   * Yard edit mode: the house moves, door, doorstep and spawns with it (shared/yard.ts). Everyone
+   * in the yard gets the new layout; whoever is inside walks out of the new door.
+   */
+  private onMoveHouse(p: HPlayer, msg: Extract<ClientMsg, { t: "moveHouse" }>): void {
+    if (p.map !== "home") return this.reject(p, msg, "Step outside to move the house.");
+    const ok = checkYardHouse(this.yardWorld(), { x: msg.x, y: msg.y });
+    if (!ok.ok) return this.reject(p, msg, ok.reason);
+    this.yard = { ...this.yard, house: { x: msg.x, y: msg.y } };
+    this.relayYard();
+    this.rebuildGrid();
+    this.herd.resettle(Date.now());
+    this.persist({ yard: true });
+    // Everyone in the yard redraws it from a fresh welcome (the ground, the props, the door).
+    const now = Date.now();
+    for (const who of this.present()) if (who.map === "home") this.rewelcome(who, now);
+  }
+
   /** Edit mode: several pieces back into the bag, or none (one that must stay, or a full bag). */
   private onPickupObjects(p: HPlayer, msg: Extract<ClientMsg, { t: "pickupObjects" }>): void {
     const list = this.objects[p.map];
     const picked: PlacedObject[] = [];
+    const limit = arrangeLimit(msg.ids.map((id) => list.find((o) => o.id === id)?.item ?? ""));
+    if (msg.ids.length > limit) return this.reject(p, msg, `Pick up at most ${limit} pieces at once.`);
     for (const id of msg.ids) {
       const obj = list.find((o) => o.id === id);
       if (!obj) return this.reject(p, msg, "That isn't here any more.");
@@ -2671,16 +2830,16 @@ export class HomeRoom extends DurableObject<Env> {
   private settleAnimals(now: number): boolean {
     if (!this.save) return false;
     const a = this.animals();
-    const built = ensureBarn(a, this.objects, this.farm);
+    const built = ensureBarn(a, this.objects, this.farm, this.maps.yard);
     if (built) {
       this.farm = built.farm;
       this.rebuildGrid();
       this.giveBack(built.returned, now, "The town hall built your barn just south of the road. Your hens will live there.");
       this.persist({ objects: true, farm: true, mail: true });
     }
-    const barn = this.objects.home.some((o) => o.id === BARN_ID);
+    const barn = this.objects.home.find((o) => o.id === BARN_ID) ?? null;
     const settling = a.chickens.some((c) => c.day === 0);
-    const laid = barn ? layEggs(a, this.clock.day, eggSpots(this.maps.grids.home)) : [];
+    const laid = barn ? layEggs(a, this.clock.day, eggSpots(this.maps.grids.home, barn)) : [];
     if (built || settling || laid.length > 0) this.persist({ save: true });
     this.herd.sync(yardAnimals(a, barn), now);
     return laid.length > 0;

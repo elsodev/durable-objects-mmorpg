@@ -9,10 +9,12 @@ import type { ServerMsg } from "../../shared/protocol";
 import { EntityDiffer } from "../game/diff";
 import { send } from "../game/net";
 import { resolveSpawn, type PendingTransfer, type SavedPlace } from "../game/spawn";
+import { applyYard, withoutTrees, type YardLayout } from "../../shared/yard";
 
 export const HOME_OUT: MapData = getMap("home");
 export const HOME_IN: MapData = getMap("home_in");
 
+/** The base map of each home map (the yard before its owner rearranged it). */
 export function homeMap(id: HomeMapId): MapData {
   return id === "home_in" ? HOME_IN : HOME_OUT;
 }
@@ -35,19 +37,34 @@ export interface Present {
   entity: EntityState;
 }
 
-/** Per-map collision grids and entity differs. */
+/** Per-map collision grids and entity differs, and this home's yard as its owner laid it out. */
 export class SubMaps {
   readonly grids: Record<HomeMapId, CollisionGrid>;
   private differs: Record<HomeMapId, EntityDiffer> = { home: new EntityDiffer(), home_in: new EntityDiffer() };
+  /** The yard with the owner's layout (shared/yard.ts) laid over the base map. */
+  yard: MapData = HOME_OUT;
 
   constructor(objects: HomeObjects, rocks?: { x: number; y: number }[]) {
     this.grids = { home: buildCollision(HOME_OUT), home_in: buildCollision(HOME_IN) };
     this.rebuild(objects, rocks);
   }
 
+  /** This home's map `id`: its own yard, or the house inside (the same for everyone). */
+  map(id: HomeMapId): MapData {
+    return id === "home_in" ? HOME_IN : this.yard;
+  }
+
+  /**
+   * Lays the owner's layout over the base yard, without the trees cleared away (`gone`): their
+   * tiles are open ground until they grow back. Call rebuild() after, so collision follows.
+   */
+  setYard(layout: YardLayout, gone: ReadonlySet<string> = new Set()): void {
+    this.yard = withoutTrees(applyYard(HOME_OUT, layout), gone);
+  }
+
   /** Rocks (unbroken) and choppable trees only exist in the yard. */
   rebuild(objects: HomeObjects, rocks?: { x: number; y: number }[], trees?: { applyTo(grid: CollisionGrid): void }): void {
-    this.grids.home = buildCollision(HOME_OUT, { objects: objects.home, ...(rocks ? { rocks } : {}) });
+    this.grids.home = buildCollision(this.yard, { objects: objects.home, ...(rocks ? { rocks } : {}) });
     trees?.applyTo(this.grids.home);
     this.grids.home_in = buildCollision(HOME_IN, { objects: objects.home_in });
   }
@@ -83,8 +100,7 @@ export function doorTarget(exit: MapExit): HomeMapId | null {
  * Where you appear on `to` after walking through a door: its named spawn, nudged to the map's
  * default when furniture or a body can't stand there.
  */
-export function doorArrival(to: HomeMapId, spawn: string, grid: CollisionGrid): Vec2 {
-  const map = homeMap(to);
+export function doorArrival(to: HomeMapId, spawn: string, grid: CollisionGrid, map: MapData = homeMap(to)): Vec2 {
   const at = Object.hasOwn(map.spawns, spawn) ? map.spawns[spawn]! : map.spawns.default!;
   return canStand(grid, at.x, at.y) ? { ...at } : { ...map.spawns.default! };
 }
@@ -104,17 +120,18 @@ export function resolveHomeArrival(
   saved: HomePlace,
   transfer: PendingTransfer | null | undefined,
   now: number,
+  yard: MapData = HOME_OUT,
 ): { map: HomeMapId; at: Vec2 } {
-  const at = resolveSpawn(HOME_OUT.spawns, "home", requested, saved, transfer, now);
-  const named = requested !== "default" && at === HOME_OUT.spawns[requested];
+  const at = resolveSpawn(yard.spawns, "home", requested, saved, transfer, now);
+  const named = requested !== "default" && at === yard.spawns[requested];
   const resumed = !named && saved.zone === "home" && at.x === saved.x && at.y === saved.y;
   return { map: resumed && isHomeMapId(saved.homeMap) ? saved.homeMap : "home", at: { ...at } };
 }
 
 /** Picks a standable position on `map`, falling back to its default spawn. */
-export function standOn(grid: CollisionGrid, id: HomeMapId, at: Vec2 | null): Vec2 {
+export function standOn(grid: CollisionGrid, id: HomeMapId, at: Vec2 | null, map: MapData = homeMap(id)): Vec2 {
   if (at && canStand(grid, at.x, at.y)) return at;
-  return { ...homeMap(id).spawns.default! };
+  return { ...map.spawns.default! };
 }
 
 export { HOME_MAPS };

@@ -752,6 +752,12 @@ Derived: ElizaWy Wood Bridge A with planks removed.
 - Source: https://github.com/ElizaWy/LPC (Structure/Fences/Plain Fence A.png)
 - Notes: Original by Eliza Wyatt.
 
+### props/garden_gate.png
+- Authors: Eliza Wyatt (DeathsDarling); gate pickets and crossbars redrawn for this game in the same palette
+- License: **OGA-BY 3.0** (derivative of Plain Fence A)
+- Source: https://github.com/ElizaWy/LPC (Structure/Fences/Plain Fence A.png)
+- Notes: Horizontal and north-south views of a garden gate that joins the plain fence.
+
 ### props/rocks_grasslands.png
 - Authors: Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**

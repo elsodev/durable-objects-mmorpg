@@ -1,5 +1,5 @@
 // Edit mode's 16x16 pixel icons, drawn for this project (CC0) in the menu icons' palette, so the
-// pencil, turn arrow and cross sit beside the bag icon without looking borrowed.
+// pencil, turn arrow, cross and fence sit beside the bag icon without looking borrowed.
 import { MENU_ICON_SIZE, menuIcon, pixelIconSvg } from "./menu-icons";
 
 export const EDIT_ICONS = {
@@ -55,6 +55,24 @@ export const EDIT_ICONS = {
     "..krrk....krrk..",
     "...kk......kk...",
     "................",
+    "................",
+  ],
+  fence: [
+    "................",
+    "..kk....kk....kk",
+    ".kbbk..kbbk..kbb",
+    ".kbBk..kbBk..kbB",
+    "kkkkkkkkkkkkkkkk",
+    "kllllllllllllllk",
+    "kBBBBBBBBBBBBBBk",
+    "kkbBkkkkbBkkkkbB",
+    ".kbBk..kbBk..kbB",
+    "kkkkkkkkkkkkkkkk",
+    "kllllllllllllllk",
+    "kBBBBBBBBBBBBBBk",
+    "kkbBkkkkbBkkkkbB",
+    ".kbBk..kbBk..kbB",
+    ".kkkk..kkkk..kkk",
     "................",
   ],
 } as const;

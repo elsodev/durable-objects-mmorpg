@@ -94,7 +94,7 @@ describe("Happy the husky: adoption", () => {
     expect(adoptAnimal(s, happy, "a:happy", T0)).toMatchObject({ ok: true });
     expect(s.pets).toEqual(["happy"]);
     expect(sanitizeAnimals(JSON.parse(JSON.stringify(s))).pets).toEqual(["happy"]);
-    const yard = yardAnimals(s, false);
+    const yard = yardAnimals(s, null);
     expect(yard).toEqual([expect.objectContaining({ id: "pet_happy", name: "Happy", sprite: "dog_husky", species: "dog" })]);
   });
 

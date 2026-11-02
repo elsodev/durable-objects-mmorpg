@@ -4,11 +4,11 @@
 // Every set* call diffs against what is on screen by a per-item signature, so the store can
 // call them on each change event without rebuilding sprites. See ../contracts.ts.
 import { AnimatedSprite, Container, Graphics, GraphicsContext, Sprite, Ticker, type Texture } from "pixi.js";
-import { cropLook, cropView, objectRect, footprint, isRug, pointInRect, wallFaceRow } from "../../shared/engine";
+import { cropLook, cropView, objectRect, footprint, isFenceItem, isRug, pointInRect, wallFaceRow } from "../../shared/engine";
 import { getItem } from "../../shared/items";
 import { Ground, type FarmTile, type MapData, type PlacedObject, type Vec2 } from "../../shared/types";
 import { hashXY } from "../art/slice";
-import { fenceKey, fenceMasks } from "./fence";
+import { fenceKey, fenceMasks, gateTurn } from "./fence";
 import { BlobTextures, type GroundEdgeArt } from "./ground";
 import { QUADRANTS, type BlobPiece, type BlobSet, type Quadrant } from "./ground-autotile";
 import { planSoil, soilShift, soilSig, type SoilPlan } from "./soil-autotile";
@@ -342,8 +342,8 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
     const fp = footprint(o.item, o.rotation);
     const x = Math.floor(o.x);
     const y = Math.floor(o.y);
-    const mask = o.item === "fence" ? maskOf(o) : 0;
-    const look = (mask && art.fence?.(mask)) || art.furniture(o.item, o.rotation);
+    const mask = isFenceItem(o.item) ? maskOf(o) : 0;
+    const look = o.item === "gate" ? art.furniture(o.item, gateTurn(mask, o.rotation)) : (mask && art.fence?.(mask)) || art.furniture(o.item, o.rotation);
     const sprite = objectSprite(look, (x + fp.w / 2) * TILE, (y + fp.h) * TILE, { x, y }, openLids.has(o.id));
     const def = getItem(o.item);
     if (def?.placeOn === "wall") {
@@ -351,8 +351,8 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       sprite.zIndex = wallObjectZ(o, objMap);
       layers.sorted.addChild(sprite);
     }
-    // Walkable furniture (rugs) lies flat under everyone instead of y-sorting.
-    else if (def?.walkable) floorRoot.addChild(sprite);
+    // Rugs lie flat under everyone instead of y-sorting (a gate is walked through but stands up).
+    else if (isRug(o.item)) floorRoot.addChild(sprite);
     else layers.sorted.addChild(sprite);
     // After the wall lift, so a hung lamp glows where it is drawn.
     const lights = lightSpots(o.item, sprite.x, sprite.y, sprite.scale.x < 0);
@@ -422,8 +422,9 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       for (const o of all) objects.set(o.id, o);
       // Placed fences join their neighbours (render/fence.ts); a lone fence keeps its rotated piece.
       fenceMask.clear();
-      for (const [k, m] of fenceMasks(all.filter((o) => o.item === "fence"))) fenceMask.set(k, m);
-      const sig = (o: PlacedObject) => (o.item === "fence" ? `${objectSig(o)}|${maskOf(o)}` : objectSig(o));
+      // Gates join the run they sit in, and fences join up with them.
+      for (const [k, m] of fenceMasks(all.filter((o) => isFenceItem(o.item)))) fenceMask.set(k, m);
+      const sig = (o: PlacedObject) => (isFenceItem(o.item) ? `${objectSig(o)}|${maskOf(o)}` : objectSig(o));
       const d = diffKeyed(objSigs, all, (o) => o.id, sig);
       for (const k of d.removed) {
         const v = objViews.get(k);

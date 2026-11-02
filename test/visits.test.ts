@@ -172,6 +172,9 @@ describe("visitor permission matrix", () => {
     pickup: { t: "pickup", id: "bed" },
     moveObjects: { t: "moveObjects", moves: [{ id: "bed", x: 1, y: 1, rotation: 0 }] },
     pickupObjects: { t: "pickupObjects", ids: ["bed"] },
+    shiftObjects: { t: "shiftObjects", ids: ["bed"], dx: 1, dy: 0 },
+    placeRun: { t: "placeRun", slot: 0, x: 20, y: 14, dx: 1, dy: 0, n: 3, rotation: 0 },
+    moveHouse: { t: "moveHouse", x: 12, y: 18 },
     buy: { t: "buy", npc: "n", item: "seed_turnip", qty: 1 },
     sell: { t: "sell", npc: "n", slot: 0, qty: 1 },
     donate: { t: "donate", goal: "bridge", slot: 0, qty: 1 },
@@ -222,10 +225,10 @@ describe("visitor permission matrix", () => {
   it("server refuses every owner-only message from a visitor and changes nothing", async () => {
     const { owner, guest } = await aliceHostsBasil();
     const room = r.room("alice") as any;
-    const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
+    const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock, yard: room.yard });
     const denied = Object.values(samples).filter((m) => "deny" in VISITOR_RULES[m.t]);
     expect(denied.map((m) => m.t).sort()).toEqual(
-      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "moveObjects", "pickup", "pickupObjects", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete", "tradeRequest", "tradeAnswer", "tradeAdd", "tradeRemove", "tradeCoins", "tradeReady", "tradeConfirm", "tradeCancel"].sort(),
+      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "moveObjects", "pickup", "pickupObjects", "place", "shiftObjects", "placeRun", "moveHouse", "sell", "setLook", "sleep", "unship", "moveSlot", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete", "tradeRequest", "tradeAnswer", "tradeAdd", "tradeRemove", "tradeCoins", "tradeReady", "tradeConfirm", "tradeCancel"].sort(),
     );
     for (const m of denied) {
       const msg = m.t === "setLook" ? { t: "setLook", look: { body: "x" } } : m;
@@ -239,7 +242,7 @@ describe("visitor permission matrix", () => {
     guest.sent = [];
     await sendMsg(r, "alice", guest, { t: "use", slot: 0, x: 36, y: 13 });
     expect(guest.last("reject").reason).toMatch(/only help harvest/);
-    const after = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
+    const after = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock, yard: room.yard });
     expect(after).toBe(before);
     expect(guest.closed).toBeNull();
     expect(owner.of("inventory")).toHaveLength(0);

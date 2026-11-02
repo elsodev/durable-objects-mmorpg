@@ -3,6 +3,7 @@ import type { ChatEntry, CreateStore, StoreEvent, WorldStore } from "../contract
 import type { ServerMsg } from "../../shared/protocol";
 import type { EntityState, FarmTile, Inventory, PlacedObject } from "../../shared/types";
 import { getMap } from "../../shared/maps";
+import { applyYard } from "../../shared/yard";
 import { HISTORY_MS, INTERP_DELAY_MS, sampleBuffer, type Snapshot } from "./interp";
 
 export const MAX_CHAT = 100;
@@ -64,7 +65,8 @@ export const createStore: CreateStore = () => {
         case "welcome": {
           store.reset();
           store.zone = msg.zone;
-          store.map = getMap(msg.homeMap ?? msg.zone);
+          // A home yard is drawn as its owner laid it out (the house may have moved).
+          store.map = msg.yard ? applyYard(getMap(msg.homeMap ?? msg.zone), msg.yard) : getMap(msg.homeMap ?? msg.zone);
           store.youId = msg.you;
           store.inventory = msg.inventory;
           for (const e of msg.entities) push(e, recvTime);

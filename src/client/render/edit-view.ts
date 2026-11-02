@@ -4,9 +4,11 @@
 import { Container, Graphics, Sprite } from "pixi.js";
 import type { Art, Layers } from "../contracts";
 import { SCALE, TILE } from "../contracts";
-import { footprint, type Rect } from "../../shared/engine";
+import { footprint, isFenceItem, type Rect } from "../../shared/engine";
+import { fenceKey, fenceMasks, gateTurn } from "./fence";
 import type { ItemId, MapData } from "../../shared/types";
 import { wallLift } from "./farm";
+import { HOUSE_SIZE, houseLot } from "../../shared/yard";
 
 export interface EditGhost {
   item: ItemId;
@@ -14,6 +16,8 @@ export interface EditGhost {
   y: number;
   rotation: 0 | 1 | 2 | 3;
   ok: boolean;
+  /** The house (yard edit mode): its footprint and doorstep, drawn with the cottage art. */
+  house?: boolean;
 }
 
 export interface EditScene {
@@ -79,18 +83,31 @@ export function createEditView(art: Art, layers: Layers): EditView {
         const a = px(scene.hover);
         over.roundRect(a.x - 2, a.y - 2, a.w + 4, a.h + 4, 6).stroke({ color: HOVER, alpha: 0.85, width: 2 });
       }
+      const masks = fenceMasks(scene.ghosts.filter((g) => !g.house && isFenceItem(g.item)));
       scene.ghosts.forEach((g, i) => {
-        const fp = footprint(g.item, g.rotation);
+        const fp = g.house ? HOUSE_SIZE : footprint(g.item, g.rotation);
         const color = g.ok ? OK : BAD;
-        for (let ty = 0; ty < fp.h; ty++) {
-          for (let tx = 0; tx < fp.w; tx++) {
-            under
-              .rect((g.x + tx) * TILE + 1, (g.y + ty) * TILE + 1, TILE - 2, TILE - 2)
-              .fill({ color, alpha: 0.28 })
-              .stroke({ color, alpha: 0.9, width: 2 });
-          }
+        // Refused spots get a stronger red wash, so "not here" reads at a glance.
+        const fill = g.ok ? 0.28 : 0.45;
+        const tile = (x: number, y: number, alpha: number) =>
+          under.rect(x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2).fill({ color, alpha }).stroke({ color, alpha: 0.9, width: 2 });
+        for (let ty = 0; ty < fp.h; ty++) for (let tx = 0; tx < fp.w; tx++) tile(g.x + tx, g.y + ty, fill);
+        if (g.house) {
+          // The doorstep has to be clear too: drawn fainter, below the door.
+          const { step } = houseLot({ x: g.x, y: g.y });
+          for (let ty = 0; ty < step.h; ty++) for (let tx = 0; tx < step.w; tx++) tile(step.x + tx, step.y + ty, fill * 0.5);
+          const look = art.prop("home_house");
+          const s = ghostSprite(i);
+          s.texture = look.texture;
+          s.anchor.set(look.anchor.x, look.anchor.y);
+          s.position.set((g.x + fp.w / 2) * TILE, (g.y + fp.h) * TILE);
+          s.tint = g.ok ? OK_TINT : BAD_TINT;
+          return;
         }
-        const look = art.furniture(g.item, g.rotation);
+        // Fence ghosts join up with each other like the placed fence does (render/fence.ts).
+        const mask = isFenceItem(g.item) ? (masks.get(fenceKey(g.x, g.y)) ?? 0) : 0;
+        const look =
+          g.item === "gate" ? art.furniture(g.item, gateTurn(mask, g.rotation)) : (mask && art.fence?.(mask)) || art.furniture(g.item, g.rotation);
         const s = ghostSprite(i);
         s.texture = look.texture;
         s.anchor.set(look.anchor.x, look.anchor.y);
@@ -99,6 +116,12 @@ export function createEditView(art: Art, layers: Layers): EditView {
         s.tint = g.ok ? OK_TINT : BAD_TINT;
       });
       for (let i = scene.ghosts.length; i < pool.length; i++) pool[i]!.visible = false;
+      // A refused spot is washed red over the ghost too, so the clash shows through its art.
+      for (const g of scene.ghosts) {
+        if (g.ok) continue;
+        const fp = g.house ? HOUSE_SIZE : footprint(g.item, g.rotation);
+        over.rect(g.x * TILE, g.y * TILE, fp.w * TILE, fp.h * TILE).fill({ color: BAD, alpha: 0.38 }).stroke({ color: BAD, alpha: 1, width: 2 });
+      }
       if (scene.box) {
         const b = px(scene.box);
         over.rect(b.x, b.y, b.w, b.h).fill({ color: BOX, alpha: 0.14 }).stroke({ color: BOX, alpha: 0.95, width: 2 });

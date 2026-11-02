@@ -78,8 +78,8 @@ describe("hens", () => {
     expect(townhallOffers(s).map((o) => o.item)).toEqual(["pet_treat"]);
     expect(new Set(s.chickens.map((c) => c.id)).size).toBe(BARN_CAPACITY);
     // hens wander the yard only once the barn stands
-    expect(yardAnimals(s, false)).toHaveLength(0);
-    expect(yardAnimals(s, true)).toHaveLength(BARN_CAPACITY);
+    expect(yardAnimals(s, null)).toHaveLength(0);
+    expect(yardAnimals(s, BARN_SPOT)).toHaveLength(BARN_CAPACITY);
   });
 
   it("settle on their first day and lay one egg each later home day, once per day", () => {

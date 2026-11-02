@@ -11,16 +11,16 @@ import { cloneInventory } from "../game/sanitize";
 
 export { WARDROBE_ID };
 
-/** Why `obj` may not move at all (null: it may). */
-export function moveRefusal(obj: PlacedObject): string | null {
-  return obj.id === BARN_ID ? "The barn stays where it was built." : null;
+/** Why `obj` may not move at all (null: it may). Everything placed may move, the barn too. */
+export function moveRefusal(_obj: PlacedObject): string | null {
+  return null;
 }
 
 /** Why `obj` may not go back into the bag (null: it may). */
 export function pickupRefusal(obj: PlacedObject, containers: Containers): string | null {
   if (obj.id === BED_ID) return "Your bed stays. You can move it instead.";
   if (obj.id === WARDROBE_ID) return "Your wardrobe stays. You can move it instead.";
-  if (obj.id === BARN_ID) return "The barn stays where it was built.";
+  if (obj.id === BARN_ID) return "The barn stays in the yard. You can move it instead.";
   if (!containerEmpty(containers, obj.id)) return `Empty the ${getItem(obj.item)?.name.toLowerCase() ?? "storage"} first.`;
   return null;
 }

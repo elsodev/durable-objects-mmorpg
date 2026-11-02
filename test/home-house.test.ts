@@ -8,7 +8,7 @@ import { H_GUEST, H_SESSION, H_SPAWN, H_USER_ID, H_USER_NAME, H_VISIT_OWNER, H_V
 import { doorArrival, doorTarget, HOME_IN, HOME_OUT, resolveHomeArrival, SubMaps, emptyObjects } from "../src/worker/home/submaps";
 import { BED_ID, ensureBed, HOME_LAYOUT, mapForItem, migrateObjects, validateObjects } from "../src/worker/home/migrate";
 import { addNote, addParcel, emptyMail, takeParcels, unreadCount } from "../src/worker/home/mailbox";
-import { HOME_DOOR } from "../src/shared/maps/home";
+import { HOME_DOOR, HOME_FENCES } from "../src/shared/maps/home";
 import { canPlace, canStand, dayIndex, farmNow, interiorTint, isFarmable, objectRect } from "../src/shared/engine";
 import type { FarmTile, PlacedObject } from "../src/shared/types";
 import { INVITE_TTL_MS } from "../src/shared/visits";
@@ -252,7 +252,7 @@ describe("HomeRoom door transitions", () => {
     expect(ws.last("reject").reason).toBe("This goes indoors.");
     vi.advanceTimersByTime(250);
     await sendMsg(r, "alice", ws, { t: "place", slot: 11, x: 4, y: 14, rotation: 0 });
-    expect(room.objects.home.map((o: any) => o.item)).toEqual(["fence"]);
+    expect(room.objects.home.filter((o: any) => o.x === 4 && o.y === 14).map((o: any) => o.item)).toEqual(["fence"]);
     await stepOnto(room.player, door);
     vi.advanceTimersByTime(250);
     ws.sent = [];
@@ -261,7 +261,7 @@ describe("HomeRoom door transitions", () => {
     expect(ws.last("objects").upd[0]).toMatchObject({ item: "chair_wood", x: 6, y: 6 });
     vi.advanceTimersByTime(250);
     // Moving the yard fence from inside: not on this map.
-    const fence = room.objects.home[0];
+    const fence = room.objects.home.find((o: any) => o.x === 4 && o.y === 14);
     await sendMsg(r, "alice", ws, { t: "moveObject", id: fence.id, x: 7, y: 7, rotation: 0 });
     expect(ws.last("reject").reason).toBe("That isn't here any more.");
     vi.advanceTimersByTime(250);
@@ -387,7 +387,9 @@ describe("HomeRoom save migration", () => {
     const room = new HomeRoom(ctx as any, r.env) as any;
     await ctx.ready;
     expect(room.objects.home_in.map((o: any) => o.id).sort()).toEqual(["bed", "o1", "wardrobe"]);
-    expect(room.objects.home).toEqual([]);
+    // The yard only has the plot's own fence, handed over as placed pieces (shared/yard.ts).
+    expect(room.objects.home.map((o: any) => `${o.item}@${o.x},${o.y}`).sort()).toEqual(HOME_FENCES.map((t) => `fence@${t.x},${t.y}`).sort());
+    expect(room.yard).toEqual({ fenced: true });
     expect(room.save.inventory.slots.filter(Boolean)).toEqual([{ item: "fence", qty: 1 }]);
     expect(room.mail.notes.at(-1).text).toMatch(/moved into your new house.*Fence/);
     expect(ctx.storage.data.get("layout")).toBe(HOME_LAYOUT);

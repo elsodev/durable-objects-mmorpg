@@ -1,7 +1,7 @@
 // Moving several placed pieces at once (house edit mode): all or nothing, the moving set never
 // blocks itself, moved pieces can't overlap each other, a cap per message, and turns.
 import { describe, expect, it } from "vitest";
-import { checkArrange, MAX_ARRANGE, turnInPlace, type ArrangeMove } from "../src/shared/engine";
+import { checkArrange, MAX_ARRANGE, MAX_FENCE_PIECES, turnInPlace, type ArrangeMove } from "../src/shared/engine";
 import { decodeClient } from "../src/shared/protocol";
 import type { PlacedObject } from "../src/shared/types";
 import { openMap } from "./engine-fixtures";
@@ -92,6 +92,12 @@ describe("moveObjects / pickupObjects frames", () => {
     expect(frame({ t: "moveObjects", moves: [] })).toBeNull();
     expect(frame({ t: "moveObjects", moves: moves(MAX_ARRANGE) })).not.toBeNull();
     expect(frame({ t: "moveObjects", moves: moves(MAX_ARRANGE + 1) })).toBeNull();
+    // A plot's whole fence slides with shiftObjects (ids only), which still fits in one frame.
+    const ids = (n: number) => Array.from({ length: n }, (_, i) => `o${i + 100}`);
+    expect(frame({ t: "shiftObjects", ids: ids(MAX_FENCE_PIECES), dx: 1, dy: 0 })).not.toBeNull();
+    expect(frame({ t: "shiftObjects", ids: ids(MAX_FENCE_PIECES + 1), dx: 1, dy: 0 })).toBeNull();
+    expect(frame({ t: "shiftObjects", ids: ids(3), dx: 0, dy: 0 })).toBeNull();
+    expect(frame({ t: "pickupObjects", ids: ids(MAX_FENCE_PIECES) })).not.toBeNull();
     expect(frame({ t: "moveObjects", moves: [...moves(1), ...moves(1)] })).toBeNull();
     expect(frame({ t: "moveObjects", moves: [{ id: "o1", x: 1.5, y: 1, rotation: 0 }] })).toBeNull();
     expect(frame({ t: "moveObjects", moves: [{ id: "o1", x: 1, y: 1, rotation: 4 }] })).toBeNull();
@@ -99,6 +105,6 @@ describe("moveObjects / pickupObjects frames", () => {
     expect(frame({ t: "pickupObjects", ids: [] })).toBeNull();
     expect(frame({ t: "pickupObjects", ids: ["a", "a"] })).toBeNull();
     expect(frame({ t: "pickupObjects", ids: [3] })).toBeNull();
-    expect(frame({ t: "pickupObjects", ids: Array.from({ length: MAX_ARRANGE + 1 }, (_, i) => `o${i}`) })).toBeNull();
+    expect(frame({ t: "pickupObjects", ids: Array.from({ length: MAX_FENCE_PIECES + 1 }, (_, i) => `o${i}`) })).toBeNull();
   });
 });

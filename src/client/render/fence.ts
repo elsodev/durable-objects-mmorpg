@@ -34,6 +34,16 @@ export function fenceMasks(tiles: Iterable<Vec2>): Map<string, number> {
 
 export const fenceKey = key;
 
+/**
+ * Which way a gate is drawn: across a north-south run it shows its side view (rotation 1), in an
+ * east-west run its front (0); a gate on its own keeps the way its owner turned it.
+ */
+export function gateTurn(mask: number, rotation: 0 | 1 | 2 | 3): 0 | 1 {
+  if (mask & (FENCE_E | FENCE_W)) return 0;
+  if (mask & (FENCE_N | FENCE_S)) return 1;
+  return rotation % 2 === 1 ? 1 : 0;
+}
+
 /** Sheet rect [x, y, w, h] and where to draw it in a 32 x 36 fence tile (tile = top 32 rows). */
 export interface FencePart {
   src: [number, number, number, number];

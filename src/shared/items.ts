@@ -344,6 +344,8 @@ const ALL: ItemDef[] = [
   furniture("lamp", "Lamp", 1, 1, "floor", 50),
   furniture("flower_pot", "Flower Pot", 1, 1, "floor", 30),
   furniture("fence", "Fence", 1, 1, "outdoor", 10),
+  // A gap you can walk through: fences join it on either side (drawn across the run it sits in).
+  furniture("gate", "Garden Gate", 1, 1, "outdoor", 25, { walkable: true, rotations: [0, 1], desc: "Swings open as you walk through. Fences join up with it." }),
   furniture("scarecrow", "Scarecrow", 1, 1, "outdoor", 75),
 
   // Interior kit furniture: never sold in shops. Villagers give it as friendship gifts and

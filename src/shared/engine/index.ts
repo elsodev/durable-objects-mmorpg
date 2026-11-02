@@ -78,7 +78,7 @@ export {
   type GrowthStage,
 } from "./farming";
 export { canPlace, isRug, wallFaceRow, MAX_WALL_DROP, type PlaceResult } from "./placement";
-export { checkArrange, turnInPlace, MAX_ARRANGE, type ArrangeMove, type ArrangeResult } from "./arrange";
+export { arrangeLimit, checkArrange, isFenceItem, turnInPlace, MAX_ARRANGE, MAX_FENCE_PIECES, type ArrangeMove, type ArrangeResult } from "./arrange";
 export {
   emptyStorage,
   isStorageEmpty,

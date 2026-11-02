@@ -1,7 +1,34 @@
-// Pure rules of the house edit mode (no Pixi, no DOM), so they can be unit tested: what is under
+// Pure rules of the home edit mode, house and yard (no Pixi, no DOM), so they can be unit tested: what is under
 // the pointer, what a drag box selects, where a dragged group lands, how a turn moves a piece,
 // and where the floating toolbar fits on screen.
-import { checkArrange, footprint, isRug, MAX_ARRANGE, rectsOverlap, turnInPlace, type ArrangeMove, type ArrangeResult, type Rect } from "../../shared/engine";
+import {
+  canPlace,
+  checkArrange,
+  footprint,
+  isFenceItem,
+  isRug,
+  MAX_ARRANGE,
+  MAX_FENCE_PIECES,
+  rectsOverlap,
+  turnInPlace,
+  type ArrangeMove,
+  type ArrangeResult,
+  type PlaceResult,
+  type Rect,
+} from "../../shared/engine";
+import {
+  checkYardHouse,
+  checkYardMoves,
+  checkYardPlace,
+  fenceGroup,
+  fenceRun,
+  houseAt,
+  HOUSE_PROP_ID,
+  HOUSE_SIZE,
+  MAX_FENCE_RUN,
+  yardHint,
+  type YardWorld,
+} from "../../shared/yard";
 import { getItem, stepRotation } from "../../shared/items";
 import type { FarmTile, Inventory, ItemId, MapData, PlacedObject, Vec2 } from "../../shared/types";
 
@@ -43,10 +70,13 @@ export function artRect(item: ItemId, x: number, y: number, rotation: Rotation, 
 
 export function shapeOf(o: PlacedObject, look: ArtLook): PieceShape {
   const fp = footprint(o.item, o.rotation);
+  // A fence piece's art reaches into its neighbours (the rails join up): only its own tile and
+  // the post above it answer a click, or a run could never be picked apart.
+  const art = isFenceItem(o.item) ? { x: o.x, y: o.y - 0.4, w: fp.w, h: fp.h + 0.4 } : artRect(o.item, o.x, o.y, o.rotation, look);
   return {
     id: o.id,
     foot: { x: o.x, y: o.y, w: fp.w, h: fp.h },
-    art: artRect(o.item, o.x, o.y, o.rotation, look),
+    art,
     // Wall pieces hang behind whoever stands below them; rugs lie under everything.
     z: isRug(o.item) ? -1 : getItem(o.item)?.placeOn === "wall" ? o.y : o.y + fp.h,
     rug: isRug(o.item),
@@ -124,12 +154,86 @@ export interface ArrangeWorld {
   objects: PlacedObject[];
   farm: FarmTile[];
   occupied: Vec2[];
+  /** Unbroken rocks (the yard; default: every rock on the map). */
+  rocks?: Vec2[];
 }
 
-/** The same all-or-nothing check the HomeRoom runs on moveObjects. */
+/** The owner's yard (not the house inside, not a zone). */
+export function isYardMap(map: MapData | null): map is MapData {
+  return !!map && map.zone === "home" && map.homeMap === "home";
+}
+
+function yardWorld(w: ArrangeWorld & { map: MapData }): YardWorld {
+  return { map: w.map, objects: w.objects, farm: w.farm, occupied: w.occupied, ...(w.rocks ? { rocks: w.rocks } : {}) };
+}
+
+/** The same all-or-nothing check the HomeRoom runs on moveObjects (in the yard: checkYardMoves). */
 export function checkMoves(w: ArrangeWorld, moves: readonly ArrangeMove[]): ArrangeResult {
   if (!w.map) return { ok: false, reason: "Not loaded yet." };
+  if (isYardMap(w.map)) return checkYardMoves(yardWorld({ ...w, map: w.map }), moves);
   return checkArrange(w.map, w.objects, w.farm, moves, { occupied: w.occupied });
+}
+
+/** Can new pieces of `item` go down on `tiles` (one, or a fence run)? As HomeRoom checks place / placeRun. */
+export function checkNew(w: ArrangeWorld, item: ItemId, tiles: readonly Vec2[], rotation: Rotation): PlaceResult {
+  if (!w.map) return { ok: false, reason: "Not loaded yet." };
+  if (isYardMap(w.map)) return checkYardPlace(yardWorld({ ...w, map: w.map }), item, tiles, rotation);
+  const t = tiles[0];
+  if (!t || tiles.length > 1) return { ok: false, reason: "Only fences go down in a run." };
+  return canPlace(w.map, w.objects, w.farm, item, t.x, t.y, rotation, { occupied: w.occupied });
+}
+
+/** Can the house stand with its top-left at `at`? As HomeRoom checks moveHouse. */
+export function checkHouse(w: ArrangeWorld, at: Vec2): PlaceResult {
+  if (!isYardMap(w.map)) return { ok: false, reason: "Step outside to move the house." };
+  return checkYardHouse(yardWorld({ ...w, map: w.map }), at);
+}
+
+/**
+ * The house as edit mode sees it: its footprint, and its art box from the prop art (drawn with
+ * its feet at the bottom-centre of the footprint, like every prop). Null on maps without one.
+ */
+export function houseShape(map: MapData | null, look: ArtLook): PieceShape | null {
+  const at = map ? houseAt(map) : null;
+  if (!at) return null;
+  const foot = { x: at.x, y: at.y, w: HOUSE_SIZE.w, h: HOUSE_SIZE.h };
+  const w = look.w / SRC_PX;
+  const h = look.h / SRC_PX;
+  const feet = { x: at.x + foot.w / 2, y: at.y + foot.h };
+  return { id: HOUSE_PROP_ID, foot, art: { x: feet.x - look.ax * w, y: feet.y - look.ay * h, w, h }, z: foot.y + foot.h, rug: false };
+}
+
+/**
+ * Tiles a fence run from `a` to `b` covers (straight along whichever axis moved more), cut to
+ * what the bag holds.
+ */
+export function runTiles(a: Vec2, b: Vec2, have: number): Vec2[] {
+  return fenceRun(a, b, Math.max(1, Math.min(have, MAX_FENCE_RUN)));
+}
+
+/** The run as one placeRun message's numbers: start, step and count. */
+export function runStep(tiles: readonly Vec2[]): { x: number; y: number; dx: number; dy: number; n: number } | null {
+  const a = tiles[0];
+  if (!a) return null;
+  const b = tiles[1];
+  return { x: a.x, y: a.y, dx: b ? b.x - a.x : 0, dy: b ? b.y - a.y : 0, n: tiles.length };
+}
+
+/** A plain click in the yard on something that stays put: what to say about it (null: nothing). */
+export function stayHint(map: MapData | null, tile: Vec2): string | null {
+  return isYardMap(map) ? yardHint(map, tile.x, tile.y) : null;
+}
+
+/** The whole fence a fence or gate belongs to (a plot's fence), for "Whole fence". */
+export function wholeFence(objects: readonly PlacedObject[], id: string): string[] {
+  return fenceGroup(objects, id, MAX_FENCE_PIECES);
+}
+
+/** Can the selection grow to its whole fence? One fence or gate piece that has neighbours. */
+export function canSelectWholeFence(objects: readonly PlacedObject[], sel: readonly string[]): boolean {
+  if (sel.length !== 1) return false;
+  const o = objects.find((x) => x.id === sel[0]);
+  return !!o && isFenceItem(o.item) && wholeFence(objects, o.id).length > 1;
 }
 
 /** True when a move list leaves every piece where it already is. */

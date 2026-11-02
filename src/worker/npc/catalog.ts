@@ -225,6 +225,7 @@ export const NPCS: Record<string, NpcDef> = {
         "lamp",
         "flower_pot",
         "fence",
+        "gate",
         "scarecrow",
       ]),
       buys: ["stone", "ore_copper", "ore_iron", "ore_silver", "ore_gold", "gem_crystal", "gem_diamond", "crab_shell"],

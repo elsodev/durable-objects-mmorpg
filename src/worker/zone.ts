@@ -1150,6 +1150,9 @@ export class ZoneRoom extends DurableObject<Env> {
       case "pickup":
       case "moveObjects":
       case "pickupObjects":
+      case "shiftObjects":
+      case "placeRun":
+      case "moveHouse":
         return this.reject(p, msg, "You can only do that at home.");
       case "moveSlot":
         return this.onMoveSlot(p, msg);

@@ -9644,6 +9644,32 @@
    },
    "shadow": "large"
   },
+  "gate": {
+   "file": "props/garden_gate.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    32
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": {
+    "left": [
+     32,
+     0,
+     32,
+     32
+    ]
+   },
+   "shadow": "small"
+  },
   "scarecrow": {
    "file": "props/decorations_medieval.png",
    "rect": [

@@ -9,7 +9,8 @@ import { validateHomeClientMsg } from "./home";
 import { isEmote } from "./emotes";
 import { HOTBAR_SIZE } from "./held";
 import { cleanNoticeText, isNoticeId, isNoticePress } from "./notices";
-import { MAX_ARRANGE, type ArrangeMove } from "./engine/arrange";
+import { MAX_ARRANGE, MAX_FENCE_PIECES, type ArrangeMove } from "./engine/arrange";
+import { MAX_FENCE_RUN } from "./yard";
 import { MAX_TRADE_COINS, TRADE_SLOTS } from "./trade";
 
 /** Frames larger than this are dropped without parsing. */
@@ -45,14 +46,18 @@ function optReq(m: Obj): { req?: string } | null {
   return isId(m.req) ? { req: m.req } : null;
 }
 
-/** 1..MAX_ARRANGE distinct ids. */
+/** 1..MAX_FENCE_PIECES distinct ids. */
 function idList(v: unknown): string[] | null {
-  if (!Array.isArray(v) || v.length === 0 || v.length > MAX_ARRANGE) return null;
+  // Fence-only groups may be this long; HomeRoom holds anything else to MAX_ARRANGE (arrangeLimit).
+  if (!Array.isArray(v) || v.length === 0 || v.length > MAX_FENCE_PIECES) return null;
   if (!v.every(isId) || new Set(v).size !== v.length) return null;
   return [...v];
 }
 
-/** 1..MAX_ARRANGE moves, each a distinct id with a whole tile and a rotation; only known fields kept. */
+/**
+ * 1..MAX_ARRANGE moves, each a distinct id with a whole tile and a rotation; only known fields
+ * kept. A plot's whole fence moves with the compact shiftObjects instead.
+ */
 function arrangeMoves(v: unknown): ArrangeMove[] | null {
   if (!Array.isArray(v) || v.length === 0 || v.length > MAX_ARRANGE) return null;
   const out: ArrangeMove[] = [];
@@ -124,6 +129,19 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       const ids = idList(o.ids);
       return ids ? { t: "pickupObjects", ids, ...req } : null;
     }
+    case "shiftObjects": {
+      const ids = idList(o.ids);
+      const step = (v: unknown) => isInt(v, -64, 64);
+      return ids && step(o.dx) && step(o.dy) && (o.dx !== 0 || o.dy !== 0) ? { t: "shiftObjects", ids, dx: o.dx as number, dy: o.dy as number, ...req } : null;
+    }
+    case "placeRun": {
+      if (!isSlot(o.slot) || !isCoord(o.x) || !isCoord(o.y) || !isRot(o.rotation) || !isInt(o.n, 1, MAX_FENCE_RUN)) return null;
+      // A run goes straight along one axis; a single piece has no direction.
+      if (!isDir(o.dx) || !isDir(o.dy) || (o.n > 1 && Math.abs(o.dx) + Math.abs(o.dy) !== 1)) return null;
+      return { t: "placeRun", slot: o.slot, x: o.x, y: o.y, dx: o.dx, dy: o.dy, n: o.n, rotation: o.rotation, ...req };
+    }
+    case "moveHouse":
+      return isCoord(o.x) && isCoord(o.y) ? { t: "moveHouse", x: o.x, y: o.y, ...req } : null;
     case "buy":
       return isId(o.npc) && isId(o.item) && isQty(o.qty) ? { t: "buy", npc: o.npc, item: o.item, qty: o.qty, ...req } : null;
     case "sell":

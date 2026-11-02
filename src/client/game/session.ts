@@ -104,6 +104,7 @@ import { emitSocial, onSocial as onSocialEvent } from "../social-events";
 import { parseChatInput, type ChatTab, type SocialClientMsg, type SocialServerMsg } from "../../shared/social";
 import { ANIMAL_PREFIX, ANIMAL_REACH } from "../../shared/animals";
 import { BARN_ID, BARN_SIZE, BARN_SPOT } from "../../shared/ranch";
+import { withoutTrees } from "../../shared/yard";
 import { ANIMAL_HEAR_RANGE, animalLoveSfx } from "../audio/audio-logic";
 import { isEmote, type EmoteCode } from "../../shared/emotes";
 import { emoteLine } from "../ui/chat";
@@ -203,8 +204,19 @@ export async function startSession(
 
   /** Open tree tiles, rebuilt only when a tree message changes them. */
   let clearedTrees: Vec2[] = [];
+  /** The map the farming and edit rules see: cleared trees are open ground (shared/yard.ts). */
+  let rules: { from: MapData | null; map: MapData | null } = { from: null, map: null };
   const refreshClearedTrees = () => {
     clearedTrees = clearedTreeTiles(map(), store.trees);
+    rules = { from: null, map: null };
+  };
+  const rulesMap = (): MapData | null => {
+    const m = map();
+    if (rules.from !== m) {
+      const gone = new Set([...store.trees].filter(([, st]) => st === "gone").map(([id]) => id));
+      rules = { from: m, map: m ? withoutTrees(m, gone) : null };
+    }
+    return rules.map;
   };
   const predictor: Predictor = createPredictor(map, () => ({
     objects: [...store.objects.values()],
@@ -436,7 +448,7 @@ export async function startSession(
   const farmFx = createFarmFx({
     world: () => world,
     art,
-    map,
+    map: rulesMap,
     farm: () => store.farm,
     objects: () => [...store.objects.values()],
     rockAt: (x, y) => unbrokenRocks().some((r) => r.x === x && r.y === y),
@@ -472,17 +484,20 @@ export async function startSession(
       deselect: () => editMode.action("cancel"),
       setMulti: (on) => editMode.setMulti(on),
       hold: (slot) => editMode.hold(slot),
+      wholeFence: () => editMode.selectWholeFence(),
     }),
     screenToTile: (sx, sy) => camera.screenToTile(sx, sy),
     tileToScreen: (x, y) => camera.tileToScreen(x, y),
     viewport: () => ({ w: game.width(), h: game.height() }),
-    map,
+    map: rulesMap,
     objects: () => [...store.objects.values()],
     farm: () => [...store.farm.values()],
     occupied: () => visibleEntities().map((e) => floorTile(e)),
+    rocks: unbrokenRocks,
     inventory: () => store.inventory,
     you,
-    available: () => store.zone === "home" && homeMapNow === "home_in" && !visiting,
+    // Your own home: the house inside, and the yard outside it.
+    available: () => store.zone === "home" && homeMapNow !== null && !visiting,
     send,
     notice: (text, kind = "info") => notice(text, kind),
     sfx: playSfx,
@@ -1246,6 +1261,9 @@ export async function startSession(
     const nextHomeMap: HomeMapId | null = msg.zone === "home" ? (msg.homeMap ?? "home") : null;
     // Walking through the house door: same socket, the other home map.
     const throughDoor = homeMapNow !== null && nextHomeMap !== null && nextHomeMap !== homeMapNow;
+    // The same home map again (the owner moved their house): editing carries on where it was.
+    const keepEditing = editMode.active() && !throughDoor && nextHomeMap !== null && nextHomeMap === homeMapNow && !msg.visit;
+    const editFocus = editMode.focus();
     homeMapNow = nextHomeMap;
     pendingZone = null;
     devTools = msg.devTools === true;
@@ -1338,6 +1356,7 @@ export async function startSession(
     hud.setGoals(store.goals);
     if (me?.hp !== undefined) hud.setHp(me.hp, me.maxHp ?? me.hp);
     syncBuildBanner();
+    if (keepEditing) editMode.resume(editFocus);
     editMode.refresh();
     setMusicZone(msg.zone);
     social.send({ t: "here", zone: msg.zone });
@@ -1412,7 +1431,7 @@ export async function startSession(
     const farm = store.zone === "home" && !visiting;
     const monsters = store.sample(performance.now()).filter((e) => e.kind === "monster");
     const target = targetAtTile(
-      { map: m, farm, farmTiles: store.farm, objects: store.objects.values(), brokenRocks: store.brokenRocks, rockOres: store.rockOres, trees: store.trees, monsters },
+      { map: rulesMap() ?? m, farm, farmTiles: store.farm, objects: store.objects.values(), brokenRocks: store.brokenRocks, rockOres: store.rockOres, trees: store.trees, monsters },
       tile,
       farmTime(),
     );
@@ -1525,7 +1544,7 @@ export async function startSession(
     if (!m) return null;
     const farm = store.zone === "home" && !visiting;
     return targetAtTile(
-      { map: m, farm, farmTiles: store.farm, objects: store.objects.values(), brokenRocks: store.brokenRocks, rockOres: store.rockOres, trees: store.trees, monsters: [] },
+      { map: rulesMap() ?? m, farm, farmTiles: store.farm, objects: store.objects.values(), brokenRocks: store.brokenRocks, rockOres: store.rockOres, trees: store.trees, monsters: [] },
       tile,
       farmTime(),
     );
@@ -1781,7 +1800,11 @@ export async function startSession(
       if (obj === BARN_ID) {
         if (p.button === 2) return;
         if (withinInteract(me, { x: tile.x + 0.5, y: tile.y + 0.5 })) interact(BARN_ID);
-        else moveTo(BARN_SPOT.x + BARN_SIZE.w / 2, BARN_SPOT.y + BARN_SIZE.h + 0.5);
+        else {
+          // Walk up to the barn's front, wherever its owner moved it.
+          const b = store.objects.get(BARN_ID) ?? { x: BARN_SPOT.x, y: BARN_SPOT.y };
+          moveTo(b.x + BARN_SIZE.w / 2, b.y + BARN_SIZE.h + 0.5);
+        }
         return;
       }
       const objItem = obj ? store.objects.get(obj)?.item : undefined;

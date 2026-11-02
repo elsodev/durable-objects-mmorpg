@@ -8,16 +8,53 @@
 //   mailbox (5, 11) west of the door, shipping bin (10..11, 11) east of it
 //   every grass tile is tillable (farmGrass); the fenced plot x 19..32, y 3..10 is the main field
 //   road y 12..13 from the doorstep to the east exit at x 39
+//
+// The owner may rearrange the yard (shared/yard.ts): the house moves (its door, doorstep and
+// spawns go with it), and the plot's fence (HOME_FENCES) is handed to each home as placed fence
+// pieces, so it can be moved, opened up or taken down like any other fence.
 
 import { Ground, type MapData } from "../types";
 import { MapBuilder } from "./builder";
 
 export const HOME_SIZE = { width: 40, height: 30 } as const;
 
-const HOUSE = { x: 6, y: 8, w: 4, h: 3 };
+/** Where the house stands until its owner moves it (top-left of its 4x3 footprint). */
+export const HOME_HOUSE = { x: 6, y: 8, w: 4, h: 3 } as const;
+const HOUSE = HOME_HOUSE;
 /** The house door: the footprint's bottom row under the painted door (as for village houses). */
 export const HOME_DOOR = { x: 8, y: 10 } as const;
 const FARM = { x: 19, y: 3, w: 14, h: 8 };
+
+/** The house's prop id in the yard. */
+export const HOUSE_PROP_ID = "house";
+/** Spawns that stand on the doorstep, so they follow the house when it moves. */
+export const DOORSTEP_SPAWNS = ["from_home_in", "default", "bed"] as const;
+
+/** Tiles kept clear of farmland in front of a door at `door` (the doorstep row). */
+export function doorKeep(door: { x: number; y: number }): { x: number; y: number; w: number; h: number } {
+  return { x: door.x - 1, y: door.y + 1, w: 3, h: 1 };
+}
+
+/** The doorstep path below a door at `door`: two tiles wide, from the door down to the road row. */
+export function doorstepTiles(door: { x: number; y: number }): { x: number; y: number }[] {
+  return [0, 1].map((dx) => ({ x: door.x + dx, y: door.y + 1 }));
+}
+
+/**
+ * The plot's fence: all the way round the field with a 4 tile opening in the south side, facing
+ * the road. Not part of the map: each home gets these as placed fence pieces (HomeRoom).
+ */
+export const HOME_FENCES: readonly { x: number; y: number }[] = (() => {
+  const out: { x: number; y: number }[] = [];
+  const south = FARM.y + FARM.h;
+  const gate = { x0: FARM.x + 5, x1: FARM.x + 8 };
+  for (let x = FARM.x - 1; x <= FARM.x + FARM.w; x++) {
+    out.push({ x, y: FARM.y - 1 });
+    if (x < gate.x0 || x > gate.x1) out.push({ x, y: south });
+  }
+  for (let y = FARM.y; y < south; y++) out.push({ x: FARM.x - 1, y }, { x: FARM.x + FARM.w, y });
+  return out;
+})();
 /**
  * Spawn name for fainting in a zone: the home welcomes you inside, by the bed. Its yard point is
  * the doorstep, used only if the bed can't be reached.
@@ -33,7 +70,7 @@ export function buildHome(): MapData {
 
   // The house: its door tile is an exit into the house (cut out of the footprint by
   // buildCollision); leaving the house puts you on the doorstep two tiles south.
-  b.prop("home_house", HOUSE.x, HOUSE.y, { id: "house" });
+  b.prop("home_house", HOUSE.x, HOUSE.y, { id: HOUSE_PROP_ID });
   // The roof art reaches far above the footprint: keep trees off it.
   b.reserve({ x: HOUSE.x - 3, y: 0, w: HOUSE.w + 6, h: HOUSE.y + HOUSE.h + 2 });
   b.exit({ x: HOME_DOOR.x, y: HOME_DOOR.y, w: 1, h: 1 }, "home", "from_home", "home_in");
@@ -54,19 +91,8 @@ export function buildHome(): MapData {
   b.prop("shipping_bin", HOME_DOOR.x + 2, HOME_DOOR.y + 1, { id: "shipping_bin" });
   b.prop("lantern_post", HOME_DOOR.x + 5, HOME_DOOR.y + 1, { id: "lantern_door" });
 
-  // Farm plot: keep it (and a 1 tile margin) free of decoration. A fence goes all the way round
-  // with a 4 tile gate in the south side, facing the road.
+  // Farm plot: keep it (and a 1 tile margin, where HOME_FENCES go) free of decoration.
   b.reserve({ x: FARM.x - 2, y: FARM.y - 2, w: FARM.w + 4, h: FARM.h + 4 });
-  const south = FARM.y + FARM.h;
-  const gate = { x0: FARM.x + 5, x1: FARM.x + 8 };
-  for (let x = FARM.x - 1; x <= FARM.x + FARM.w; x++) {
-    b.prop("fence_deco", x, FARM.y - 1);
-    if (x < gate.x0 || x > gate.x1) b.prop("fence_deco", x, south);
-  }
-  for (let y = FARM.y; y < south; y++) {
-    b.prop("fence_deco", FARM.x - 1, y);
-    b.prop("fence_deco", FARM.x + FARM.w, y);
-  }
 
   // Yard furniture.
   b.prop("well", 35, 4, { id: "well" });
@@ -90,7 +116,7 @@ export function buildHome(): MapData {
     // Any grass is farmland; keep a tile clear around the door, the mailbox and the bin.
     farmGrass: true,
     noFarm: [
-      { x: HOME_DOOR.x - 1, y: HOME_DOOR.y + 1, w: 3, h: 1 },
+      doorKeep(HOME_DOOR),
       { x: HOME_DOOR.x - 4, y: HOME_DOOR.y, w: 3, h: 3 },
       { x: HOME_DOOR.x + 1, y: HOME_DOOR.y, w: 4, h: 3 },
     ],

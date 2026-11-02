@@ -9,6 +9,20 @@ export type Rotation = 0 | 1 | 2 | 3;
 
 /** Most pieces one moveObjects / pickupObjects message may carry (and edit mode may select). */
 export const MAX_ARRANGE = 12;
+/**
+ * Fences and gates go in long runs, so a group made only of them may be this big: a plot's whole
+ * fence moves or comes down at once.
+ */
+export const MAX_FENCE_PIECES = 120;
+
+const FENCE_ITEMS: ReadonlySet<ItemId> = new Set(["fence", "gate"]);
+/** Pieces that make up fences: they join up and may move in long runs. */
+export const isFenceItem = (item: ItemId): boolean => FENCE_ITEMS.has(item);
+
+/** How many of these pieces one message may move or pick up. */
+export function arrangeLimit(items: readonly ItemId[]): number {
+  return items.length > 0 && items.every(isFenceItem) ? MAX_FENCE_PIECES : MAX_ARRANGE;
+}
 
 export interface ArrangeMove {
   id: string;
@@ -32,13 +46,14 @@ export function checkArrange(
   opts?: { occupied?: Vec2[]; fixed?: (o: PlacedObject) => string | null },
 ): ArrangeResult {
   if (moves.length === 0) return { ok: false, reason: "Nothing to move." };
-  if (moves.length > MAX_ARRANGE) return { ok: false, reason: `Move at most ${MAX_ARRANGE} pieces at once.` };
+  const byId = new Map(objects.map((o) => [o.id, o]));
+  const limit = arrangeLimit(moves.map((m) => byId.get(m.id)?.item ?? ""));
+  if (moves.length > limit) return { ok: false, reason: `Move at most ${limit} pieces at once.` };
   const moving = new Set<string>();
   for (const m of moves) {
     if (moving.has(m.id)) return { ok: false, reason: "Each piece moves once.", id: m.id };
     moving.add(m.id);
   }
-  const byId = new Map(objects.map((o) => [o.id, o]));
   const placed: PlacedObject[] = objects.filter((o) => !moving.has(o.id));
   for (const m of moves) {
     const obj = byId.get(m.id);

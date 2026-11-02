@@ -50,6 +50,13 @@ export class TreeField {
     return [...this.felled].map(([id, s]) => ({ id, stage: s.stage }));
   }
 
+  /** Ids of trees cleared away (stump gone): their tiles are open ground until they regrow. */
+  goneIds(): Set<string> {
+    const out = new Set<string>();
+    for (const [id, s] of this.felled) if (s.stage === "gone") out.add(id);
+    return out;
+  }
+
   stageOf(id: string): TreeStage {
     return this.felled.get(id)?.stage ?? "tree";
   }
@@ -80,8 +87,11 @@ export class TreeField {
     return next;
   }
 
-  /** Regrows trees whose time came, except a cleared tile someone stands on. Returns regrown ids. */
-  regrowDue(grid: CollisionGrid, now: number, occupied: Vec2[]): string[] {
+  /**
+   * Regrows trees whose time came, except a cleared tile someone stands on or that `taken` says
+   * is in use now (tilled, built on): that one waits another regrow time. Returns regrown ids.
+   */
+  regrowDue(grid: CollisionGrid, now: number, occupied: Vec2[], taken?: (tree: MapProp) => boolean): string[] {
     const out: string[] = [];
     for (const [id, s] of this.felled) {
       if (now < s.regrowAt) continue;
@@ -92,6 +102,10 @@ export class TreeField {
       }
       if (s.stage === "gone") {
         if (occupied.some((p) => Math.abs(p.x - (t.x + 0.5)) < 1 && Math.abs(p.y - (t.y + 0.5)) < 1)) continue;
+        if (taken?.(t)) {
+          s.regrowAt = now + TREE_REGROW_MS;
+          continue;
+        }
         setBlocked(grid, t.x, t.y, 1, 1, true);
       }
       this.felled.delete(id);
