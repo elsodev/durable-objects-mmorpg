@@ -109,7 +109,8 @@ export async function speak(ctx: NpcContext, decision: Decision, env: BrainEnv, 
     ]);
     const raw = typeof out === "string" ? out : (out as { response?: unknown } | null)?.response;
     return sanitizeLine(raw, ctx.npc.name) ?? scripted();
-  } catch {
+  } catch (err) {
+    console.warn("npc speak failed", ctx.npc.id, err instanceof Error ? err.message : String(err));
     return scripted();
   } finally {
     if (timer !== undefined) clearTimeout(timer);

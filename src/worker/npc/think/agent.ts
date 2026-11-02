@@ -61,6 +61,10 @@ function textOf(msg: { parts?: { type: string; text?: string }[] } | undefined):
     .trim();
 }
 
+function errorText(err: unknown): string {
+  return err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+}
+
 function uiText(role: "user" | "assistant", text: string): UIMessage {
   return { id: crypto.randomUUID(), role, parts: [{ type: "text", text }] };
 }
@@ -169,7 +173,13 @@ export class NpcAgent extends Think<Env> {
       this.situation = cleanSituation(req.context.situation);
 
       let result: ConverseResult | null = null;
-      if (req.ai && this.aiAvailable()) result = await this.modelTurn(npcId, userId, mem, req).catch(() => null);
+      if (req.ai && this.aiAvailable()) {
+        // Logged so a broken model or gateway shows in `wrangler tail` instead of silent scripted lines.
+        result = await this.modelTurn(npcId, userId, mem, req).catch((err: unknown) => {
+          console.warn("npc agent turn failed", npcId, errorText(err));
+          return null;
+        });
+      }
       if (!result) {
         const reply = scriptedReply(npcId, mem, req.context.intent, req.context.interact, Math.random, this.situation ?? undefined, req.text);
         await this.log(turnInput(req.playerName, req.text), reply);
@@ -249,7 +259,10 @@ export class NpcAgent extends Think<Env> {
     const timer = setTimeout(() => abort.abort(), AGENT_TURN_MS);
     try {
       const res = await this.runTurn({ input: turnInput(req.playerName, req.text), signal: abort.signal });
-      if (res.status !== "completed") return null;
+      if (res.status !== "completed") {
+        console.warn("npc agent turn not completed", npcId, res.status, abort.signal.aborted ? "timeout" : "");
+        return null;
+      }
       const line = sanitizeLine(textOf(res.message), getNpc(npcId)?.name ?? npcId);
       const intents: NpcIntent[] = validateIntents(this.pending, { npcId, playerId: userId });
       if (!line) return null;
