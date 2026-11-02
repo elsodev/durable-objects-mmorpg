@@ -77,7 +77,7 @@ import { SEAT_FACING } from "../shared/maps/interiors/props";
 import { RockField } from "./game/rockField";
 import { ChestField, isRareLoot, rollChestLoot } from "./game/chestField";
 import { CHEST_REACH, CHEST_TARGET_PREFIX } from "../shared/chests";
-import { bondGift, bondGiftRefusal, bondHearts, bondList, bondTalk, npcName, type BondOutcome } from "./game/bonds";
+import { bondGift, bondGiftRefusal, bondHearts, bondList, bondReset, bondTalk, npcName, type BondOutcome } from "./game/bonds";
 import { giftLine } from "./npc/giftTables";
 import { giftTaste, isNpcId } from "./npc/bible";
 import { heartCurve, MAX_HEARTS, newBond, sanitizeBonds, type Bonds } from "../shared/hearts";
@@ -100,6 +100,8 @@ import {
   type ToolTarget,
   type WeaponStats,
 } from "../shared/engine/toolRules";
+import { endPose, POSE_ACT, POSE_MIN_INTERVAL_MS, poseRefusal, witnesses, type PoseCode } from "../shared/poses";
+import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, sellTo, shopToday } from "./game/shop";
 import { donate, GOAL_DEFS, goalsView, sanitizeProgress, type GoalProgress } from "./game/goals";
@@ -160,6 +162,8 @@ interface ZPlayer {
   donation: Promise<void> | null;
   dirty: boolean;
   lastUse: number;
+  /** Last /sleep or /piss (ms), to throttle them. */
+  lastPose?: number;
   /** Wrong-tool hits in a row (axe on a rock...): each one tires you more. */
   wrongTool?: WrongToolStreak;
   lastHurt: number;
@@ -865,6 +869,8 @@ export class ZoneRoom extends DurableObject<Env> {
         p.heldSlot = msg.slot;
         applyHeld(p.entity, p.inv, p.heldSlot);
         return;
+      case "pose":
+        return this.onPose(p, msg.pose, now);
       case "emote":
         // Everyone here sees it; spam just gets dropped.
         if (this.emotes.allow(p.userId, now)) this.broadcast({ t: "emote", from: p.entity.id, code: msg.code });
@@ -977,6 +983,39 @@ export class ZoneRoom extends DurableObject<Env> {
     if (out.effect === "hitTree" || out.effect === "hitStump") {
       if (!this.spendStamina(p, msg, def.tool)) return;
       return this.chop(p, msg, target, now, stamp);
+    }
+  }
+
+  /**
+   * /sleep lies down on the ground until you move; /piss stands and pees for a moment. Every
+   * villager close enough to see the second one resets your hearts with them to zero, glares,
+   * shows an angry emote and says so.
+   */
+  private onPose(p: ZPlayer, pose: PoseCode, now: number): void {
+    if (now - (p.lastPose ?? 0) < POSE_MIN_INTERVAL_MS) return;
+    const why = poseRefusal(p.entity, now);
+    if (why) return send(p.ws, { t: "notice", text: why, kind: "error" });
+    p.lastPose = now;
+    p.entity.act = { k: POSE_ACT[pose], at: now };
+    if (pose !== "pee") return;
+    const world = this.world!;
+    const present = world.npcs.present();
+    const seen = witnesses(present.map((n) => ({ id: n.id, x: n.entity.x, y: n.entity.y })), p.entity);
+    const roll = Math.random();
+    const opener = () => roll;
+    for (const [nth, id] of seen.entries()) {
+      const n = present.find((x) => x.id === id);
+      if (!n) continue;
+      world.npcs.glareAt(n, p.entity, now);
+      this.broadcast({ t: "emote", from: n.entity.id, code: "angry" });
+      this.broadcast({ t: "chat", from: n.entity.id, name: n.entity.name, text: scoldLine(opener, nth), at: now });
+      const out = bondReset(p.bonds, n.id, p.inv, now, Math.random, this.rates);
+      if (out) {
+        this.bondChanged(p, n.entity, out, false);
+        if (out.heartsBefore > 0 || out.delta < 0) {
+          send(p.ws, { t: "notice", text: `${n.entity.name} saw that. Your friendship is gone.`, kind: "error" });
+        }
+      }
     }
   }
 
@@ -1135,6 +1174,8 @@ export class ZoneRoom extends DurableObject<Env> {
 
   /** Stands a seated player up beside the chair (where they came from when that's still free). */
   private getUp(p: ZPlayer): void {
+    // Moving or swinging ends a pose (lying on the ground, peeing).
+    endPose(p.entity);
     if (!isSitting(p.entity)) return;
     const world = this.world!;
     const seat = world.seats.of(p.entity.id);

@@ -449,6 +449,8 @@ export async function startSession(
         return send({ t: "chat", text: intent.text });
       case "emote":
         return sendEmote(intent.code);
+      case "pose":
+        return send({ t: "pose", pose: intent.pose });
       case "error":
         return system(intent.message);
       case "world":

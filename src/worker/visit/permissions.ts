@@ -31,6 +31,7 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   sleep: { deny: "You can't sleep in someone else's bed." },
   unship: { deny: NOT_YOURS },
   moveSlot: { deny: "You can tidy your bag after the visit." },
+  pose: { deny: "Not in someone else's home." },
 };
 
 export function visitorVerdict(msg: ClientMsg): VisitorVerdict {

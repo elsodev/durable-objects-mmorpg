@@ -1,6 +1,7 @@
 // WebSocket protocol between the browser and a zone/home Durable Object.
 // All messages are JSON text frames. Client sends INTENTS, server is authoritative.
 
+import type { PoseCode } from "./poses";
 import type {
   EntityState,
   Facing,
@@ -55,6 +56,8 @@ export type ClientMsg =
   | { t: "ping"; at: number }
   /** Emote bubble above your head for everyone in this zone/home (codes in shared/emotes.ts). */
   | { t: "emote"; code: EmoteCode }
+  /** Strike a pose: lie down on the ground, or pee on the spot (shared/poses.ts). */
+  | { t: "pose"; pose: PoseCode }
   /**
    * Rearrange the bag: move the stack in `from` onto `to`. Empty target: move (or split off `qty`);
    * same item: merge up to the stack limit; otherwise swap. Answered with `inventory` or `reject`.

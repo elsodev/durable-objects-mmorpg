@@ -125,6 +125,26 @@ function settle(
   };
 }
 
+/**
+ * Something the villager can't forgive (they watched you pee in public): friendship drops to zero.
+ * Milestones already reached stay rolled, so winning them back doesn't pay out the gifts again.
+ */
+export function bondReset(
+  bonds: Bonds,
+  npcId: string,
+  inv: Inventory,
+  now: number,
+  rand: () => number,
+  rates: Readonly<DropRates> = DEFAULT_DROP_RATES,
+): BondOutcome | null {
+  if (!isNpcId(npcId)) return null;
+  const b = bondOf(bonds, npcId, now);
+  const before = heartsFor(npcId, b.pts).hearts;
+  const delta = -b.pts;
+  b.pts = 0;
+  return settle(npcId, b, inv, before, delta, now, rand, rates);
+}
+
 /** A chat with a villager (interact or a line typed next to them). Null for non-villagers. */
 export function bondTalk(
   bonds: Bonds,

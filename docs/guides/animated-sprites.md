@@ -108,6 +108,14 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
   3. Credit it.
   4. Check it in the browser on at least two body types, facing all four ways. A screencast (CDP `Page.startScreencast`) shows the frames more reliably than screenshots, because headless screenshots are slower than the effect.
 
+## Poses (`/sleep` and `/piss`)
+
+- **No new character frames:** poses reuse each body's own sheet, so they work for every body type and look.
+  - `/sleep` takes the `idle.up` frame and rotates it to lie flat, head to the west. A pillow is drawn behind it, a quilt over it, and Z's rise from the head.
+  - `/piss` keeps the standing idle frame and adds a stream (`fx_pee_side` or `fx_pee_front`, mirrored for left) and a puddle on the ground layer that fades after `PUDDLE_MS`.
+- **Where it lives:** offsets and timing are in `src/client/render/pose-logic.ts`; drawing is in `src/client/render/poses.ts`. The server only sets the player's act (`lie` or `pee`), and any move, tool use or sit ends it.
+- **Redrawing the props:** keep the sizes in `catalog.json` (`fx_quilt`, `fx_pillow`, `fx_zzz`, `fx_pee_*`, `fx_puddle`) or update their anchors there, then check both poses on two body types in the browser.
+
 ## Monsters
 
 - **Catalog entry:** monsters are listed in `catalog.json` `monsters` with `frameW` and `frameH`, an `anchor`, and `animations.walk` rows per direction. Optional `attack` rows can be added the same way.

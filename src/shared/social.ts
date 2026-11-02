@@ -1,6 +1,7 @@
 // Social features shared by client and server: emotes, chat channels and command parsing, and the
 // protocol of the global social socket (/ws/social -> SocialRoom: world chat, whispers, presence,
 // stats). Pure: no DOM, no Workers APIs.
+import { POSE_COMMANDS, type PoseCode } from "./poses";
 import { cleanChat, MAX_CHAT_LEN } from "./validate";
 import type { ZoneId } from "./types";
 import { isValidName } from "./names";
@@ -80,6 +81,7 @@ export type ChatIntent =
   | { kind: "world"; text: string }
   | { kind: "pm"; to: string; text: string }
   | { kind: "emote"; code: EmoteCode }
+  | { kind: "pose"; pose: PoseCode }
   | { kind: "error"; message: string };
 
 /** Which channel plain text (no command) goes to from the selected tab. */
@@ -87,6 +89,7 @@ export function defaultChannel(tab: ChatTab): "zone" | "world" | "pm" {
   return tab === "world" ? "world" : tab === "pm" ? "pm" : "zone";
 }
 
+const POSE = /^\/(\w+)\s*$/;
 const WHISPER = /^\/(?:w|whisper|msg|tell|pm)(?:\s+|$)(.*)$/is;
 const REPLY = /^\/(?:r|reply)(?:\s+|$)(.*)$/is;
 const WORLD = /^\/(?:world|g|global)(?:\s+|$)(.*)$/is;
@@ -130,6 +133,10 @@ export function parseChatInput(raw: string, tab: ChatTab, replyTo: string | null
   if ((m = EMOTE.exec(line))) {
     const code = emoteFrom(m[1] ?? "");
     return code ? { kind: "emote", code } : { kind: "error", message: `Emotes: ${EMOTES.join(", ")}` };
+  }
+  if ((m = POSE.exec(line))) {
+    const pose = POSE_COMMANDS[m[1]!.toLowerCase()];
+    if (pose) return { kind: "pose", pose };
   }
   // Other "/commands" belong to the zone (e.g. the local "/day" dev tool), whatever the tab.
   if (line.startsWith("/")) return { kind: "zone", text: line };

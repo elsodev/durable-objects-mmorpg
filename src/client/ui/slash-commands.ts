@@ -37,6 +37,8 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "world", aliases: ["g", "global"], args: "message", description: "Talk to everyone online", available: account },
   { name: "zone", aliases: ["s", "say"], args: "message", description: "Talk to people nearby", available: always },
   { name: "emote", aliases: ["e", "em"], args: "code", description: "Show an emote over your head", options: EMOTES, available: always },
+  { name: "sleep", aliases: ["lie", "nap"], args: "", description: "Lie down on the ground (move to get up)", available: always },
+  { name: "piss", aliases: ["pee"], args: "", description: "Relieve yourself (villagers who see it won't forgive you)", available: always },
   { name: "friend", aliases: [], args: "name", description: "Send a friend request", available: account },
   { name: "mute", aliases: [], args: "name", description: "Hide a player's chat and requests", available: account },
   { name: "unmute", aliases: [], args: "name", description: "Show a muted player again", available: account },

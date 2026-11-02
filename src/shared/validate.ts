@@ -1,6 +1,7 @@
 // Runtime validation of client frames. Every WebSocket frame from a browser is untrusted:
 // decodeClient() runs this before any Durable Object handler sees the message, so handlers
 // can rely on the ClientMsg types actually holding (finite integers, bounded strings, ...).
+import { isPose } from "./poses";
 import type { ClientMsg } from "./protocol";
 import { validateLook } from "./look";
 import { validateHomeClientMsg } from "./home";
@@ -108,6 +109,8 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       return typeof o.at === "number" && Number.isFinite(o.at) ? { t: "ping", at: o.at } : null;
     case "emote":
       return isEmote(o.code) ? { t: "emote", code: o.code } : null;
+    case "pose":
+      return isPose(o.pose) ? { t: "pose", pose: o.pose } : null;
     default:
       return validateHomeClientMsg(o);
   }

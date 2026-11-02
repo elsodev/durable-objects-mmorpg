@@ -124,6 +124,7 @@ import {
   type ToolKey,
   type ToolTarget,
 } from "../shared/engine/toolRules";
+import { endPose, POSE_ACT, POSE_MIN_INTERVAL_MS, poseRefusal } from "../shared/poses";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { binPayout, sanitizeBin, shipSlot, unshipLast, type BinEntry } from "./game/shipping";
 import { endHomeDay, type DayEndKind } from "./game/homeDay";
@@ -233,6 +234,8 @@ export interface PlayerPeek {
 
 interface HPlayer {
   ws: WebSocket;
+  /** Last /sleep or /piss (ms), to throttle them. */
+  lastPose?: number;
   /** The home map the owner stands on. */
   map: HomeMapId;
   guest: boolean;
@@ -1371,6 +1374,8 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   private handle(p: HPlayer, msg: ClientMsg, now: number): void {
+    // Moving or swinging ends a pose (lying on the ground, peeing).
+    if ((msg.t === "move" && (msg.dx !== 0 || msg.dy !== 0)) || msg.t === "moveTo" || msg.t === "use") endPose(p.entity);
     switch (msg.t) {
       case "move":
         p.motion.onMove(p.entity, this.maps.grids[p.map], msg.dx, msg.dy, msg.seq, now);
@@ -1412,6 +1417,15 @@ export class HomeRoom extends DurableObject<Env> {
         p.lastEmote = now;
         this.toAll({ t: "emote", from: p.entity.id, code: msg.code });
         return;
+      case "pose": {
+        // At home nobody is watching: no villagers live in the yard.
+        if (now - (p.lastPose ?? 0) < POSE_MIN_INTERVAL_MS) return;
+        const why = poseRefusal(p.entity, now);
+        if (why) return this.reject(p, msg, why);
+        p.lastPose = now;
+        this.act(p, POSE_ACT[msg.pose], now);
+        return;
+      }
       case "ping":
         send(p.ws, { t: "pong", at: msg.at, serverTime: now });
         return;

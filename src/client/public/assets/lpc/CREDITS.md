@@ -810,3 +810,9 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - License: **CC0**
 - Source: drawn by script for this game
 - Notes: Four-frame effects shown when a tool rebounds off something it can't work. Pickaxe: hot sparks. Axe: a steel flash. Sword: a bright ring. Hoe: a puff of dirt.
+
+### fx/bedroll.png, fx/zzz.png, fx/pee.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game
+- Notes: Pose props. `bedroll.png` is a patchwork quilt and a pillow for `/sleep`, `zzz.png` is three frames of a rising Z, and `pee.png` holds the side and front stream frames plus the puddles for `/piss`.

@@ -10,6 +10,7 @@ import { blinkVisible, deathSquash, knockbackDone, knockbackOffset, slimePose } 
 import { actionFrame, actionNameFor, impactFrameOf, ITEM_POSE_ACTS, swingFrame } from "./tool-actions";
 import { toolTiming } from "../../shared/engine/toolTiming";
 import { heldFrameIndex, heldToShow } from "./held-logic";
+import { createPoseLayer } from "./poses";
 import { bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFrame, type EntityProfile } from "./entityProfile";
 
 /**
@@ -97,6 +98,7 @@ export const createEntityLayer = ((
   let flashFilters: ColorMatrixFilter[] | null = null;
   const live = new Map<string, Rec>();
   const pool: Rec[] = [];
+  const poses = createPoseLayer(art, layers);
   let gen = 0;
 
   function applyCharacter(rec: Rec, s: EntityState): void {
@@ -246,6 +248,7 @@ export const createEntityLayer = ((
 
   function release(rec: Rec): void {
     live.delete(rec.id);
+    poses.release(rec.id);
     rec.heldBg.visible = rec.heldFg.visible = false;
     rec.root.removeFromParent();
     rec.body.filters = null;
@@ -308,13 +311,15 @@ export const createEntityLayer = ((
       }
     }
 
-    drawHeld(rec, s, heldToShow(s, { acting, seated, dying: rec.deathT >= 0 }), walkIndex);
+    // /sleep and /piss draw over whatever the body showed above.
+    const posed = seated ? { posed: false } : poses.draw(rec, s, c, now);
+    drawHeld(rec, s, heldToShow(s, { acting: acting || posed.posed, seated, dying: rec.deathT >= 0 }), walkIndex);
 
     // Higher off the ground = smaller, fainter shadow.
     const height = lift / (TILE * 0.75);
     rec.shadow.scale.set(p.shadow * (1 - Math.min(0.35, height * 0.25)));
     rec.shadow.alpha = 1 - Math.min(0.4, height * 0.3);
-    rec.shadow.visible = !seated; // the chair has its own
+    if (!posed.posed || posed.head === undefined) rec.shadow.visible = !seated; // the chair has its own
 
     let ox = 0;
     let oy = 0;
@@ -333,7 +338,7 @@ export const createEntityLayer = ((
     const top = Math.min(p.head, c.anchor.y * tex.height) * SCALE;
     rec.head.x = fx;
     // Seated bodies are drawn SIT_DROP_PX lower, so the name tag and bubbles follow them down.
-    rec.head.y = fy + rec.body.y - top;
+    rec.head.y = posed.head !== undefined ? fy - posed.head : fy + rec.body.y - top;
 
     if (rec.flashMs > 0) {
       rec.flashMs -= dt;
@@ -420,6 +425,7 @@ export const createEntityLayer = ((
       pool.length = 0;
       flashFilters?.[0].destroy();
       shadowCtx.destroy();
+      poses.destroy();
     },
   };
 }) satisfies CreateEntityLayer;

@@ -243,6 +243,14 @@ export class NpcRunner {
     return this.npcs.find((n) => n.here && (n.entity.id === id || n.id === id));
   }
 
+  /** A villager saw something shocking: stop, glare at it and stay put for a moment. */
+  glareAt(n: NpcState, at: Vec2, now: number, ms = 5000): void {
+    n.target = null;
+    n.entity.moving = false;
+    if (n.entity.act?.k !== "sit") n.entity.facing = facingFor(at.x - n.entity.x, at.y - n.entity.y, n.entity.facing);
+    n.idleUntil = Math.max(n.idleUntil, now + ms);
+  }
+
   /** NPCs currently in this zone. */
   present(): NpcState[] {
     return this.npcs.filter((n) => n.here);

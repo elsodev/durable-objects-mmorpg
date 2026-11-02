@@ -182,6 +182,7 @@ describe("visitor permission matrix", () => {
     emote: { t: "emote", code: EMOTE_CODE },
     moveSlot: { t: "moveSlot", from: 0, to: 1 },
     hold: { t: "hold", slot: 0 },
+    pose: { t: "pose", pose: "sleep" },
   };
 
   it("allows only walking, chat, ping and harvest-use", () => {
@@ -199,7 +200,7 @@ describe("visitor permission matrix", () => {
     const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
     const denied = Object.values(samples).filter((m) => "deny" in VISITOR_RULES[m.t]);
     expect(denied.map((m) => m.t).sort()).toEqual(
-      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "pickup", "place", "sell", "setLook", "sleep", "unship", "moveSlot"].sort(),
+      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "pickup", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose"].sort(),
     );
     for (const m of denied) {
       const msg = m.t === "setLook" ? { t: "setLook", look: { body: "x" } } : m;
