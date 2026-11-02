@@ -159,6 +159,8 @@ npm run deploy                                    # vite build, then wrangler de
 
 Set `TURNSTILE_SITE_KEY` in `wrangler.jsonc` → `vars` before deploying. `BETTER_AUTH_URL` can be a var instead of a secret.
 
+To keep account-specific values out of `wrangler.jsonc`, put them in a git-ignored `.env.production` instead (copy `.env.production.example`) and run `npm run deploy:prod`. It writes `D1_DATABASE_ID` and `TURNSTILE_SITE_KEY` into a generated, git-ignored `wrangler.production.jsonc`, applies the remote D1 migrations, and deploys with the other keys as secrets. `node scripts/deploy-prod.mjs --dry-run` shows what it would do without deploying.
+
 Optional services:
 
 - **Workers AI** is on by default in production (`NPC_AI_MODE=on`, model in `NPC_MODEL`). `AI_DAILY_NEURONS` caps daily spend. When the budget runs out NPCs fall back to scripted lines.
