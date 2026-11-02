@@ -18,6 +18,7 @@ import {
   STICK_PX,
   TAB_LABELS,
   unreadTabs,
+  cycleTab,
 } from "./chat-format";
 import { emoteDataUrl } from "../art/emotes";
 import { uiSound } from "./sound";
@@ -311,6 +312,13 @@ export const createChat: CreateChat = (root, opts) => {
         return;
       }
     }
+    if (e.key === "Tab") {
+      // While typing, Tab and Shift+Tab walk the chat tabs instead of leaving the box.
+      e.preventDefault();
+      selectTab(cycleTab(tab, e.shiftKey ? -1 : 1));
+      uiSound("select");
+      return;
+    }
     if (e.key === "Enter") {
       e.preventDefault();
       const text = outgoingText(input.value);
@@ -331,6 +339,16 @@ export const createChat: CreateChat = (root, opts) => {
   input.addEventListener("keyup", (e) => e.stopPropagation());
 
   document.addEventListener("keydown", (e) => {
+    // Tab from the game (nothing else focused) jumps into chat. Inside menus and dialogs Tab keeps
+    // its normal job of moving between buttons.
+    if (e.key === "Tab" && !e.altKey && !e.ctrlKey && !e.metaKey && e.target !== input) {
+      const a = document.activeElement;
+      if (a === null || a === document.body || a instanceof HTMLCanvasElement) {
+        e.preventDefault();
+        input.focus();
+      }
+      return;
+    }
     if (e.key !== "Enter" || e.repeat || e.isComposing || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.target === input || isEditable(document.activeElement)) return;
     e.preventDefault();

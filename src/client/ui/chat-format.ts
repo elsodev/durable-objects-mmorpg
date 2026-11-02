@@ -1,6 +1,6 @@
 // Pure chat helpers (no DOM) so they can be unit tested and typechecked with the Worker config.
 import { cleanChat } from "../../shared/validate";
-import type { ChatChannel, ChatTab } from "../../shared/social";
+import { CHAT_TABS, type ChatChannel, type ChatTab } from "../../shared/social";
 
 
 export const MAX_LOG_LINES = 100;
@@ -37,6 +37,12 @@ export function displayLine(name: string, text: string): { name: string; text: s
 
 // ---------------------------------------------------------------- channels & tabs
 
+
+/** The tab after (or before, with step -1) `t`, wrapping around. Tab and Shift+Tab use it. */
+export function cycleTab(t: ChatTab, step: 1 | -1 = 1): ChatTab {
+  const i = CHAT_TABS.indexOf(t);
+  return CHAT_TABS[(i + step + CHAT_TABS.length) % CHAT_TABS.length]!;
+}
 
 export const TAB_LABELS: Record<ChatTab, string> = { all: "All", world: "World", zone: "Zone", pm: "PM" };
 

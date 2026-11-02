@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayLine, MAX_NAME_LEN, nameColor, nameHue, outgoingText } from "../src/client/ui/chat-format";
+import { cycleTab, displayLine, MAX_NAME_LEN, nameColor, nameHue, outgoingText } from "../src/client/ui/chat-format";
 import { MAX_CHAT_LEN } from "../src/shared/validate";
 
 describe("chat helpers", () => {
@@ -24,5 +24,18 @@ describe("chat helpers", () => {
     expect(l.name.length).toBe(MAX_NAME_LEN);
     expect(l.text).toBe("hello world");
     expect(displayLine("x", "  ").text).toBe("");
+  });
+});
+
+describe("cycleTab", () => {
+  it("walks All, World, Zone, PM and wraps", () => {
+    expect(cycleTab("all")).toBe("world");
+    expect(cycleTab("world")).toBe("zone");
+    expect(cycleTab("zone")).toBe("pm");
+    expect(cycleTab("pm")).toBe("all");
+  });
+  it("goes backwards for Shift+Tab", () => {
+    expect(cycleTab("all", -1)).toBe("pm");
+    expect(cycleTab("zone", -1)).toBe("world");
   });
 });
