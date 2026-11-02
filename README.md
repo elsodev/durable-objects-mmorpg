@@ -22,6 +22,56 @@ A cozy multiplayer farming game set in the valley of Mossbrook, with light monst
 - Click a villager (or press F next to one) to open the conversation window and type replies. Each reply is judged good, neutral or bad for that villager (TypeSafe Jev when available, word lists otherwise) and moves your hearts with them: a liked reply adds a little (at most once every 20 s, capped per day), a rude one takes some away (also capped per day). The rules live in `src/shared/npcChat.ts`
 - Character creator, guest play with an upgrade to a full account later, music and sound effects
 
+## How it runs on Cloudflare
+
+The whole game is one Worker plus a few Durable Objects. There is no separate game server, database server or CDN to run.
+
+| Service | What the game uses it for |
+|---|---|
+| **Workers** | The single entry point (`src/worker/index.ts`): sign-up and sign-in at `/api/auth/*`, the player API, uploads, WebSocket upgrades at `/ws/:zone`, and the built client as static assets. It checks the session and passes identity to the Durable Objects in `x-dmmo-*` headers, stripping any copies the browser sent. |
+| **Durable Objects: `ZoneRoom`** | One per shared map (village, riverside, quarry, each cave floor and interior). It runs the authoritative 10 Hz tick: players, villagers, monsters, rocks, trees, chests, shops, ground items and village goals. When a map is full it opens a copy (see Limitations). |
+| **Durable Objects: `HomeRoom`** | One per player (`idFromName(userId)`), acting as that player's character record: inventory, coins, stamina, water, hearts, pets, barn and hens, farm tiles, furniture, the fridge, mail and their private home map. Zones load and save players through its RPC methods, and only its owner may change it. |
+| **Durable Objects: `SocialRoom`** | One global room for world chat, whispers, presence and the online counts. |
+| **Durable Objects: `NpcAgent` and `AiBudget`** | `NpcAgent` is one agent per villager and player, holding that villager's memory of you. `AiBudget` is one global counter that caps the day's AI spend. |
+| **Durable Object storage (SQLite)** | Each object keeps its own state in its built-in storage: the save in `HomeRoom`, rocks, trees, chests, ground items and goals in `ZoneRoom`. Zones write player saves back every 5 seconds and when a player leaves. |
+| **WebSocket Hibernation** | Every room accepts sockets with `ctx.acceptWebSocket` and keeps per-socket data in attachments. The tick only runs while someone is connected, so an empty map sleeps and costs nothing. |
+| **Alarms** | `HomeRoom` sets an alarm to regrow broken rocks and trees in the yard and to end the day on time. Crops still grow from timestamps, not timers. |
+| **D1** | Better Auth tables, plus friends, unique names and mutes (`migrations/`). Game state never goes here. |
+| **R2** | Art and player uploads, served by the Worker at `/files/*`. |
+| **Workers AI** | Villagers' spoken lines. The cheaper model (`NPC_MODEL`) writes lines, and a function-calling model (`NPC_AGENT_MODEL`) runs the per-player agents. Without it, villagers use scripted lines. |
+| **Turnstile** | Captcha on sign-up and sign-in. |
+| **Cron Triggers** | A daily job (`src/worker/cron.ts`) deletes guest accounts idle for over 30 days, with their home, uploads and villager memories. |
+| **Observability** | Worker logs are on (`"observability"` in `wrangler.jsonc`). |
+
+TypeSafe Jev (`@typesafe-ai/sdk`) is the one outside service: it makes fast typed villager decisions and judges replies in the conversation window. Without its key, rules and word lists do the same job.
+
+### How the load is kept down
+
+- **Updates go to nearby players first.** Each player gets every tick for things within 24 tiles. Things farther away are batched to 2 updates a second (`src/worker/game/interest.ts`).
+- **Slow work never holds up the tick.** AI and RPC calls run in the background, and their results apply when they arrive.
+- **Loot is only sent to its owners.** Loot on the ground goes only to the players it belongs to.
+
+### Limitations
+
+**Limits this game sets**
+
+| Limit | Value | Why |
+|---|---|---|
+| Players per map copy | 60 (`ZONE_CAP`) | One object runs the whole map's tick on a single thread. Past 60, the next player joins a copy ("Mossbrook Village · 2"), and players in different copies don't see each other. |
+| Copies per map | 8 (`MAX_COPIES`) | So 480 players per map at most. Further joins get "full". |
+| AI spend per day | `AI_DAILY_NEURONS` (9,000 by default) | When it runs out, villagers fall back to scripted lines until the next UTC day. |
+
+**Limits set by the platform**
+
+- **Storage per object:** up to 10 GB, so one player's save has plenty of room.
+- **Value or row size:** at most 2 MB. Saves are split into separate keys (inventory, farm, objects, mail, containers) to stay far below it.
+- **WebSocket message size:** at most 32 MiB. Game messages are a few KB.
+- **Per-socket attachment:** at most 16 KB. Only identity and a few small fields go there.
+- **Requests per object:** about 1,000 a second (a soft limit). This is one more reason maps split into copies instead of growing.
+- **One location per object:** an object lives in one Cloudflare location, picked near whoever first used it, so players far from a map's room see more ping.
+- **Workers AI isn't available offline:** `npm run dev:local` has no AI binding, so villagers use scripted lines and word lists.
+- **D1 holds accounts only:** game state lives in Durable Objects, so a player's whole game can't be queried with SQL across all players.
+
 ## Requirements
 
 - Node.js 22 or newer, and npm
