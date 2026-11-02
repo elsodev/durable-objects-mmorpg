@@ -291,6 +291,54 @@
   color: var(--dm-wood-dark);
 }
 
+/* The picked item's name, above the hotbar (hud.ts). Same row as the build banner, which cancels it.
+   The outer box is a fixed-width lane; the pill inside is as wide as the name. */
+.hud-item-flash {
+  --flash-w: 260px;
+  position: absolute;
+  bottom: calc(var(--dm-slot-size, 48px) + 34px);
+  left: calc(50% - var(--flash-w) / 2);
+  width: var(--flash-w);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 350ms ease-out;
+  animation: hud-item-flash-in 140ms ease-out;
+}
+.hud-item-flash.is-fading {
+  opacity: 0;
+}
+.hud-item-flash-text {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 3px 12px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--dm-font-pixel);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.4px;
+  color: var(--dm-cream);
+  background: rgba(58, 42, 28, 0.85);
+  border: 2px solid var(--dm-wood-dark);
+  border-radius: var(--dm-radius);
+  box-shadow: inset 0 0 0 1px var(--dm-wood-light), 0 2px 0 rgba(0, 0, 0, 0.3);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+}
+@keyframes hud-item-flash-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-item-flash {
+    animation: none;
+  }
+}
+
 .dm-hud.offline .hud-hotbar {
   filter: grayscale(0.6);
 }
@@ -300,6 +348,12 @@
 @media (min-width: 761px) and (max-width: 1220px) {
   .hud-layer-chat {
     bottom: calc(var(--dm-slot-size) + 36px);
+  }
+  /* The chat shares this row (its right edge is at 404 px): centred when there's room, else just
+     right of the chat. */
+  .hud-item-flash {
+    --flash-w: 210px;
+    left: max(calc(50% - var(--flash-w) / 2), 412px);
   }
 }
 
@@ -313,7 +367,16 @@
     --dm-menu-row: 44px;
   }
   .hud-layer-chat {
-    bottom: calc(var(--dm-slot-size) + 36px + var(--dm-menu-row) + 6px);
+    /* + a 26 px lane between the menu row and the chat for the item name flash. */
+    bottom: calc(var(--dm-slot-size) + 36px + var(--dm-menu-row) + 32px);
+  }
+  .hud-item-flash {
+    --flash-w: calc(100vw - 24px);
+    bottom: calc(var(--dm-slot-size) + 30px + var(--dm-menu-row) + 5px);
+  }
+  .hud-item-flash-text {
+    padding: 1px 10px 2px;
+    font-size: 14px;
   }
   .hud-menu {
     top: auto;

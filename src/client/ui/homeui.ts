@@ -5,6 +5,7 @@ import type { DaySummary, ShipLine } from "../../shared/home";
 import { getItem } from "../../shared/items";
 import type { ItemId } from "../../shared/types";
 import { iconFor } from "./icons";
+import { itemTip } from "./item-tip";
 import { uiSound } from "./sound";
 import "./styles/home.css";
 
@@ -64,7 +65,7 @@ function btn(text: string, className: string, id: string, onClick: () => void): 
   return b;
 }
 
-function icon(item: ItemId): HTMLElement {
+function icon(item: ItemId, qty = 1): HTMLElement {
   const img = el("img", "home-icon");
   img.alt = "";
   try {
@@ -72,6 +73,7 @@ function icon(item: ItemId): HTMLElement {
   } catch {
     // no icon: the name still reads
   }
+  itemTip().attach(img, () => ({ item, qty }));
   return img;
 }
 
@@ -240,7 +242,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       for (const l of items) {
         const li = el("li", "home-line");
         const { name, quality } = itemLabel(l.item);
-        add(li, icon(l.item), el("span", "home-line-name", quality ? `${name} (${quality})` : name), el("span", "home-line-qty", `×${l.qty}`), el("span", "home-line-coins", `${l.coins} c`));
+        add(li, icon(l.item, l.qty), el("span", "home-line-name", quality ? `${name} (${quality})` : name), el("span", "home-line-qty", `×${l.qty}`), el("span", "home-line-coins", `${l.coins} c`));
         binList.appendChild(li);
       }
       binTotal.textContent = `Tonight: ${total} c`;

@@ -1,9 +1,11 @@
-// Inventory panel (#inventory-panel): 6x4 grid of slots with icon, qty and a tooltip, plus coins.
+// Inventory panel (#inventory-panel): 6x4 grid of slots with icon, qty and the shared item tooltip, plus coins.
 // All text goes in via textContent; item data comes from the shared catalog.
-import { getItem, MAX_SLOTS } from "../../shared/items";
+import { MAX_SLOTS } from "../../shared/items";
 import type { Inventory } from "../../shared/types";
-import { formatCoins, tooltipInfo } from "./inventory-format";
+import { formatCoins } from "./inventory-format";
 import { iconFor } from "./icons";
+import { itemTip } from "./item-tip";
+import { itemTitle } from "./item-tip-logic";
 import type { CreateInventoryPanel, InventoryPanel } from "./index";
 import { uiSound } from "./sound";
 import "./styles/inventory.css";
@@ -53,13 +55,7 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
   coins.id = "inventory-coins";
   add(footer, coinIcon, coins);
 
-  const tip = el("div", "dm-panel inv-tooltip");
-  tip.setAttribute("role", "tooltip");
-  tip.hidden = true;
-  const tipName = el("div", "inv-tip-name");
-  const tipDesc = el("div", "inv-tip-desc");
-  const tipPrice = el("div", "inv-tip-price");
-  add(tip, tipName, tipDesc, tipPrice);
+  const tip = itemTip();
 
   const slotEls: { btn: HTMLButtonElement; img: HTMLImageElement; qty: HTMLSpanElement }[] = [];
   for (let i = 0; i < slotCount; i++) {
@@ -78,17 +74,14 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
     });
     btn.addEventListener("mouseenter", () => {
       if (inv.slots[i]) uiSound("hover");
-      showTip(i, btn);
     });
-    btn.addEventListener("focus", () => showTip(i, btn));
-    btn.addEventListener("mouseleave", hideTip);
-    btn.addEventListener("blur", hideTip);
+    tip.attach(btn, () => inv.slots[i] ?? null);
     opts.drag?.attach(btn, i);
     add(grid, btn);
     slotEls.push({ btn, img, qty });
   }
 
-  add(panel, header, grid, footer, tip);
+  add(panel, header, grid, footer);
   panel.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       e.stopPropagation();
@@ -97,40 +90,19 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
   });
   add(root, panel);
 
-  function showTip(i: number, anchor: HTMLElement): void {
-    const slot = inv.slots[i];
-    if (!slot) return hideTip();
-    const info = tooltipInfo(slot);
-    tipName.textContent = info.qty > 1 ? `${info.name} ×${info.qty}` : info.name;
-    tipDesc.textContent = info.desc ?? "";
-    tipDesc.hidden = !info.desc;
-    tipPrice.textContent = info.price;
-    tip.hidden = false;
-    // Position relative to the panel so it moves with it.
-    const p = panel.getBoundingClientRect();
-    const a = anchor.getBoundingClientRect();
-    tip.style.left = `${a.left - p.left + a.width / 2}px`;
-    tip.style.top = `${a.top - p.top}px`;
-  }
-
-  function hideTip(): void {
-    tip.hidden = true;
-  }
-
   function render(): void {
     coins.textContent = formatCoins(inv.coins);
     for (let i = 0; i < slotEls.length; i++) {
       const { btn, img, qty } = slotEls[i];
       const slot = inv.slots[i];
       if (slot) {
-        const name = getItem(slot.item)?.name ?? slot.item;
         const src = iconFor(slot.item);
         if (img.getAttribute("src") !== src) img.src = src;
         img.hidden = false;
         qty.textContent = slot.qty > 1 ? String(slot.qty) : "";
         btn.classList.remove("is-empty");
         btn.removeAttribute("aria-disabled");
-        btn.setAttribute("aria-label", slot.qty > 1 ? `${name}, ${slot.qty}` : name);
+        btn.setAttribute("aria-label", itemTitle(slot.item, slot.qty));
       } else {
         img.removeAttribute("src");
         img.hidden = true;
@@ -147,7 +119,6 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
     setInventory(next) {
       inv = next;
       render();
-      if (!tip.hidden) hideTip();
     },
     toggle() {
       if (open) panelApi.close();
@@ -165,7 +136,7 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
       open = false;
       panel.hidden = true;
       panel.classList.remove("is-open");
-      hideTip();
+      tip.hide();
       uiSound("close");
     },
     isOpen: () => open,

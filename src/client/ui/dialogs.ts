@@ -5,6 +5,7 @@ import type { Inventory, ItemId } from "../../shared/types";
 import { clampQty, donatePlan, itemName, maxAffordable, MAX_STEP_QTY, progress, sellRows } from "./dialogs-logic";
 import { mountAccountForm } from "./auth";
 import { iconFor } from "./icons";
+import { itemTip } from "./item-tip";
 import { uiSound } from "./sound";
 import type { CreateAccountPrompt, CreateGoals, CreateNotices, CreateShop } from "./index";
 import "./styles/dialogs.css";
@@ -49,18 +50,20 @@ function closeButton(onClick: () => void): HTMLButtonElement {
   return b;
 }
 
-function icon(item: ItemId): HTMLElement {
+/** The item's icon, with the shared item tooltip (the row's text already names it). */
+function icon(item: ItemId, qty = 1): HTMLElement {
   const img = el("img", "dlg-icon");
   img.alt = "";
   img.width = 32;
   img.height = 32;
+  let out: HTMLElement = img;
   try {
     img.src = iconFor(item);
   } catch {
-    const t = el("span", "dlg-icon dlg-icon-fallback", itemName(item).charAt(0).toUpperCase());
-    return t;
+    out = el("span", "dlg-icon dlg-icon-fallback", itemName(item).charAt(0).toUpperCase());
   }
-  return img;
+  itemTip().attach(out, () => ({ item, qty }));
+  return out;
 }
 
 function coinText(n: number): string {
@@ -200,7 +203,7 @@ export const createShop: CreateShop = (root, opts) => {
         total.textContent = `+${coinText(r.price * get())}`;
       };
       const st = stepper(get, (n) => sellQty.set(r.slot, n), r.qty, refresh);
-      add(li, icon(r.item), el("span", "dlg-name", `${itemName(r.item)} ×${r.qty}`), el("span", "dlg-unit", `${r.price} c each`), st.root, total, action);
+      add(li, icon(r.item, r.qty), el("span", "dlg-name", `${itemName(r.item)} ×${r.qty}`), el("span", "dlg-unit", `${r.price} c each`), st.root, total, action);
       refresh();
       return li;
     });

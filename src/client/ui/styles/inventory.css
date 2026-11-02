@@ -92,22 +92,6 @@
   border: 2px solid #8a5a17;
 }
 
-.inv-tooltip {
-  position: absolute;
-  transform: translate(-50%, calc(-100% - 6px));
-  min-width: 120px;
-  max-width: 220px;
-  padding: 6px 8px;
-  pointer-events: none;
-  z-index: 1;
-  font-size: 12px;
-}
-.inv-tooltip[hidden] { display: none; }
-.inv-tip-name { font-weight: bold; color: var(--dm-text, #fff8e7); }
-.inv-tip-desc { margin-top: 2px; color: var(--dm-text-dim, #e8d9c0); }
-.inv-tip-desc[hidden] { display: none; }
-.inv-tip-price { margin-top: 4px; color: var(--dm-gold, #f5c84c); }
-
 @media (max-width: 420px) {
   #inventory-panel { --dm-slot-size: 40px; }
 }

@@ -28,6 +28,8 @@ import { menuIcon, type MenuIconName } from "./menu-icons";
 import { HOTBAR_SIZE, heartStates, hotbarSlots, pingLevel, shortcutFor } from "./hud-logic";
 import type { SocialStats } from "../../shared/social";
 import { statRows, statsVisible } from "./stats-logic";
+import { itemTip } from "./item-tip";
+import { createNameFlash, itemTitle, type NameFlash } from "./item-tip-logic";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -250,7 +252,10 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   const hotbar = el("div", { id: "hotbar", className: "dm-panel hud-hotbar" });
   hotbar.setAttribute("role", "toolbar");
   hotbar.setAttribute("aria-label", "Hotbar");
+  hotbar.dataset.tipFrame = "";
   const slotEls: HTMLButtonElement[] = [];
+  /** The slot a click just picked: the game echoes it back through setSelectedSlot. */
+  let clickEcho: number | null = null;
   for (let i = 0; i < HOTBAR_SIZE; i++) {
     const b = el("button", { className: "dm-slot hud-slot" });
     b.type = "button";
@@ -259,13 +264,38 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     b.addEventListener("click", (ev) => {
       ev.stopPropagation();
       uiSound("select");
-      setSelected(i);
+      setSelected(i, true);
+      clickEcho = i;
       game.selectSlot(i);
+      clickEcho = null;
     });
+    safe("item tip", () => itemTip().attach(b, () => inv?.slots[i] ?? null), undefined);
     slotEls.push(b);
     hotbar.appendChild(b);
   }
   hud.appendChild(hotbar);
+
+  // --- the selected item's name, flashed above the hotbar for a moment
+  const flashText = el("span", { className: "hud-item-flash-text" });
+  const flashEl = el("div", { id: "hud-item-flash", className: "hud-item-flash" }, flashText);
+  // Screen readers get the name from the slot's aria-label and aria-pressed.
+  flashEl.setAttribute("aria-hidden", "true");
+  flashEl.hidden = true;
+  hud.appendChild(flashEl);
+  const nameFlash: NameFlash = createNameFlash({
+    show(text) {
+      flashText.textContent = text;
+      flashEl.hidden = false;
+      flashEl.classList.remove("is-fading");
+    },
+    fade() {
+      flashEl.classList.add("is-fading");
+    },
+    hide() {
+      flashEl.hidden = true;
+      flashEl.classList.remove("is-fading");
+    },
+  });
 
   // --- drag and drop between bag slots (hotbar + inventory panel)
   const drag: SlotDrag | null = safe(
@@ -483,6 +513,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     inventory.setInventory(next);
     shop.setInventory(next);
     goals.setInventory(next);
+    safe("item tip", () => itemTip().refresh(), undefined);
   }
 
   function renderHotbar(): void {
@@ -494,17 +525,18 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       b.classList.toggle("selected", i === selected);
       b.setAttribute("aria-pressed", String(i === selected));
       if (!s) {
-        b.title = `Slot ${i + 1}: empty`;
+        b.setAttribute("aria-label", `Slot ${i + 1}: empty`);
         b.classList.add("empty");
         return;
       }
       b.classList.remove("empty");
       const name = itemName(s.item);
-      b.title = s.qty > 1 ? `${name} ×${s.qty}` : name;
+      b.setAttribute("aria-label", `Slot ${i + 1}: ${itemTitle(s.item, s.qty)}`);
       const src = itemIcon(s.item);
       if (src) {
         const img = el("img");
-        img.alt = name;
+        // The button already names the item; an alt would read it twice.
+        img.alt = "";
         img.draggable = false;
         img.src = src;
         b.appendChild(img);
@@ -515,8 +547,13 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     });
   }
 
-  function setSelected(slot: number): void {
+  /** `announce`: the player picked it (click, number key, wheel), so flash the item's name. */
+  function setSelected(slot: number, announce = false): void {
     if (!Number.isInteger(slot) || slot < 0 || slot >= HOTBAR_SIZE) return;
+    if (announce) {
+      const s = inv?.slots[slot];
+      nameFlash.flash(s && !buildMode ? itemName(s.item) : null);
+    }
     selected = slot;
     slotEls.forEach((b, i) => {
       b.classList.toggle("selected", i === slot);
@@ -640,7 +677,9 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       applyInventory(next);
     },
     setSelectedSlot(slot: number) {
-      setSelected(slot);
+      // Keys and the wheel arrive here (pressing the current slot's key again re-shows its name);
+      // a click already flashed before the game echoed it back.
+      setSelected(slot, slot !== clickEcho);
     },
     setHp(hp: number, maxHp: number) {
       const states = heartStates(hp, maxHp);
@@ -684,6 +723,8 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       if (on === buildMode) return;
       buildMode = on;
       buildBanner.hidden = !on;
+      // The banner sits where the flash does.
+      if (on) nameFlash.cancel();
       hud.classList.toggle("build-mode", on);
       uiSound(on ? "open" : "close");
     },
