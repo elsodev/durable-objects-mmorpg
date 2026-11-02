@@ -746,6 +746,12 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - Source: https://github.com/ElizaWy/LPC (Objects/Furniture: Fireplace, Cabinet, Barrel, Sink Countertop, Table Workshop, Workbench Carpentry, Smithing/Forge A, Smithing/Bellows; Objects/Small Items: Fire Fireplace, Lighting Table, Dishes A, Kitchen Clutter A, Boxes, Baskets A, Loose Paper, Tools Smithing, Food/Bread A, Food/Vegetables A; Objects/Wall Items: Lighting Wall, Paintings Landscape, Paintings Portraits, Paintings Still Life, Mirrors, Curtains; Structure/Windows; Structure/Signs/Sign Backgrounds A); https://opengameart.org/content/lpc-fireplace; https://opengameart.org/content/lpc-blacksmith; https://opengameart.org/content/lpc-woodshop; https://opengameart.org/content/lpc-upholstery; https://opengameart.org/content/lpc-meals; https://opengameart.org/content/rpg-item-set; https://opengameart.org/content/lpc-tailor; https://opengameart.org/content/mage-city-arcanos
 - Notes: Atlas assembled by the DurableMMO project: fire frames composited into the fireplaces, forge glow states as animation frames, a sink set into the kitchen counter from furniture/interiors.png, produce piles on a market table, cash box/papers/candle on a shop counter, papers pinned to a sign board.
 
+### interior/forge_tall.png
+- Authors: Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling); chimney hood by the DurableMMO project (CC0)
+- License: **OGA-BY 3.0**
+- Source: https://github.com/ElizaWy/LPC (Objects/Furniture/Smithing/Forge A); https://opengameart.org/content/lpc-blacksmith
+- Notes: The forge from interior/kit.png (its four fire frames and the unlit state) with a stone chimney hood added above it, drawn in the forge's own brick colours, so it rises to the ceiling.
+
 ### interior/floor_tile_a.png, interior/floor_tile_c.png, interior/floor_herringbone.png, interior/floor_diamond.png
 - Authors: Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**

@@ -5045,16 +5045,16 @@
    "shadow": "medium"
   },
   "forge": {
-   "file": "interior/kit.png",
+   "file": "interior/forge_tall.png",
    "rect": [
-    148,
-    76,
+    0,
+    0,
     128,
-    116
+    192
    ],
    "anchor": [
     64,
-    115
+    191
    ],
    "footprintTiles": {
     "w": 4,
@@ -5062,37 +5062,38 @@
    },
    "frames": [
     [
-     148,
-     76,
-     128,
-     116
-    ],
-    [
-     278,
-     76,
-     128,
-     116
-    ],
-    [
      0,
-     194,
+     0,
      128,
-     116
+     192
     ],
     [
-     130,
-     194,
      128,
-     116
+     0,
+     128,
+     192
+    ],
+    [
+     256,
+     0,
+     128,
+     192
+    ],
+    [
+     384,
+     0,
+     128,
+     192
     ]
    ],
    "unlit": [
-    260,
-    194,
+    512,
+    0,
     128,
-    116
+    192
    ],
-   "shadow": "medium"
+   "shadow": "medium",
+   "note": "forge with a stone chimney hood up to the ceiling (4 fire frames, unlit last)"
   },
   "hearth": {
    "file": "interior/kit.png",
