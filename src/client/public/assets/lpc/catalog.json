@@ -8638,6 +8638,15 @@
     32
    ]
   },
+  "flashlight": {
+   "file": "icons/flashlight.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ]
+  },
   "bat_wing": {
    "file": "icons/extra_icons.png",
    "rect": [

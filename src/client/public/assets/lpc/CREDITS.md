@@ -822,3 +822,9 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - License: **CC0**
 - Source: drawn by script for this game
 - Notes: The island picture on the Map tab (256 × 160, shown at 2× with pixelated scaling) and its place pins (12 × 16: red for a place, gold for where you are).
+
+### icons/flashlight.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game
+- Notes: Flashlight inventory icon (32 × 32).

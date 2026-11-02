@@ -45,6 +45,7 @@ describe("MONSTER_STATS", () => {
       { item: "slime_gel", qty: 2 },
       { item: "herb_mint", qty: 1 },
       { item: "gem_crystal", qty: 1 },
+      { item: "flashlight", qty: 1 },
     ]);
     expect(rollMonsterDrops("slime", () => 0.99)).toEqual([]);
     const crab = rollMonsterDrops("rock_crab", () => 0);

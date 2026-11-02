@@ -80,6 +80,7 @@ export const MONSTER_STATS: Record<MonsterType, MonsterStats> = {
       { item: "slime_gel", min: 1, max: 1, chance: 0.05 },
       { item: "herb_mint", min: 1, max: 1, chance: 0.1 },
       { item: "gem_crystal", min: 1, max: 1, chance: 0.01 },
+      { item: "flashlight", min: 1, max: 1, chance: 0.004 },
     ],
   },
   bat: {
@@ -94,6 +95,7 @@ export const MONSTER_STATS: Record<MonsterType, MonsterStats> = {
       { item: "bat_wing", min: 1, max: 1, chance: 0.9 },
       { item: "bat_wing", min: 1, max: 1, chance: 0.35 },
       { item: "gem_crystal", min: 1, max: 1, chance: 0.02 },
+      { item: "flashlight", min: 1, max: 1, chance: 0.006 },
     ],
   },
   rock_crab: {
@@ -109,6 +111,7 @@ export const MONSTER_STATS: Record<MonsterType, MonsterStats> = {
       { item: "ore_iron", min: 1, max: 2, chance: 0.3 },
       { item: "stone", min: 1, max: 3, chance: 0.5 },
       { item: "gem_crystal", min: 1, max: 1, chance: 0.08 },
+      { item: "flashlight", min: 1, max: 1, chance: 0.012 },
     ],
   },
 };

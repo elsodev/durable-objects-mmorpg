@@ -53,6 +53,7 @@ export const CHEST_BONUS: readonly { item: ItemId | "furniture"; min: number; ma
   { item: "gem_crystal", min: 1, max: 1, chance: 0.12 },
   { item: "furniture", min: 1, max: 1, chance: 0.08 },
   { item: "ore_gold", min: 1, max: 1, chance: 0.03 },
+  { item: "flashlight", min: 1, max: 1, chance: 0.02 },
   { item: "gem_diamond", min: 1, max: 1, chance: 0.003 },
 ];
 

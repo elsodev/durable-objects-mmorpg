@@ -290,6 +290,8 @@ const ALL: ItemDef[] = [
   tool("axe", "Axe", "axe", 1, { buy: 150, desc: "Chops trees and clears stumps for wood." }),
   tool("sword_wood", "Wooden Sword", "sword", 5),
   tool("sword_copper", "Copper Sword", "sword", 10, { buy: 300 }),
+  // Not swung: just carrying it lights the whole cave (see shared/flashlight.ts).
+  def("flashlight", "Flashlight", "tool", 120, { stack: 1, rarity: "rare", desc: "Lights up the whole cave while it's in your bag. A rare find from cave monsters and chests." }),
 
   // Seeds & crops
   ...crop("Turnip", "turnip", 2, 10, 25, 8),

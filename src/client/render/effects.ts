@@ -7,6 +7,7 @@ import { TILE } from "../contracts";
 import type { MapData, Vec2 } from "../../shared/types";
 import {
   AMBIENT,
+  ambientLook,
   METER_LIFE,
   RIPPLE_LIFE,
   TOSS_LIFE,
@@ -73,6 +74,8 @@ class AmbientLayer {
     return this.kind;
   }
   private kind: Ambient | null = null;
+  private flashlight = false;
+  private shown: ReturnType<typeof ambientLook> | null = null;
   private fill: Sprite;
   private light: Sprite | null = null;
   /** Top, bottom, left, right covers around the light square. */
@@ -89,10 +92,17 @@ class AmbientLayer {
     this.set("day");
   }
 
+  setFlashlight(on: boolean): void {
+    this.flashlight = on;
+    if (this.kind) this.set(this.kind);
+  }
+
   set(kind: Ambient): void {
-    if (kind === this.kind) return;
+    const shown = ambientLook(kind, this.flashlight);
+    if (kind === this.kind && shown === this.shown) return;
     this.kind = kind;
-    const look = AMBIENT[kind];
+    this.shown = shown;
+    const look = AMBIENT[shown];
     this.fade = 0;
     this.root.alpha = 0;
     if (look.light > 0) {
@@ -111,7 +121,7 @@ class AmbientLayer {
       if (this.light) this.light.visible = false;
       for (const e of this.edges) e.visible = false;
     }
-    this.root.visible = kind !== "day";
+    this.root.visible = shown !== "day";
   }
 
   private ensureLight(): void {
@@ -136,7 +146,7 @@ class AmbientLayer {
     if (!this.root.visible) return;
     this.fill.position.set(0, 0);
     this.fill.setSize(w, h);
-    const look = AMBIENT[this.kind ?? "day"];
+    const look = AMBIENT[this.shown ?? "day"];
     const light = this.light;
     if (look.light <= 0 || !light) return;
     let cx = w / 2;
@@ -444,6 +454,10 @@ export const createEffects: CreateEffects = (layers, viewport): Effects => {
     setAmbient(kind) {
       if (destroyed) return;
       ambient.set(kind);
+    },
+    setFlashlight(on) {
+      if (destroyed) return;
+      ambient.setFlashlight(on);
     },
     floatText(at, text, kind) {
       if (destroyed) return;

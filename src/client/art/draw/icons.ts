@@ -264,7 +264,25 @@ function sack(g: PixelGrid, h: number): void {
   g.px(16, 20, shade(c, -0.4));
 }
 
+/** Fallback flashlight (the catalog icon is used when it loads): yellow barrel, steel head, lit lens. */
+function flashlight(g: PixelGrid): void {
+  const body = 0xe09a2a;
+  g.poly([[5, 24], [9, 28], [20, 17], [16, 13]], body);
+  g.line(6, 24, 17, 13, shade(body, 0.35));
+  g.line(9, 27, 20, 16, shade(body, -0.35));
+  for (const t of [0, 3, 6]) g.line(9 + t, 22 - t, 12 + t, 25 - t, 0x4a3a32);
+  g.poly([[16, 13], [20, 17], [27, 14], [18, 5]], 0xb8bcc4);
+  g.line(17, 9, 23, 15, 0xe8ecf0);
+  g.line(18, 5, 27, 14, 0xfff4b0);
+  g.line(19, 5, 27, 13, 0xffffff);
+  g.outline();
+  g.px(29, 6, 0xffe870);
+  g.px(25, 2, 0xffe870);
+  g.px(30, 10, 0xffe870);
+}
+
 const ICONS: Record<string, (g: PixelGrid) => void> = {
+  flashlight,
   hoe,
   watering_can: wateringCan,
   pickaxe: (g) => pickaxe(g, 0x8a8a92),

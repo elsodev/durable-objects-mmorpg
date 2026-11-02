@@ -391,6 +391,8 @@ export type CreateBuildMode = (
 /** render/effects.ts: ambient tint (cave dark with light around you, indoor warm), float text (+3 ore), dust/hit particles. */
 export interface Effects {
   setAmbient(ambient: MapData["ambient"]): void;
+  /** A flashlight in the bag: caves are drawn fully lit instead of dark around you. */
+  setFlashlight?(on: boolean): void;
   floatText(at: Vec2, text: string, kind: "info" | "error" | "loot" | "love" | "damage" | "crit" | "miss" | "hurt"): void;
   burst(at: Vec2, kind: "dust" | "hit" | "water" | "sparkle"): void;
   /**

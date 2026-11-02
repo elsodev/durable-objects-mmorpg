@@ -1,5 +1,6 @@
 // Session orchestrator: wires app, art, store, connection, prediction, input, camera, per-zone
 // renderers and the HUD, runs the frame loop and zone switching. See ../contracts.ts.
+import { hasFlashlight } from "../../shared/flashlight";
 import { loadArt } from "../art";
 import { createLookCompositor } from "../art/compositor";
 import { lookResolver } from "../render/look-characters";
@@ -728,6 +729,7 @@ export async function startSession(
       case "inventory":
         hud.setInventory(store.inventory);
         refreshEdible();
+        world?.effects.setFlashlight?.(hasFlashlight(store.inventory));
         break;
       case "farm":
         farmFx.farmChanged(msg.tiles);
@@ -918,6 +920,7 @@ export async function startSession(
       characterFor,
       { beat: itemPoseBeat },
     );
+    world.effects.setFlashlight?.(hasFlashlight(store.inventory));
     if (msg.zone !== "home") home = null;
     visiting = msg.visit ?? null;
     homeUi.setAtHome(msg.zone === "home");

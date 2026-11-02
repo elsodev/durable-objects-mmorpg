@@ -360,11 +360,18 @@ export interface AmbientLook {
   light: number;
 }
 
-export const AMBIENT: Record<"day" | "cave" | "indoor", AmbientLook> = {
+export const AMBIENT: Record<"day" | "cave" | "indoor" | "caveLit", AmbientLook> = {
   day: { tint: 0xffffff, light: 0 },
   indoor: { tint: 0xffe6c4, light: 0 },
   cave: { tint: 0x23263a, light: 4.5 },
+  /** A cave seen with a flashlight in the bag: all of it visible, still cool and dim enough to read as underground. */
+  caveLit: { tint: 0xc9cde0, light: 0 },
 };
+
+/** The look for a map's ambient; a flashlight lights a cave fully. */
+export function ambientLook(kind: "day" | "cave" | "indoor", flashlight: boolean): "day" | "cave" | "indoor" | "caveLit" {
+  return kind === "cave" && flashlight ? "caveLit" : kind;
+}
 
 /** Gentle torch flicker for the cave light radius, deterministic in time. */
 export function flicker(t: number): number {

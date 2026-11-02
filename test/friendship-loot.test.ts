@@ -239,7 +239,7 @@ describe("cave chests", () => {
       for (const d of loot.items) {
         const def = getItem(d.item);
         expect(def, d.item).toBeTruthy();
-        expect(["ore", "gem", "furniture"]).toContain(def!.kind);
+        if (d.item !== "flashlight") expect(["ore", "gem", "furniture"]).toContain(def!.kind);
         if (def!.kind === "furniture") furniture++;
       }
     }

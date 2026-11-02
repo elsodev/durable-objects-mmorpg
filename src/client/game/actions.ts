@@ -54,7 +54,7 @@ export function usableItem(inv: Inventory, slot: number): string | null {
   const s = inv.slots[slot];
   if (!s || s.qty <= 0) return null;
   const def = getItem(s.item);
-  return def && (def.kind === "tool" || def.kind === "seed") ? s.item : null;
+  return def && ((def.kind === "tool" && def.tool !== undefined) || def.kind === "seed") ? s.item : null;
 }
 
 /**
