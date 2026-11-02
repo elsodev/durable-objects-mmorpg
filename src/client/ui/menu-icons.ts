@@ -233,6 +233,25 @@ export const MENU_ICONS = {
     ".......kk.......",
     "................",
   ],
+  // The HUD's feedback button: a ladybird, read as "report a bug".
+  bug: [
+    "....k......k....",
+    ".....k....k.....",
+    "......kkkk......",
+    ".....kwkkwk.....",
+    "...kkkkkkkkkk...",
+    "..kwrrrkkrrrrk..",
+    ".kwrkkrkkrkkrRk.",
+    "kkrrkkrkkrkkrRkk",
+    ".krrrrrkkrrrrRk.",
+    "kkrkkrrkkrrkkRkk",
+    ".krkkrrkkrrkkRk.",
+    "kkrrrrrkkrrrRRkk",
+    "..kRrrrkkrrRRk..",
+    "...kRRRkkRRRk...",
+    "....kkkkkkkk....",
+    "................",
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 export type MenuIconName = keyof typeof MENU_ICONS;

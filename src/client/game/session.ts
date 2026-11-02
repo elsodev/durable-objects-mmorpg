@@ -53,7 +53,7 @@ import {
   useTarget,
   withinInteract,
 } from "./actions";
-import { createGameApp } from "./app";
+import { captureView, createGameApp } from "./app";
 import { appearanceOf, applyAppearance } from "./appearance";
 import { playSfx, setAudioHooks, setAudioPaused, setMusicZone, type AudioHooks } from "./audio";
 import { createAfkWatch } from "./afk";
@@ -412,6 +412,11 @@ export async function startSession(
     tradeAdd: (slot, qty) => send({ t: "tradeAdd", slot, qty }),
     requestTrade: (target) => requestTrade(target),
     canTrade: () => !isGuest && store.zone !== null && store.zone !== "home",
+    captureView: () => captureView(game.app),
+    feedbackContext() {
+      const me = you();
+      return { zone: store.zone, x: me ? Math.round(me.x) : null, y: me ? Math.round(me.y) : null, renderer: game.renderer };
+    },
   };
 
   /** Ask a player here to trade (player card or /trade name). The server checks it all again. */

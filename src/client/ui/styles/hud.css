@@ -381,7 +381,8 @@
   .hud-menu {
     top: auto;
     left: 12px;
-    right: 12px;
+    /* The feedback button (styles/feedback.css) takes the row's right end. */
+    right: 56px;
     bottom: calc(var(--dm-slot-size) + 30px);
     box-sizing: border-box;
     height: var(--dm-menu-row);

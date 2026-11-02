@@ -43,6 +43,7 @@ import { parseAdminCommand } from "../../shared/admin";
 import { createShoutBanner, type ShoutBanner } from "./shout-banner";
 import { createJailTimer, type JailTimer } from "./jail-timer";
 import { createLevelBadge, type LevelBadge } from "./level-badge";
+import { createFeedback, type FeedbackUi } from "./feedback";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -597,6 +598,12 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     else void friends.addByName(cmd.name);
     return true;
   }
+  // --- feedback (bottom-right bug button; admins also review)
+  const feedback: FeedbackUi | null = safe(
+    "feedback",
+    () => createFeedback(hud, root, game, (t, kind) => notices.notice(t, kind)),
+    null,
+  );
   const account: AccountPrompt = safe("account prompt", () => createAccountPrompt(accountLayer), {
     show: async () => false,
   });
@@ -902,6 +909,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       convo.close();
       animalCard.close();
       slotMenu.close();
+      feedback?.close();
     },
     showAccountPrompt,
     setBonds(list) {
@@ -925,6 +933,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     },
     setAdmin(on) {
       shoutBtn.hidden = !on;
+      feedback?.setAdmin(on);
     },
     jail(until, serverTime) {
       jailTimer?.set(until, serverTime);

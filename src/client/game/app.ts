@@ -1,5 +1,5 @@
 // See ../contracts.ts for the contract.
-import { Application, Container, RendererType, TextureStyle, type Ticker } from "pixi.js";
+import { Application, Container, Rectangle, RendererType, TextureStyle, type Ticker } from "pixi.js";
 import type { CreateGameApp, GameApp, Layers } from "../contracts";
 
 const BACKGROUND = 0x2b3a2e; // dark moss, shown before the ground layer draws
@@ -39,6 +39,26 @@ export function createLayers(): Layers {
 export function clearLayers(layers: Layers): void {
   for (const layer of [layers.ground, layers.groundOverlay, layers.sorted, layers.overlay]) {
     for (const child of layer.removeChildren()) child.destroy({ children: true });
+  }
+}
+
+/**
+ * The stage as it looks on screen, as a 2D canvas. A WebGPU or WebGL canvas can't be read back
+ * once presented, so the frame is rendered again into a texture through the extract API.
+ */
+export function captureView(app: Application): HTMLCanvasElement | null {
+  try {
+    const { width, height } = app.screen;
+    if (width <= 0 || height <= 0) return null;
+    return app.renderer.extract.canvas({
+      target: app.stage,
+      frame: new Rectangle(0, 0, width, height),
+      resolution: Math.min(app.renderer.resolution, 2),
+      clearColor: BACKGROUND,
+    }) as HTMLCanvasElement;
+  } catch (err) {
+    console.warn("[dmmo] view capture failed", err);
+    return null;
   }
 }
 

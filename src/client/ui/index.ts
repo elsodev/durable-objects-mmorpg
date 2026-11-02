@@ -90,6 +90,13 @@ export interface GameApi {
   isAdmin?(): boolean;
   /** Sends an admin command (/shout, /kick, /unban, /jail, /unjail, or the player card's Kick / Send to Jail) to the server. */
   adminCommand?(cmd: Exclude<AdminCommand, { cmd: "error" }>): void;
+  /**
+   * The game canvas as it looks now, drawn through the renderer's extract API (a WebGPU or WebGL
+   * canvas can't be read back directly). Null when the renderer can't. Feedback screenshots only.
+   */
+  captureView?(): HTMLCanvasElement | null;
+  /** Where the player is, attached to a feedback report for context (display only). */
+  feedbackContext?(): { zone: string | null; x: number | null; y: number | null; renderer: string };
 }
 
 /** Where a chat line belongs (tabs) and, for whispers, which way it went. */

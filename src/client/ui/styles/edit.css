@@ -11,10 +11,10 @@
   pointer-events: none;
 }
 
-/* ---- Edit button: bottom-right, level with the hotbar */
+/* ---- Edit button: bottom-right, level with the hotbar, left of the feedback button */
 .edit-open {
   position: absolute;
-  right: 16px;
+  right: 60px;
   bottom: 18px;
   display: inline-flex;
   align-items: center;

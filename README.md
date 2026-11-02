@@ -38,8 +38,8 @@ The whole game is one Worker plus a few Durable Objects. There is no separate ga
 | **Durable Object storage (SQLite)** | Each object keeps its own state in its built-in storage: the save in `HomeRoom`, rocks, trees, chests, ground items and goals in `ZoneRoom`. Zones write player saves back every 5 seconds and when a player leaves. |
 | **WebSocket Hibernation** | Every room accepts sockets with `ctx.acceptWebSocket` and keeps per-socket data in attachments. The tick only runs while someone is connected, so an empty map sleeps and costs nothing. |
 | **Alarms** | `HomeRoom` sets an alarm to regrow broken rocks and trees in the yard and to end the day on time. Crops still grow from timestamps, not timers. |
-| **D1** | Better Auth tables, plus friends, unique names and mutes (`migrations/`). Game state never goes here. |
-| **R2** | Art and player uploads, served by the Worker at `/files/*`. |
+| **D1** | Better Auth tables, plus friends, unique names, mutes and player feedback reports (`migrations/`). Game state never goes here. |
+| **R2** | Art and player uploads, served by the Worker at `/files/*`, and feedback screenshots under the private `feedback/` prefix, which only admins can read. |
 | **Workers AI** | Villagers' spoken lines. The cheaper model (`NPC_MODEL`) writes lines, and a function-calling model (`NPC_AGENT_MODEL`) runs the per-player agents. Without it, villagers use scripted lines. |
 | **Turnstile** | Captcha on sign-up and sign-in. |
 | **Cron Triggers** | A daily job (`src/worker/cron.ts`) deletes guest accounts idle for over 30 days, with their home, uploads and villager memories. |
@@ -218,7 +218,7 @@ src/
   client/     PixiJS client
     game/ render/ net/ state/ art/ audio/ ui/
     public/assets/   art, audio and their CREDITS files
-migrations/   D1 migrations (Better Auth tables, friends, unique names, mutes)
+migrations/   D1 migrations (Better Auth tables, friends, unique names, mutes, feedback)
 test/         Vitest tests
 scripts/      e2e.mjs (Playwright)
 ```
@@ -231,6 +231,7 @@ scripts/      e2e.mjs (Playwright)
 - **Trading** between two players standing close together in a shared zone: Trade on the player card or `/trade name`, and the other player accepts or declines (the request lapses after 30 s). Each side puts up to 9 stacks and some coins in the trade window (click or right-click bag slots; click an offered stack to take it back) and both see every change live. Both press Ready, then both press Trade; any change to either side clears Ready for both. Bags aren't touched until the end: `ZoneRoom` (`src/worker/game/trades.ts`) checks both bags again, plans the swap on copies (rules in `src/shared/engine/trade.ts`) and writes both in one synchronous step, then saves both players. Walking apart, leaving, shopping or asking someone else calls it off. Villagers don't trade; homes and visits refuse trade messages.
 - **Mute** (`/mute name`, `/unmute name`, the card, or the Friends panel's Muted tab) is a per-account list in D1 (`migrations/0007_mutes.sql`, `/api/mutes`). It is one-way and silent. The server drops whispers, home invites and friend requests from muted players; the client hides their zone chat, bubbles, world chat and emotes.
 - **Notice board**: press F next to the board in the village square or the town hall, or click it. A notice is at most 160 characters of plain text (control and invisible format characters stripped) and costs 200 coins, taken by the zone before the post and refunded if the board refuses it. One new notice per player every 5 minutes; the board keeps the newest 50, and each comes down after 7 days. One vote per player per notice (the same button again takes it back; no votes on your own); authors can take their notice down (no refund). Notices from players you muted are hidden from you. The board is stored in the global `SocialRoom` (one storage key per notice), so every village copy and the town hall show the same board, and votes and new notices reach everyone looking at it live over `/ws/social`. Players who are muted for spamming chat can't pin notices.
+- **Feedback**: the small ladybird button at the bottom right opens a form (Bug, Idea or Other, up to 1000 characters, plain text) with an optional screenshot: the view freezes under a dim veil and you drag over the part to show. The game canvas is read through the renderer's extract API and the HUD is drawn with `html-to-image`, cropped, scaled to at most 1600 px and sent as WebP (or JPEG) under 1.5 MB. `POST /api/feedback` (signed in, guests too, same origin only) checks the image by its bytes (complete PNG, JPEG or WebP with nothing after the end marker, no embedded markup, at most 2048 px a side), stores it in R2 under a server-made `feedback/<uuid>` key and records the report in D1 (`migrations/0008_feedback.sql`). Each player may send 5 an hour and 20 a day. Admins see a Review button in the form: newest first, filter by status, view the screenshot (`/api/feedback/:id/screenshot`, admins only, served as an inert image) and mark reports seen or resolved.
 - Names are 3-16 letters, numbers or `_`, unique ignoring case (`migrations/0006_unique_names.sql`); the forms check `GET /api/name-check` before submitting. Guests start as `Guest_xxxxxx` and then take the name they typed if it is free. An account may claim a name a guest holds; that guest goes back to a `Guest_xxxxxx` name. Names from before this rule are shown with other characters replaced by `_`.
 
 ## Credits

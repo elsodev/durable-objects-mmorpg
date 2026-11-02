@@ -44,8 +44,12 @@ export async function readCapped(body: ReadableStream<Uint8Array> | null, max: n
   return out;
 }
 
+/** R2 prefixes /files/* never serves: feedback screenshots are for admins only (/api/feedback). */
+export const PRIVATE_FILE_PREFIXES: readonly string[] = ["feedback/"];
+
 /** R2 keys served by /files/*: plain path segments of safe chars only (no "..", no empty segments). */
 export function isSafeFileKey(key: string): boolean {
+  if (PRIVATE_FILE_PREFIXES.some((p) => key.toLowerCase().startsWith(p))) return false;
   if (key.length === 0 || key.length > 256) return false;
   return key.split("/").every((seg) => /^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$/.test(seg) && !seg.includes(".."));
 }

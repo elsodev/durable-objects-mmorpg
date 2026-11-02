@@ -1,5 +1,6 @@
 // Worker entry.
 // Routes: /api/auth/* (Better Auth), /api/config, /api/me, /api/standing (removed by an admin?), /api/uploads, /api/friends, /api/mutes,
+// /api/feedback (bug button; admins review),
 // /api/players/:id/card, /api/name-check,
 // /api/home/* (visits), /files/*, /ws/:zone (WebSocket -> DO), /ws/visit/:ownerId (visitor WebSocket ->
 // owner's HomeRoom), /ws/social (SocialRoom), static assets.
@@ -12,6 +13,7 @@ import { errorJson, json } from "./http/util";
 import { forwardWs } from "./http/ws";
 import { handleFriends, isFriendsPath } from "./friends/routes";
 import { handleMutes, isMutesPath } from "./mutes/routes";
+import { handleFeedback, isFeedbackPath } from "./feedback/routes";
 import { handlePlayerCard, isPlayersPath } from "./players/card";
 import { parseWsZone } from "./http/zone-route";
 import { handleHomeApi, isHomeApiPath } from "./visit/routes";
@@ -106,6 +108,7 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (isHomeApiPath(pathname)) return handleHomeApi(request, env, user);
   if (isMutesPath(pathname)) return handleMutes(request, env, user);
   if (isPlayersPath(pathname)) return handlePlayerCard(request, env, user);
+  if (isFeedbackPath(pathname)) return handleFeedback(request, env, user);
 
   return errorJson(404, "not found");
 }

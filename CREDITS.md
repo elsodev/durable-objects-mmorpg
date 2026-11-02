@@ -95,6 +95,7 @@ We took art and audio from these repositories. Each file's exact source is in th
 | Cloudflare Workers SDK (wrangler) | https://github.com/cloudflare/workers-sdk |
 | Vercel AI SDK | https://github.com/vercel/ai |
 | Zod | https://github.com/colinhacks/zod |
+| html-to-image (feedback screenshots) | https://github.com/bubkoo/html-to-image |
 | TypeSafe AI SDK | `@typesafe-ai/sdk` |
 | Vite | https://github.com/vitejs/vite |
 | Vitest | https://github.com/vitest-dev/vitest |
