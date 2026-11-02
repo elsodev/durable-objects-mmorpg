@@ -704,7 +704,8 @@ export class NpcRunner {
       AI: this.env.AI,
       NPC_MODEL: this.env.NPC_MODEL,
       NPC_AI_MODE: this.env.NPC_AI_MODE,
-      TYPESAFE_API_KEY: this.env.TYPESAFE_API_KEY,
+      JEV_MODEL: this.env.JEV_MODEL,
+      AI_GATEWAY_ID: this.env.AI_GATEWAY_ID,
     };
   }
 
@@ -713,7 +714,7 @@ export class NpcRunner {
     if (this.env.NPC_AI_MODE === "off" || !this.env.AI) return false;
     if (!this.gate.allowAi(userId, npcId, now)) return false;
     try {
-      const jevCalls = this.env.TYPESAFE_API_KEY ? (judge ? 2 : 1) : 0;
+      const jevCalls = this.env.JEV_MODEL ? (judge ? 2 : 1) : 0;
       const units = (this.mind ? AGENT_UNITS : SPEAK_UNITS) + jevCalls * JEV_UNITS;
       const stub = this.env.AI_BUDGET.get(this.env.AI_BUDGET.idFromName("global"));
       return (await stub.tryConsume({ userId, units, day: utcDay(now) })) === true;
@@ -811,7 +812,8 @@ export class NpcRunner {
 
   /** Good, neutral or bad for this villager: Jev when AI was granted for this turn, else word lists. */
   private judge(ctx: NpcContext, speaker: Speaker, useAi: boolean): Promise<ChatVerdict> {
-    const key = useAi ? this.env.TYPESAFE_API_KEY : undefined;
+    const { AI, JEV_MODEL, AI_GATEWAY_ID } = this.env;
+    const client = useAi && AI && JEV_MODEL ? jevClient(AI, JEV_MODEL, AI_GATEWAY_ID) : null;
     const subject = {
       npcId: ctx.npc.id,
       npcName: ctx.npc.name,
@@ -821,7 +823,7 @@ export class NpcRunner {
       text: ctx.text,
       memory: ctx.memory,
     };
-    return judgeReply(subject, key ? jevClient(key) : null).catch((): ChatVerdict => "neutral");
+    return judgeReply(subject, client).catch((): ChatVerdict => "neutral");
   }
 
   /** The pair's NpcAgent: memory-aware reply, model-written only when `ai` (budget already reserved). */

@@ -51,6 +51,11 @@
     // NpcAgent (Project Think) turns call tools, so they use a function-calling model.
     "NPC_AGENT_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
     "NPC_AI_MODE": "on",
+    // TypeSafe Jev on Workers AI for typed NPC decisions (billed via Unified Billing credits).
+    // Set to "" to use rule-based decisions only.
+    "JEV_MODEL": "typesafe/jev",
+    // AI Gateway for every NPC model call (lines, Think agent turns, Jev). "" = call Workers AI directly.
+    "AI_GATEWAY_ID": "default",
     "AI_DAILY_NEURONS": "9000",
     // Global drop-rate multiplier (0..10). Optional overrides: DROP_RATE_MONSTER, DROP_RATE_ROCK,
     // DROP_RATE_CHEST, DROP_RATE_FORAGE, DROP_RATE_GIFT, DROP_RATE_HARVEST, DROP_RATE_RARE.

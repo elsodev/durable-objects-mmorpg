@@ -34,8 +34,10 @@ export interface Env {
   NPC_AI_MODE?: "on" | "off";
   /** "on" enables local test commands (e.g. "/day" at home, "/hour N" in shared zones). Honoured only with NPC_AI_MODE "off"; never set in production. */
   DEV_TOOLS?: "on" | "off";
-  /** TypeSafe AI key for Jev decisions. Optional: without it NPCs use rule-based decisions. */
-  TYPESAFE_API_KEY?: string;
+  /** Workers AI model id for TypeSafe Jev decisions ("typesafe/jev"). Empty/unset = rule-based decisions. */
+  JEV_MODEL?: string;
+  /** AI Gateway id every NPC model call goes through (lines, Think turns, Jev). Empty/unset = no gateway. */
+  AI_GATEWAY_ID?: string;
   /** "local" only in `wrangler dev --env local`: relaxes the WS origin check and the captcha requirement. */
   DMMO_ENV?: string;
   /**

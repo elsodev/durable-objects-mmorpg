@@ -50,6 +50,14 @@ describe("speak", () => {
     expect(input.max_tokens).toBe(80);
     expect(input.messages[0].role).toBe("system");
   });
+  it("sends the line through the AI Gateway when one is set", async () => {
+    const seen: (AiOptions | undefined)[] = [];
+    const ai = { run: async (_m: string, _i: unknown, o?: AiOptions) => { seen.push(o); return { response: "Hello there." }; } } as unknown as Ai;
+    await speak(ctx, decision, { NPC_MODEL: "m", AI: ai, AI_GATEWAY_ID: "default" });
+    await speak(ctx, decision, { NPC_MODEL: "m", AI: ai });
+    expect(seen[0]?.gateway).toEqual({ id: "default" });
+    expect(seen[1]?.gateway).toBeUndefined();
+  });
   it("falls back to a scripted line on error, timeout or bad output", async () => {
     const pool = NPCS.bram.lines.smalltalk!;
     expect(pool).toContain(await speak(ctx, decision, { NPC_MODEL: "m", AI: fakeAi(async () => { throw new Error("x"); }) }));

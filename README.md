@@ -45,7 +45,7 @@ The whole game is one Worker plus a few Durable Objects. There is no separate ga
 | **Cron Triggers** | A daily job (`src/worker/cron.ts`) deletes guest accounts idle for over 30 days, with their home, uploads and villager memories. |
 | **Observability** | Worker logs are on (`"observability"` in `wrangler.jsonc`). |
 
-TypeSafe Jev (`@typesafe-ai/sdk`) is the one outside service: it makes fast typed villager decisions and judges replies in the conversation window. Without its key, rules and word lists do the same job.
+TypeSafe Jev (`typesafe/jev`, a third-party model on Workers AI) makes fast typed villager decisions and judges replies in the conversation window. With `JEV_MODEL` empty, rules and word lists do the same job. Every NPC model call (lines, Think agent turns, Jev) goes through the AI Gateway named in `AI_GATEWAY_ID`.
 
 ### How the load is kept down
 
@@ -94,7 +94,7 @@ TypeSafe Jev (`@typesafe-ai/sdk`) is the one outside service: it makes fast type
    openssl rand -base64 32   # paste the output after BETTER_AUTH_SECRET=
    ```
 
-   Leave `TURNSTILE_*` empty. `TYPESAFE_API_KEY` is optional.
+   Leave `TURNSTILE_*` empty.
 
 3. Create the auth tables in the local D1 database (stored under `.wrangler/`):
 
@@ -164,7 +164,8 @@ To keep account-specific values out of `wrangler.jsonc`, put them in a git-ignor
 Optional services:
 
 - **Workers AI** is on by default in production (`NPC_AI_MODE=on`, model in `NPC_MODEL`). `AI_DAILY_NEURONS` caps daily spend. When the budget runs out NPCs fall back to scripted lines.
-- **TypeSafe Jev** for typed NPC decisions: `npx wrangler secret put TYPESAFE_API_KEY`. Without it NPCs use rule-based decisions.
+- **AI Gateway**: `AI_GATEWAY_ID` (default `default`) routes every NPC model call through that gateway, for logs, caching and Unified Billing. Set it to `""` to call Workers AI directly.
+- **TypeSafe Jev** for typed NPC decisions runs on Workers AI as `JEV_MODEL` (default `typesafe/jev`). It is a third-party model billed through Cloudflare Unified Billing, so load credits on the account first; no TypeSafe key is needed. Set `JEV_MODEL` to `""` for rule-based decisions only. Failed or slow Jev calls (1.5 s) fall back to rules.
 - **Turnstile** captcha on sign-up and sign-in: the site key and secret above. Without a secret, production sign-up and sign-in answer 503. Set `CAPTCHA_DISABLED=1` to run without a captcha on purpose.
 
 ### Drop rates

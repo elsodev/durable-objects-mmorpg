@@ -14,6 +14,7 @@ import { getNpc } from "../catalog";
 import type { NpcId } from "../bible";
 import { utcDay } from "../budget-logic";
 import { sanitizeLine } from "../text";
+import { gatewayOptions } from "../gateway";
 import { dedupeDoubledText } from "./dedupe-stream";
 import {
   addFact,
@@ -87,6 +88,11 @@ export class NpcAgent extends Think<Env> {
 
   override getModel(): ThinkModel {
     return (this.env.NPC_AGENT_MODEL || this.env.NPC_MODEL) as ThinkModel;
+  }
+
+  /** Agent turns and compaction summaries go through the same AI Gateway as every other NPC call. */
+  override getGateway(): GatewayOptions | undefined {
+    return gatewayOptions(this.env.AI_GATEWAY_ID);
   }
 
   override resolveModel(model: ThinkModel = this.getModel()): LanguageModel {

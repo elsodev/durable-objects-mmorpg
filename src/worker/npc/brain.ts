@@ -2,9 +2,10 @@
 import type { ItemId, SharedZoneId } from "../../shared/types";
 import type { ShopOffer } from "../../shared/protocol";
 import { classify, ruleDecision } from "./rules";
-import { askJev, jevClient, type JevClient } from "./jev";
+import { askJev, jevClient } from "./jev";
 import { buildMessages } from "./prompt";
 import { pickLine, sanitizeLine } from "./text";
+import { gatewayOptions } from "./gateway";
 
 export type Intent = "greet" | "buy" | "sell" | "quest" | "ask_info" | "smalltalk" | "rude" | "goodbye";
 
@@ -51,7 +52,10 @@ export interface BrainEnv {
   AI?: Ai;
   NPC_MODEL: string;
   NPC_AI_MODE?: "on" | "off";
-  TYPESAFE_API_KEY?: string;
+  /** Workers AI model id for Jev decisions (e.g. "typesafe/jev"); unset = rule-based decisions. */
+  JEV_MODEL?: string;
+  /** AI Gateway every model call goes through; unset = straight to Workers AI. */
+  AI_GATEWAY_ID?: string;
 }
 
 /** Approximate cost units per call, for AiBudget accounting. */
@@ -75,12 +79,12 @@ export function decide(ctx: NpcContext, env: BrainEnv): Promise<Decision> {
 }
 
 /** decide() with an injectable Jev client factory (tests). */
-export async function decideWith(ctx: NpcContext, env: BrainEnv, makeClient: (apiKey: string) => JevClient): Promise<Decision> {
+export async function decideWith(ctx: NpcContext, env: BrainEnv, makeClient: typeof jevClient): Promise<Decision> {
   const match = classify(ctx.text);
-  if (match.confident || !aiEnabled(env) || !env.TYPESAFE_API_KEY) return ruleDecision(ctx, match.intent, "rules");
+  if (match.confident || !aiEnabled(env) || !env.AI || !env.JEV_MODEL) return ruleDecision(ctx, match.intent, "rules");
   let jev: Decision | null = null;
   try {
-    jev = await askJev(ctx, makeClient(env.TYPESAFE_API_KEY));
+    jev = await askJev(ctx, makeClient(env.AI, env.JEV_MODEL, env.AI_GATEWAY_ID));
   } catch {
     jev = null;
   }
@@ -92,11 +96,11 @@ export async function speak(ctx: NpcContext, decision: Decision, env: BrainEnv, 
   const scripted = () => pickLine(ctx.npc, decision.intent, ctx.speaker.name);
   if (!aiEnabled(env) || !env.AI || !env.NPC_MODEL) return scripted();
   // Ai.run is typed per model name; NPC_MODEL is configuration, so call it through a plain signature.
-  const ai = env.AI as unknown as { run(model: string, input: unknown): Promise<unknown> };
+  const ai = env.AI as unknown as { run(model: string, input: unknown, options?: AiOptions): Promise<unknown> };
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const out = await Promise.race([
-      ai.run(env.NPC_MODEL, { messages: buildMessages(ctx, decision), max_tokens: 80 }),
+      ai.run(env.NPC_MODEL, { messages: buildMessages(ctx, decision), max_tokens: 80 }, { gateway: gatewayOptions(env.AI_GATEWAY_ID) }),
       new Promise<null>((resolve) => {
         timer = setTimeout(() => resolve(null), timeoutMs);
       }),
