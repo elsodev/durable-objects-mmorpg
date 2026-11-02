@@ -4,6 +4,8 @@ import { createAuthClient } from "better-auth/client";
 import { anonymousClient } from "better-auth/client/plugins";
 import type { SessionUser } from "./index";
 import { uiSound } from "./sound";
+import { createLogoHeading } from "./logo";
+import { mountLoginCat } from "./login-cat";
 import { startScreenFooter } from "./start-footer";
 import { CaptchaError, createCaptcha, type Captcha } from "./turnstile";
 import {
@@ -318,6 +320,7 @@ export async function mountAuth(root: HTMLElement): Promise<SessionUser> {
       finished = true;
       guestCaptcha?.destroy();
       account.destroy();
+      cat.destroy();
       screen.remove();
       resolve(u);
     };
@@ -424,7 +427,7 @@ export async function mountAuth(root: HTMLElement): Promise<SessionUser> {
       el(
         "div",
         { class: "auth-card", role: "dialog", "aria-labelledby": "auth-title" },
-        el("h1", { id: "auth-title", class: "auth-title", text: "DurableMMO" }),
+        createLogoHeading({ id: "auth-title", className: "auth-title" }),
         el("p", { class: "auth-tagline", text: "Grow crops, befriend villagers and explore the caves of Mossbrook valley." }),
         tabs.bar,
         err.box,
@@ -433,6 +436,7 @@ export async function mountAuth(root: HTMLElement): Promise<SessionUser> {
       ),
     );
     root.appendChild(screen);
+    const cat = mountLoginCat(screen);
     tabs.select("guest");
   });
 }

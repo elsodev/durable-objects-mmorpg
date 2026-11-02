@@ -28,6 +28,7 @@ export const CREDIT_FILES = [
   "/assets/lpc/custom/CREDITS-custom.md",
   "/assets/audio/CREDITS.md",
   "/assets/emotes/CREDITS.md",
+  "/assets/ui/CREDITS.md",
 ] as const;
 
 const MAX_TEXT = 400;

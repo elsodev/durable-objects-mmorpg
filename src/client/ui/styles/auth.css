@@ -201,3 +201,35 @@
     padding: 18px 14px 16px;
   }
 }
+
+/* The wandering cat (ui/login-cat.ts) walks along the bottom, behind the card. */
+.auth-card {
+  position: relative;
+  z-index: 1;
+}
+.dm-login-cat {
+  position: fixed;
+  left: 0;
+  bottom: 10px;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.dm-login-cat::before {
+  /* A soft shadow so the cat stands on something. */
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 6%;
+  height: 10%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+}
+.dm-login-cat-sprite {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}

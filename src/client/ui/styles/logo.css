@@ -1,0 +1,23 @@
+/* The pixel-art logo (ui/logo.ts). Whole-pixel scales keep every logo pixel square and crisp. */
+.dm-logo {
+  --logo-scale: 2;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  line-height: 0;
+}
+.dm-logo-art {
+  width: calc(var(--logo-w) * var(--logo-scale) * 1px);
+  max-width: 100%;
+  height: auto;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+.dm-logo-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

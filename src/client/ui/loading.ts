@@ -1,6 +1,7 @@
 // Loading screen: plain DOM shown while the renderer, art, audio and first zone load (Pixi is not
 // ready yet, so it can't be drawn in the canvas), and briefly while switching zones.
 import "./styles/loading.css";
+import { createLogoHeading } from "./logo";
 import { LOAD_STEPS, OUTDATED_LABEL, loadLabel, loadProgress, zoneLoadLabel, zoneProgress, type LoadStep, type ZoneStage } from "./loading-logic";
 
 export interface LoadingScreen {
@@ -34,10 +35,8 @@ export function createLoadingScreen(parent: HTMLElement): LoadingScreen {
   root.setAttribute("aria-live", "polite");
 
   const card = div("dm-loading-card");
-  const title = document.createElement("h1");
-  title.className = "dm-loading-title";
-  title.textContent = "DurableMMO";
-  const tagline = div("dm-loading-tagline", "Mossbrook valley");
+  const title = createLogoHeading({ className: "dm-loading-title" });
+  const tagline = div("dm-loading-tagline", "A cozy farming valley");
 
   // A little sprout that sways while it waits (pure CSS, see loading.css).
   const sprout = div("dm-loading-sprout");

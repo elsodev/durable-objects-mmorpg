@@ -169,3 +169,10 @@
     animation: none;
   }
 }
+
+/* The logo (ui/logo.ts) grows to 3x where there's room. */
+@media (min-width: 560px) {
+  .dm-loading-title {
+    --logo-scale: 3;
+  }
+}
