@@ -33,6 +33,8 @@ export const NPC_WORK_ZONE: Readonly<Record<string, OutdoorZoneId>> = {
   iris: "riverside",
   grumm: "caves",
   tess: "caves",
+  wren: "village",
+  jory: "village",
 };
 
 /**
@@ -52,6 +54,9 @@ export const NPC_JOBS: Readonly<Record<string, Job>> = {
   bram: { at: "townhall", from: 8, to: 17 },
   // The seed stall on the market lane.
   odette: { at: "work", from: 8, to: 18 },
+  // The bakery and furniture stalls either side of Odette's (shared/stalls.ts).
+  wren: { at: "work", from: 8, to: 18 },
+  jory: { at: "work", from: 8, to: 18 },
   // At the anvil in the smithy.
   fenwick: { at: "smithy", from: 8, to: 17 },
   // Behind the bar; the inn keeps going until midnight.
@@ -102,6 +107,11 @@ export const NPC_SCHEDULE: Readonly<Record<string, readonly ScheduleBand[]>> = {
   tess: day("townhall", "house_tess", [{ from: 8, to: 9, at: "about" }]),
   // The sheriff never leaves the police station: his desk by day, the back room by night.
   sheriff: [{ from: 0, to: 24, at: "police" }],
+  // Wren bakes in the inn's kitchen before dawn, keeps the bakery stall, then helps Rue with
+  // supper and sleeps in the attic.
+  wren: day("inn", "inn", shift("wren")),
+  // Jory keeps the furniture stall, has supper at the inn and goes back to the smithy loft.
+  jory: day("inn", "smithy", shift("jory")),
 };
 
 /** True while the NPC's working hours are on (it has a job and `hour` is inside them). */

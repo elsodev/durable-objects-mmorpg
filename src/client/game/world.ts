@@ -21,6 +21,7 @@ import { createGroundLayer } from "../render/ground";
 import { createMailboxFlag, type MailboxFlag } from "../render/mailbox-flag";
 import { createOverlays } from "../render/overlays";
 import { createItemPoses, type ItemPoseOpts, type ItemPoses } from "../render/item-poses";
+import { createCounterMeals, type CounterMealOpts, type CounterMeals } from "../render/counter-meals";
 import { createPropsLayer } from "../render/props";
 import { createHitFx, type HitFx } from "../render/hit-fx";
 import { createGroundItems, type GroundItemsLayer } from "../render/ground-items";
@@ -36,6 +37,8 @@ export interface World {
   overlays: Overlays;
   /** The item in eat and hold-up acts, with crumbs. */
   itemPoses: ItemPoses;
+  /** Plates served across the bar counter and eaten there (shared/counterMeal.ts). */
+  counterMeals: CounterMeals;
   build: BuildMode;
   /** Cave treasure chests (empty elsewhere). */
   chests: ChestLayer;
@@ -61,6 +64,7 @@ export function createWorld(
   buildDeps: Parameters<typeof createBuildMode>[2],
   characterFor?: CharacterResolver,
   itemPoseOpts?: ItemPoseOpts,
+  counterMealOpts?: CounterMealOpts,
 ): World {
   const { layers } = game;
   const created: { destroy(): void }[] = [];
@@ -79,6 +83,7 @@ export function createWorld(
       entities: track(createEntityLayer(art, layers, { characterFor })),
       overlays: track(createOverlays(layers)),
       itemPoses: track(createItemPoses(art, layers, itemPoseOpts)),
+      counterMeals: track(createCounterMeals(art, layers, map.props, counterMealOpts)),
       build: track(createBuildMode(art, layers, buildDeps)),
       chests: track(createChestLayer(art, layers)),
       effects: track(createEffects(layers, () => ({ w: game.width(), h: game.height() }))),

@@ -9,6 +9,7 @@ import { deriveSeats } from "./interiors/rules";
 import { doorsIn } from "./interiors/doors";
 import { buildPond } from "./pond";
 import { buildYards } from "./yards";
+import { STALL_KEEPERS, stallKeeperSpot } from "../stalls";
 
 export const VILLAGE_SIZE = { width: 64, height: 48 } as const;
 
@@ -74,9 +75,11 @@ export function buildVillage(): MapData {
   b.prop("town_hall", 28, 3, { id: "town_hall" });
   b.prop("inn", 13, 15, { id: "inn" });
   b.prop("blacksmith", 43, 27, { id: "blacksmith" });
-  b.prop("market_stall", 42, 18, { id: "stall_bakery", label: "Bakery" }); // self-serve, like the furniture stall
+  // Wren keeps the bakery stall and Jory the furniture stall; out of hours both are self-serve
+  // (worker/game/shop.ts STALL_SHOPS). Odette's seed stall closes when she goes home.
+  b.prop("market_stall", 42, 18, { id: "stall_bakery", label: "Bakery" });
   b.prop("market_stall", 46, 18, { id: "stall_produce" });
-  b.prop("market_stall", 50, 18, { id: "stall_goods", label: "Furniture" }); // self-serve (worker/game/shop.ts STALL_SHOPS)
+  b.prop("market_stall", 50, 18, { id: "stall_goods", label: "Furniture" });
   // Each house is its owner's: stone, brick or painted boards, gable or hipped roof, porch side.
   b.prop("house_iris", 6, 6, { id: "house_nw1" });
   b.prop("house_tess", 15, 5, { id: "house_nw2" });
@@ -106,9 +109,13 @@ export function buildVillage(): MapData {
 
   // ---- NPCs ----
   b.npc("bram", 33, 10, 3); // in front of the Town Hall
-  // Odette keeps the middle stall: feet on the art's keeper point (one tile above the footprint's
-  // bottom edge) so the counter overlay hides her legs. She stays put; players talk across the counter.
-  b.npc("odette", 47, 19, 0, 19);
+  // Stall keepers stand behind the middle of their counter (stallKeeperSpot), so the counter
+  // overlay hides their legs. They stay put; players talk across the counter. The zone puts an NPC
+  // half a tile on from its spawn (worker/game/npcRunner.ts), hence the spawn half a tile back.
+  for (const [stall, keeper] of Object.entries(STALL_KEEPERS)) {
+    const at = stallKeeperSpot(b.propById(stall)!);
+    b.npc(keeper, at.x - 1, Math.floor(at.y), 0, at.y - 0.5);
+  }
   b.npc("fenwick", 46, 32, 2); // blacksmith yard
   b.npc("rue", 18, 21, 2); // inn porch
   b.npc("pip", 27, 27, 5); // runs around the square

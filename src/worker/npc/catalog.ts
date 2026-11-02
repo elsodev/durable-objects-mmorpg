@@ -1,10 +1,11 @@
-// The 11 NPCs of Mossbrook.
+// The 13 NPCs of Mossbrook.
 import type { ItemId } from "../../shared/types";
 import type { ShopOffer } from "../../shared/protocol";
 import { getItem } from "../../shared/items";
 import { allCrops, STORE_SEEDS } from "../../shared/seeds";
 import { INN_MENU } from "../../shared/foods";
 import type { NpcDef } from "./brain";
+import { STALL_SHOPS } from "../game/shop";
 
 /** Shop offers priced from items.ts so prices never drift from the item table. */
 function offers(ids: ItemId[]): ShopOffer[] {
@@ -208,7 +209,7 @@ export const NPCS: Record<string, NpcDef> = {
       "An iron pickaxe breaks iron, silver, gold, gem and diamond rocks; the starter pickaxe only handles stone and copper.",
       "Fenwick buys stone, ores, gems and crab shells, but pays less for ore than the shipping bin does.",
       "Gold and diamond rocks are very rare, and turn up mostly on the deepest cave floor.",
-      "Fenwick's workshop stocks the self-serve Furniture Stall, the east stall on the market lane: chairs, beds, rugs, lamps, a sofa, a fridge, a TV and more. You pay into the honour box.",
+      "Fenwick's workshop stocks the Furniture Stall, the east stall on the market lane: chairs, beds, rugs, lamps, a sofa, a fridge, a TV and more. His apprentice Jory minds it by day; after hours you pay into the honour box.",
       LORE.critters,
       LORE.bridge,
     ],
@@ -309,7 +310,7 @@ export const NPCS: Record<string, NpcDef> = {
       LORE.fair,
       "The inn's stew recipe is older than the bridge and twice as sturdy.",
       "Rue serves hot meals and drinks at the Mossy Mug Inn: stew, roast dinner, fish pie, shepherd's pie, curry, soups, bread, cheese, cider, tea, coffee and milk. Talk to her or step up to the bar to order. A good meal gives back a lot of energy; a drink a little.",
-      "The bakery stall on the square sells bread, cookies, muffins, pie, pancakes, omelettes and hot drinks. You pay into the honour box.",
+      "The bakery stall on the square sells bread, cookies, muffins, pie, pancakes, omelettes and hot drinks. Rue's niece Wren minds it by day; after hours you pay into the honour box.",
     ],
     shop: { sells: offers([...INN_MENU]), buys: [] },
     lines: {
@@ -946,6 +947,174 @@ export const NPCS: Record<string, NpcDef> = {
       ],
     },
   },
+
+  wren: {
+    id: "wren",
+    name: "Wren",
+    sprite: "wren",
+    zone: "village",
+    role: "Baker who keeps the bakery stall on the market lane",
+    personality:
+      "A bright, quick, flour-dusted young baker, Pip's big sister and Rue's niece, who bakes before dawn, counts everything in dozens and remembers how every regular takes their bun.",
+    knowledge: [
+      "Wren bakes in the inn's kitchen before dawn and keeps the bakery stall, the west stall on the market lane, from eight in the morning until six in the evening.",
+      "The bakery stall sells bread rolls, oat cookies, berry muffins, apple pie, pancakes, omelettes and hot drinks. After hours it is self-serve: you pay into the honour box.",
+      "Food gives back energy: a meal a lot, a snack some, a drink a little. Press Q with food in your hand to eat it.",
+      "At the inn you can sit on a bar stool and order across the counter; Rue serves your plate right there.",
+      LORE.fair,
+      LORE.bridge,
+    ],
+    shop: STALL_SHOPS.stall_bakery!.shop,
+    lines: {
+      greet: [
+        "Morning, {name}! Rolls are still warm, I promise.",
+        "{name}! Perfect timing, the muffins just came out.",
+        "Hello, hello! Mind the flour, {name}, it gets everywhere.",
+        "Oh, {name}! Pip said you'd come by. Pip says a lot of things.",
+        "Welcome to the bakery stall, {name}! Best smell on the square.",
+      ],
+      buy: [
+        "What'll it be, {name}? Cookies by the dozen, pie by the slice.",
+        "Pancakes for the hungry, cocoa for the cold. Take your pick!",
+        "Everything's baked this morning. Well, before this morning.",
+      ],
+      sell: [
+        "I only sell, {name}. Odette buys crops just next door.",
+        "No buying at a bakery stall, sorry! Try Odette or the shipping bin.",
+        "Keep your goods, {name}. Fenwick takes ore, Odette takes crops.",
+      ],
+      quest: [
+        "The fair needs strawberries, {name}. I'd bake them into a tart for the judges!",
+        "Donate at the board by the Town Hall. Every basket brings the fair closer.",
+        "Bring wood and stone for the bridge, {name}. Then I can sell buns up the valley.",
+        "Aunt Rue says a well-fed village rebuilds faster. I'm doing my part!",
+        "Eat before the caves, {name}. Heroes run on muffins. Ask Pip.",
+      ],
+      ask_info: [
+        "A meal gives back lots of energy, a snack some, a drink a little. Press Q to eat.",
+        "I'm here from eight till six. After that, coins go in the honour box.",
+        "Sit at Aunt Rue's bar and order across the counter. She'll set your plate right there.",
+        "Pancakes and omelettes fill you up best. Cookies are for walking.",
+        "Hot cocoa in winter, apple juice in summer. Trust me, {name}.",
+        "Tired out? Eating helps, but only a good night's sleep fixes worn out.",
+      ],
+      smalltalk: [
+        "I get up at four to bake. The bread doesn't care that I'm sleepy.",
+        "Pip sneaks cookies when I'm not looking. I count them. I always know.",
+        "Aunt Rue taught me the stew. I taught her the muffins. Fair trade.",
+        "Jory next door keeps sanding the same chair. I think he likes the sound.",
+        "Odette gives me her best berries. I give her the crusts. She loves crusts.",
+      ],
+      rude: [
+        "Hm! That's half-baked, {name}.",
+        "Easy, {name}. I've a rolling pin and nowhere to be.",
+        "I'll pretend I didn't hear that over the oven.",
+      ],
+      goodbye: [
+        "Bye, {name}! Come back hungry.",
+        "Off you go! Don't squash that bun.",
+        "See you tomorrow, {name}. Fresh batch at eight!",
+        "Take care, {name}! Eat something warm.",
+      ],
+      idle: [
+        "Fresh rolls! Warm rolls!",
+        "...one dozen, two dozen...",
+        "*dusts flour off her apron*",
+        "Muffins! Berry muffins!",
+        "Hm, needs more cinnamon.",
+        "Cocoa's hot!",
+      ],
+      thinking_fail: [
+        "Sorry, {name}, I was counting buns. Say again?",
+        "Oops, flour in my ears. What was that?",
+        "Hold on, the timer in my head went off. Once more?",
+      ],
+    },
+  },
+
+  jory: {
+    id: "jory",
+    name: "Jory",
+    sprite: "jory",
+    zone: "village",
+    role: "Fenwick's apprentice joiner who keeps the furniture stall",
+    personality:
+      "A lanky, earnest young joiner, Fenwick's apprentice, who builds the furniture on the market lane, smells of sawdust and talks about wood grain the way others talk about weather.",
+    knowledge: [
+      "Jory builds chairs, beds, tables and lamps in the back of Fenwick's smithy and keeps the furniture stall, the east stall on the market lane, from eight in the morning until six in the evening.",
+      "The furniture stall sells chairs, beds, rugs, lamps, a sofa, a fridge, a TV and more. After hours it is self-serve: you pay into the honour box.",
+      "At home, press B to place furniture and R to turn it; T rearranges the whole house.",
+      "A fridge from the furniture stall keeps twelve stacks of crops and food at home.",
+      LORE.bridge,
+      LORE.donate,
+    ],
+    shop: STALL_SHOPS.stall_goods!.shop,
+    lines: {
+      greet: [
+        "Oh! Hi, {name}. Mind the sawdust.",
+        "{name}! Come feel this table. No, really, feel the grain.",
+        "Morning, {name}. Fresh chairs in. Well, fresh-ish.",
+        "Hello, {name}. Looking to fill a house?",
+        "{name}! Fenwick says I talk too much about wood. Do I?",
+      ],
+      buy: [
+        "Everything here I built myself. Except the TV. Don't ask about the TV.",
+        "Chairs, beds, lamps, rugs. Have a look, {name}.",
+        "A fridge keeps your crops fresh at home. Best thing I sell.",
+      ],
+      sell: [
+        "I only sell, {name}. Fenwick buys ore at the smithy.",
+        "No buying here. Odette takes crops, Fenwick takes ore.",
+        "Sorry, {name}, the stall only sells. The shipping bin buys most things.",
+      ],
+      quest: [
+        "The bridge needs wood, {name}. Good straight wood. Bring it to the board.",
+        "Donate at the Town Hall board. I'd build the bridge rails myself if I could.",
+        "Sixty wood for the bridge. I counted. Twice.",
+        "Chop trees with your axe, {name}. The village needs every plank.",
+        "When the bridge is back, I'll sell chairs up the valley. That's the plan.",
+      ],
+      ask_info: [
+        "At home press B to place furniture, R to turn it. T moves the whole house around.",
+        "A fridge holds twelve stacks of food and crops. Saves your bag.",
+        "I'm here from eight till six. After that, coins go in the honour box.",
+        "Del picks a piece back up when you're arranging. No harm done.",
+        "Good friends in the village sometimes give furniture. Keep chatting, {name}.",
+        "Rugs go under things. Lamps go on things. That's most of decorating.",
+      ],
+      smalltalk: [
+        "Oak for tables, pine for shelves. Everyone has a favourite. Mine's oak.",
+        "Fenwick makes the hinges. I make everything they hang on.",
+        "Wren next door brings me rolls. I fixed her stall shutters. Fair trade.",
+        "I'm building Pip a toy chest. Don't tell him. It's a surprise.",
+        "I sleep in the smithy loft. It's warm, and it smells like iron.",
+      ],
+      rude: [
+        "That's... rough, {name}. Needs sanding.",
+        "Hey, I'm just selling chairs here.",
+        "I'll let that one splinter off.",
+      ],
+      goodbye: [
+        "See you, {name}. Sit on something nice.",
+        "Bye, {name}! Watch the step, I haven't fixed it.",
+        "Take care, {name}. Come back when you've more room.",
+        "Off you go, {name}. Mind the sawdust.",
+      ],
+      idle: [
+        "*sands a chair leg*",
+        "Good grain on this one.",
+        "...measure twice, cut once...",
+        "Chairs! Sturdy chairs!",
+        "Hm. Wobbly. Needs a shim.",
+        "*blows sawdust off the counter*",
+      ],
+      thinking_fail: [
+        "Sorry, {name}, I was measuring something. Again?",
+        "Hm? Sawdust in my ears. Say that once more?",
+        "Lost count of my nails. What did you say?",
+      ],
+    },
+  },
 };
 
 /**
@@ -964,6 +1133,8 @@ export const NPC_GIFTS: Record<string, ItemId[]> = {
   grumm: ["stone"],
   tess: [],
   sheriff: [],
+  wren: ["herb_mint"],
+  jory: ["wood"],
 };
 
 /** Own-key lookup: npc ids can arrive from clients. */

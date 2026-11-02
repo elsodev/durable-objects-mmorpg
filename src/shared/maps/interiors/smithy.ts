@@ -35,5 +35,6 @@ export function buildSmithy(): MapData {
   r.hang("wall_torch", 10);
 
   r.npc("fenwick", 6, 4, 2);
+  r.npc("jory", 9, 5, 1);
   return r.build();
 }

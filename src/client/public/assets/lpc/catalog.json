@@ -1088,6 +1088,150 @@
     60
    ],
    "shadow": "character"
+  },
+  "wren": {
+   "file": "characters/wren.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Wren",
+   "body": "female",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
+  },
+  "jory": {
+   "file": "characters/jory.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Jory",
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
   }
  },
  "terrain": {

@@ -28,6 +28,8 @@ const WORKPLACE: Record<string, SharedZoneId> = {
   fenwick: "int_smithy",
   rue: "int_inn",
   odette: "village",
+  wren: "village",
+  jory: "village",
   marlo: "riverside",
   iris: "riverside",
   grumm: "caves",

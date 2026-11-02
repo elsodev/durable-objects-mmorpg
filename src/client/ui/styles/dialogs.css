@@ -64,6 +64,18 @@
   margin-bottom: 8px;
 }
 
+.dlg-tabs[hidden],
+.dlg-note[hidden] {
+  display: none;
+}
+
+/* The bar menu, opened from a stool: a line on how orders are served instead of tabs. */
+.dlg-note {
+  margin: 0 0 8px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
 .dlg-tab[hidden] {
   display: none;
 }
@@ -105,6 +117,16 @@
 .dlg-row > .dlg-stepper { grid-area: step; }
 .dlg-row > .dlg-price { grid-area: price; }
 .dlg-row > .dlg-action { grid-area: action; }
+
+/* Bar menu rows: one line, no quantity (one plate per order). */
+.is-counter .dlg-row {
+  grid-template-columns: 32px 1fr auto auto;
+  grid-template-areas: "icon name price action";
+}
+
+.is-counter .dlg-row > .dlg-unit {
+  display: none;
+}
 
 .dlg-row.is-disabled .dlg-name,
 .dlg-row.is-disabled .dlg-icon {

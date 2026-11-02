@@ -24,6 +24,7 @@ export function snapshotEntity(e: EntityState): EntityState {
   if (e.pace !== undefined) s.pace = e.pace;
   if (e.admin === true) s.admin = true;
   if (e.level !== undefined) s.level = e.level;
+  if (e.meal !== undefined) s.meal = e.meal;
   return s;
 }
 

@@ -50,8 +50,9 @@ export function buildInn(): MapData {
   r.put("potted_plant", 17, 8);
   r.put("crate", 6, 0);
 
-  r.put("mugs", 1, 2);
-  r.put("bottle", 5, 2);
+  // Between the stools: the counter in front of each stool is kept clear for a served plate.
+  r.put("mugs", 2, 2);
+  r.put("bottle", 4, 2);
   r.put("candle", 15, 4);
   r.hang("wall_lamp_double", 4);
   r.hang("mirror", 11);
@@ -65,5 +66,7 @@ export function buildInn(): MapData {
   r.npc("marlo", 6, 4, 1);
   r.npc("iris", 16, 6, 1);
   r.npc("grumm", 9, 7, 1);
+  r.npc("wren", 7, 2, 1);
+  r.npc("jory", 14, 2, 1);
   return r.build();
 }

@@ -18,6 +18,8 @@ export const INTERACTABLE_TYPES: ReadonlySet<string> = new Set([
   "mine_cart",
   "dock",
   "campfire",
+  // The bar: order across it standing, or from a stool for a plate served in front of you.
+  "bar_counter",
   // Seats: interact to sit down.
   "chair_down",
   "chair_up",

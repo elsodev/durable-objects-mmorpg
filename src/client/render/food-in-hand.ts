@@ -38,7 +38,14 @@ export function tipOf(item: ItemId | undefined): Tip {
   return food === "drink" ? "cup" : food === "meal" ? "dish" : "none";
 }
 
-export function createFoodHand(art: Art): FoodHand {
+/** Food icons with their shadow dropped and bites cut out, cut once per item, bite count and side. */
+export interface FoodCutter {
+  /** The icon of `item` with `bites` bites taken from the `side` edge; null without art. */
+  cut(item: ItemId, bites: number, side: 1 | -1): Texture | null;
+  destroy(): void;
+}
+
+export function createFoodCutter(art: Art): FoodCutter {
   const cache = new Map<string, Texture | null>();
 
   function icon(item: ItemId): Texture | null {
@@ -112,6 +119,22 @@ export function createFoodHand(art: Art): FoodHand {
   }
 
   return {
+    cut,
+    destroy() {
+      for (const t of new Set(cache.values())) {
+        // Only the cut copies are ours; plain icons belong to the art pack.
+        if (t && typeof HTMLCanvasElement !== "undefined" && t.source.resource instanceof HTMLCanvasElement) t.destroy(true);
+      }
+      cache.clear();
+    },
+  };
+}
+
+export function createFoodHand(art: Art): FoodHand {
+  const cutter = createFoodCutter(art);
+  const cut = cutter.cut;
+
+  return {
     draw(sprite, body, s, ageMs) {
       const item = s.act?.k === "eat" ? s.act.item : undefined;
       const pose = item && ageMs !== null ? foodPose(s.facing, ageMs, tipOf(item)) : null;
@@ -147,11 +170,7 @@ export function createFoodHand(art: Art): FoodHand {
       return true;
     },
     destroy() {
-      for (const t of new Set(cache.values())) {
-        // Only the cut copies are ours; plain icons belong to the art pack.
-        if (t && typeof HTMLCanvasElement !== "undefined" && t.source.resource instanceof HTMLCanvasElement) t.destroy(true);
-      }
-      cache.clear();
+      cutter.destroy();
     },
   };
 }

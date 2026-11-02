@@ -7,14 +7,15 @@ import type { Birthday } from "../../shared/calendar";
 import { baseItem } from "../../shared/items";
 import { isRareCrop } from "../../shared/seeds";
 
-export const NPC_IDS = ["bram", "odette", "fenwick", "rue", "pip", "marlo", "sable", "iris", "grumm", "tess", "sheriff"] as const;
+export const NPC_IDS = ["bram", "odette", "fenwick", "rue", "pip", "marlo", "sable", "iris", "grumm", "tess", "sheriff", "wren", "jory"] as const;
 export type NpcId = (typeof NPC_IDS)[number];
 
 /**
  * Village buildings, the same ids as the interiors (shared/maps/interiors/doors.ts). Every one but
  * "market" (Odette's open-air stall) has an interior. All cottages are in the village; Rue lives
  * at the inn and Sable at the shrine, so they have no `house_` id. The police station stands in
- * the jail yard south of the quarry; the sheriff lives in its back room.
+ * the jail yard south of the quarry; the sheriff lives in its back room. Wren sleeps in the inn's
+ * attic and Jory in the smithy loft.
  */
 export const BUILDING_IDS = [
   "townhall",
@@ -301,7 +302,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   fenwick: {
     id: "fenwick",
     background:
-      "Fenwick inherited the smithy from his grandmother along with her hammer, which he still won't let anyone else hold. She taught him that a tool should outlive the hand that holds it, and he has never sold one he wouldn't trust himself. He forges every pickaxe and sword in the valley, builds the chairs, beds and lamps on the self-serve furniture stall, and keeps the honour box honest by never counting it. He was the one who first saw the bridge go in the storm, and he has already drawn the plans to rebuild it, if only the village gathers the wood and stone. He made Tess her first pickaxe, trades ore and grumbles with Grumm, and lets Pip watch the forge from a safe stool.",
+      "Fenwick inherited the smithy from his grandmother along with her hammer, which he still won't let anyone else hold. She taught him that a tool should outlive the hand that holds it, and he has never sold one he wouldn't trust himself. He forges every pickaxe and sword in the valley, builds the chairs, beds and lamps on the furniture stall with his apprentice Jory, who minds it by day, and keeps the honour box honest by never counting it. He was the one who first saw the bridge go in the storm, and he has already drawn the plans to rebuild it, if only the village gathers the wood and stone. He made Tess her first pickaxe, trades ore and grumbles with Grumm, and lets Pip watch the forge from a safe stool.",
     secret:
       "He carves tiny wooden animals every night and hides them around the village for people to find; Pip has nearly caught him twice. He is also terrified of geese.",
     wants: "To swing the first hammer on the new bridge, built to his grandmother's standard, and to make something that outlasts him.",
@@ -360,7 +361,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   rue: {
     id: "rue",
     background:
-      "Rue sailed down the river as a girl with a fiddle and a sack of recipes and opened the Mossy Mug Inn when nobody else would. She has heard every rumour in the valley twice and remembers the old ballad about the shrine lantern, every verse. Her stew recipe is older than the bridge, the inn's kitchen also bakes for the self-serve bakery stall, and she keeps a seat by the fire for anyone who looks tired. When her sister moved away, Rue took in Pip, and now runs the inn with one eye on the stew and the other on a child who climbs everything. Marlo sells her trout, Odette sells her pumpkins, and Bram has eaten supper at the same corner table for thirty years.",
+      "Rue sailed down the river as a girl with a fiddle and a sack of recipes and opened the Mossy Mug Inn when nobody else would. She has heard every rumour in the valley twice and remembers the old ballad about the shrine lantern, every verse. Her stew recipe is older than the bridge, her niece Wren bakes in the inn's kitchen before dawn for the bakery stall, and she keeps a seat by the fire for anyone who looks tired. When her sister moved away, Rue took in Pip, and now runs the inn with one eye on the stew and the other on a child who climbs everything. Marlo sells her trout, Odette sells her pumpkins, and Bram has eaten supper at the same corner table for thirty years.",
     secret:
       "She once played the fiddle in grand halls far downriver and gave it all up for one quiet valley; she still plays alone after closing. She worries Pip will want to leave someday, the way she did.",
     wants: "To sing the lantern ballad at a revived Spring Fair, with the shrine lit and every chair in the inn full.",
@@ -834,6 +835,118 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       giftNeutral: ["Thank you, {name}. That's going in the ledger."],
     },
   },
+  wren: {
+    id: "wren",
+    background:
+      "Wren is Pip's big sister. She stayed behind with their mother when Pip came to live with Aunt Rue, learned to bake in a busy town kitchen far down the river, and came to Mossbrook last spring with a sourdough starter in a jar she calls Old Biscuit. Now she sleeps in the inn's attic, bakes in Rue's kitchen from four in the morning, and keeps the bakery stall on the market lane from eight till six. She counts everything in dozens, remembers how every regular takes their bun, and keeps a tally of the cookies Pip steals. Odette gives her the best berries, Jory next door fixed her shutters, and Marlo trades her trout for a warm loaf every Friday.",
+    secret:
+      "She burned the first hundred loaves she ever baked and nearly gave up, and she still keeps one blackened roll in a tin under the stall as a reminder. She also writes to their mother every week on Pip's behalf when he forgets.",
+    wants: "To bake the cake for the Spring Fair when it comes back, and one day to open a proper bakery with a door and a bell.",
+    quirks: [
+      "counts things in dozens out loud",
+      "dusts flour off her apron whenever she is nervous",
+      "names every batch of bread",
+    ],
+    personality: "Bright, quick and warm; proud of her baking, protective of Pip, and endlessly practical about getting up early.",
+    speechStyle: "Quick and cheerful, with bakery words, little exclamations and dozens. Calls people by name and sells as she talks.",
+    sampleLines: [
+      "Warm rolls! Get them before Pip does.",
+      "One dozen muffins, two dozen cookies, and not a crumb wasted.",
+      "I'm up at four. The bread doesn't wait for anyone.",
+      "Aunt Rue makes the stew; I make everything that goes with it.",
+      "Pip thinks I don't count the cookies. I always count the cookies.",
+      "Pancakes fill you up best before the caves. Ask any hero.",
+      "After six the stall's on the honour box. Everyone here pays fair.",
+    ],
+    gifts: { loved: ["strawberry", "apple_pie"], liked: ["herb_mint", "milk", "hot_cocoa", "berry_muffin"], disliked: ["bat_wing"], hated: ["slime_gel"] },
+    likes: ["early mornings", "the smell of fresh bread", "regulars", "strawberry season"],
+    dislikes: ["soggy crusts", "waste", "being called little"],
+    relationships: [
+      { npc: "pip", bond: "Her little brother", gossip: "Pip told everyone he found a bat as big as a cat. It was a moth. A big moth." },
+      { npc: "rue", bond: "Her aunt, who gave her the kitchen", gossip: "Aunt Rue hums the same ballad every time she stirs the stew. Every single time." },
+      { npc: "jory", bond: "Neighbour across the stall wall", gossip: "Jory sanded the same chair for a whole morning. He says it was finding its shape." },
+      { npc: "odette", bond: "Trades berries for crusts", gossip: "Odette eats the crusts first. She says they're the best part, and she's right." },
+    ],
+    routine: day(
+      "inn",
+      "market",
+      [
+        { from: 0, to: 4, place: "inn", activity: "asleep in the attic" },
+        { from: 4, to: 8, place: "inn", activity: "baking in Rue's kitchen" },
+        { from: 8, to: 18, place: "market", activity: "keeping the bakery stall" },
+        { from: 18, to: 21, place: "inn", activity: "helping Rue with supper" },
+        { from: 21, to: 24, place: "inn", activity: "setting the dough to rise" },
+      ],
+      { from: 8, to: 18 },
+    ),
+    lovesToTalkAbout: ["baking", "her stall's menu", "Pip's latest adventure", "early mornings"],
+    neverSay: ["Never invent foods or prices the bakery stall doesn't sell.", "Never tease Pip unkindly; she teases him only with love."],
+    memoryLines: {
+      firstMeet: ["Hi! I'm Wren, Pip's big sister. I keep the bakery stall. Welcome, {name}!", "A new face! I'm Wren. If you're hungry, you've come to the right stall, {name}."],
+      welcomeBack: ["{name}! Back for more? I saved the good rolls.", "There you are, {name}. The muffins missed you."],
+      rememberGift: ["I baked your {lastGift} into a tart, {name}! It sold out in an hour.", "{name}! That {lastGift} was lovely. Still smiling about it."],
+      giftLoved: ["A {item}?! {name}, I'm naming a whole batch after you."],
+      giftLiked: ["Ooh, a {item}! Thank you, {name}. Into the basket it goes."],
+      giftDisliked: ["A {item}... I'll find a use for it, {name}. Probably."],
+      giftNeutral: ["Thank you, {name}! That's kind of you."],
+    },
+  },
+  jory: {
+    id: "jory",
+    background:
+      "Jory came to Mossbrook at fourteen as a carter's boy, broke a wheel on the old bridge road and spent a week watching Fenwick mend it. He never left. Fenwick took him on as an apprentice, found he had no feel for iron but a great one for wood, and gave him the back of the smithy for a workshop. Now he sleeps in the loft above the forge, builds the chairs, beds, tables and lamps sold on the market lane, and keeps the furniture stall from eight till six. He talks about wood grain the way other people talk about weather, keeps every offcut, and is secretly building Pip a toy chest. He fixed Wren's shutters next door, buys his nails from Fenwick, and argues happily with Grumm about whether stone or oak lasts longer.",
+    secret:
+      "He is terrified of the forge fire and has never once worked the bellows, though he has lived above it for six years. He also keeps a little carved oak bird Fenwick made him on his first day, and has never told Fenwick he still has it.",
+    wants: "To build the new bridge's railings when the village rebuilds it, and to sell his chairs up the valley once the road is open again.",
+    quirks: [
+      "runs his hand along any piece of wood he passes",
+      "keeps a pencil behind his ear and forgets it is there",
+      "says measure twice, cut once under his breath",
+    ],
+    personality: "Earnest, lanky and a little shy until you mention wood; patient with his work, generous with offcuts and eager to please.",
+    speechStyle: "Plain and friendly with woodworking words, small jokes about sanding and splinters, and the odd ramble about grain.",
+    sampleLines: [
+      "Feel that grain. Oak. Lasts longer than any of us.",
+      "Measure twice, cut once. Fenwick says it's the only rule.",
+      "Everything on this stall I built myself. Except the TV.",
+      "A fridge keeps your crops fresh at home. Best thing I sell.",
+      "Sixty wood for the bridge. I counted. Twice.",
+      "After six the stall's on the honour box. Folks here pay fair.",
+      "I sleep in the smithy loft. Warm, and it smells like iron.",
+    ],
+    gifts: { loved: ["wood", "bread_roll"], liked: ["coffee", "apple_pie", "cider"], disliked: ["bat_wing", "crab_shell"], hated: ["slime_gel"] },
+    likes: ["oak and pine", "a quiet workshop", "Wren's rolls", "straight lines"],
+    dislikes: ["wobbly legs", "damp", "the forge fire"],
+    relationships: [
+      { npc: "fenwick", bond: "His master and the closest he has to family", gossip: "Fenwick carves tiny wooden animals when he thinks nobody's looking. Better than mine." },
+      { npc: "wren", bond: "Neighbour across the stall wall", gossip: "Wren names every batch of bread. Yesterday's was called Gerald." },
+      { npc: "pip", bond: "Building him a secret toy chest", gossip: "Pip asked me to build a boat. For the fountain. I said maybe." },
+      { npc: "grumm", bond: "Argues stone versus oak", gossip: "Grumm says stone outlasts oak. I say oak doesn't fall on your head." },
+    ],
+    routine: day(
+      "smithy",
+      "market",
+      [
+        { from: 0, to: 7, place: "smithy", activity: "asleep in the smithy loft" },
+        { from: 7, to: 8, place: "smithy", activity: "sanding chairs in the back workshop" },
+        { from: 8, to: 18, place: "market", activity: "keeping the furniture stall" },
+        { from: 18, to: 20, place: "inn", activity: "supper at the inn" },
+        { from: 20, to: 24, place: "smithy", activity: "building furniture by lamplight" },
+      ],
+      { from: 8, to: 18 },
+    ),
+    lovesToTalkAbout: ["wood and grain", "furniture for your house", "Fenwick's workshop", "the bridge railings"],
+    neverSay: ["Never invent furniture or prices the stall doesn't sell.", "Never claim to have forged anything; Fenwick works the iron."],
+    memoryLines: {
+      firstMeet: ["Oh, hi! I'm Jory, Fenwick's apprentice. I built everything on this stall, {name}.", "A new face! I'm Jory. Need a chair, {name}? I've got chairs."],
+      welcomeBack: ["{name}! Back again. Something new to sit on?", "Hi, {name}. Mind the sawdust."],
+      rememberGift: ["Still got that {lastGift}, {name}. It's on my workbench.", "That {lastGift} you gave me? Best thing in the workshop, {name}."],
+      giftLoved: ["A {item}! {name}, that's... thank you. Really."],
+      giftLiked: ["Oh, a {item}! Thanks, {name}. Very kind."],
+      giftDisliked: ["A {item}. Um. I'll put it... somewhere, {name}."],
+      giftNeutral: ["Thanks, {name}. That's nice of you."],
+    },
+  },
 };
 
 /** Typed routines for the interiors/home-sim work: where each NPC lives, works and is hour by hour. */
@@ -901,6 +1014,8 @@ export const NPC_BIRTHDAYS: Readonly<Record<NpcId, Birthday>> = {
   grumm: { season: "winter", day: 14 },
   tess: { season: "winter", day: 25 },
   sheriff: { season: "fall", day: 13 },
+  wren: { season: "spring", day: 3 },
+  jory: { season: "summer", day: 11 },
 };
 
 export function birthdayOf(id: string): Birthday | undefined {
@@ -1022,5 +1137,24 @@ export const NPC_DIALOGUE: Readonly<Record<NpcId, Partial<Record<string, string[
     Fri: ["Friday night. Folks get rowdy at the inn. Not you, I hope, {name}."],
     fall: ["Fall, {name}. Leaves on the road and pumpkins on every porch."],
     winter: ["Cold out, {name}. Even the cell's warmer than the road today."],
+  },  wren: {
+    birthday: ["My birthday, {name}! I baked my own cake. Is that sad? It's delicious.", "Birthday! A strawberry would make my whole dozen, {name}."],
+    hearts9: ["{name}! You're my favourite regular. Don't tell the others.", "{name}, I named today's whole batch after you. They sold out."],
+    hearts6: ["{name}! I kept a warm roll back for you.", "{name}! Pip says you're a hero. I say you're a good customer. Both!"],
+    hearts2: ["Morning, {name}! Hungry?", "Hi, {name}. Fresh batch, just for you. Well, for everyone."],
+    Fri: ["Friday, {name}! Marlo brings trout, I bring loaves. Best day."],
+    Sun: ["Sunday buns, {name}! Extra cinnamon."],
+    winter: ["Cold out, {name}! Hot cocoa's on the stall."],
+    summer: ["Hot day, {name}! Apple juice is the thing."],
+  },
+  jory: {
+    birthday: ["My birthday, {name}. Fenwick gave me a plane. A wood plane. Best gift ever.", "It's my birthday! Wood's my favourite gift, {name}. Or a roll. Either."],
+    hearts9: ["{name}. I'm building you something. Don't peek.", "{name}! If I ever open my own shop, your chair's on the house."],
+    hearts6: ["{name}! Saved you an offcut. Oak. Smell it.", "{name}! How's the house? Room for one more chair?"],
+    hearts2: ["Hi, {name}. Mind the sawdust.", "{name}! Fresh chairs in."],
+    Mon: ["Monday, {name}. New week, new chairs."],
+    Sat: ["Saturday market, {name}! Busiest day for chairs."],
+    fall: ["Fall, {name}. Best season for oak."],
+    spring: ["Spring, {name}! Everyone wants new furniture in spring."],
   },
 };

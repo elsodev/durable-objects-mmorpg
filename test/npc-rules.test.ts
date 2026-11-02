@@ -17,9 +17,9 @@ function ctx(npcId: string, text: string): NpcContext {
 }
 
 describe("catalog", () => {
-  const sprites = ["villager_old", "villager_woman", "smith", "villager_woman2", "kid", "fisher", "monk", "villager_woman3", "miner", "explorer", "sheriff"];
-  it("has the 11 NPCs with the right sprites and zones", () => {
-    expect(Object.keys(NPCS)).toEqual(["bram", "odette", "fenwick", "rue", "pip", "marlo", "sable", "iris", "grumm", "tess", "sheriff"]);
+  const sprites = ["villager_old", "villager_woman", "smith", "villager_woman2", "kid", "fisher", "monk", "villager_woman3", "miner", "explorer", "sheriff", "wren", "jory"];
+  it("has the 13 NPCs with the right sprites and zones", () => {
+    expect(Object.keys(NPCS)).toEqual(["bram", "odette", "fenwick", "rue", "pip", "marlo", "sable", "iris", "grumm", "tess", "sheriff", "wren", "jory"]);
     expect(NPCS.sheriff.zone).toBe("int_police");
     expect(Object.values(NPCS).map((n) => n.sprite)).toEqual(sprites);
     expect(NPCS.marlo.zone).toBe("riverside");

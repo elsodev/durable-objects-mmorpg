@@ -150,8 +150,8 @@ describe("pair naming", () => {
     expect(parsePairName("bram:u1:x")).toEqual({ npcId: "bram", userId: "u1:x" });
     expect(parsePairName("nobody:u1")).toBeNull();
     expect(parsePairName("bram:")).toBeNull();
-    expect(pairsForUser("u1")).toHaveLength(11);
-    expect(new Set(pairsForUser("u1")).size).toBe(11);
+    expect(pairsForUser("u1")).toHaveLength(13);
+    expect(new Set(pairsForUser("u1")).size).toBe(13);
   });
   it("builds a safe FTS query", () => {
     expect(searchQuery('the "pumpkin") OR fair*')).toBe('"pumpkin" OR "fair"');

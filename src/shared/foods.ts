@@ -76,7 +76,7 @@ export const INN_MENU: readonly ItemId[] = [
   "milk",
 ];
 
-/** The self-serve bakery stall on the square: breakfasts, bakes and drinks. */
+/** The bakery stall on the square (Wren's by day, self-serve after hours): breakfasts, bakes and drinks. */
 export const BAKERY_MENU: readonly ItemId[] = [
   "bread_roll",
   "oat_cookie",

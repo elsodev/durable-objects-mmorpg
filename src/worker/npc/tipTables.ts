@@ -107,7 +107,7 @@ export const NPC_TIPS: Readonly<Record<NpcId, readonly Tip[]>> = {
       about: ["furniture", "build", "place", "house", "home", "decorate", "edit", "move"],
     },
     {
-      line: "Furniture stall's on the market lane. Self-serve. Chairs, beds, rugs, lamps, even a fridge. Coins go in the honour box.",
+      line: "Furniture stall's on the market lane. Jory minds it by day. Chairs, beds, rugs, lamps, even a fridge. After hours, coins go in the honour box.",
       about: ["furniture", "stall", "fridge", "bed", "chair", "lamp", "buy", "shop"],
     },
     {
@@ -137,7 +137,7 @@ export const NPC_TIPS: Readonly<Record<NpcId, readonly Tip[]>> = {
       about: ["sleep", "bed", "night", "late", "pass", "day", "coins"],
     },
     {
-      line: "Busy night? Step up to the bar counter and I'll serve you across it. The self-serve bakery stall by the market has sweets and breakfasts too.",
+      line: "Busy night? Sit on a bar stool and order across the counter; I'll set your plate right in front of you. Wren's bakery stall has sweets too.",
       about: ["inn", "bar", "food", "bakery", "buy", "menu", "drink", "breakfast"],
     },
     {
@@ -358,6 +358,63 @@ export const NPC_TIPS: Readonly<Record<NpcId, readonly Tip[]>> = {
     {
       line: "Want a quiet word with someone? Type /whisper and a name. Keeps it between the two of you.",
       about: ["whisper", "chat", "private", "message", "talk"],
+    },
+  ],
+  // Food and energy (shared/engine/eating.ts, homeday.ts eatGain, shared/foods.ts), the bakery
+  // stall's hours (shared/npcSchedule.ts NPC_JOBS, worker/game/shop.ts STALL_SHOPS), the counter
+  // meal (shared/counterMeal.ts), tiredness (shared/engine/homeday.ts).
+  wren: [
+    {
+      line: "Hungry, {name}? Pick some food in your hotbar and press Q to eat it. A meal gives back lots of energy, a snack some, a drink a little.",
+      about: ["eat", "food", "energy", "hungry", "q", "meal", "snack"],
+    },
+    {
+      line: "I keep the bakery stall from eight till six. After that it's self-serve: take what you need and the coins go in the honour box.",
+      about: ["stall", "bakery", "hours", "open", "closed", "honour", "night"],
+    },
+    {
+      line: "At Aunt Rue's inn, sit on a bar stool and order across the counter. She sets your plate right in front of you and you eat it there.",
+      about: ["inn", "bar", "counter", "stool", "sit", "order", "plate"],
+    },
+    {
+      line: "Worn out from the caves? Food helps your energy, but only a night in your own bed fixes being worn out.",
+      about: ["tired", "worn", "exhausted", "sleep", "bed", "energy"],
+    },
+    {
+      line: "Pancakes and omelettes fill you up best. Cookies and muffins are for walking. Cocoa and juice are just a little lift.",
+      about: ["pancakes", "omelette", "cookie", "muffin", "cocoa", "juice", "best"],
+    },
+    {
+      line: "Talk to Odette next door to sell crops, and Fenwick for ore. I only sell, but I'll always point you the right way.",
+      about: ["sell", "crops", "ore", "odette", "fenwick", "money"],
+    },
+  ],
+  // The furniture stall (worker/game/shop.ts, shared/furnitureItems.ts FRIDGE_STORAGE), build and
+  // edit mode (client game/edit-mode.ts), goals (worker/game/goals.ts), gifts (shared/hearts.ts).
+  jory: [
+    {
+      line: "I keep the furniture stall from eight till six. After hours it's self-serve, and the coins go in the honour box.",
+      about: ["stall", "furniture", "hours", "open", "closed", "honour", "night"],
+    },
+    {
+      line: "Got a chair home? Press B to place it and R to turn it. T lets you rearrange the whole house, and Del picks a piece back up.",
+      about: ["place", "build", "turn", "rotate", "arrange", "house", "decorate"],
+    },
+    {
+      line: "A fridge holds twelve stacks of crops and food at home. Frees up your bag for the road.",
+      about: ["fridge", "storage", "store", "crops", "food", "bag"],
+    },
+    {
+      line: "The bridge needs sixty wood, {name}. Chop trees with your axe and donate at the board by the Town Hall.",
+      about: ["bridge", "wood", "donate", "board", "goal", "axe"],
+    },
+    {
+      line: "Good friends around the village sometimes give furniture at heart milestones. Press H to see how your hearts stand.",
+      about: ["friends", "hearts", "gift", "present", "furniture", "h"],
+    },
+    {
+      line: "Fenwick buys ore and Odette buys crops. My stall only sells, but the shipping bin at your farm takes most things.",
+      about: ["sell", "ore", "crops", "bin", "money", "shipping"],
     },
   ],
 };

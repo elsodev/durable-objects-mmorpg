@@ -875,8 +875,8 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     notice(text: string, kind: "info" | "error" | "loot") {
       notices.notice(text, kind);
     },
-    openShop(npc: string, name: string, offers: ShopOffer[], buys: ItemId[]) {
-      shop.open(npc, name, offers, buys, inv ?? { coins: 0, slots: [] });
+    openShop(npc: string, name: string, offers: ShopOffer[], buys: ItemId[], counter?: boolean) {
+      shop.open(npc, name, offers, buys, inv ?? { coins: 0, slots: [] }, counter);
     },
     closeShop() {
       shop.close();
@@ -924,6 +924,9 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     },
     npcSaid(entityId, text) {
       convo.said(entityId, text);
+    },
+    talkingTo() {
+      return convo.talkingTo?.() ?? null;
     },
     npcSayFailed(reason) {
       convo.failed(reason);

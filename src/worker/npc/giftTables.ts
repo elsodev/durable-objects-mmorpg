@@ -21,6 +21,8 @@ export const GIFT_TABLES: Readonly<Record<NpcId, readonly ItemId[]>> = {
   grumm: ["mine_cart", "ore_crate", "coal_pile", "barrel", "grindstone", "wall_sconce"],
   tess: ["painting_landscape", "writing_desk", "basket", "sack", "dresser", "wardrobe"],
   sheriff: ["wall_clock", "writing_desk", "bookshelf", "barrel", "candle", "wall_sconce"],
+  wren: ["basket", "flower_vase", "candle", "wall_pans", "table_round", "potted_plant"],
+  jory: ["workbench", "crate", "wall_shelf", "dresser", "bookshelf", "table_round"],
 };
 
 export type Rarity = "common" | "uncommon" | "rare";

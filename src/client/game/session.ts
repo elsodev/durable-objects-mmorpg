@@ -1,5 +1,6 @@
 // Session orchestrator: wires app, art, store, connection, prediction, input, camera, per-zone
 // renderers and the HUD, runs the frame loop and zone switching. See ../contracts.ts.
+import { faceViewer, facingTarget, type Engaged } from "./npc-facing-logic";
 import { copyTitle } from "../../shared/zoneCopies";
 import { hasFlashlight } from "../../shared/flashlight";
 import { loadArt } from "../art";
@@ -1113,7 +1114,12 @@ export async function startSession(
         if (msg.kind !== "info") playSfx(msg.kind);
         break;
       case "shop":
-        hud.openShop(msg.npc, msg.name, msg.offers, msg.buys);
+        hud.openShop(msg.npc, msg.name, msg.offers, msg.buys, msg.counter);
+        {
+          // Shops name the villager by npc id; their entity is "n:<id>". Stalls have no one.
+          const keeper = msg.npc.startsWith("n:") ? msg.npc : `n:${msg.npc}`;
+          if (store.latest(keeper)?.kind === "npc") engaged = { id: keeper, at: performance.now() };
+        }
         break;
       case "zone":
         playSfx("door");
@@ -1278,6 +1284,7 @@ export async function startSession(
       },
       characterFor,
       { beat: itemPoseBeat },
+      { beat: (id, item) => itemPoseBeat(id, "eat", item) },
     );
     world.effects.setFlashlight?.(hasFlashlight(store.inventory));
     if (msg.zone !== "home") home = null;
@@ -1594,6 +1601,11 @@ export async function startSession(
     homeUi.setEdible(edibleSelected());
   }
 
+  /** The villager you last talked to or shopped with (npc-facing-logic.ts). */
+  let engaged: Engaged | null = null;
+  /** Your last counter meal ("seat:at"), so a new one closes the bar menu once. */
+  let lastServed = "";
+
   /** When you last asked to eat: the server refuses a bite inside EAT_COOLDOWN_MS anyway. */
   let lastEatSent = -Infinity;
 
@@ -1640,6 +1652,7 @@ export async function startSession(
   }
 
   function interact(target: string): void {
+    if (store.latest(target)?.kind === "npc") engaged = { id: target, at: performance.now() };
     send({ t: "interact", target });
     playSfx("interact");
   }
@@ -1922,11 +1935,17 @@ export async function startSession(
     refreshPreload(dt);
     if (step.send) send(step.send);
 
-    const states = visibleEntities();
+    // The villager you're talking to faces you on your screen, whoever else is talking to them.
+    const states = faceViewer(visibleEntities(), facingTarget(hud.talkingTo?.() ?? null, engaged, nowMs), you());
     world.entities.sync(states, dt);
     world.overlays.sync(states, (id) => world!.entities.headOf(id), store.youId);
     world.itemPoses.sync(states, (id) => world!.entities.headOf(id), performance.now(), dt, (id) => world!.entities.foodOf?.(id) ?? null);
+    world.counterMeals.sync(states, (id) => world!.entities.headOf(id), performance.now(), dt);
     const me = states.find((e) => e.id === store.youId) ?? null;
+    // Your order arrived on the counter: put the menu away so you can watch yourself eat.
+    const served = me?.meal ? `${me.meal.seat}:${me.meal.at}` : "";
+    if (served && served !== lastServed) hud.closeShop();
+    lastServed = served;
     approachAnimal(me, states);
     // Edit mode moves the view itself (keys, a finger, or dragging to the edge).
     editMode.update(dt);

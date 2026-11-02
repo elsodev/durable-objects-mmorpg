@@ -235,7 +235,11 @@ export type ServerMsg =
    * grew back ("tree", hits 0). `drops` are what popped out.
    */
   | ({ t: "tree"; id: string; stage: "tree" | "stump" | "gone"; hits: number; need?: number; drops?: ItemId[] } & ImpactStamp)
-  | { t: "shop"; npc: string; name: string; offers: ShopOffer[]; buys: ItemId[] }
+  /**
+   * A shop opened. `counter`: the bar menu, opened from a stool at the counter (shared/counterMeal.ts);
+   * what you order there is served on the counter in front of you and eaten at once.
+   */
+  | { t: "shop"; npc: string; name: string; offers: ShopOffer[]; buys: ItemId[]; counter?: boolean }
   | { t: "goals"; goals: VillageGoal[] }
   /** Floating text / toast, e.g. "+3 copper ore", "Not enough coins". */
   | { t: "notice"; text: string; kind: "info" | "error" | "loot" }

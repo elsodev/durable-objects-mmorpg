@@ -64,7 +64,7 @@ describe("NPC bible", () => {
   it.each(NPC_IDS)("%s routine uses fixed building ids and covers the whole day", (id) => {
     const r = NPC_ROUTINES[id];
     // Matches the interiors: Rue sleeps at the inn, Sable at the shrine, everyone else in a cottage.
-    expect(r.home).toBe(({ rue: "inn", sable: "shrine", sheriff: "police" } as Record<string, string>)[id] ?? `house_${id}`);
+    expect(r.home).toBe(({ rue: "inn", sable: "shrine", sheriff: "police", wren: "inn", jory: "smithy" } as Record<string, string>)[id] ?? `house_${id}`);
     if (r.home.startsWith("house_")) expect(BUILDING_IDS).toContain(r.home);
     expect(isPlaceId(r.work)).toBe(true);
     expect(r.workHours.from).toBeLessThan(r.workHours.to);

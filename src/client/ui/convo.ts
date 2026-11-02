@@ -33,6 +33,8 @@ export interface ConvoUi {
   failed(reason: string): void;
   close(): void;
   isOpen(): boolean;
+  /** Entity id of the villager you're talking to while the window is open, else null. */
+  talkingTo?(): string | null;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = "", text?: string): HTMLElementTagNameMap[K] {
@@ -328,6 +330,7 @@ export function createConvo(root: HTMLElement, opts: ConvoOpts): ConvoUi {
       uiSound("close");
     },
     isOpen: () => !win.hidden,
+    talkingTo: () => (win.hidden ? null : entity),
   };
   syncSend();
   return api;

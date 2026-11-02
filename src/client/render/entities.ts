@@ -14,6 +14,7 @@ import { heldFrameIndex, heldToShow } from "./held-logic";
 import { createPoseLayer } from "./poses";
 import { createDashFx } from "./dash-fx";
 import { createFoodHand } from "./food-in-hand";
+import { leanOffset, mealMotion } from "./counter-meal-logic";
 import { isFootStrike, strideFrame, strideRate } from "./dash-logic";
 import { createHaloArt, makeHalo, updateHalo, type Halo } from "./halo";
 import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFps, type EntityProfile } from "./entityProfile";
@@ -80,6 +81,9 @@ interface Rec {
   stepped: boolean;
   /** Admin halo (EntityState.admin), built the first time this record draws an admin. */
   halo: Halo | null;
+  /** Counter meal being eaten ("id:at") and when it was first seen: the sitter leans to each bite. */
+  mealKey: string;
+  mealStart: number;
 }
 
 /** Soft drop shadow: stacked translucent ellipses fake a blurred edge without a filter. */
@@ -176,6 +180,17 @@ export const createEntityLayer = ((
     const tex = frames[i]!;
     if (rec.body.texture !== tex) rec.body.texture = tex;
     return true;
+  }
+
+  /** The sitter's lean while a counter meal is eaten, timed from when this client first saw it. */
+  function mealLean(rec: Rec, s: EntityState, now: number): { dx: number; dy: number } | null {
+    if (!s.meal) return null;
+    const key = `${s.meal.seat}:${s.meal.at}`;
+    if (key !== rec.mealKey) {
+      rec.mealKey = key;
+      rec.mealStart = now;
+    }
+    return leanOffset(s.facing, mealMotion(now - rec.mealStart).lean);
   }
 
   /** Animals sitting, napping or happy: their pose frames loop in place (same anchor as walking). */
@@ -283,6 +298,8 @@ export const createEntityLayer = ((
         poseKey: "",
         poseStart: 0,
         halo: null,
+        mealKey: "",
+        mealStart: 0,
         stepFrame: -1,
         stepped: false,
       };
@@ -303,6 +320,8 @@ export const createEntityLayer = ((
     rec.poseStart = -Infinity;
     rec.stepFrame = -1;
     rec.stepped = false;
+    rec.mealKey = "";
+    rec.body.x = 0;
     rec.body.alpha = 1;
     rec.removing = false;
     rec.body.filters = null;
@@ -371,6 +390,15 @@ export const createEntityLayer = ((
     const lift = (p.hover + bobOffset(p, t, s.moving)) * SCALE + pose.lift * TILE;
     const sq = squashFactor(p, t, s.moving);
     rec.body.y = seated ? SIT_DROP_PX * SCALE : -lift;
+    // Eating at the counter: lean toward the plate for each bite (counter-meal-logic.ts).
+    const lean = seated ? mealLean(rec, s, now) : null;
+    if (lean) {
+      rec.body.x = lean.dx * SCALE;
+      rec.body.y += lean.dy * SCALE;
+    } else if (rec.mealKey) {
+      rec.mealKey = "";
+      rec.body.x = 0;
+    }
     let sx = pose.sx;
     let sy = pose.sy;
     if (rec.deathT >= 0) {

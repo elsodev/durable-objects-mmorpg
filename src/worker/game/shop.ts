@@ -25,9 +25,9 @@ export function offersFor(ids: readonly ItemId[]): ShopOffer[] {
 export const STALL_PREFIX = "stall:";
 
 /**
- * Self-serve stalls on the village square: no keeper, an honour box for the coins. Keyed by the
- * stall prop's id; Fenwick's workshop stocks the furniture stall and the inn's kitchen bakes for
- * the bakery stall.
+ * Stalls on the village square with an honour box: their keeper (shared/stalls.ts) sells across
+ * the counter by day, and out of hours they are self-serve. Keyed by the stall prop's id; Jory
+ * minds the furniture stall Fenwick's workshop stocks, Wren the bakery stall the inn's kitchen bakes for.
  */
 export const STALL_SHOPS: Readonly<Record<string, { name: string; shop: Shop }>> = {
   stall_goods: { name: "Furniture Stall", shop: { sells: offersFor(FURNITURE_SHOP), buys: [] } },

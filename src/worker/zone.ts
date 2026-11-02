@@ -20,6 +20,8 @@ import {
   type EntityState,
   type Facing,
   type Inventory,
+  type ItemId,
+  type Seat,
   type Look,
   type MapData,
   type MapExit,
@@ -153,7 +155,10 @@ import type { TradeOffer } from "../shared/trade";
 import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, COUNTER_KEEPERS, sellTo, shopToday, stallShop, STALL_PREFIX } from "./game/shop";
+import { keptStall, stallKeeper } from "../shared/stalls";
+import { counterAhead, counterOrderRefusal, mealOver, seatedAtCounter, serveMeal } from "../shared/counterMeal";
 import { eatFrom, eatNotice } from "../shared/engine/eating";
+import { eatGain } from "../shared/engine/homeday";
 import { AnimalHerd } from "./game/animalHerd";
 import { syncZoneHerd } from "./game/zoneHerd";
 import { zoneHasAnimals } from "../shared/roam";
@@ -778,6 +783,8 @@ export class ZoneRoom extends DurableObject<Env> {
         p.lastRegen = now;
         p.dirty = true;
       }
+      // An eaten counter meal's plate is cleared away.
+      if (p.entity.meal && mealOver(p.entity.meal, now)) delete p.entity.meal;
     }
 
     world.npcs.tick(dt, now);
@@ -1739,15 +1746,9 @@ export class ZoneRoom extends DurableObject<Env> {
     const prop = world.map.props.find((pr) => pr.id === target);
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
     if (SEAT_FACING[prop.type]) return this.onSeat(p, prop.id, now);
-    if (prop.type === "market_stall" && stallShop(STALL_PREFIX + prop.id)) return this.sendStallShop(p, prop.id);
-    if (prop.type === "bar_counter") return this.onCounter(p, world.zone);
+    if (prop.type === "market_stall") return this.onStall(p, prop.id, now);
+    if (prop.type === "bar_counter") return this.onCounter(p, prop.id);
     if (prop.id === TOWNHALL_DESK && world.zone === "int_townhall") return this.sendTownhall(p);
-    if (prop.type === "market_stall") {
-      const keeper = this.shopkeeperNear(prop);
-      if (keeper) this.sendShop(p, keeper);
-      else send(p.ws, { t: "notice", text: "Nobody is minding this stall.", kind: "info" });
-      return;
-    }
     if (isNoticeBoard(prop)) void this.openNotices(p);
     if (prop.type === "notice_board" || prop.type === "shrine" || prop.type === "bridge_broken") {
       void this.villageGoals().then((goals) => send(p.ws, { t: "goals", goals }));
@@ -1788,6 +1789,8 @@ export class ZoneRoom extends DurableObject<Env> {
   private getUp(p: ZPlayer): void {
     // Moving or swinging ends a pose (sitting or lying on the ground, dancing, peeing).
     endPose(p.entity);
+    // Leaving the stool leaves the plate: it's cleared away.
+    delete p.entity.meal;
     if (!isSitting(p.entity)) return;
     const world = this.world!;
     const seat = world.seats.of(p.entity.id);
@@ -1799,42 +1802,56 @@ export class ZoneRoom extends DurableObject<Env> {
     p.dirty = true;
   }
 
-  /** The bar: whoever keeps it serves you across the counter, if they're in. */
-  private onCounter(p: ZPlayer, zone: string): void {
-    const keeper = Object.hasOwn(COUNTER_KEEPERS, zone) ? COUNTER_KEEPERS[zone] : undefined;
-    const n = keeper ? this.world!.npcs.present().find((x) => x.id === keeper) : undefined;
+  /**
+   * The bar: whoever keeps it serves you across the counter, if they're in. Seated on a stool at
+   * this counter you get the bar menu, and what you order is served in front of you to eat there.
+   */
+  private onCounter(p: ZPlayer, counterId: string): void {
+    const world = this.world!;
+    const keeper = Object.hasOwn(COUNTER_KEEPERS, world.zone) ? COUNTER_KEEPERS[world.zone] : undefined;
+    const n = keeper ? world.npcs.present().find((x) => x.id === keeper) : undefined;
     if (!n?.def?.shop) return send(p.ws, { t: "notice", text: "Nobody is behind the bar right now.", kind: "info" });
-    this.sendShop(p, n.entity.id);
+    const seated = seatedAtCounter(world.seats.of(p.entity.id), p.entity, counterId, world.map.props);
+    this.sendShop(p, n.entity.id, seated);
   }
 
-  /** The shop NPC closest to a stall (stalls have no owner field in map data); only one who is here. */
-  private shopkeeperNear(prop: { x: number; y: number; w: number; h: number }): string | null {
-    let best: string | null = null;
-    let bd = Infinity;
-    for (const n of this.world!.npcs.present()) {
-      if (!n.def?.shop) continue;
-      const d = distToRect({ x: n.spawn.x + 0.5, y: n.spawn.y + 0.5 }, prop);
-      if (d < bd) {
-        bd = d;
-        best = n.id;
-      }
-    }
-    return best;
+  /**
+   * A market stall: its keeper sells across the counter while on shift; out of hours a stall with
+   * an honour box is self-serve, and any other is closed.
+   */
+  private onStall(p: ZPlayer, propId: string, now: number): void {
+    const npcs = this.world!.npcs;
+    const keeperId = stallKeeper(propId);
+    const keeper = keeperId ? npcs.byEntityId(keeperId) : undefined;
+    if (keeper?.def?.shop && npcs.atPost(keeper, now)) return this.sendShop(p, keeper.entity.id);
+    if (stallShop(STALL_PREFIX + propId)) return this.sendStallShop(p, propId);
+    send(p.ws, { t: "notice", text: "Nobody is minding this stall.", kind: "info" });
   }
 
-  private sendShop(p: ZPlayer, npcId: string): void {
+  private sendShop(p: ZPlayer, npcId: string, counter = false): void {
     const n = this.world!.npcs.byEntityId(npcId);
     const shop = n?.def?.shop;
     if (!n || !shop) return;
     this.leaveTradeForShop(p);
     const now = Date.now();
-    if (now - (p.lastShop.get(n.id) ?? 0) < SHOP_DEDUP_MS) return;
-    p.lastShop.set(n.id, now);
+    // The bar menu and the keeper's own shop are separate windows: one mustn't swallow the other.
+    const key = counter ? `${n.id}:counter` : n.id;
+    if (now - (p.lastShop.get(key) ?? 0) < SHOP_DEDUP_MS) return;
+    p.lastShop.set(key, now);
     const today = shopToday(shop, now);
-    send(p.ws, { t: "shop", npc: n.id, name: n.entity.name, offers: today.sells, buys: today.buys });
+    if (counter) {
+      // The bar menu: only what can be eaten or drunk on the spot.
+      const menu = today.sells.filter((o) => getItem(o.item)?.eat);
+      return send(p.ws, { t: "shop", npc: n.id, name: `${n.entity.name}'s Bar Menu`, offers: menu, buys: [], counter: true });
+    }
+    // A stall keeper's window is named for the stall, so it reads the same as the self-serve one.
+    const stall = keptStall(n.id);
+    const stallName = stall ? stallShop(STALL_PREFIX + stall)?.name : undefined;
+    const name = stallName ? `${n.entity.name}'s ${stallName}` : n.entity.name;
+    send(p.ws, { t: "shop", npc: n.id, name, offers: today.sells, buys: today.buys });
   }
 
-  /** A self-serve stall's shop (no keeper; you pay into the honour box). */
+  /** A stall's self-serve shop while its keeper is away (you pay into the honour box). */
   private sendStallShop(p: ZPlayer, propId: string): void {
     const s = stallShop(STALL_PREFIX + propId);
     if (!s) return;
@@ -1864,9 +1881,52 @@ export class ZoneRoom extends DurableObject<Env> {
     if (msg.npc === TOWNHALL_SHOP) return this.onTownhallTrade(p, msg);
     const s = this.shopFor(p, msg.npc);
     if ("error" in s) return this.reject(p, msg, s.error!);
+    const now = Date.now();
+    const seat = this.counterOrder(p, msg.npc, msg.item);
+    // An order from a stool is eaten on the spot: refuse it before taking any coins if it can't be.
+    const why = seat ? counterOrderRefusal(p.entity, now, p.lastEat ?? -Infinity, eatGain(msg.item, p.stamina)) : null;
+    if (why) return this.reject(p, msg, why);
     const r = buyFrom(p.inv, s.shop, msg.item, msg.qty);
     if (!r.ok) return this.reject(p, msg, r.reason);
+    if (seat && this.serveAtCounter(p, seat, msg.item, r.text, now)) return;
     this.inventoryChanged(p, r.text);
+  }
+
+  /**
+   * The stool a purchase is served to: food or drink bought from the bar's keeper while sitting on
+   * a stool that faces a counter. Undefined for any other purchase (it goes in the bag).
+   */
+  private counterOrder(p: ZPlayer, shopId: string, item: ItemId): Seat | undefined {
+    const world = this.world!;
+    const keeperId = Object.hasOwn(COUNTER_KEEPERS, world.zone) ? COUNTER_KEEPERS[world.zone] : undefined;
+    const keeper = keeperId ? world.npcs.byEntityId(keeperId) : undefined;
+    if (!keeper || world.npcs.byEntityId(shopId) !== keeper || !getItem(item)?.eat) return undefined;
+    const seat = world.seats.of(p.entity.id);
+    return seat && counterAhead(seat, world.map.props) ? seat : undefined;
+  }
+
+  /**
+   * One of the food just bought is set on the counter in front of the stool and eaten there,
+   * seated (energy as for any meal). Same tick as the purchase, so nothing awaits between the
+   * inventory read and write. False (the food stays in the bag) if it can't be eaten after all.
+   */
+  private serveAtCounter(p: ZPlayer, seat: Seat, item: ItemId, bought: string, now: number): boolean {
+    const world = this.world!;
+    const meal = serveMeal(seat, world.map.props, item, now);
+    if (!meal) return false;
+    const slot = p.inv.slots.findIndex((x) => x?.item === item && x?.quality === undefined);
+    const r = slot >= 0 ? eatFrom(p.inv, slot, p.stamina, now, p.lastEat ?? -Infinity) : null;
+    if (!r?.ok) return false;
+    p.lastEat = now;
+    p.stamina = r.stamina;
+    p.entity.meal = meal;
+    p.dirty = true;
+    this.sendStamina(p);
+    const keeper = COUNTER_KEEPERS[world.zone];
+    const by = (keeper && world.npcs.byEntityId(keeper)?.entity.name) ?? "It";
+    this.inventoryChanged(p, `${bought}. ${by} sets it on the counter for you (+${r.gain} energy)`);
+    if (p.exhausted) send(p.ws, { t: "notice", text: RESTED_EATING_NOTICE, kind: "info" });
+    return true;
   }
 
   private onSell(p: ZPlayer, msg: Extract<ClientMsg, { t: "sell" }>): void {

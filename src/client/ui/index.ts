@@ -118,7 +118,8 @@ export interface Hud {
   /** Global stats panel (#hud-stats, top-right). Shown only in shared zones; null hides it. */
   setStats(stats: SocialStats | null): void;
   notice(text: string, kind: "info" | "error" | "loot"): void;
-  openShop(npc: string, name: string, offers: ShopOffer[], buys: ItemId[]): void;
+  /** `counter`: the bar menu from a stool, whose orders are served in front of you (shared/counterMeal.ts). */
+  openShop(npc: string, name: string, offers: ShopOffer[], buys: ItemId[], counter?: boolean): void;
   closeShop(): void;
   setGoals(goals: VillageGoal[]): void;
   setPing(ms: number): void;
@@ -139,6 +140,8 @@ export interface Hud {
   animal?(view: AnimalView, open: boolean): void;
   /** A villager's line answering you (the conversation window shows it). */
   npcSaid?(entityId: string, text: string): void;
+  /** Entity id of the villager whose conversation window is open, else null. */
+  talkingTo?(): string | null;
   /** The server refused a conversation-window reply. */
   npcSayFailed?(reason: string): void;
   /** A global announcement (ui/shout-banner.ts): marquee banner, top centre, with chimes. */
@@ -209,7 +212,7 @@ export type CreateChat = (
 ) => Chat;
 
 export interface ShopDialog {
-  open(npc: string, name: string, offers: ShopOffer[], buys: ItemId[], inv: Inventory): void;
+  open(npc: string, name: string, offers: ShopOffer[], buys: ItemId[], inv: Inventory, counter?: boolean): void;
   setInventory(inv: Inventory): void;
   close(): void;
 }

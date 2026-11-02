@@ -133,9 +133,13 @@ export const createShop: CreateShop = (root, opts) => {
   for (const t of [buyTab, sellTab]) t.setAttribute("role", "tab");
   add(tabs, buyTab, sellTab);
 
+  // The bar menu orders one plate to eat on the spot: no quantities, a word on how it's served.
+  const counterNote = el("p", "dlg-note", "Served on the counter in front of your stool.");
+  counterNote.hidden = true;
+
   const list = el("ul", "dlg-list");
   list.id = "shop-list";
-  add(dialog, header, tabs, list);
+  add(dialog, header, tabs, counterNote, list);
   add(root, dialog);
 
   let npc = "";
@@ -143,6 +147,7 @@ export const createShop: CreateShop = (root, opts) => {
   let buys: ItemId[] = [];
   let inv: Inventory = { coins: 0, slots: [] };
   let tab: "buy" | "sell" = "buy";
+  let counter = false;
   const buyQty = new Map<ItemId, number>();
   /** The last Buy press, so the price floats up only once the server has taken the coins. */
   let pendingBuy: (PendingBuy & { item: ItemId }) | null = null;
@@ -160,6 +165,9 @@ export const createShop: CreateShop = (root, opts) => {
     buyTab.classList.toggle("is-active", tab === "buy");
     sellTab.classList.toggle("is-active", tab === "sell");
     sellTab.hidden = buys.length === 0;
+    tabs.hidden = counter;
+    counterNote.hidden = !counter;
+    dialog.classList.toggle("is-counter", counter);
     list.replaceChildren(...(tab === "buy" ? buyRows() : sellRowEls()));
   }
 
@@ -169,13 +177,13 @@ export const createShop: CreateShop = (root, opts) => {
       const li = el("li", "dlg-row");
       li.dataset.item = o.item;
       const price = el("span", "dlg-price");
-      const action = button("Buy", "dm-btn-primary dlg-action", () => {
-        const qty = buyQty.get(o.item) ?? 1;
+      const action = button(counter ? "Order" : "Buy", "dm-btn-primary dlg-action", () => {
+        const qty = counter ? 1 : (buyQty.get(o.item) ?? 1);
         pendingBuy = { total: o.price * qty, coinsBefore: inv.coins, at: performance.now(), item: o.item };
         opts.send({ t: "buy", npc, item: o.item, qty });
       }, "confirm");
       const refresh = () => {
-        const qty = buyQty.get(o.item) ?? 1;
+        const qty = counter ? 1 : (buyQty.get(o.item) ?? 1);
         const total = o.price * qty;
         price.textContent = coinText(total);
         const ok = total <= inv.coins;
@@ -189,7 +197,8 @@ export const createShop: CreateShop = (root, opts) => {
         MAX_STEP_QTY,
         refresh,
       );
-      add(li, icon(o.item), el("span", "dlg-name", itemName(o.item)), el("span", "dlg-unit", `${o.price} c each`), st.root, price, action);
+      if (counter) add(li, icon(o.item), el("span", "dlg-name", itemName(o.item)), el("span", "dlg-unit", ""), price, action);
+      else add(li, icon(o.item), el("span", "dlg-name", itemName(o.item)), el("span", "dlg-unit", `${o.price} c each`), st.root, price, action);
       refresh();
       return li;
     });
@@ -226,14 +235,15 @@ export const createShop: CreateShop = (root, opts) => {
   });
 
   return {
-    open(npcId, name, o, b, i) {
+    open(npcId, name, o, b, i, atCounter) {
       const wasOpen = !dialog.hidden;
-      if (npcId !== npc) {
+      if (npcId !== npc || !!atCounter !== counter) {
         buyQty.clear();
         sellQty.clear();
         tab = "buy";
       }
       npc = npcId;
+      counter = !!atCounter;
       offers = o;
       buys = b;
       inv = i;

@@ -1109,6 +1109,22 @@
    "derivedSit": [
     "torso/vest/torso_clothes_vest"
    ]
+  },
+  "wren": {
+   "base": "../characters/wren.png",
+   "act": "../characters/wren.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/aprons/torso_aprons_apron_full"
+   ]
+  },
+  "jory": {
+   "base": "../characters/jory.png",
+   "act": "../characters/jory.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/aprons/torso_aprons_apron"
+   ]
   }
  }
 }

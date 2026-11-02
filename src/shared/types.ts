@@ -113,6 +113,20 @@ export interface EntityState {
   jailed?: boolean;
   /** Players only: their level (shared/leveling.ts), shown on the player card. */
   level?: number;
+  /** Players only: a plate served on the counter in front of their bar stool (shared/counterMeal.ts). */
+  meal?: CounterMeal;
+}
+
+/** A meal served across a bar counter, eaten seated (shared/counterMeal.ts). */
+export interface CounterMeal {
+  item: ItemId;
+  /** Server time it was served (eating starts at once). */
+  at: number;
+  /** Plate centre in tile coords: the counter tile in front of the seat. */
+  x: number;
+  y: number;
+  /** The seat it was served to. */
+  seat: string;
 }
 
 /** Character creator choices; every field is an option id listed in shared/look.ts. */
