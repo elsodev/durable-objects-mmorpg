@@ -1,9 +1,9 @@
 // Renders the code-drawn emote pixel maps to canvases (DOM picker) and Pixi textures (bubbles).
 import { Texture } from "pixi.js";
-import type { EmoteCode } from "../../shared/emotes";
+import type { BubbleCode } from "../../shared/emotes";
 import { EMOTE_PALETTE, EMOTE_PIXELS } from "./emote-pixels";
 
-export function emoteCanvas(code: EmoteCode, scale = 2): HTMLCanvasElement {
+export function emoteCanvas(code: BubbleCode, scale = 2): HTMLCanvasElement {
   const rows = EMOTE_PIXELS[code];
   const c = document.createElement("canvas");
   c.width = 12 * scale;
@@ -22,7 +22,7 @@ export function emoteCanvas(code: EmoteCode, scale = 2): HTMLCanvasElement {
 }
 
 const urls = new Map<string, string>();
-export function emoteDataUrl(code: EmoteCode, scale = 3): string {
+export function emoteDataUrl(code: BubbleCode, scale = 3): string {
   const k = `${code}@${scale}`;
   let u = urls.get(k);
   if (!u) {
@@ -32,9 +32,9 @@ export function emoteDataUrl(code: EmoteCode, scale = 3): string {
   return u;
 }
 
-const textures = new Map<EmoteCode, Texture>();
+const textures = new Map<BubbleCode, Texture>();
 /** Drawn at 2x and scaled with nearest filtering, so pixels stay crisp at any zoom. */
-export function emoteTexture(code: EmoteCode): Texture {
+export function emoteTexture(code: BubbleCode): Texture {
   let t = textures.get(code);
   if (!t) {
     t = Texture.from(emoteCanvas(code, 2));

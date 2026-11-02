@@ -18,6 +18,7 @@ import {
 import { worldDay } from "../../shared/calendar";
 import { removeFromSlot } from "../../shared/engine";
 import { getItem } from "../../shared/items";
+import { hurtBond, upsetEmote, upsetLine, type UpsetEmote } from "../../shared/animalUpset";
 import { boltLine, rollsAway, rollsSnatch } from "../../shared/mischief";
 import type { Inventory } from "../../shared/types";
 
@@ -93,4 +94,18 @@ export function henView(hen: Chicken, entity: string, now: number): AnimalView {
 export function petHen(hen: Chicken, entity: string, now: number): CareOutcome {
   hen.petDay = worldDay(now);
   return { ok: true, view: henView(hen, entity, now), delta: 0, text: "The hen clucks happily." };
+}
+
+/** A sword swing caught the animal: no harm done, but it likes you a heart less and runs off. */
+export type UpsetOutcome = { view: AnimalView; delta: number; text: string; emote: UpsetEmote };
+
+export function swordAnimal(save: AnimalSave, def: VillageAnimal, entity: string, now: number, yours = false): UpsetOutcome {
+  const r = hurtBond(bondWith(save, def.id));
+  const emote = upsetEmote(def.species);
+  return { view: animalView(save, def, entity, now, yours), delta: r.delta, text: upsetLine(def.name, emote), emote };
+}
+
+/** Hens keep no affection: a swing only frightens her. */
+export function swordHen(hen: Chicken, entity: string, now: number): UpsetOutcome {
+  return { view: henView(hen, entity, now), delta: 0, text: upsetLine("The hen", "scared"), emote: "scared" };
 }

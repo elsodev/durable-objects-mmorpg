@@ -5,8 +5,9 @@
 import type { Species } from "../../shared/animals";
 import { ANIMAL_PREFIX } from "../../shared/animals";
 import { canStand, type CollisionGrid } from "../../shared/engine";
-import { animalGrid, animalStart, newAnimalMind, pickRunAway, reactToLove, startRun, stepAnimal, type AnimalMind } from "../../shared/engine/animals";
-import type { EntityState, MapExit, MapProp, Vec2 } from "../../shared/types";
+import { animalGrid, animalStart, newAnimalMind, pickFlee, pickRunAway, reactToLove, startFlee, startRun, stepAnimal, type AnimalMind } from "../../shared/engine/animals";
+import { inSwingArc } from "../../shared/engine/combat";
+import type { EntityState, Facing, MapExit, MapProp, Vec2 } from "../../shared/types";
 
 /** The animal grid is rebuilt from the map's grid this often, so felled trees or new furniture count. */
 const GRID_REFRESH_MS = 2000;
@@ -110,6 +111,21 @@ export class AnimalHerd {
     if (!path) return false;
     startRun(m.entity, m.mind, path, now);
     return true;
+  }
+
+  /** A fright (a sword swung at it): it sprints well away from `from`. False when it is cornered. */
+  flee(entityId: string, from: Vec2, now: number): boolean {
+    const m = this.members.get(entityId);
+    if (!m) return false;
+    const path = pickFlee(m.entity, from, this.walkable(now), this.rand);
+    if (!path) return false;
+    startFlee(m.entity, m.mind, path, now);
+    return true;
+  }
+
+  /** Everyone inside a sword sweep from `origin` toward `facing`. */
+  inArc(origin: Vec2, facing: Facing): { spec: AnimalSpec; entity: EntityState }[] {
+    return [...this.members.values()].filter((m) => inSwingArc(origin, facing, m.entity));
   }
 
   /** The animal stops, turns to `toward` and looks happy for a moment. */

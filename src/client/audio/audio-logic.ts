@@ -192,9 +192,16 @@ export const ANIMAL_HEAR_RANGE = 10;
 
 /**
  * The sound an animal makes with an emote: when petted or fed (a heart) dogs bark, cats purr and
- * hens cluck; the husky howls a happy "awoo" instead, and yips as it bolts (a laugh).
+ * hens cluck; the husky howls a happy "awoo" instead, and yips as it bolts (a laugh). Swung at
+ * with a sword, a dog barks crossly (angry), and a cat meows or a hen squawks in fright (scared).
  */
 export function animalLoveSfx(sprite: string, code = "heart"): string | null {
+  if (code === "angry" || code === "scared") {
+    if (sprite.startsWith("dog_")) return "dog_bark";
+    if (sprite.startsWith("cat_")) return "cat_meow";
+    if (sprite.startsWith("chicken_")) return "hen_cluck";
+    return null;
+  }
   if (sprite === "dog_husky") return code === "laugh" ? "husky_yip" : "husky_awoo";
   if (code !== "heart") return null;
   if (sprite.startsWith("dog_")) return "dog_bark";

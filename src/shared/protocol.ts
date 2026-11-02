@@ -18,7 +18,7 @@ import type {
 import { MAX_FRAME_BYTES, validateClientMsg } from "./validate";
 import type { HomeClientMsg, HomeServerMsg } from "./home";
 import type { VisitInfo, VisitServerMsg } from "./visits";
-import type { EmoteCode } from "./emotes";
+import type { BubbleCode, EmoteCode } from "./emotes";
 import type { BondView } from "./hearts";
 import type { ChestView } from "./chests";
 import type { AnimalView } from "./animals";
@@ -246,7 +246,7 @@ export type ServerMsg =
   /** A guest tried to leave home; the client shows the "create an account" prompt. */
   | { t: "needAccount"; reason: string }
   /** Someone here emoted: `from` is their entity id. */
-  | { t: "emote"; from: string; code: EmoteCode }
+  | { t: "emote"; from: string; code: BubbleCode }
   /**
    * Friendship with one villager changed or was looked at. `talk`: you just spoke to them (the
    * client opens the talk card); `from`: their entity id here, for the floating hearts.

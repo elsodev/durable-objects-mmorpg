@@ -31,6 +31,8 @@ export interface AnimalMind {
   movedAt: number;
   /** Running off (a getaway): tiles per second for this walk; cleared when it stops. */
   speed?: number;
+  /** After a fright: it stays alert (no rest, nap or wander) until this time (ms). */
+  waryUntil?: number;
 }
 
 /** Walk speed in tiles per second: unhurried, well below a player's. */
@@ -160,7 +162,11 @@ export function stepAnimal(e: EntityState, m: AnimalMind, grid: CollisionGrid, d
     m.movedAt = now;
   }
   if (r.arrived) m.path.shift();
-  if (m.path.length === 0 || now - m.movedAt > STUCK_MS) settle(e, m, "idle", now, rand);
+  if (m.path.length === 0 || now - m.movedAt > STUCK_MS) {
+    settle(e, m, "idle", now, rand);
+    // A frightened animal stands its distance a while before it settles back into its day.
+    if (m.waryUntil !== undefined && m.until < m.waryUntil) m.until = m.waryUntil;
+  }
   return true;
 }
 
@@ -192,6 +198,42 @@ export function pickRunAway(at: Vec2, from: Vec2, grid: CollisionGrid, rand: () 
     if (path && path.length > 0 && path.length <= RUN_MAX_PATH) return path;
   }
   return null;
+}
+
+/** A sword-scare flee: further than a playful getaway, and always away from the attacker. */
+export const FLEE_MIN = 6;
+export const FLEE_MAX = 10;
+const FLEE_MAX_PATH = 20;
+
+/**
+ * A path fleeing `from` (whoever swung at it): FLEE_MIN to FLEE_MAX tiles off, within a right
+ * angle of straight away so it never runs past the attacker. Tries narrow first, then wider, then
+ * shorter hops if it is cornered. Null when nowhere fits.
+ */
+export function pickFlee(at: Vec2, from: Vec2, grid: CollisionGrid, rand: () => number): Vec2[] | null {
+  const same = at.x === from.x && at.y === from.y;
+  const away = same ? rand() * Math.PI * 2 : Math.atan2(at.y - from.y, at.x - from.x);
+  for (let i = 0; i < 18; i++) {
+    const spread = i < 8 ? 0.5 : i < 14 ? 1.2 : Math.PI / 2 - 0.05;
+    const reach = i < 14 ? FLEE_MIN + rand() * (FLEE_MAX - FLEE_MIN) : 2 + rand() * (FLEE_MIN - 2);
+    const a = away + (rand() * 2 - 1) * spread;
+    const t = { x: Math.floor(at.x + Math.cos(a) * reach) + 0.5, y: Math.floor(at.y + Math.sin(a) * reach) + 0.5 };
+    if (!canStand(grid, t.x, t.y) || dist(t, at) < 1.5) continue;
+    // Snapping to a tile centre must not leave the end any closer to the attacker.
+    if (!same && dist(t, from) <= dist(at, from)) continue;
+    const path = findPath(grid, at, t);
+    if (path && path.length > 0 && path.length <= FLEE_MAX_PATH) return path;
+  }
+  return null;
+}
+
+/** How long a fright lasts in all: the sprint away, then standing alert, before normal wandering. */
+export const WARY_MS = 6000;
+
+/** Starts a flee along `path`: a getaway sprint, then alert until WARY_MS after the fright. */
+export function startFlee(e: EntityState, m: AnimalMind, path: Vec2[], now: number): void {
+  startRun(e, m, path, now);
+  m.waryUntil = now + WARY_MS;
 }
 
 /** Starts a getaway along `path` at RUN_SPEED (the client sees act "run"). */

@@ -2,7 +2,7 @@
 // Name tags, speech bubbles, NPC status and hp bars, drawn into layers.overlay at headOf() each frame.
 // All strings reach the screen through Text.text only (never HTML), after sanitizeText().
 import { Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
-import { EMOTE_MS, type EmoteCode } from "../../shared/emotes";
+import { EMOTE_MS, type BubbleCode } from "../../shared/emotes";
 import { truncateWords } from "../../shared/social";
 import { emoteTexture } from "../art/emotes";
 import type { CreateOverlays, Overlays } from "../contracts";
@@ -193,7 +193,7 @@ interface View {
 }
 
 interface Emoted {
-  code: EmoteCode;
+  code: BubbleCode;
   at: number;
 }
 

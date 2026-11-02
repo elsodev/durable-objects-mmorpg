@@ -14,6 +14,11 @@ export const EMOTES = [
   "thanks",
 ] as const;
 export type EmoteCode = (typeof EMOTES)[number];
+/** Bubbles only the server shows (a frightened animal); players can't send these. */
+export const SERVER_EMOTES = ["scared"] as const;
+/** Anything a bubble can show: a player emote or a server-only one. */
+export type BubbleCode = EmoteCode | (typeof SERVER_EMOTES)[number];
+export const BUBBLES: readonly BubbleCode[] = [...EMOTES, ...SERVER_EMOTES];
 export const EMOTE_MS = 3000;
 /** Minimum gap between two emotes from one player. */
 export const EMOTE_MIN_INTERVAL_MS = 800;

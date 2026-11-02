@@ -24,7 +24,7 @@ import { DurableObject } from "cloudflare:workers";
 import { TRAVEL_SPAWN, travelBlock } from "../shared/travel";
 import { devToolsEnabled, H_VISIT_LOOK, H_VISIT_OWNER, H_VISIT_RETURN, H_VISIT_SPRITE, type Env } from "./env";
 import type { HomeMapId, Inventory, Look, ZoneId } from "../shared/types";
-import { TICK_MS, type EntityState, type FarmTile, type MapExit, type PlacedObject, type RockOre, type Vec2 } from "../shared/types";
+import { TICK_MS, type EntityState, type Facing, type FarmTile, type MapExit, type PlacedObject, type RockOre, type Vec2 } from "../shared/types";
 import { parseDropRates, type DropRates } from "../shared/engine/dropRate";
 import type { DaySummary, HomeServerMsg } from "../shared/home";
 import { decodeClient, type ClientMsg, type ImpactStamp, type ServerMsg } from "../shared/protocol";
@@ -124,7 +124,8 @@ import { sanitizeBonds, type Bonds } from "../shared/hearts";
 import { ANIMAL_CARE_REACH, ANIMAL_PREFIX, emptyAnimals, sanitizeAnimals, villageAnimal, type AnimalSave } from "../shared/animals";
 import { BARN_ID, BARN_ITEM, BARN_CAPACITY, chickenById, collectEgg, layEggs } from "../shared/ranch";
 import { AnimalHerd } from "./game/animalHerd";
-import { feedAnimal, petAnimal, petHen, type CareOutcome } from "./game/animalCare";
+import { feedAnimal, petAnimal, petHen, swordAnimal, swordHen, type CareOutcome, type UpsetOutcome } from "./game/animalCare";
+import { HitCooldown } from "../shared/animalUpset";
 import { eggSpots, eggViews, ensureBarn, yardAnimals } from "./home/ranch";
 import { ensureWardrobe, WARDROBE_ID, wardrobeRefusal } from "./home/wardrobe";
 import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../shared/spawns";
@@ -143,6 +144,7 @@ import {
   STUMP_RULE,
   toolKeyOf,
   TREE_RULES,
+  weaponStats,
   type ToolKey,
   type ToolTarget,
 } from "../shared/engine/toolRules";
@@ -314,6 +316,8 @@ export class HomeRoom extends DurableObject<Env> {
   /** Hit progress on rocks, trees and stumps (not persisted: it fades anyway). */
   private hits = new HitTracker();
   private player: HPlayer | null = null;
+  /** One upset per animal every few seconds, however fast the sword swings. */
+  private animalHits = new HitCooldown();
   private mail: MailState = emptyMail();
   /** The owner's dash time under one stamina point (not saved: it is less than half a second). */
   private dashCarry = 0;
@@ -2049,6 +2053,8 @@ export class HomeRoom extends DurableObject<Env> {
     if (!inToolReach(p.entity, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
     // Tools work in the yard; inside the house there is nothing to till, water or break.
     if (p.map !== "home") return this.reject(p, msg, "Nothing to do here.");
+    // A sword swung at your own pets or hens: they aren't hurt, but they're upset (scareAnimals).
+    if (weaponStats(def.id)?.arc && this.herd.inArc(p.entity, p.entity.facing).length > 0) return this.swordAtAnimals(p, key);
     // Swing at the tile that was clicked, not wherever the player happened to face.
     this.faceTile(p, msg.x, msg.y);
     // Farm functions run on the home day, not on real time (see homeclock.farmNow).
@@ -2491,6 +2497,45 @@ export class HomeRoom extends DurableObject<Env> {
     send(p.ws, { t: "notice", text: out.text, kind: "info" });
     if (msg.t === "feedAnimal") this.inventoryChanged(p);
     else this.persist({ save: true });
+    this.startTick();
+  }
+
+  /** The sweep lands at the swing's impact frame; whoever is in the arc then is upset. */
+  private swordAtAnimals(p: HPlayer, key: ToolKey): void {
+    const facing = p.entity.facing;
+    const delay = impactDelayMs(key, facing);
+    const land = () => {
+      if (this.player === p && p.map === "home") this.scareAnimals(p, facing, Date.now());
+    };
+    if (delay <= 0) land();
+    else setTimeout(land, delay);
+  }
+
+  /**
+   * Each pet in the arc likes you a heart less (hens just take fright); everyone in the yard sees
+   * the angry or scared bubble and the animal running off away from you.
+   */
+  private scareAnimals(p: HPlayer, facing: Facing, now: number): void {
+    const animals = this.animals();
+    let changed = false;
+    for (const a of this.herd.inArc(p.entity, facing)) {
+      if (!this.animalHits.allow(a.entity.id, now)) continue;
+      let out: UpsetOutcome | null = null;
+      if (a.spec.species === "chicken") {
+        const hen = chickenById(animals, a.spec.id);
+        if (hen) out = swordHen(hen, a.entity.id, now);
+      } else {
+        const def = villageAnimal(a.spec.id.replace(/^pet_/, ""));
+        if (def) out = swordAnimal(animals, def, a.entity.id, now, true);
+      }
+      if (!out) continue;
+      changed ||= out.delta !== 0;
+      this.herd.flee(a.entity.id, p.entity, now);
+      this.toMap("home", { t: "emote", from: a.entity.id, code: out.emote });
+      send(p.ws, { t: "animal", view: out.view, delta: out.delta });
+      send(p.ws, { t: "notice", text: out.text, kind: "error" });
+    }
+    if (changed) this.persist({ save: true });
     this.startTick();
   }
 

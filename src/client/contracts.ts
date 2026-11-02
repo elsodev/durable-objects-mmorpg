@@ -2,7 +2,7 @@
 // so these interfaces are the ONLY way modules talk to each other. Add optional members if needed;
 // never rename or remove. Every factory returns an object with destroy() where it owns display objects.
 import type { Application, Container, Sprite, Texture } from "pixi.js";
-import type { EmoteCode } from "../shared/emotes";
+import type { BubbleCode } from "../shared/emotes";
 import type { CropLook } from "../shared/engine";
 import type { ClientMsg, ServerMsg, VillageGoal } from "../shared/protocol";
 import type {
@@ -380,7 +380,7 @@ export interface Overlays {
   sync(states: EntityState[], headOf: (id: string) => Vec2 | null, youId: string | null): void;
   say(entityId: string, text: string): void;
   /** Icon bubble above the head for EMOTE_MS (shared/emotes.ts). Optional for older overlay builds. */
-  emote?(entityId: string, code: EmoteCode): void;
+  emote?(entityId: string, code: BubbleCode): void;
   destroy(): void;
 }
 export type CreateOverlays = (layers: Layers) => Overlays;

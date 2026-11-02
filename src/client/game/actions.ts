@@ -65,6 +65,12 @@ export function withinInteract(you: Vec2, target: Vec2): boolean {
 }
 
 /** Item in a slot if it is something you "use" on a tile (tools and seeds). */
+/** With a sword in hand, clicking a cat, dog or hen swings at it instead of petting it. */
+export function swingsAtAnimals(inv: Inventory, slot: number): boolean {
+  const id = usableItem(inv, slot);
+  return !!id && getItem(id)?.tool === "sword";
+}
+
 export function usableItem(inv: Inventory, slot: number): string | null {
   const s = inv.slots[slot];
   if (!s || s.qty <= 0) return null;

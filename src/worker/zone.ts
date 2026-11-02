@@ -18,6 +18,7 @@ import {
   SHARED_ZONES,
   TICK_MS,
   type EntityState,
+  type Facing,
   type Inventory,
   type Look,
   type MapData,
@@ -132,7 +133,8 @@ import { eatFrom, eatNotice } from "../shared/engine/eating";
 import { AnimalHerd } from "./game/animalHerd";
 import { syncZoneHerd } from "./game/zoneHerd";
 import { zoneHasAnimals } from "../shared/roam";
-import { adoptAnimal, feedAnimal, petAnimal, type CareOutcome } from "./game/animalCare";
+import { adoptAnimal, feedAnimal, petAnimal, swordAnimal, type CareOutcome } from "./game/animalCare";
+import { HitCooldown } from "../shared/animalUpset";
 import { townhallBuy, townhallSell, townhallShop } from "./game/townhall";
 import { ANIMAL_CARE_REACH, ANIMAL_PREFIX, animalView, bondWith, HEART_PTS, MAX_ANIMAL_HEARTS, sanitizeAnimals, villageAnimal, type AnimalSave } from "../shared/animals";
 import { TOWNHALL_DESK, TOWNHALL_SHOP } from "../shared/ranch";
@@ -283,6 +285,8 @@ export class ZoneRoom extends DurableObject<Env> {
   private donationIds = new Map<string, number>();
   private chatGuards = new ChatGuards();
   private emotes = new Throttle(EMOTE_MIN_INTERVAL_MS);
+  /** One upset per player and animal every few seconds, however fast the sword swings. */
+  private animalHits = new HitCooldown();
   /** Notice board votes and take-downs: each is a SocialRoom call, so a few a second at most. */
   private noticeEdits = new Throttle(NOTICE_EDIT_MS);
   /** The "bag full, loot on the ground" notice once in a while, not on every kill. */
@@ -1298,7 +1302,9 @@ export class ZoneRoom extends DurableObject<Env> {
     if (key === "water" && isWaterSource(world.map, msg.x, msg.y)) return this.refillCan(p, msg);
     const weapon = weaponStats(def.id);
     // A sword sweeps the arc in front of you: everything in it is hit, whatever tile you aimed at.
-    if (weapon?.arc && world.monsters.inArc(p.entity, p.entity.facing).length > 0) {
+    // A cat or dog in the sweep isn't hurt, but it is upset with you (scareAnimals).
+    const sweep = weapon?.arc ? world.monsters.inArc(p.entity, p.entity.facing).length + (world.animals?.inArc(p.entity, p.entity.facing).length ?? 0) : 0;
+    if (weapon && sweep > 0) {
       return this.strikeAtImpact(p, weapon, null, key);
     }
     const aimed = world.monsters.targetAt(msg.x, msg.y);
@@ -1441,6 +1447,7 @@ export class ZoneRoom extends DurableObject<Env> {
       if (!world || this.players.get(p.ws) !== p) return;
       const targets = strikeTargets(world.monsters, p.entity, facing, weapon, aimedId);
       if (targets.length > 0) this.attack(p, targets, weapon, Date.now());
+      if (weapon.arc) this.scareAnimals(p, facing, Date.now());
     };
     const delay = impactDelayMs(key, facing);
     if (delay <= 0) land();
@@ -2002,6 +2009,26 @@ export class ZoneRoom extends DurableObject<Env> {
     send(p.ws, { t: "animal", view: out.view, delta: out.delta, ...((open && !out.ran) || msg.t === "adoptAnimal" ? { open: true } : {}), ...(msg.t === "adoptAnimal" ? { adopted: true } : {}), ...(msg.t === "feedAnimal" ? { fed: true } : {}) });
     if (out.text) send(p.ws, { t: "notice", text: out.text, kind: msg.t === "adoptAnimal" ? "loot" : "info" });
     p.saveSoon.schedule();
+  }
+
+  /**
+   * A sword sweep caught village animals: each one in the arc (where it stands when the blade
+   * lands, judged here, never by the client) likes this player a heart less, shows an angry or
+   * scared bubble that everyone sees, and runs off away from the swinger.
+   */
+  private scareAnimals(p: ZPlayer, facing: Facing, now: number): void {
+    const herd = this.world?.animals;
+    if (!herd) return;
+    for (const a of herd.inArc(p.entity, facing)) {
+      const def = villageAnimal(a.spec.id);
+      if (!def || !this.animalHits.allow(`${p.userId}:${a.entity.id}`, now)) continue;
+      const out = swordAnimal(p.animals, def, a.entity.id, now);
+      herd.flee(a.entity.id, p.entity, now);
+      this.broadcast({ t: "emote", from: a.entity.id, code: out.emote });
+      send(p.ws, { t: "animal", view: out.view, delta: out.delta });
+      send(p.ws, { t: "notice", text: out.text, kind: "error" });
+      p.saveSoon.schedule();
+    }
   }
 
   /** The town hall counter (the mayor's desk): the barn, hens and pet treats; it buys eggs. */

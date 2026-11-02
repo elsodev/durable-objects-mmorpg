@@ -47,6 +47,7 @@ import {
   propTarget,
   usableHere,
   clickUsesTool,
+  swingsAtAnimals,
   usableItem,
   useTarget,
   withinInteract,
@@ -101,7 +102,7 @@ import { parseChatInput, type ChatTab, type SocialServerMsg } from "../../shared
 import { ANIMAL_PREFIX, ANIMAL_REACH } from "../../shared/animals";
 import { BARN_ID, BARN_SIZE, BARN_SPOT } from "../../shared/ranch";
 import { ANIMAL_HEAR_RANGE, animalLoveSfx } from "../audio/audio-logic";
-import type { EmoteCode } from "../../shared/emotes";
+import { isEmote, type EmoteCode } from "../../shared/emotes";
 import { emoteLine } from "../ui/chat";
 import { playerHit, tileDistance } from "./player-hit";
 import { CLIMB_ACTS } from "../../shared/climb";
@@ -675,6 +676,13 @@ export async function startSession(
     const id = world?.entities.entityAt(at);
     const st = id ? store.latest(id) : null;
     if (!st || st.kind !== "animal") return false;
+    // A sword is swung, not a hand held out: in reach it swings (the server decides what it hits).
+    if (!visiting && swingsAtAnimals(store.inventory, selectedSlot)) {
+      pendingAnimal = null;
+      if (inUseRange(me, st)) useAt(floorTile(st));
+      else moveTo(st.x, st.y + 0.8);
+      return true;
+    }
     if (Math.hypot(st.x - me.x, st.y - me.y) <= ANIMAL_REACH) {
       pendingAnimal = null;
       interact(st.id);
@@ -1076,6 +1084,8 @@ export async function startSession(
           animalSound(msg.from, msg.code);
           break;
         }
+        // Server-only bubbles (a frightened animal) have no chat line.
+        if (!isEmote(msg.code)) break;
         const who = store.latest(msg.from)?.name ?? (msg.from === store.youId ? "You" : "Someone");
         hud.addChat("", emoteLine(who, msg.code), "system", { channel: "zone" });
         break;

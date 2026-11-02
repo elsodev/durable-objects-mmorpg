@@ -1,6 +1,6 @@
 // Emote icons as 12x12 pixel maps, drawn in code (original art, CC0; see assets/emotes/CREDITS.md).
 // Pure data + a DOM-free validity check, so tests can run without a canvas.
-import { EMOTES, type EmoteCode } from "../../shared/emotes";
+import { BUBBLES, type BubbleCode } from "../../shared/emotes";
 
 /** "." is transparent. */
 export const EMOTE_PALETTE: Record<string, string> = {
@@ -19,7 +19,7 @@ const FACE_TOP = ["...kkkkkk...", "..kyyyyyyk..", ".kyyyyyyyyk.", "kyyyyyyyyyyk"
 const FACE_BOTTOM = [".kyyyyyyyyk.", "..kyyyyyyk..", "...kkkkkk..."];
 const HAPPY_EYES = ["kyyykyykyyyk", "kyykykkykyyk"];
 
-export const EMOTE_PIXELS: Record<EmoteCode, string[]> = {
+export const EMOTE_PIXELS: Record<BubbleCode, string[]> = {
   wave: [
     "...k.k.k....",
     "..kykykyk.G.",
@@ -175,12 +175,27 @@ export const EMOTE_PIXELS: Record<EmoteCode, string[]> = {
     "kyyykkkkyyyk",
     ...FACE_BOTTOM,
   ],
+  // A frightened animal: blanched forehead, worried brows, wide eyes, a chattering mouth.
+  scared: [
+    "...kkkkkk...",
+    "..kbbbbbbk..",
+    ".kbbbbbbbbk.",
+    "kbbbkbbkbbbk",
+    "kykkyyyykkyk",
+    "kywwwyywwwyk",
+    "kywkwyywkwyk",
+    "kyyyyyyyyyyk",
+    "kyyykykykyyk",
+    ".kykykykyyk.",
+    "..kyyyyyyk..",
+    "...kkkkkk...",
+  ],
 };
 
 /** Problems with the pixel maps (empty when all are well-formed). */
 export function emotePixelProblems(): string[] {
   const out: string[] = [];
-  for (const code of EMOTES) {
+  for (const code of BUBBLES) {
     const rows = EMOTE_PIXELS[code];
     if (!rows || rows.length !== 12) out.push(`${code}: needs 12 rows`);
     rows?.forEach((r, i) => {
