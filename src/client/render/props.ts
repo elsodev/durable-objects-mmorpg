@@ -11,6 +11,7 @@ import {
   lidBump,
   placeOnSurface,
   propSortZ,
+  frontBodyZ,
   raisedZ,
   surfaceUnder,
   SWAY_TYPES,
@@ -218,9 +219,8 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
     const fx = feet.x * TILE;
     const fy = feet.y * TILE;
 
-    // With a front overlay the main sprite sorts behind anyone from one row north of the
-    // footprint through the footprint itself (the keeper), and the overlay sorts in front.
-    const z = sa.front ? (p.y - 1) * TILE + 1 : propSortZ(p, fy);
+    // With a front overlay the overlay sorts in front of everyone at the footprint.
+    const z = sa.front ? frontBodyZ(p) : propSortZ(p, fy);
     const raised = p.walkable ? raisedZ(p, map.props) : null;
     if (raised !== null) {
       // Hangings on the wall, candles and plates on tables: walkable, but drawn upright.

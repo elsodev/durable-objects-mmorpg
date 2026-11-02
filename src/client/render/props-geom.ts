@@ -116,6 +116,16 @@ export function propSortZ(p: MapProp, fy: number): number {
   return SURFACE_PROPS.has(p.type) ? fy + TABLE_SORT_BIAS : fy;
 }
 
+/**
+ * Sort z of a prop's main sprite when a front overlay is drawn over it. A market stall's frame
+ * stands at the back of its footprint, so anyone north of the footprint is behind it; only the
+ * keeper, inside the footprint, is in front (and the counter overlay hides their legs). A chair's
+ * backrest overlay sorts the seat behind anyone from one row north, so the sitter stays on top.
+ */
+export function frontBodyZ(p: MapProp): number {
+  return p.type === "market_stall" ? p.y * TILE + 1 : (p.y - 1) * TILE + 1;
+}
+
 /** The table, desk or counter a tabletop item stands on. */
 export function surfaceUnder(p: MapProp, props: readonly MapProp[]): MapProp | undefined {
   return props.find((q) => !q.walkable && SURFACE_PROPS.has(q.type) && p.x >= q.x && p.x < q.x + q.w && p.y >= q.y && p.y < q.y + q.h);

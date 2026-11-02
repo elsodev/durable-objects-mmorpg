@@ -155,8 +155,41 @@
   color: var(--dm-berry-dark);
 }
 .home-summary-total {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 10px 0;
   font-size: var(--dm-fs-lg);
+}
+.home-summary-total .home-coin {
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+}
+.home-summary-amount {
+  display: inline-block;
+  min-width: 3ch;
+  font-variant-numeric: tabular-nums;
+}
+.home-summary-amount.is-landed {
+  animation: home-coin-land 260ms ease-out;
+}
+@keyframes home-coin-land {
+  40% {
+    transform: scale(1.25);
+  }
+}
+.home-earned {
+  white-space: nowrap;
+}
+.home-earned .home-coin {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-summary-amount.is-landed {
+    animation: none;
+  }
 }
 .home-sleep-banner {
   position: absolute;

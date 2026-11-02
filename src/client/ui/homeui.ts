@@ -7,6 +7,7 @@ import { getItem } from "../../shared/items";
 import type { ItemId } from "../../shared/types";
 import { iconFor } from "./icons";
 import { itemTip } from "./item-tip";
+import { countUpMs, countUpValue } from "./count-up-logic";
 import { uiSound } from "./sound";
 import "./styles/home.css";
 
@@ -79,6 +80,39 @@ function icon(item: ItemId, qty = 1): HTMLElement {
 }
 
 const QUALITY = ["", "Silver", "Gold"];
+
+/** The bag's coin, so every coin amount in the game looks the same. */
+function coinIcon(): HTMLElement {
+  return el("span", "home-coin dm-coin");
+}
+
+function coinCell(coins: number): HTMLElement {
+  const td = el("td", "home-earned");
+  add(td, coinIcon(), el("span", "", `${coins}`));
+  return td;
+}
+
+/** Runs the total up from 0 with a cash-in sound as it lands. Reduced motion shows it at once. */
+function countUp(node: HTMLElement, target: number): void {
+  const ms = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : countUpMs(target);
+  if (target > 0) uiSound("coins");
+  if (ms === 0) {
+    node.textContent = `${target}`;
+    return;
+  }
+  const start = performance.now();
+  const step = (now: number) => {
+    if (!node.isConnected && now - start > 50) return;
+    const v = countUpValue(target, now - start, ms);
+    node.textContent = `${v}`;
+    if (now - start < ms) requestAnimationFrame(step);
+    else {
+      node.classList.add("is-landed");
+      if (target > 0) uiSound("coins");
+    }
+  };
+  requestAnimationFrame(step);
+}
 
 export function itemLabel(item: ItemId): { name: string; quality: string } {
   const def = getItem(item);
@@ -309,7 +343,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
             const { name, quality } = itemLabel(l.item);
             const iconCell = el("td");
             iconCell.appendChild(icon(l.item));
-            add(tr, iconCell, el("td", "", name), el("td", `q-${quality.toLowerCase() || "normal"}`, quality || "Normal"), el("td", "", `${l.qty}`), el("td", "", `${l.coins} c`));
+            add(tr, iconCell, el("td", "", name), el("td", `q-${quality.toLowerCase() || "normal"}`, quality || "Normal"), el("td", "", `${l.qty}`), coinCell(l.coins));
             table.appendChild(tr);
           }
           if (summary.lines.length === 0) add(p, el("p", "home-muted", "Nothing was shipped today."));
@@ -328,7 +362,11 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
           if (summary.reverted > 0) notes.appendChild(el("li", "", `${summary.reverted} patch${summary.reverted === 1 ? "" : "es"} of empty soil went back to grass.`));
           if (summary.passedOut) notes.appendChild(el("li", "is-bad", `You stayed up past 2:00 and lost ${summary.penalty}g.`));
           if (notes.childElementCount > 0) add(p, notes);
-          const total = el("div", "home-summary-total", `Total earned: ${summary.total - summary.penalty} c`);
+          const earned = summary.total - summary.penalty;
+          const amount = el("span", "home-summary-amount", "0");
+          const total = el("div", "home-summary-total", "Total earned: ");
+          add(total, coinIcon(), amount);
+          countUp(amount, earned);
           add(p, total, btn("Good morning!", "dm-btn dm-btn-primary", "summary-ok", () => closeDialog?.()));
         },
         () => undefined,

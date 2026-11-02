@@ -7,6 +7,7 @@ import {
   placeOnSurface,
   propFeet,
   propSortZ,
+  frontBodyZ,
   raisedZ,
   surfaceUnder,
   type PxRect,
@@ -121,5 +122,17 @@ describe("ladder draw order", () => {
     const z = propSortZ(ladder, 37 * TILE);
     expect(z).toBeLessThan(36.1 * TILE);
     expect(z).toBeGreaterThan(35.9 * TILE);
+  });
+});
+
+describe("market stall layering", () => {
+  const stall = getMap("village").props.find((p) => p.type === "market_stall" && p.id === "stall_produce")!;
+  it("draws someone standing just north of the stall behind its frame", () => {
+    const behindFeet = (stall.y - 0.1) * TILE;
+    expect(behindFeet).toBeLessThan(frontBodyZ(stall));
+  });
+  it("keeps the keeper inside the footprint in front of the frame", () => {
+    const keeperFeet = (stall.y + 1) * TILE; // Odette's feet row
+    expect(keeperFeet).toBeGreaterThan(frontBodyZ(stall));
   });
 });
