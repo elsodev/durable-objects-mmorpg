@@ -42,7 +42,15 @@ Cozy multiplayer farming game with light monster hunting and mining, running on 
 - `npm test`, `npm run typecheck`, `npm run e2e` (Playwright: sign up and play through the main flow)
 - `npm run deploy`
 
+## Guides
+
+Read these before adding or changing art:
+
+- [docs/guides/assets.md](docs/guides/assets.md): where art lives, licences and credits, style rules, cutting rects, anchors, footprints, furniture, layering, and the checklist before committing art.
+- [docs/guides/animated-sprites.md](docs/guides/animated-sprites.md): characters, action and tool layers, monsters, looping props and lids.
+- [docs/guides/sprite-lifecycle.md](docs/guides/sprite-lifecycle.md): art that changes state, such as crop stages, wilting and death, soil, trees and stumps, rocks and bins.
+
 ## Repo hygiene
 
-- This repo is public: commit code, config, tests and the README only. Plans, research notes and design docs stay out of the repo.
+- This repo is public: commit code, config, tests, the README and the guides in `docs/guides`. Plans, research notes and design docs stay out of the repo.
 - Commits are authored by the repo owner; don't add AI attribution trailers.
