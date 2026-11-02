@@ -5,9 +5,9 @@ import { buildHome } from "../src/shared/maps/home";
 import { NPC_SCHEDULE, placeZone } from "../src/shared/npcSchedule";
 import { isFarmable } from "../src/shared/engine";
 import { BUILDING_DOORS } from "../src/shared/maps/interiors";
-import { BLOCKING_GROUND, Ground, INTERIOR_ZONES, type MapData, type MapId, type ZoneId } from "../src/shared/types";
+import { BLOCKING_GROUND, CAVE_DEPTH_ZONES, Ground, INTERIOR_ZONES, type MapData, type MapId, type ZoneId } from "../src/shared/types";
 
-const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", "quarry", ...INTERIOR_ZONES];
+const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", "quarry", ...CAVE_DEPTH_ZONES, ...INTERIOR_ZONES];
 const SIZES: Partial<Record<MapId, [number, number]>> = {
   home: [40, 30],
   village: [64, 48],
@@ -162,8 +162,8 @@ describe.each(ZONES)("map %s", (zone) => {
       expect(target.spawns[e.spawn], `${zone} -> ${dest(e)}:${e.spawn}`).toBeDefined();
       expect(e.spawn).toBe(`from_${zone}`);
       expect(map.spawns[`from_${dest(e)}`], `${zone} needs from_${dest(e)}`).toBeDefined();
-      // and the target has an exit back
-      expect(target.exits.some((b) => dest(b) === zone)).toBe(true);
+      // and the target has an exit back (a cave level's way up may serve several maps above)
+      expect(target.exits.some((b) => dest(b) === zone || b.back?.includes(zone as ZoneId))).toBe(true);
     }
   });
 
@@ -311,7 +311,7 @@ describe("village paths", () => {
 
 describe("hasMap", () => {
   it("knows every zone and home map, and nothing else", () => {
-    for (const z of ["village", "riverside", "caves", "quarry", "home", "home_in"]) expect(hasMap(z)).toBe(true);
+    for (const z of ["village", "riverside", "caves", "quarry", "home", "home_in", ...CAVE_DEPTH_ZONES]) expect(hasMap(z)).toBe(true);
     for (const z of ["mines", "", "toString", "__proto__", 3, null]) expect(hasMap(z)).toBe(false);
   });
 });

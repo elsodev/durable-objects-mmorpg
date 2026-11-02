@@ -55,8 +55,8 @@ export class GroundItems {
   }
 
   /** Forage growing at a tile point; nobody owns it and it doesn't expire. */
-  forage(item: ItemId, at: Vec2): GroundItem | null {
-    return this.add({ item, qty: 1, x: at.x, y: at.y, owner: null, expiresAt: null });
+  forage(item: ItemId, at: Vec2, qty = 1): GroundItem | null {
+    return this.add({ item, qty: Math.max(1, Math.floor(qty)), x: at.x, y: at.y, owner: null, expiresAt: null });
   }
 
   private add(g: Omit<GroundItem, "id">): GroundItem | null {

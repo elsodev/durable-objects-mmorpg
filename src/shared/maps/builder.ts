@@ -216,7 +216,7 @@ export class MapBuilder {
    * Place a 1x1 decoration at (x,y) or the nearest tile (within 4) where it cannot block anything.
    * Returns false if nowhere fits.
    */
-  decorNear(type: PropType, x: number, y: number, opts: { id?: string } = {}): boolean {
+  decorNear(type: PropType, x: number, y: number, opts: { id?: string; label?: string } = {}): boolean {
     for (let r = 0; r <= 4; r++)
       for (let dy = -r; dy <= r; dy++)
         for (let dx = -r; dx <= r; dx++) {
@@ -247,14 +247,15 @@ export class MapBuilder {
   // ---------- rocks (mining nodes, block until broken) ----------
 
   /** Scatter mining rocks in an area, using the same never-disconnect rule as scatter(). */
-  scatterRocks(prefix: string, ores: Ore[], count: number, area: Rect): void {
+  scatterRocks(prefix: string, ores: Ore[], count: number, area: Rect, odds?: { silver: number; gold: number; diamond: number }): void {
     let placed = 0;
     for (let tries = 0; placed < count && tries < count * 60; tries++) {
       const x = this.rng.int(area.x, area.x + area.w - 1);
       const y = this.rng.int(area.y, area.y + area.h - 1);
       if (!this.inBounds(x, y) || !this.safeSingle(x, y)) continue;
       placed++;
-      this.rocks.push({ id: `${prefix}_${placed}`, x, y, ore: this.rng.pick(ores) });
+      const ore = this.rng.pick(ores);
+      this.rocks.push(odds ? { id: `${prefix}_${placed}`, x, y, ore, odds } : { id: `${prefix}_${placed}`, x, y, ore });
       this.markBlocked({ x, y, w: 1, h: 1 });
     }
   }
@@ -267,8 +268,8 @@ export class MapBuilder {
     this.reserve({ x: tx - 1, y: ty - 1, w: 3, h: 3 });
   }
 
-  exit(r: Rect, to: MapExit["to"], spawn: string, map?: MapExit["map"]): void {
-    this.exits.push({ ...r, to, spawn, ...(map ? { map } : {}) });
+  exit(r: Rect, to: MapExit["to"], spawn: string, map?: MapExit["map"], extra: Pick<MapExit, "label" | "back"> = {}): void {
+    this.exits.push({ ...r, to, spawn, ...(map ? { map } : {}), ...extra });
     this.reserve({ x: r.x - 2, y: r.y - 2, w: r.w + 4, h: r.h + 4 });
   }
 
@@ -285,8 +286,8 @@ export class MapBuilder {
     this.reserve({ x: tx, y: ty, w: 1, h: 1 });
   }
 
-  monster(type: MonsterSpawn["type"], tx: number, ty: number, radius: number, count: number): void {
-    this.monsters.push({ type, x: tx + 0.5, y: ty + 0.5, radius, count });
+  monster(type: MonsterSpawn["type"], tx: number, ty: number, radius: number, count: number, extra: Pick<MonsterSpawn, "level" | "tuning"> = {}): void {
+    this.monsters.push({ type, x: tx + 0.5, y: ty + 0.5, radius, count, ...extra });
     this.reserve({ x: tx - 1, y: ty - 1, w: 3, h: 3 });
   }
 

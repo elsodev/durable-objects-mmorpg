@@ -11,6 +11,8 @@ export interface Rock {
   x: number;
   y: number;
   ore: Ore;
+  /** JSON maps: this rock's own odds of coming back rarer. */
+  odds?: { silver: number; gold: number; diamond: number };
 }
 
 export class RockField {

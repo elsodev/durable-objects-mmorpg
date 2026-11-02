@@ -133,5 +133,5 @@ export function ownGet<T>(rec: Record<string, T>, key: unknown): T | undefined {
 
 /** Valid spawn name for `spawns`, else "default". Use for any spawn name that came from a client. */
 export function safeSpawnName(spawns: Record<string, unknown>, name: unknown): string {
-  return typeof name === "string" && /^[a-z_]{1,32}$/.test(name) && Object.hasOwn(spawns, name) ? name : "default";
+  return typeof name === "string" && /^[a-z0-9_]{1,32}$/.test(name) && Object.hasOwn(spawns, name) ? name : "default";
 }

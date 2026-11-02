@@ -3,7 +3,7 @@
 // stats). Pure: no DOM, no Workers APIs.
 import { POSE_COMMANDS, type PoseCode } from "./poses";
 import { cleanChat, MAX_CHAT_LEN } from "./validate";
-import type { ZoneId } from "./types";
+import { CAVE_DEPTH_ZONES, type ZoneId } from "./types";
 import { isValidName } from "./names";
 import { EMOTES, isEmote, type EmoteCode } from "./emotes";
 
@@ -187,7 +187,7 @@ export type SocialServerMsg =
   | { t: "social"; payload: { t: string } & Record<string, unknown> }
   | { t: "pong"; at: number };
 
-const ZONE_IDS: readonly ZoneId[] = ["village", "riverside", "caves", "quarry", "home"];
+const ZONE_IDS: readonly ZoneId[] = ["village", "riverside", "caves", "quarry", ...CAVE_DEPTH_ZONES, "home"];
 export const MAX_SOCIAL_FRAME = 1024;
 
 /** Validates a social socket frame, copying only known fields. */

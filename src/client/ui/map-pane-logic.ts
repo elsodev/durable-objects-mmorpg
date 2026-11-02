@@ -1,5 +1,6 @@
 // Places on the Map tab's island: where each sits on the picture, which one you are in, and
 // whether you can fast-travel there from here.
+import { caveLevelOf } from "../../shared/caveLevels";
 import { isInteriorZone, type ZoneId } from "../../shared/types";
 
 export interface MapRow {
@@ -24,7 +25,7 @@ const PLACES: readonly Omit<MapRow, "here">[] = [
   { id: "village", name: "Village", desc: "Town hall, inn, smithy, market and the villagers' cottages.", pin: { x: 55.5, y: 50 } },
   { id: "riverside", name: "Riverside", desc: "The river, the dock and the fishing spots.", pin: { x: 44, y: 88 } },
   { id: "quarry", name: "Quarry", desc: "The cliffs east of the village and the cave mouth.", pin: { x: 80, y: 57 } },
-  { id: "caves", name: "Caves", desc: "Ore, gems, treasure chests and monsters.", pin: { x: 84.4, y: 35 } },
+  { id: "caves", name: "Caves", desc: "Ore, gems, treasure chests and monsters, four levels deep.", pin: { x: 84.4, y: 35 } },
 ];
 
 /** "int_house_bram" -> "Bram's house", "int_inn" -> "the inn". */
@@ -38,9 +39,10 @@ export function buildingName(zone: string): string {
 }
 
 export function mapRows(zone: ZoneId | null): MapRow[] {
-  const inside = zone && isInteriorZone(zone) ? buildingName(zone) : undefined;
-  // Every building is in the village.
-  const at = inside ? "village" : zone;
+  const cave = caveLevelOf(zone);
+  const inside = zone && isInteriorZone(zone) ? buildingName(zone) : cave ? `depth ${cave.depth}` : undefined;
+  // Every building is in the village; every cave level is in the caves.
+  const at = cave ? "caves" : zone && isInteriorZone(zone) ? "village" : zone;
   return PLACES.map((p) => ({ ...p, here: p.id === at, ...(p.id === at && inside ? { inside } : {}) }));
 }
 

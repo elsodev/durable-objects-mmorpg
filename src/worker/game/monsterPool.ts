@@ -8,6 +8,7 @@ import {
   lootShares,
   MONSTER_IFRAME_MS,
   MONSTER_STATS,
+  levelStats,
   newMonster,
   pickSpawnPoint,
   provoke,
@@ -67,7 +68,7 @@ export class MonsterPool {
     now = 0,
   ) {
     const table = zone ? SPAWN_TUNING[zone] : undefined;
-    this.groups = map.monsters.map((spec, i) => ({ spec, tune: table?.[i] ?? defaultTuning(spec.count), nextSpawnAt: 0, near: 1 }));
+    this.groups = map.monsters.map((spec, i) => ({ spec, tune: table?.[i] ?? spec.tuning ?? defaultTuning(spec.count), nextSpawnAt: 0, near: 1 }));
     // A waking zone starts at its base numbers (nobody is in yet).
     this.groups.forEach((g, i) => {
       for (let n = 0; n < g.tune.base; n++) this.spawnIn(g, i, [], now, true);
@@ -130,7 +131,7 @@ export class MonsterPool {
     const home = { x: g.spec.x, y: g.spec.y };
     const p = pickSpawnPoint(home, g.spec.radius, this.grid, players, initial ? 0 : g.tune.minPlayerDist, this.rand, SPAWN_TRIES) ?? (initial ? home : null);
     if (!p) return false;
-    this.list.push(newMonster(`m:${++this.seq}`, g.spec.type, p, home, g.spec.radius, i, now));
+    this.list.push(newMonster(`m:${++this.seq}`, g.spec.type, p, home, g.spec.radius, i, now, g.spec.level));
     return true;
   }
 
@@ -163,7 +164,7 @@ export class MonsterPool {
     for (const m of targets) {
       if (now < m.iframeUntil || (m.hp ?? 0) <= 0) continue;
       const stats = MONSTER_STATS[m.type];
-      const roll = rollHit(weapon, stats.defense, stats.missChance, this.rand);
+      const roll = rollHit(weapon, levelStats(m.type, m.level).defense, stats.missChance, this.rand);
       provoke(m, attacker.id, now);
       if (roll.miss) {
         out.push({ m, dmg: 0, crit: false, miss: true, kb: null });

@@ -33,4 +33,17 @@ describe("door hints", () => {
     const out = caves.exits.find((e) => e.to === "quarry")!;
     expect(doorHintAt(caves, { x: out.x + 1, y: out.y - 0.5 })?.text).toBe("Exit to Quarry");
   });
+
+  it("shows a cave passage's own label, and hangs the plate below a passage off the top edge", () => {
+    const caves = getMap("caves");
+    const left = caves.exits.find((e) => e.to === "caves_2_left")!;
+    const s = caves.spawns.from_caves_2_left!;
+    expect(doorHintAt(caves, s)).toMatchObject({ text: "← Depth 2: West Hollows", y: left.y });
+    const top = caves.exits.find((e) => e.to === "caves_2_top")!;
+    const hint = doorHintAt(caves, caves.spawns.from_caves_2_top!)!;
+    expect(hint).toMatchObject({ text: "↑ Depth 2: Bat Roost", below: true });
+    expect(hint.y).toBeGreaterThan(top.y + top.h);
+    const deep = getMap("caves_3_top");
+    expect(doorHintAt(deep, deep.spawns.from_caves_2_top!)?.text).toBe("↓ Way back up");
+  });
 });

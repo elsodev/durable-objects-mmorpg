@@ -26,10 +26,29 @@ export const INTERIOR_ZONES = [
   "int_house_tess",
 ] as const;
 export type InteriorZoneId = (typeof INTERIOR_ZONES)[number];
+/**
+ * The deeper cave levels under "caves" (level 1): three wings (left, top, right) on each of
+ * levels 2..4. Their maps are JSON (shared/maps/cave-levels); see docs/guides/json-maps.md.
+ */
+export const CAVE_DEPTH_ZONES = [
+  "caves_2_left",
+  "caves_2_top",
+  "caves_2_right",
+  "caves_3_left",
+  "caves_3_top",
+  "caves_3_right",
+  "caves_4_left",
+  "caves_4_top",
+  "caves_4_right",
+] as const;
+export type CaveDepthZoneId = (typeof CAVE_DEPTH_ZONES)[number];
+export function isCaveDepthZone(z: unknown): z is CaveDepthZoneId {
+  return (CAVE_DEPTH_ZONES as readonly unknown[]).includes(z);
+}
 /** Shared zones everyone sees (served by ZoneRoom), plus the private home. */
-export type SharedZoneId = OutdoorZoneId | InteriorZoneId;
+export type SharedZoneId = OutdoorZoneId | InteriorZoneId | CaveDepthZoneId;
 export type ZoneId = SharedZoneId | "home";
-export const SHARED_ZONES: SharedZoneId[] = [...OUTDOOR_ZONES, ...INTERIOR_ZONES];
+export const SHARED_ZONES: SharedZoneId[] = [...OUTDOOR_ZONES, ...CAVE_DEPTH_ZONES, ...INTERIOR_ZONES];
 
 /**
  * The maps of a player's home, all served by the owner's HomeRoom: "home" is the yard (house
@@ -165,6 +184,13 @@ export interface MapExit {
    * this map on the same connection instead of changing zone.
    */
   map?: HomeMapId;
+  /** What the door plate says near this exit ("Deeper: West Hollows"). */
+  label?: string;
+  /**
+   * A way back up shared by several maps above: a player who arrived from one of these zones
+   * goes back there (to its "from_<this zone>" spawn) instead of to `to`.
+   */
+  back?: ZoneId[];
 }
 
 export interface NpcSpawn {
@@ -181,6 +207,26 @@ export interface MonsterSpawn {
   y: number;
   radius: number;
   count: number;
+  /** Depth level (1 = surface strength): more hp, harder bites, thicker armour. */
+  level?: number;
+  /** Spawn scaling for this group when the zone has no SPAWN_TUNING row (JSON maps). */
+  tuning?: { base: number; perPlayer: number; max: number; respawnMs: number; minPlayerDist: number };
+}
+
+/** One weighted line of a map's drop table; qty is rolled in [min, max]. */
+export interface MapDropEntry {
+  item: ItemId;
+  weight: number;
+  min: number;
+  max: number;
+}
+
+/** Random finds a map rolls on the server (JSON maps). */
+export interface MapDrops {
+  /** Extra roll on every monster kill here: `chance`, then one entry by weight. */
+  kill?: { chance: number; table: MapDropEntry[] };
+  /** Loose finds that turn up on the floor at `spots` (tile centres), topped up every refillMs. */
+  ground?: { spots: Vec2[]; base: number; perPlayer: number; max: number; refillMs: number; minPlayerDist: number; table: MapDropEntry[] };
 }
 
 export interface MapData {
@@ -207,7 +253,7 @@ export interface MapData {
   /** Home only: rectangles where furniture may be placed (indoors). */
   floorArea?: { x: number; y: number; w: number; h: number }[];
   /** Mining nodes that can be broken (caves). */
-  rocks?: { id: string; x: number; y: number; ore: RockOre }[];
+  rocks?: { id: string; x: number; y: number; ore: RockOre; odds?: { silver: number; gold: number; diamond: number } }[];
   /** Chairs, stools and benches anyone may sit on (derived from the seat props). */
   seats?: Seat[];
   /** Outdoor spots villagers walk between during the day (village). */
@@ -220,6 +266,12 @@ export interface MapData {
   homeMap?: HomeMapId;
   /** How the client animates this map's water: ripples in place, or a current (default still). */
   waterStyle?: WaterStyle;
+  /** Treasure chests the zone keeps on its floor (JSON maps; the caves use CHESTS_PER_ZONE). */
+  chests?: number;
+  /** Random kill drops and floor finds (JSON maps). */
+  drops?: MapDrops;
+  /** Cave depth (1 = the caves under the quarry). */
+  depth?: number;
 }
 
 /** Water animation per map: ponds and lakes shimmer in place, rivers drift with the current. */

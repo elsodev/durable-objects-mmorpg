@@ -5,7 +5,7 @@ const ZONES: readonly ZoneId[] = [...SHARED_ZONES, "home"];
 
 /** "/ws/village" -> "village", "/ws/int_inn" -> "int_inn"; anything else -> null. */
 export function parseWsZone(pathname: string): ZoneId | null {
-  const m = /^\/ws\/([a-z_]{1,32})\/?$/.exec(pathname);
+  const m = /^\/ws\/([a-z0-9_]{1,32})\/?$/.exec(pathname);
   if (!m) return null;
   const z = m[1] as ZoneId;
   return ZONES.includes(z) ? z : null;

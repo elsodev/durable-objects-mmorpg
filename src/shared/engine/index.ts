@@ -59,7 +59,9 @@ export {
 export { canPlace, wallFaceRow, MAX_WALL_DROP, type PlaceResult } from "./placement";
 export {
   MONSTER_AI,
+  MONSTER_LEVEL_SCALE,
   MONSTER_STATS,
+  levelStats,
   newMonster,
   provoke,
   rollMonsterDrops,

@@ -19,6 +19,7 @@
 // Visitors (see src/worker/visit): invited accounts may join the owner's home while the owner is
 // here. A visitor socket never takes a lease or touches the visitor's own save (their own HomeRoom
 // keeps both); it can walk, chat and help harvest ready crops for the owner, nothing else.
+import { sanitizeCaveTrail, type CaveTrail } from "../shared/caveLevels";
 import { DurableObject } from "cloudflare:workers";
 import { TRAVEL_SPAWN, travelBlock } from "../shared/travel";
 import { devToolsEnabled, H_VISIT_LOOK, H_VISIT_OWNER, H_VISIT_RETURN, H_VISIT_SPRITE, type Env } from "./env";
@@ -191,6 +192,8 @@ export interface PlayerSave {
   stats?: PlayerStats;
   /** Friendship with each villager met (shared/hearts.ts); zones change it, the home shows it. */
   bonds?: Bonds;
+  /** Cave levels: the map above each one the player last came down from (shared/caveLevels.ts). */
+  caveTrail?: CaveTrail;
   /**
    * savePlayer: the exit just taken (recorded so the next join may use that spawn).
    * loadPlayer: the pending transfer, if any (consumed by the call).
@@ -591,6 +594,7 @@ export class HomeRoom extends DurableObject<Env> {
     // Counters only grow: take the larger of each, so a late save can't roll one back.
     if (save.stats !== undefined) this.save.stats = mergeStats(this.save.stats, save.stats);
     if (save.bonds !== undefined) this.save.bonds = sanitizeBonds(save.bonds);
+    if (save.caveTrail !== undefined) this.save.caveTrail = sanitizeCaveTrail(save.caveTrail);
     if (isZoneId(save.zone) && Number.isFinite(save.x) && Number.isFinite(save.y)) {
       this.save.zone = save.zone;
       this.save.x = save.x;

@@ -1,23 +1,32 @@
-// Forage that grows in a zone (riverside herbs and mushrooms): every refill period the zone tops
-// the forage on the ground back up to a cap that grows with the number of players.
+// Forage that grows in a zone (riverside herbs and mushrooms, finds on the deep cave floors):
+// every refill period the zone tops the forage on the ground back up to a cap that grows with
+// the number of players.
 import { Ground, type MapData, type SharedZoneId, type Vec2 } from "../../shared/types";
 import { canStand, farFromPlayers, forageCap, planForage, weightedItem, type CollisionGrid } from "../../shared/engine";
 import { FORAGE_RULES, type ForageRule } from "../../shared/spawns";
 import type { GroundItem, GroundItems } from "./groundItems";
 import { DEFAULT_DROP_RATES, dropCount, type DropRates } from "../../shared/engine/dropRate";
 
+/** What the grower needs of a rule (a FORAGE_RULES row, or a JSON map's ground drops). */
+export type GrowRule = Pick<ForageRule, "base" | "perPlayer" | "max" | "refillMs" | "minPlayerDist" | "table">;
+
 export class ForageGrower {
   private nextAt = 0;
 
   constructor(
-    readonly rule: ForageRule,
+    readonly rule: GrowRule,
     /** Tile centres forage may grow on. */
     readonly spots: readonly Vec2[],
   ) {}
 
   static forZone(zone: SharedZoneId, map: MapData, grid: CollisionGrid): ForageGrower | null {
     const rule = FORAGE_RULES[zone];
-    if (!rule) return null;
+    if (!rule) {
+      // JSON maps list their own spots; keep only ones still standable (props, rocks).
+      const g = map.drops?.ground;
+      const spots = g ? g.spots.filter((s) => canStand(grid, s.x, s.y)) : [];
+      return g && spots.length > 0 ? new ForageGrower(g, spots) : null;
+    }
     const spots = forageSpots(map, grid, rule);
     return spots.length > 0 ? new ForageGrower(rule, spots) : null;
   }
@@ -35,7 +44,8 @@ export class ForageGrower {
     for (let n = 0; n < want; n++) {
       const spot = this.pickSpot(ground, players, rand);
       const pick = spot ? weightedItem(this.rule.table, rand) : null;
-      const g = spot && pick ? ground.forage(pick.item, spot) : null;
+      const qty = pick && pick.min !== undefined ? pick.min + Math.floor(rand() * (Math.max(pick.min, pick.max ?? pick.min) - pick.min + 1)) : 1;
+      const g = spot && pick ? ground.forage(pick.item, spot, qty) : null;
       if (g) out.push(g);
     }
     return out;

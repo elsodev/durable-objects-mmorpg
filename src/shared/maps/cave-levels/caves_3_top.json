@@ -1,0 +1,54 @@
+{
+  "id": "caves_3_top",
+  "name": "Echo Galleries · Depth 3",
+  "width": 52,
+  "height": 42,
+  "seed": 852275,
+  "ambient": "cave",
+  "depth": 3,
+  "fill": "cave_wall",
+  "floor": "stone",
+  "rooms": [
+    {"id": "landing", "x": 25, "y": 35, "rx": 5, "ry": 3},
+    {"id": "hub", "x": 25, "y": 22, "rx": 13, "ry": 8, "noise": 0.35},
+    {"id": "west", "x": 8, "y": 18, "rx": 6, "ry": 5},
+    {"id": "north", "x": 23, "y": 7, "rx": 7, "ry": 4},
+    {"id": "east", "x": 43, "y": 17, "rx": 6, "ry": 5}
+  ],
+  "tunnels": [
+    {"from": "landing", "to": "hub"},
+    {"from": "hub", "to": "west"},
+    {"from": "hub", "to": "north"},
+    {"from": "hub", "to": "east"}
+  ],
+  "exits": [
+    {"edge": "bottom", "room": "landing", "to": "caves_2_top", "label": "↓ Way back up", "back": ["caves_2_left", "caves_2_right"]},
+    {"edge": "left", "room": "west", "to": "caves_4_left", "label": "← Depth 4: Glowmoss Den"},
+    {"edge": "top", "room": "north", "to": "caves_4_top", "label": "↑ Depth 4: Crystal Spire"},
+    {"edge": "right", "room": "east", "to": "caves_4_right", "label": "→ Depth 4: Gem Vault"}
+  ],
+  "spawns": {"default": {"room": "landing"}},
+  "monsters": [
+    {"room": "hub", "type": "bat", "count": 3, "max": 6, "radius": 4, "level": 3},
+    {"room": "west", "type": "slime", "count": 2, "max": 4, "radius": 4, "level": 3},
+    {"room": "north", "type": "bat", "count": 2, "max": 5, "radius": 4, "level": 3},
+    {"room": "east", "type": "bat", "count": 2, "max": 4, "radius": 4, "level": 3}
+  ],
+  "rocks": [
+    {"room": "hub", "count": 9, "ores": {"iron": 3, "gem": 1}, "odds": {"silver": 0.15, "gold": 0.05, "diamond": 0.01}},
+    {"room": "west", "count": 4, "ores": {"iron": 3, "gem": 1}, "odds": {"silver": 0.15, "gold": 0.05, "diamond": 0.01}},
+    {"room": "north", "count": 3, "ores": {"iron": 3, "gem": 1}, "odds": {"silver": 0.15, "gold": 0.05, "diamond": 0.01}},
+    {"room": "east", "count": 4, "ores": {"iron": 3, "gem": 1}, "odds": {"silver": 0.15, "gold": 0.05, "diamond": 0.01}}
+  ],
+  "decor": [
+    {"type": "rock_deco", "room": "hub", "count": 3},
+    {"type": "rock_deco", "room": "west", "count": 3},
+    {"type": "rock_deco", "room": "north", "count": 3},
+    {"type": "rock_deco", "room": "east", "count": 3}
+  ],
+  "chests": 1,
+  "drops": {
+    "kill": {"chance": 0.3, "table": [{"item": "ore_iron", "weight": 5, "min": 1, "max": 3}, {"item": "ore_silver", "weight": 3, "min": 1, "max": 2}, {"item": "gem_crystal", "weight": 1, "min": 1, "max": 1}, {"item": "ore_gold", "weight": 1, "min": 1, "max": 1}]},
+    "ground": {"rooms": ["hub", "west", "east"], "base": 2, "perPlayer": 0.5, "max": 5, "refillSec": 300, "table": [{"item": "ore_iron", "weight": 4, "min": 1, "max": 2}, {"item": "ore_silver", "weight": 1, "min": 1, "max": 1}, {"item": "mushroom", "weight": 2, "min": 1, "max": 1}]}
+  }
+}

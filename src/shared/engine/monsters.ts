@@ -48,6 +48,8 @@ export interface MonsterState extends EntityState {
   heading: number;
   /** Bats: steering resumes after this (they coast after being hit). */
   coastUntil: number;
+  /** Depth level (deeper caves); absent means 1. */
+  level?: number;
 }
 
 export interface MonsterStats {
@@ -116,6 +118,20 @@ export const MONSTER_STATS: Record<MonsterType, MonsterStats> = {
   },
 };
 
+/** Per level above 1: extra share of base hp and bite damage; armour grows every other level. */
+export const MONSTER_LEVEL_SCALE = { hp: 0.3, damage: 0.2, defenseEvery: 2 } as const;
+
+/** Stats of a monster at `level` (1 = MONSTER_STATS as written). */
+export function levelStats(type: MonsterType, level = 1): Pick<MonsterStats, "hp" | "damage" | "defense"> {
+  const base = MONSTER_STATS[type];
+  const up = Math.max(0, Math.floor(level) - 1);
+  return {
+    hp: Math.round(base.hp * (1 + MONSTER_LEVEL_SCALE.hp * up)),
+    damage: Math.round(base.damage * (1 + MONSTER_LEVEL_SCALE.damage * up)),
+    defense: base.defense + Math.floor(up / MONSTER_LEVEL_SCALE.defenseEvery),
+  };
+}
+
 /** Gems only come from the deep zones. */
 const NO_GEM_ZONES: ReadonlySet<string> = new Set(["riverside"]);
 
@@ -177,8 +193,8 @@ export function rollMonsterDrops(
 }
 
 /** A fresh monster at `at`. */
-export function newMonster(id: string, type: MonsterType, at: Vec2, home: Vec2, radius: number, group: number, now: number): MonsterState {
-  const hp = MONSTER_STATS[type].hp;
+export function newMonster(id: string, type: MonsterType, at: Vec2, home: Vec2, radius: number, group: number, now: number, level = 1): MonsterState {
+  const hp = levelStats(type, level).hp;
   return {
     id,
     kind: "monster",
@@ -208,6 +224,7 @@ export function newMonster(id: string, type: MonsterType, at: Vec2, home: Vec2, 
     lastCombatAt: now,
     heading: 0,
     coastUntil: 0,
+    ...(level > 1 ? { level } : {}),
   };
 }
 
@@ -277,7 +294,7 @@ function contact(m: MonsterState, players: readonly EntityState[], now: number):
   }
   if (!best) return undefined;
   m.lastCombatAt = now;
-  return { playerId: best.id, damage: MONSTER_STATS[m.type].damage };
+  return { playerId: best.id, damage: levelStats(m.type, m.level).damage };
 }
 
 function walk(m: MonsterState, to: Vec2, speed: number, dtMs: number, grid: CollisionGrid): boolean {

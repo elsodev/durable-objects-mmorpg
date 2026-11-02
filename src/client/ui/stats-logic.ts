@@ -1,4 +1,5 @@
 // Pure view model for the global stats panel (#hud-stats). Shown in shared zones only.
+import { caveLevelOf } from "../../shared/caveLevels";
 import type { SocialStats } from "../../shared/social";
 import { isInteriorZone, type ZoneId } from "../../shared/types";
 
@@ -12,6 +13,8 @@ const OUTDOOR_LABEL: Record<string, string> = { village: "village", riverside: "
 
 /** "in the village", "in the inn", "in Pip's house". */
 function zonePhrase(zone: ZoneId): string {
+  const cave = caveLevelOf(zone);
+  if (cave) return `at depth ${cave.depth} of the caves`;
   if (!isInteriorZone(zone)) return `in the ${OUTDOOR_LABEL[zone] ?? zone}`;
   if (zone.startsWith("int_house_")) {
     const owner = zone.slice("int_house_".length);

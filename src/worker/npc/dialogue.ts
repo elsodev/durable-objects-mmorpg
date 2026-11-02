@@ -2,7 +2,7 @@
 // birthday), the tone they take by heart level, and which scripted line key applies. Pure, so
 // ZoneRoom, the NpcAgent prompt and the scripted fallback all agree.
 import type { Season, Weekday } from "../../shared/calendar";
-import { SHARED_ZONES, type SharedZoneId } from "../../shared/types";
+import { isCaveDepthZone, SHARED_ZONES, type SharedZoneId } from "../../shared/types";
 
 export interface Situation {
   /** Hearts with this player, 0..10. */
@@ -91,6 +91,7 @@ const ROOM_NAME: Record<string, string> = { int_townhall: "the town hall", int_i
 export function zonePlace(zone: SharedZoneId): string {
   if (Object.hasOwn(OUTDOOR_NAME, zone)) return OUTDOOR_NAME[zone]!;
   if (Object.hasOwn(ROOM_NAME, zone)) return ROOM_NAME[zone]!;
+  if (isCaveDepthZone(zone)) return "the deep caves";
   const owner = zone.startsWith("int_house_") ? zone.slice("int_house_".length) : "";
   return owner ? `${owner.charAt(0).toUpperCase()}${owner.slice(1)}'s house` : "the valley";
 }

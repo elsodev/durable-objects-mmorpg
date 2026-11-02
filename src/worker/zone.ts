@@ -14,6 +14,7 @@ import { cleanChat, safeSpawnName } from "../shared/validate";
 import { getItem } from "../shared/items";
 import { getMap } from "../shared/maps";
 import {
+  isCaveDepthZone,
   SHARED_ZONES,
   TICK_MS,
   type EntityState,
@@ -23,7 +24,10 @@ import {
   type MapExit,
   type RockOre,
   type SharedZoneId,
+  type ZoneId,
 } from "../shared/types";
+import { mergeLoot, rollKillDrop } from "../shared/engine/mapDrops";
+import { noteCaveArrival, sanitizeCaveTrail, type CaveTrail } from "../shared/caveLevels";
 import {
   addItem,
   buildCollision,
@@ -52,7 +56,7 @@ import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../shared/spawns";
 import { HOME_FAINT_SPAWN } from "../shared/maps/home";
 import { canChangeLook, savedLook, shownLook } from "./game/look";
 import { entityIdFor, readAttachment, readIdentity, type SocketAttachment } from "./game/identity";
-import { cloneInventory, clampHp, sanitizeInventory } from "./game/sanitize";
+import { cloneInventory, clampHp, isZoneId, sanitizeInventory } from "./game/sanitize";
 import { ChatGuards } from "./game/chat";
 import { HOME_COMMAND_NOTICE, parseHomeCommand } from "../shared/visits";
 import { reportPresence } from "./social/hooks";
@@ -61,7 +65,7 @@ import { EMOTE_MIN_INTERVAL_MS } from "../shared/emotes";
 import { Motion } from "./game/motion";
 import { CoalescingSaver, SaveDebouncer, type SaveOutcome } from "./game/saver";
 import { CLOSE_ABUSE, SocketLimiter } from "./game/rateLimit";
-import { resolveSpawn } from "./game/spawn";
+import { arrivedFrom, resolveSpawn, routeExit, transferHonoured } from "./game/spawn";
 import { CLOSE_SESSION_ENDED, recheckDue, sessionStillValid } from "./game/session";
 import { timeout } from "./game/timeout";
 import { stripControls } from "./npc/text";
@@ -138,6 +142,9 @@ const DONATION_IDS_MAX = 1000;
 /** Treasure chests per zone (only the caves have any). */
 const CHESTS_PER_ZONE: Partial<Record<SharedZoneId, number>> = { caves: 4 };
 
+/** Deeper cave levels roll the caves' own kill drops (gems, seeds) before their map's extras. */
+const dropZoneOf = (zone: SharedZoneId): string => (isCaveDepthZone(zone) ? "caves" : zone);
+
 interface ZPlayer {
   ws: WebSocket;
   userId: string;
@@ -185,6 +192,8 @@ interface ZPlayer {
   lastShop: Map<string, number>;
   /** Friendship with each villager (saved with the player). */
   bonds: Bonds;
+  /** Cave levels: the map above each one this player came down from (a shared way up returns there). */
+  caveTrail: CaveTrail;
 }
 
 interface World {
@@ -306,7 +315,7 @@ export class ZoneRoom extends DurableObject<Env> {
       judged: (entityId, npcId, verdict) => this.onJudged(entityId, npcId, verdict),
     };
     const seats = new SeatBook(map.seats ?? []);
-    const chestCount = CHESTS_PER_ZONE[zone] ?? 0;
+    const chestCount = CHESTS_PER_ZONE[zone] ?? map.chests ?? 0;
     const chests = chestCount > 0 ? new ChestField(map, chestCount) : null;
     chests?.load(await this.ctx.storage.get("chests"), grid, rand);
     const npcs = new NpcRunner(map, grid, this.env, this.ctx.storage, host, rand, agentMind(this.env), seats);
@@ -380,6 +389,7 @@ export class ZoneRoom extends DurableObject<Env> {
     const spawn = safeSpawnName(world.map.spawns, id.spawn);
     const transfer = save.transfer && "at" in save.transfer ? save.transfer : null;
     const at = resolveSpawn(world.map.spawns, world.zone, spawn, save, transfer, Date.now());
+    const from = arrivedFrom(spawn, transferHonoured(world.map.spawns, world.zone, spawn, transfer, Date.now()), isZoneId);
 
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
@@ -392,6 +402,11 @@ export class ZoneRoom extends DurableObject<Env> {
     };
     server.serializeAttachment(att);
     const p = this.addPlayer(server, att, save, at, Date.now());
+    const trail = noteCaveArrival(p.caveTrail, world.zone, from);
+    if (trail !== p.caveTrail) {
+      p.caveTrail = trail;
+      p.saveSoon.schedule();
+    }
     reportPresence(this.env, p.userId, world.zone, true);
     send(server, {
       t: "welcome",
@@ -472,6 +487,7 @@ export class ZoneRoom extends DurableObject<Env> {
       interest: new PlayerInterest(this.nextPhase++),
       lastShop: new Map(),
       bonds: sanitizeBonds(save.bonds),
+      caveTrail: sanitizeCaveTrail(save.caveTrail),
     };
     this.players.set(ws, p);
     return p;
@@ -826,6 +842,7 @@ export class ZoneRoom extends DurableObject<Env> {
       stamina: p.stamina,
       stats: { ...p.stats },
       bonds: p.bonds,
+      caveTrail: p.caveTrail,
       ...(p.look ? { look: p.look } : {}),
       ...override,
     };
@@ -866,8 +883,10 @@ export class ZoneRoom extends DurableObject<Env> {
     p.saveSoon.schedule();
   }
 
-  private async takeExit(p: ZPlayer, exit: MapExit): Promise<void> {
+  private async takeExit(p: ZPlayer, taken: MapExit): Promise<void> {
     if (this.players.get(p.ws) !== p) return;
+    const above = p.caveTrail[this.world!.zone];
+    const exit = routeExit(taken, this.world!.zone, isZoneId(above) ? above : undefined);
     // Out of the zone at once (entity disappears next tick), but keep the socket until saved.
     this.players.delete(p.ws);
     if (this.players.size === 0) this.stopTick();
@@ -975,6 +994,8 @@ export class ZoneRoom extends DurableObject<Env> {
     if (hourCmd && devToolsEnabled(this.env)) return void this.devSetHour(p, hourCmd[1], now);
     const heartsCmd = /^\/hearts\s+(\d{1,2})$/.exec(text);
     if (heartsCmd && devToolsEnabled(this.env)) return this.devSetHearts(p, Number(heartsCmd[1]));
+    const warpCmd = /^\/warp\s+([a-z0-9_]{1,32})(?:\s+([a-z0-9_]{1,32}))?$/.exec(text);
+    if (warpCmd && devToolsEnabled(this.env)) return this.devWarp(p, warpCmd[1]!, warpCmd[2]);
     // The client sends /invite, /kick and /uninvite over HTTP; never broadcast one that slips through.
     if (parseHomeCommand(text)) return send(p.ws, { t: "notice", text: HOME_COMMAND_NOTICE, kind: "error" });
     const guard = this.chatGuards.get(p.userId, now);
@@ -1210,7 +1231,7 @@ export class ZoneRoom extends DurableObject<Env> {
         if (!winner) continue;
         bumpStat(winner.stats, "monstersDefeated");
         winner.saveSoon.schedule();
-        const items = rollMonsterDrops(h.m.type, Math.random, world.zone, this.rates);
+        const items = mergeLoot(rollMonsterDrops(h.m.type, Math.random, dropZoneOf(world.zone), this.rates), rollKillDrop(world.map.drops, Math.random, this.rates));
         if (items.length === 0) continue;
         send(winner.ws, { t: "loot", at, items: items.map((d) => d.item) });
         this.inventoryChanged(winner, this.grantLoot(winner, items, at, now));
@@ -1581,6 +1602,12 @@ export class ZoneRoom extends DurableObject<Env> {
    * Local dev only: "/hearts N" puts the nearest villager one point short of N hearts (talk
    * counters reset), so the next chat reaches N and rolls its milestone gifts.
    */
+  /** Local dev only: "/warp caves_3_top [spawn]" walks you through an exit to anywhere shared. */
+  private devWarp(p: ZPlayer, zone: string, spawn: string | undefined): void {
+    if (!isZoneId(zone) || zone === "home") return send(p.ws, { t: "notice", text: "Usage: /warp zone_id [spawn]", kind: "info" });
+    void this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: zone, spawn: spawn ?? "default" });
+  }
+
   private devSetHearts(p: ZPlayer, hearts: number): void {
     const npc = this.world!.npcs.nearest(p.entity, NPC_CHAT_RANGE);
     if (!npc || !isNpcId(npc.id) || hearts < 1 || hearts > MAX_HEARTS) {

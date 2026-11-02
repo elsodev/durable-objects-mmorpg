@@ -1,7 +1,9 @@
 // Map definitions.
-// Maps are built in code (deterministic, seeded) so server and client share them without loading files.
+// Maps are built in code (deterministic, seeded) so server and client share them without loading
+// files; the deeper cave levels are JSON files bundled in at build time (cave-levels/, json/).
 // getMap() caches each map; treat the returned MapData as read-only (it is shared by every caller).
 import type { MapData, MapId } from "../types";
+import { CAVE_LEVEL_BUILDERS } from "./cave-levels";
 import { buildCaves } from "./caves";
 import { buildHome } from "./home";
 import { buildHomeInterior } from "./home-in";
@@ -20,6 +22,7 @@ const BUILDERS: Record<MapId, () => MapData> = {
   riverside: buildRiverside,
   caves: buildCaves,
   quarry: buildQuarry,
+  ...CAVE_LEVEL_BUILDERS,
   ...INTERIOR_BUILDERS,
 };
 

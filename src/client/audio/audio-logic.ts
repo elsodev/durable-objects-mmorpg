@@ -1,5 +1,6 @@
 // Pure audio helpers: key mapping, variant/pitch picks, throttling and settings parsing.
 // No DOM or Web Audio here so the rules can be unit-tested under the worker tsconfig.
+import { isCaveDepthZone } from "../../shared/types";
 
 export interface MusicEntry {
   file: string;
@@ -99,6 +100,7 @@ export function musicKeyForZone(zone: string | null, music: Readonly<Record<stri
 
 function borrowedMusic(zone: string): string[] {
   if (zone === "quarry") return ["riverside", "village"];
+  if (isCaveDepthZone(zone)) return ["caves"];
   if (!zone.startsWith("int_")) return [];
   if (zone === "int_inn") return ["festival", "village"];
   if (zone.startsWith("int_house_")) return ["home", "village"];

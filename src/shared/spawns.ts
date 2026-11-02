@@ -66,7 +66,8 @@ export interface ForageRule {
   near: string;
   nearRadius: number;
   minPlayerDist: number;
-  table: { item: ItemId; weight: number }[];
+  /** qty defaults to 1; min/max roll a stack (JSON map floor finds). */
+  table: { item: ItemId; weight: number; min?: number; max?: number }[];
 }
 
 export const FORAGE_RULES: Partial<Record<SharedZoneId, ForageRule>> = {

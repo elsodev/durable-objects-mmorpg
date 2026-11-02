@@ -1,5 +1,6 @@
 // "Enter Town Hall" plate over a building door while you stand near it (and "Exit to Village"
-// inside, by the way out; "Enter House" / "Exit to Yard" at home). The text comes from shared map data only.
+// inside, by the way out; "Enter House" / "Exit to Yard" at home; an exit's own label, such as
+// the cave passages' "← Depth 3: ..."). The text comes from shared map data only.
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import { TILE, type Layers } from "../contracts";
 import { doorFor } from "../../shared/maps/interiors/doors";
@@ -13,6 +14,11 @@ export interface DoorHint {
   /** Tile coords of the plate's bottom centre (top edge of the door tile). */
   x: number;
   y: number;
+  /**
+   * A passage off the top edge of the map: there is no room above it, so the plate hangs below
+   * the passage instead, with `y` its top edge (clear of the player walking up to it).
+   */
+  below?: boolean;
 }
 
 /** Pure: the hint for a position, or null. */
@@ -21,7 +27,8 @@ export function doorHintAt(map: MapData, pos: Vec2): DoorHint | null {
   let bestD = HINT_RANGE;
   for (const e of map.exits) {
     let text: string | null = null;
-    if (e.map) text = e.map === "home_in" ? "Enter House" : "Exit to Yard";
+    if (e.label) text = e.label;
+    else if (e.map) text = e.map === "home_in" ? "Enter House" : "Exit to Yard";
     else if (isInteriorZone(e.to)) text = `Enter ${doorFor(e.to).name}`;
     else if (isInteriorZone(map.zone) && e.to === "village") text = "Exit to Village";
     // The cave mouth is a doorway in the quarry's cliff, and the tunnel's end leads back out.
@@ -33,7 +40,7 @@ export function doorHintAt(map: MapData, pos: Vec2): DoorHint | null {
     const d = Math.hypot(dx, dy);
     if (d <= bestD) {
       bestD = d;
-      best = { text, x: e.x + e.w / 2, y: e.y };
+      best = e.y === 0 && !e.map ? { text, x: e.x + e.w / 2, y: e.y + e.h + 2.1, below: true } : { text, x: e.x + e.w / 2, y: e.y };
     }
   }
   return best;
@@ -74,8 +81,11 @@ export function createDoorHint(layers: Layers): DoorHintLayer {
         bg.clear().roundRect(0, 0, w, h, 5).fill({ color: 0x2a1c14, alpha: 0.85 }).stroke({ color: 0xe6b84a, width: 2 });
         label.position.set(8, 4);
       }
-      // Above the door, clear of the player's own name tag.
-      root.position.set(Math.round(hint.x * TILE - root.width / 2), Math.round(hint.y * TILE - TILE * 0.9 - root.height));
+      // Above the door, clear of the player's own name tag; kept inside the map, so a passage at
+      // the map's side edge doesn't push half the plate off screen.
+      const x = Math.min(Math.max(hint.x * TILE - root.width / 2, 2), map.width * TILE - root.width - 2);
+      const y = hint.below ? hint.y * TILE : hint.y * TILE - TILE * 0.9 - root.height;
+      root.position.set(Math.round(x), Math.round(y));
     },
     destroy() {
       if (!root.destroyed) root.destroy({ children: true });

@@ -46,12 +46,13 @@ export function rollRockOre(base: RockOre, odds: RockUpgradeOdds | null, rand: (
 
 /** The ore rock `rock` holds on its `spawn`-th appearance in `scope` (zone id or home owner). */
 export function rockOreAt(
-  rock: { id: string; ore: RockOre },
+  rock: { id: string; ore: RockOre; odds?: RockUpgradeOdds },
   scope: string,
   spawn: number,
   rates: Readonly<DropRates> = DEFAULT_DROP_RATES,
 ): RockOre {
-  const odds = rockOdds(rock.id);
+  // JSON maps carry their own odds on the rock; the caves map uses the prefix table.
+  const odds = rock.odds ?? rockOdds(rock.id);
   if (!odds) return rock.ore;
   return rollRockOre(rock.ore, odds, mulberry32(seedFrom(`rockore|${scope}|${rock.id}|${spawn}`)), rates);
 }

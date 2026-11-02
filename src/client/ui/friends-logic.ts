@@ -1,4 +1,5 @@
 // Pure helpers for the Friends panel (no DOM), tested in test/fe-friends.test.ts.
+import { caveLevelLabel } from "../../shared/caveLevels";
 import { FRIEND_NAME_HINT, FRIEND_NAME_RE } from "../../shared/friends";
 
 /** Polling interval for GET /api/friends while the panel is open. */
@@ -20,7 +21,7 @@ const ZONE_LABELS: Record<string, string> = {
 export function zoneLabel(online: boolean, zone: string | null): string {
   if (!online) return "Offline";
   if (!zone) return "Online";
-  return ZONE_LABELS[zone] ?? zone.charAt(0).toUpperCase() + zone.slice(1);
+  return ZONE_LABELS[zone] ?? caveLevelLabel(zone) ?? zone.charAt(0).toUpperCase() + zone.slice(1);
 }
 
 /** Error to show for the add-friend input, or null when the name can be sent. */

@@ -1,7 +1,7 @@
 // Chat slash commands: the one table the "/" suggestion popup reads, and its filter. Pure (no DOM).
 // The handlers live in shared/social.ts parseChatInput (/w /r /world /zone /emote),
 // shared/friends.ts parseFriendCommand, shared/players.ts parseMuteCommand, shared/visits.ts parseHomeCommand,
-// and the dev tools in worker/home.ts devCommand (/day /time) and worker/zone.ts onChat (/hour, /hearts);
+// and the dev tools in worker/home.ts devCommand (/day /time) and worker/zone.ts onChat (/hour, /hearts, /warp);
 // slash-commands.test.ts checks every entry here against those parsers.
 import { EMOTES } from "../../shared/emotes";
 
@@ -50,6 +50,7 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "time", aliases: [], args: "hour", description: "Dev: set your home clock, e.g. /time 21", available: (c) => c.devTools && c.homeOwner },
   { name: "hour", aliases: [], args: "hour", description: "Dev: run village routines as if at this UTC hour", available: (c) => c.devTools && !c.atHome },
   { name: "hearts", aliases: [], args: "n", description: "Dev: put the nearest villager one point short of n hearts", available: (c) => c.devTools && !c.atHome },
+  { name: "warp", aliases: [], args: "zone [spawn]", description: "Dev: walk straight into another zone, e.g. /warp caves_3_top", available: (c) => c.devTools && !c.atHome },
 ];
 
 export interface SlashSuggestion {

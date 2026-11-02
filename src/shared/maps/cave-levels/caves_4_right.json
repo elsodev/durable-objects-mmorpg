@@ -1,0 +1,46 @@
+{
+  "id": "caves_4_right",
+  "name": "Gem Vault · Depth 4",
+  "width": 44,
+  "height": 36,
+  "seed": 852382,
+  "ambient": "cave",
+  "depth": 4,
+  "fill": "cave_wall",
+  "floor": "stone",
+  "rooms": [
+    {"id": "landing", "x": 21, "y": 29, "rx": 5, "ry": 3},
+    {"id": "vault", "x": 21, "y": 14, "rx": 14, "ry": 8, "noise": 0.35},
+    {"id": "west", "x": 8, "y": 24, "rx": 5, "ry": 4},
+    {"id": "east", "x": 35, "y": 24, "rx": 5, "ry": 4}
+  ],
+  "tunnels": [
+    {"from": "landing", "to": "vault"},
+    {"from": "landing", "to": "west"},
+    {"from": "landing", "to": "east"}
+  ],
+  "exits": [
+    {"edge": "bottom", "room": "landing", "to": "caves_3_right", "label": "↓ Way back up", "back": ["caves_3_left", "caves_3_top"]}
+  ],
+  "spawns": {"default": {"room": "landing"}},
+  "monsters": [
+    {"room": "vault", "type": "rock_crab", "count": 3, "max": 5, "radius": 4, "level": 4},
+    {"room": "west", "type": "rock_crab", "count": 2, "max": 4, "radius": 4, "level": 4},
+    {"room": "east", "type": "bat", "count": 2, "max": 4, "radius": 4, "level": 4}
+  ],
+  "rocks": [
+    {"room": "vault", "count": 14, "ores": {"gem": 4, "iron": 1}, "odds": {"silver": 0.2, "gold": 0.08, "diamond": 0.02}},
+    {"room": "west", "count": 4, "ores": {"gem": 4, "iron": 1}, "odds": {"silver": 0.2, "gold": 0.08, "diamond": 0.02}},
+    {"room": "east", "count": 4, "ores": {"gem": 4, "iron": 1}, "odds": {"silver": 0.2, "gold": 0.08, "diamond": 0.02}}
+  ],
+  "decor": [
+    {"type": "rock_deco", "room": "vault", "count": 3},
+    {"type": "rock_deco", "room": "west", "count": 3},
+    {"type": "rock_deco", "room": "east", "count": 3}
+  ],
+  "chests": 2,
+  "drops": {
+    "kill": {"chance": 0.4, "table": [{"item": "ore_silver", "weight": 4, "min": 1, "max": 3}, {"item": "ore_gold", "weight": 3, "min": 1, "max": 2}, {"item": "gem_crystal", "weight": 3, "min": 1, "max": 2}, {"item": "gem_diamond", "weight": 0.3, "min": 1, "max": 1}]},
+    "ground": {"rooms": ["vault", "west", "east"], "base": 3, "perPlayer": 0.5, "max": 7, "refillSec": 300, "table": [{"item": "ore_silver", "weight": 3, "min": 1, "max": 2}, {"item": "ore_gold", "weight": 1, "min": 1, "max": 1}, {"item": "gem_crystal", "weight": 1, "min": 1, "max": 1}]}
+  }
+}
