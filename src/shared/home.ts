@@ -61,6 +61,8 @@ export type HomeServerMsg =
       clock: HomeClock;
       stamina: number;
       maxStamina: number;
+      /** Worn out (stamina ran out today): slow walk, no dash, no farming until the day resets. */
+      exhausted?: boolean;
       water: number;
       maxWater: number;
       serverTime: number;

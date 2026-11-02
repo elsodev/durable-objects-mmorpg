@@ -29,9 +29,10 @@ export interface HomeUi {
   /** Visiting someone else's home: only the (host's) clock shows; stamina, water and Eat are yours, not here. */
   setVisiting?(visiting: boolean): void;
   setClock(day: number, label: string, night: boolean): void;
-  setVitals(stamina: number, maxStamina: number, water: number, maxWater: number): void;
-  /** Shared zones: only the stamina bar shows (mining and chopping cost it there too). */
-  setZoneStamina?(stamina: number, maxStamina: number): void;
+  /** `exhausted`: worn out until the day resets (the bar says so). */
+  setVitals(stamina: number, maxStamina: number, water: number, maxWater: number, exhausted?: boolean): void;
+  /** Shared zones: only the stamina bar shows (mining, chopping and dashing cost it there too). */
+  setZoneStamina?(stamina: number, maxStamina: number, exhausted?: boolean): void;
   /** Selected item if it can be eaten, else null. */
   setEdible(item: ItemId | null): void;
   setBin(items: ShipLine[], total: number, open: boolean): void;
@@ -80,6 +81,8 @@ function icon(item: ItemId, qty = 1): HTMLElement {
 }
 
 const QUALITY = ["", "Silver", "Gold"];
+const STAMINA_TITLE = "Stamina: tools and dashing (Shift) tire you; eat crops or sleep to recover";
+const EXHAUSTED_TITLE = "Worn out: you walk slowly and can't farm or dash until you sleep or the day ends";
 
 /** The bag's coin, so every coin amount in the game looks the same. */
 function coinIcon(): HTMLElement {
@@ -134,7 +137,7 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
   add(clockEl, el("span", "home-sun"), dayEl, timeEl);
   const staminaEl = el("div", "home-bar home-stamina");
   staminaEl.id = "home-stamina";
-  staminaEl.title = "Stamina: tools tire you; eat crops or sleep to recover";
+  staminaEl.title = STAMINA_TITLE;
   const staminaFill = el("span", "home-bar-fill");
   const staminaText = el("span", "home-bar-text", "100");
   add(staminaEl, el("span", "home-bar-label", "Energy"), el("span", "home-bar-track"));
@@ -222,11 +225,13 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
     fade.classList.add("is-on");
   }
 
-  const setBar = (stamina: number, maxStamina: number) => {
+  const setBar = (stamina: number, maxStamina: number, exhausted = false) => {
     const pct = maxStamina > 0 ? Math.max(0, Math.min(1, stamina / maxStamina)) : 0;
     staminaFill.style.width = `${Math.round(pct * 100)}%`;
     staminaFill.classList.toggle("is-low", pct <= 0.2);
-    staminaText.textContent = `${stamina}`;
+    staminaEl.classList.toggle("is-exhausted", exhausted);
+    staminaText.textContent = exhausted ? `${stamina} · worn out` : `${stamina}`;
+    staminaEl.title = exhausted ? EXHAUSTED_TITLE : STAMINA_TITLE;
   };
 
   let home = false;
@@ -248,8 +253,8 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       staminaEl.hidden = visiting;
       if (visiting) eatBtn.hidden = true;
     },
-    setZoneStamina(stamina, maxStamina) {
-      setBar(stamina, maxStamina);
+    setZoneStamina(stamina, maxStamina, exhausted) {
+      setBar(stamina, maxStamina, exhausted);
       rows.hidden = false;
     },
     setClock(day, label, night) {
@@ -257,8 +262,8 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       timeEl.textContent = label;
       clockEl.classList.toggle("is-night", night);
     },
-    setVitals(stamina, maxStamina) {
-      setBar(stamina, maxStamina);
+    setVitals(stamina, maxStamina, _water, _maxWater, exhausted) {
+      setBar(stamina, maxStamina, exhausted);
     },
     setEdible(item) {
       eatBtn.hidden = !item;

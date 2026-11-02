@@ -8,6 +8,10 @@ import {
   ARRIVE_DIST,
   PLAYER_SPEED,
   buildCollision,
+  paceSpeed,
+  pathSpeed,
+  pickPace,
+  type Pace,
   dist,
   findPath,
   moveGoal,
@@ -36,6 +40,8 @@ export interface InputFrame {
   dx: number;
   dy: number;
   dtMs: number;
+  /** Tiles per second it moved at (walk, dash or worn out); absent: walking. */
+  speed?: number;
 }
 
 interface Extras {
@@ -110,6 +116,8 @@ export function unsimulated(inputs: readonly InputFrame[], ack: number, ackMs: n
 }
 
 const sign = (v: number) => (v > 0 ? 1 : v < 0 ? -1 : 0);
+/** Frames at walking speed leave `speed` out, so the history stays as small as before. */
+const speedOf = (speed: number): { speed?: number } => (speed === PLAYER_SPEED ? {} : { speed });
 
 export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
   const collision = createCollisionCache(getMap, getBlockedExtras);
@@ -126,6 +134,10 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
   let acked = 0;
   let inputs: InputFrame[] = [];
   let lastDir = { dx: 0, dy: 0 };
+  /** Shift held with the current direction, and what the server allows (setLimits). */
+  let dash = false;
+  let tired = false;
+  let canDash = true;
   let sinceSendMs = 0;
   let path: Vec2[] | null = null;
   /** Clock time (ms) the predicted position is integrated up to; null until the first step. */
@@ -134,6 +146,16 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
   function nextSeq(): number {
     seq += 1;
     return seq;
+  }
+
+  /** The pace a held direction moves at now: the same rule the server's Motion uses. */
+  function pace(): Pace {
+    return pickPace({ dash, tired, canDash });
+  }
+
+  function moveMsg(dx: number, dy: number): ClientMsg {
+    // The server decides whether a dash is allowed; asking is all the client does.
+    return dash && (dx !== 0 || dy !== 0) ? { t: "move", dx, dy, seq: nextSeq(), dash: true } : { t: "move", dx, dy, seq: nextSeq() };
   }
 
   function record(frame: InputFrame): void {
@@ -161,14 +183,15 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
         if (path.length === 0) path = null;
         continue;
       }
-      const r = stepToward({ x, y, facing }, target, PLAYER_SPEED, left, grid);
+      const speed = pathSpeed(tired);
+      const r = stepToward({ x, y, facing }, target, speed, left, grid);
       // Time actually spent: stepToward never overshoots, so a short final leg uses less than dt.
-      const used = Math.min(left, (d / PLAYER_SPEED) * 1000);
+      const used = Math.min(left, (d / speed) * 1000);
       if (r.x === x && r.y === y) {
         path = null; // stuck (something blocks the path): stop like the server would
         break;
       }
-      record({ seq, dx: (target.x - x) / d, dy: (target.y - y) / d, dtMs: used });
+      record({ seq, dx: (target.x - x) / d, dy: (target.y - y) / d, dtMs: used, ...speedOf(speed) });
       x = r.x;
       y = r.y;
       facing = r.facing;
@@ -195,8 +218,9 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       walkPath(dtMs, grid);
     } else if (lastDir.dx !== 0 || lastDir.dy !== 0) {
       if (dtMs <= 0) return;
-      const r = stepDirection({ x, y, facing }, lastDir.dx, lastDir.dy, PLAYER_SPEED, dtMs, grid);
-      record({ seq, dx: lastDir.dx, dy: lastDir.dy, dtMs });
+      const speed = paceSpeed(pace());
+      const r = stepDirection({ x, y, facing }, lastDir.dx, lastDir.dy, speed, dtMs, grid);
+      record({ seq, dx: lastDir.dx, dy: lastDir.dy, dtMs, ...speedOf(speed) });
       x = r.x;
       y = r.y;
       facing = r.facing;
@@ -211,16 +235,20 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
    * input is integrated up to `at` first, so walking lasts exactly as long as the key was held,
    * which is also how long the server walks (it integrates between the same two messages).
    */
-  function changeDir(dx: number, dy: number, at: number): ClientMsg {
+  function changeDir(dx: number, dy: number, at: number, wantDash: boolean): ClientMsg {
     advance(Math.max(at, simAt ?? at));
     if ((dx !== 0 || dy !== 0) && path) path = null; // keys override click-to-move
     lastDir = { dx, dy };
+    dash = wantDash && (dx !== 0 || dy !== 0);
     sinceSendMs = 0;
-    return { t: "move", dx, dy, seq: nextSeq() };
+    return moveMsg(dx, dy);
   }
 
+  /** Same direction, but Shift was pressed or released. */
+  const dashChanged = (dx: number, dy: number, wantDash: boolean) => (wantDash && (dx !== 0 || dy !== 0)) !== dash;
+
   const predictor: Predictor = {
-    step(rawDx, rawDy, rawDt, now) {
+    step(rawDx, rawDy, rawDt, now, wantDash = false) {
       const dtMs = Math.max(0, rawDt);
       const t = now ?? (simAt ?? 0) + dtMs;
       if (simAt === null) simAt = t - Math.min(dtMs, MAX_DT_MS);
@@ -231,22 +259,30 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       let send: ClientMsg | null = null;
       // A change that setDir() did not already see (no key event, e.g. typing started): treat it
       // as starting with this frame, so the player still moves on this very frame.
-      if (dx !== lastDir.dx || dy !== lastDir.dy) send = changeDir(dx, dy, simAt);
+      if (dx !== lastDir.dx || dy !== lastDir.dy || dashChanged(dx, dy, wantDash)) send = changeDir(dx, dy, simAt, wantDash);
       const before = simAt;
       advance(t);
       sinceSendMs += Math.max(0, t - before);
       if (!send && (dx !== 0 || dy !== 0) && sinceSendMs >= RESEND_MS) {
-        send = { t: "move", dx, dy, seq: nextSeq() };
+        send = moveMsg(dx, dy);
         sinceSendMs = 0;
       }
       return { send };
     },
 
-    setDir(rawDx, rawDy, at) {
+    setDir(rawDx, rawDy, at, wantDash = false) {
       const dx = sign(rawDx);
       const dy = sign(rawDy);
-      if (dx === lastDir.dx && dy === lastDir.dy) return null;
-      return changeDir(dx, dy, at);
+      if (dx === lastDir.dx && dy === lastDir.dy && !dashChanged(dx, dy, wantDash)) return null;
+      return changeDir(dx, dy, at, wantDash);
+    },
+
+    setLimits(l) {
+      if (l.tired === tired && l.canDash === canDash) return;
+      // Movement so far keeps the old speed (the server switches the same way, see Motion.setTired).
+      if (simAt !== null) advance(simAt);
+      tired = l.tired;
+      canDash = l.canDash;
     },
 
     reconcile(server, ack, ackMs) {
@@ -274,7 +310,7 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       inputs = inputs.filter((f) => (ms === undefined ? f.seq > acked : f.seq >= acked));
       if (grid) {
         for (const f of replay) {
-          const r = stepDirection({ x: px, y: py, facing: pf }, f.dx, f.dy, PLAYER_SPEED, f.dtMs, grid);
+          const r = stepDirection({ x: px, y: py, facing: pf }, f.dx, f.dy, f.speed ?? PLAYER_SPEED, f.dtMs, grid);
           px = r.x;
           py = r.y;
           pf = r.facing;
@@ -290,6 +326,7 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
     moveTo(target) {
       const msg: ClientMsg = { t: "moveTo", x: target.x, y: target.y, seq: nextSeq() };
       lastDir = { dx: 0, dy: 0 };
+      dash = false;
       sinceSendMs = 0;
       const grid = collision.get();
       if (!grid) {
@@ -312,7 +349,9 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
     },
 
     state() {
-      return { x: x + corr.x, y: y + corr.y, facing, moving };
+      const held = lastDir.dx !== 0 || lastDir.dy !== 0;
+      const p = tired ? "tired" : held && moving && pace() === "dash" ? "dash" : undefined;
+      return p ? { x: x + corr.x, y: y + corr.y, facing, moving, pace: p } : { x: x + corr.x, y: y + corr.y, facing, moving };
     },
 
     face(f) {
@@ -332,6 +371,7 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       inputs = [];
       acked = seq;
       lastDir = { dx: 0, dy: 0 };
+      dash = false;
       sinceSendMs = 0;
       path = null;
       simAt = null;

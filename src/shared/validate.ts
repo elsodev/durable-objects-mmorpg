@@ -63,7 +63,10 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
   switch (o.t) {
     case "move": {
       const seq = optSeq(o);
-      return seq && isDir(o.dx) && isDir(o.dy) ? { t: "move", dx: o.dx, dy: o.dy, ...seq } : null;
+      if (!seq || !isDir(o.dx) || !isDir(o.dy) || (o.dash !== undefined && typeof o.dash !== "boolean")) return null;
+      // Only a held direction can dash; the server still decides whether it may (worn out, visiting).
+      const dash = o.dash === true && (o.dx !== 0 || o.dy !== 0);
+      return { t: "move", dx: o.dx, dy: o.dy, ...seq, ...(dash ? { dash: true } : {}) };
     }
     case "moveTo": {
       const seq = optSeq(o);

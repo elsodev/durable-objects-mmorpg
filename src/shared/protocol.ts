@@ -31,8 +31,11 @@ import type { NoticePress, NoticeView } from "./notices";
 // back exactly the optimistic change that was refused.
 
 export type ClientMsg =
-  /** Held-direction movement. dx/dy in {-1,0,1}. Sent on change, and at most every 100 ms. */
-  | { t: "move"; dx: number; dy: number; seq?: number }
+  /**
+   * Held-direction movement. dx/dy in {-1,0,1}. Sent on change, and at most every 100 ms.
+   * `dash`: Shift is held, asking to run (the server ignores it while worn out or visiting).
+   */
+  | { t: "move"; dx: number; dy: number; seq?: number; dash?: boolean }
   /** Click-to-move target in tile coords. */
   | { t: "moveTo"; x: number; y: number; seq?: number }
   | { t: "chat"; text: string }
@@ -259,7 +262,16 @@ export type ServerMsg =
    */
   | { t: "animal"; view: AnimalView; delta?: number; open?: boolean; adopted?: boolean; /** You just fed it (cats meow). */ fed?: boolean }
   /** Zones: your stamina changed (mining and chopping cost it like at home). */
-  | { t: "stamina"; stamina: number; max: number; /** Water in your can, so the slot gauge shows away from home too. */ water?: number; maxWater?: number }
+  | {
+      t: "stamina";
+      stamina: number;
+      max: number;
+      /** Water in your can, so the slot gauge shows away from home too. */
+      water?: number;
+      maxWater?: number;
+      /** Worn out (stamina ran out today): slow walk, no dash, no farming until the day resets. */
+      exhausted?: boolean;
+    }
   /**
    * The notice board as you see it, newest first. `open`: you just walked up to it (show the
    * panel). `nextPostAt`: when you may pin again. `posted`: your notice just went up. Live changes

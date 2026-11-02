@@ -100,6 +100,7 @@ import type { EmoteCode } from "../../shared/emotes";
 import { emoteLine } from "../ui/chat";
 import { playerHit, tileDistance } from "./player-hit";
 import { CLIMB_ACTS } from "../../shared/climb";
+import { createEnergy } from "./energy";
 
 const HOTBAR_SLOTS = 8;
 /** Stats panel refresh while in a shared zone. */
@@ -203,6 +204,8 @@ export async function startSession(
   const combatFx = createCombatFx({ world: () => world, youId: () => store.youId, camera, latest: (id) => store.latest(id) });
   /** Zones: last stamina the server sent (a gentle warning when it runs low). */
   let zoneStamina: number | null = null;
+  /** Worn out or not: prediction speed, the dash notice and the farm lock. */
+  const energy = createEnergy({ predictor, notice: (text, kind) => notice(text, kind) });
   const input: Input = createInput(game.app.canvas, (sx, sy) => camera.screenToTile(sx, sy));
 
   /** Your entity: authoritative fields + predicted position, with the creator's look applied locally. */
@@ -223,6 +226,9 @@ export async function startSession(
     const me: EntityState = { ...base, act, x: p.x, y: p.y, facing, moving: p.moving };
     if (held) me.held = held;
     else delete me.held;
+    // Your own run shows from your keys at once; the server's copy is for everyone else.
+    if (p.pace) me.pace = p.pace;
+    else delete me.pace;
     return applyAppearance(me, appearance);
   }
 
@@ -807,7 +813,8 @@ export async function startSession(
         break;
       case "homeState":
         home = msg;
-        homeUi.setVitals(msg.stamina, msg.maxStamina, msg.water, msg.maxWater);
+        homeUi.setVitals(msg.stamina, msg.maxStamina, msg.water, msg.maxWater, !visiting && !!msg.exhausted);
+        if (!visiting) energy.setExhausted(!!msg.exhausted);
         // A visitor is sent a full can that isn't theirs.
         if (!visiting) hud.setWater?.(msg.water, msg.maxWater);
         farmFx.homeState(msg);
@@ -956,8 +963,9 @@ export async function startSession(
           notice("You're getting tired. Eat something, or rest at home.", "info");
         }
         zoneStamina = msg.stamina;
+        energy.setExhausted(!!msg.exhausted);
         if (msg.water !== undefined && msg.maxWater !== undefined) hud.setWater?.(msg.water, msg.maxWater);
-        if (store.zone !== "home") homeUi.setZoneStamina?.(msg.stamina, msg.max);
+        if (store.zone !== "home") homeUi.setZoneStamina?.(msg.stamina, msg.max, !!msg.exhausted);
         break;
       case "chestOpened": {
         world?.chests.open(msg.id);
@@ -1026,6 +1034,7 @@ export async function startSession(
     visiting = msg.visit ?? null;
     homeUi.setAtHome(msg.zone === "home");
     homeUi.setVisiting?.(!!visiting);
+    energy.setVisiting(!!visiting);
     visitsUi.setVisiting(visiting?.ownerName ?? null);
     visitsUi.setAtHome(msg.zone === "home" && !visiting);
     // Each room starts with empty hands: say what is selected so others see it.
@@ -1159,6 +1168,13 @@ export async function startSession(
       return;
     }
     const item = visiting ? null : (inv.slots[selectedSlot]?.item ?? null);
+    const atHome = store.zone === "home" && !visiting;
+    const outcome = item ? predictAt(tile) : null;
+    // Worn out: no farm work until the day resets (the server refuses it too).
+    if (energy.blocksUse(outcome, atHome)) {
+      playSfx("error");
+      return;
+    }
     const me = you();
     // Swing right away (even at nothing): the server's answer only adds the results.
     const s = me ? startSwing(item, me, tile, now, serverNow()) : null;
@@ -1170,8 +1186,6 @@ export async function startSession(
     const req = sendTagged({ t: "use", slot: selectedSlot, x: tile.x, y: tile.y }, "use");
     const used = usableItem(inv, selectedSlot);
     const water = home?.water ?? null;
-    const atHome = store.zone === "home" && !visiting;
-    const outcome = item ? predictAt(tile) : null;
     const sfx = sfxForUse(inv, selectedSlot);
     const clunk = !!s && !!outcome && !outcome.ok && !!outcome.reason;
     // The sword's whoosh starts with the swing; everything else is the sound of it landing.
@@ -1625,8 +1639,8 @@ export async function startSession(
     applyDueImpacts(nowMs);
     // Movement pauses while a swing plays out.
     const locked = swingLocked(swing, nowMs);
-    const { dx, dy } = locked ? { dx: 0, dy: 0 } : input.dir();
-    const step = predictor.step(dx, dy, dt, performance.now());
+    const { dx, dy, dash } = locked ? { dx: 0, dy: 0, dash: false } : input.dir();
+    const step = predictor.step(dx, dy, dt, performance.now(), dash);
     refreshPreload(dt);
     if (step.send) send(step.send);
 
@@ -1652,7 +1666,8 @@ export async function startSession(
   // Key presses go out at once (not on the next frame), stamped with the event time.
   const stopDir = input.onDir((d, at) => {
     if (!world || pendingZone) return;
-    const msg = predictor.setDir(d.dx, d.dy, Math.min(at, performance.now()));
+    const msg = predictor.setDir(d.dx, d.dy, Math.min(at, performance.now()), d.dash);
+    if (msg?.t === "move" && d.dash) energy.dashPressed(performance.now());
     if (msg) send(msg);
   });
 

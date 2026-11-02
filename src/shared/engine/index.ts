@@ -5,6 +5,7 @@
 // Implementation lives in focused modules; this file is the public surface:
 //   collision.ts  grid building + body fit test
 //   movement.ts   held-direction / point-to-point movement with wall sliding
+//   pace.ts       walk / dash / worn-out speeds, dash stamina drain, the worn-out farm lock
 //   path.ts       A* pathfinding
 //   crowd.ts      other characters as soft obstacles
 //   geometry.ts   footprints, facing, exits, rect helpers
@@ -14,9 +15,27 @@
 //   storage.ts    fridge (storage furniture) slots: put in / take out
 //   monsters.ts   monster stats + AI tick
 
-/** Walk speed in tiles per second. */
-export const PLAYER_SPEED = 4.5;
 export const NPC_SPEED = 2;
+export {
+  DASH_DRAIN_MS,
+  DASH_MULT,
+  DASH_SPEED,
+  EXHAUSTED_NOTICE,
+  FARM_LOCKED_NOTICE,
+  NO_DASH_NOTICE,
+  PLAYER_SPEED,
+  RESTED_EATING_NOTICE,
+  TIRED_MULT,
+  TIRED_SPEED,
+  drainDash,
+  farmLocked,
+  isExhausted,
+  paceSpeed,
+  pathSpeed,
+  pickPace,
+  type DashDrain,
+  type Pace,
+} from "./pace";
 
 export { buildCollision, setBlocked, canStand, isBlocked, type CollisionGrid } from "./collision";
 export { moveGoal, stepDirection, stepToward, ARRIVE_DIST, type MoveResult } from "./movement";

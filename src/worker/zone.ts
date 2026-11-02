@@ -37,9 +37,11 @@ import {
   clampStamina,
   clampWater,
   dist,
+  EXHAUSTED_NOTICE,
   exitAt,
   facingToTile,
   hurtAmount,
+  isExhausted,
   impactDelayMs,
   KNOCKBACK_HALF_LIFE_MS,
   MAX_STAMINA,
@@ -72,6 +74,7 @@ import type { BoardAnswer } from "./social/noticeDesk";
 import { Throttle } from "./throttle";
 import { EMOTE_MIN_INTERVAL_MS } from "../shared/emotes";
 import { Motion } from "./game/motion";
+import { chargeDash, spendEnergy, type EnergyChange } from "./game/energy";
 import { CoalescingSaver, SaveDebouncer, type SaveOutcome } from "./game/saver";
 import { CLOSE_ABUSE, SocketLimiter } from "./game/rateLimit";
 import { arrivedFrom, resolveSpawn, routeExit, transferHonoured } from "./game/spawn";
@@ -202,8 +205,12 @@ interface ZPlayer {
   lastRegen: number;
   /** No monster can hurt them before this (after each hit). */
   iframeUntil: number;
-  /** Tool stamina, carried from the home save (mining and chopping cost it here too). */
+  /** Tool stamina, carried from the home save (mining, chopping and dashing cost it here too). */
   stamina: number;
+  /** Worn out (stamina ran out today); only the home's day end clears it. */
+  exhausted: boolean;
+  /** Dash time under one stamina point, carried between ticks. */
+  dashCarry: number;
   /** Water left in the can (from the home save); zones only show it. */
   water: number;
   /** While seated: where the player stood before sitting (they get up there). */
@@ -499,7 +506,7 @@ export class ZoneRoom extends DurableObject<Env> {
       },
       inv: sanitizeInventory(save.inventory),
       stats: cleanStats(save.stats),
-      motion: new Motion(),
+      motion: isExhausted(clampStamina(save.stamina), save.exhausted) ? Motion.tired() : new Motion(),
       saver: new CoalescingSaver<PlayerSave>(async (s) => (await this.home(s.userId).savePlayer(s)) !== false),
       saveSoon: new SaveDebouncer(() => {
         if (this.players.get(ws) === p) void this.save(p);
@@ -515,6 +522,8 @@ export class ZoneRoom extends DurableObject<Env> {
       lastRegen: 0,
       iframeUntil: 0,
       stamina: clampStamina(save.stamina),
+      exhausted: isExhausted(clampStamina(save.stamina), save.exhausted),
+      dashCarry: 0,
       water: clampWater(save.water),
       lastAck: undefined,
       interest: new PlayerInterest(this.nextPhase++),
@@ -663,6 +672,7 @@ export class ZoneRoom extends DurableObject<Env> {
       }
       acks.set(p, p.motion.step(p.entity, world.grid, now));
       if (p.motion.takeMoved()) p.dirty = true;
+      this.energyChanged(p, chargeDash(p, p.motion.takeDashMs()), now);
       const exit = exitAt(world.map, p.entity.x, p.entity.y);
       // A donation in flight finishes first (its refund must land in this zone's save).
       if (exit && !p.donation) {
@@ -762,7 +772,25 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private sendStamina(p: ZPlayer): void {
-    send(p.ws, { t: "stamina", stamina: p.stamina, max: MAX_STAMINA, water: p.water, maxWater: MAX_WATER });
+    send(p.ws, {
+      t: "stamina",
+      stamina: p.stamina,
+      max: MAX_STAMINA,
+      water: p.water,
+      maxWater: MAX_WATER,
+      ...(p.exhausted ? { exhausted: true } : {}),
+    });
+  }
+
+  /** After stamina moved: save it, tell the player, and slow them down once it runs out. */
+  private energyChanged(p: ZPlayer, change: EnergyChange, now: number): void {
+    if (change === "none") return;
+    p.dirty = true;
+    if (change === "exhausted") {
+      p.motion.setTired(p.entity, this.world!.grid, true, now);
+      send(p.ws, { t: "notice", text: EXHAUSTED_NOTICE, kind: "error" });
+    }
+    this.sendStamina(p);
   }
 
   /** Mining and chopping cost stamina like at home; false (and a reject) when too tired. */
@@ -773,9 +801,7 @@ export class ZoneRoom extends DurableObject<Env> {
       this.reject(p, msg, "You're too tired. Eat something or go home to bed.");
       return false;
     }
-    p.stamina -= cost;
-    p.dirty = true;
-    this.sendStamina(p);
+    this.energyChanged(p, spendEnergy(p, cost), Date.now());
     return true;
   }
 
@@ -891,6 +917,8 @@ export class ZoneRoom extends DurableObject<Env> {
       y: isSitting(p.entity) && p.standBack ? p.standBack.y : p.entity.y,
       lease: p.lease,
       stamina: p.stamina,
+      // Zones only ever set it; the home clears it when the day resets.
+      ...(p.exhausted ? { exhausted: true } : {}),
       stats: { ...p.stats },
       bonds: p.bonds,
       caveTrail: p.caveTrail,
@@ -971,7 +999,7 @@ export class ZoneRoom extends DurableObject<Env> {
     switch (msg.t) {
       case "move":
         if (msg.dx !== 0 || msg.dy !== 0) this.getUp(p);
-        p.motion.onMove(p.entity, world.grid, msg.dx, msg.dy, msg.seq, now);
+        p.motion.onMove(p.entity, world.grid, msg.dx, msg.dy, msg.seq, now, msg.dash === true);
         return;
       case "moveTo":
         this.getUp(p);
@@ -1236,12 +1264,7 @@ export class ZoneRoom extends DurableObject<Env> {
   private wrongToolHit(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, reason: string, key: ToolKey, now: number): void {
     const streak = nextWrongToolStreak(p.wrongTool, now);
     p.wrongTool = streak;
-    const cost = Math.min(p.stamina, wrongToolCost(streak.count));
-    if (cost > 0) {
-      p.stamina -= cost;
-      p.dirty = true;
-      this.sendStamina(p);
-    }
+    this.energyChanged(p, spendEnergy(p, wrongToolCost(streak.count)), now);
     this.reject(p, msg, wrongToolNotice(reason, streak.count));
     const bounce: ServerMsg = { t: "bounce", x: msg.x, y: msg.y, by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
     for (const o of this.players.values()) if (o !== p) send(o.ws, bounce);

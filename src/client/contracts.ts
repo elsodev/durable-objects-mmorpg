@@ -247,9 +247,14 @@ export interface Predictor {
    * Local input each frame; returns a move msg to send when direction changed or every 100 ms.
    * `now` (performance.now() clock) lets it integrate exactly up to the frame; without it, dtMs.
    */
-  step(dx: number, dy: number, dtMs: number, now?: number): { send: ClientMsg | null };
-  /** Direction changed at clock time `at` (key event timeStamp): returns the move msg to send now, or null if unchanged. */
-  setDir(dx: number, dy: number, at: number): ClientMsg | null;
+  step(dx: number, dy: number, dtMs: number, now?: number, dash?: boolean): { send: ClientMsg | null };
+  /** Direction (or dash) changed at clock time `at` (key event timeStamp): returns the move msg to send now, or null if unchanged. */
+  setDir(dx: number, dy: number, at: number, dash?: boolean): ClientMsg | null;
+  /**
+   * What the server allows (shared/engine/pace.ts): worn out walks at half speed and can't dash;
+   * visitors can't dash. Prediction must use the same speed as the server.
+   */
+  setLimits?(limits: { tired: boolean; canDash: boolean }): void;
   /**
    * Server state for you + last acked seq (+ how long the server has applied it): replay the
    * inputs the server has not simulated yet; snap if error > 1.5 tiles else ease.
@@ -257,7 +262,7 @@ export interface Predictor {
   reconcile(server: EntityState, ack: number | undefined, ackMs?: number): void;
   /** Click-to-move: client also walks the path locally. */
   moveTo(target: Vec2): ClientMsg;
-  state(): { x: number; y: number; facing: Facing; moving: boolean };
+  state(): { x: number; y: number; facing: Facing; moving: boolean; pace?: "dash" | "tired" };
   reset(at: Vec2, facing: Facing): void;
   /** Turn on the spot (a tool swing faces its tile); ignored while walking. */
   face?(facing: Facing): void;
@@ -272,10 +277,13 @@ export interface PointerInfo {
   button: 0 | 2;
 }
 export interface Input {
-  /** Held movement direction from WASD/arrows, in {-1,0,1}. Zero while typing. */
-  dir(): { dx: number; dy: number };
-  /** Fires as soon as the held direction changes, with the event's timeStamp (performance.now() clock). */
-  onDir(cb: (dir: { dx: number; dy: number }, at: number) => void): () => void;
+  /**
+   * Held movement direction from WASD/arrows, in {-1,0,1}. Zero while typing. `dash`: Shift is
+   * held together with a direction.
+   */
+  dir(): { dx: number; dy: number; dash?: boolean };
+  /** Fires as soon as the held direction (or dash) changes, with the event's timeStamp (performance.now() clock). */
+  onDir(cb: (dir: { dx: number; dy: number; dash?: boolean }, at: number) => void): () => void;
   setTyping(typing: boolean): void;
   onAction(cb: (a: InputAction) => void): () => void;
   onSlot(cb: (slot: number) => void): () => void; // keys 1-8, mouse wheel

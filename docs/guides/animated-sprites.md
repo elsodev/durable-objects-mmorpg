@@ -191,6 +191,27 @@ How it flows:
 
 Check a climb in the browser on two body types, in both directions, and on the frames around the fade.
 
+### Dashing (Shift + a direction)
+
+Holding Shift with WASD or the arrow keys runs. The sheets have no run rows, so a dash is drawn from each look's own walk cycle and every body type, outfit and held tool gets it for free.
+
+| Pace (`EntityState.pace`) | Speed | Walk cycle | Extras |
+|---|---|---|---|
+| absent (walk) | `PLAYER_SPEED` (4.5 tiles/s) | frames 0–8 at the profile fps | none |
+| `dash` | `DASH_SPEED` (1.8×) | frames 1–8 (no standing frame) at 1.6× fps, so the stride length matches the walk | lean, bob, dust puffs |
+| `tired` (worn out) | `TIRED_SPEED` (0.5×) | frames 0–8 at half fps, so the feet don't skate | none |
+
+How it flows:
+
+1. **Server:** the client asks with `{ t: "move", dx, dy, dash: true }`. `Motion` (`src/worker/game/motion.ts`) picks the speed with `pickPace` from `src/shared/engine/pace.ts`: worn out beats everything, and visitors can't dash. It sets `entity.pace` only while a dash actually moves (or while worn out), so other players see the run. The client predictor uses the same `pickPace` and records each frame's speed for replay, so nothing rubber-bands.
+2. **Client:** `entities.ts` advances a `stride` at the profile fps times `strideRate(pace)` and picks the frame with `strideFrame`. Then `dash-fx.ts`:
+   - **Lean:** facing left or right, the body gets a horizontal skew of `DASH_LOOK.lean`, so the head leads the feet. Up and down runs don't lean, because a sideways tilt would read as falling over. The held tool copies the skew.
+   - **Bob:** the body lifts `DASH_LOOK.bob` source px on the frames between the two foot strikes (walk frames 1 and 5).
+   - **Dust:** each foot strike leaves a puff (`fx/dash_dust.png`, catalog `props.fx_dash_dust`: 4 frames of 16 × 16, anchor (8, 13)) by the striking foot, in turn left and right. It stays where it was kicked up in the sorted layer, at its own ground y, so the runner leaves a trail: behind the legs when running down or sideways, in front of the feet when running up. It rises 3 px and fades over `dustLifeMs`.
+3. **Numbers:** all of the above lives in `src/client/render/dash-logic.ts` and is tested in `test/fe-dash.test.ts`.
+
+Check a dash in the browser on a male, a female and a slim body, facing all four ways, with a tool held, and as a second player watching.
+
 ### Common mistakes
 
 - **Effects starting from the wrong body part:** measure from the feet point using the table above, not by eye from the hands. The stream once started at chest height (−26) and read as coming from the mouth.

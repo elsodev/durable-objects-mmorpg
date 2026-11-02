@@ -87,6 +87,11 @@ import {
   rockRand,
   rollHarvest,
   staminaCost,
+  EXHAUSTED_NOTICE,
+  FARM_LOCKED_NOTICE,
+  RESTED_EATING_NOTICE,
+  farmLocked,
+  isExhausted,
   type HarvestRoll,
   type HomeClock,
   pointInRect,
@@ -110,6 +115,7 @@ import {
 } from "./game/identity";
 import { clampHp, cloneInventory, isZoneId, objSeqFor, sanitizeFarm, sanitizeInventory, sanitizeObjects } from "./game/sanitize";
 import { Motion } from "./game/motion";
+import { chargeDash, spendEnergy, type EnergyChange, type EnergyState } from "./game/energy";
 import { applyHeld } from "./game/held";
 import { bondList } from "./game/bonds";
 import { sanitizeBonds, type Bonds } from "../shared/hearts";
@@ -199,6 +205,8 @@ export interface PlayerSave {
   lease?: string;
   /** Home simulation: stamina (0..100) and water left in the watering can. Absent = full. */
   stamina?: number;
+  /** Worn out: stamina ran out since the last day reset (slow walk, no dash, no farming). */
+  exhausted?: boolean;
   water?: number;
   /** Lifetime counters for the player card (shared/players.ts). Absent = all zero. */
   stats?: PlayerStats;
@@ -303,6 +311,8 @@ export class HomeRoom extends DurableObject<Env> {
   private hits = new HitTracker();
   private player: HPlayer | null = null;
   private mail: MailState = emptyMail();
+  /** The owner's dash time under one stamina point (not saved: it is less than half a second). */
+  private dashCarry = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastTick = 0;
   private clock: HomeClock = { day: 1, startAt: 0 };
@@ -630,6 +640,8 @@ export class HomeRoom extends DurableObject<Env> {
     this.save.hp = clampHp(save.hp, this.save.maxHp);
     // Zones spend stamina on mining and chopping too.
     if (save.stamina !== undefined) this.save.stamina = clampStamina(save.stamina);
+    // Zones can wear the player out; only this home's day end clears it.
+    if (save.exhausted === true) this.save.exhausted = true;
     // Zones only send a look the player changed there; never clear a saved one.
     const look = savedLook(save.look);
     if (look) this.save.look = look;
@@ -1185,7 +1197,7 @@ export class HomeRoom extends DurableObject<Env> {
         maxHp: save.maxHp,
         look: shownLook(save.look),
       },
-      motion: new Motion(),
+      motion: this.ownerMotion(),
       lastAck: undefined,
       lastUse: 0,
       lastSlot: null,
@@ -1327,6 +1339,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (this.sleepAt !== null && now >= this.sleepAt) this.endDay("sleep", now);
     const acks = new Map<HPlayer | Visitor, number | undefined>();
     acks.set(p, p.motion.step(p.entity, this.maps.grids[p.map], now));
+    this.chargeOwnerDash(p, now);
     const exit = this.sleepAt === null ? exitAt(homeMap(p.map), p.entity.x, p.entity.y) : null;
     if (exit) this.takeExit(p, exit, now);
 
@@ -1490,7 +1503,7 @@ export class HomeRoom extends DurableObject<Env> {
     if ((msg.t === "move" && (msg.dx !== 0 || msg.dy !== 0)) || msg.t === "moveTo" || msg.t === "use") endPose(p.entity);
     switch (msg.t) {
       case "move":
-        p.motion.onMove(p.entity, this.maps.grids[p.map], msg.dx, msg.dy, msg.seq, now);
+        p.motion.onMove(p.entity, this.maps.grids[p.map], msg.dx, msg.dy, msg.seq, now, msg.dash === true);
         this.startTick();
         return;
       case "moveTo":
@@ -1736,6 +1749,7 @@ export class HomeRoom extends DurableObject<Env> {
       clock: { ...this.clock },
       stamina: clampStamina(save.stamina),
       maxStamina: MAX_STAMINA,
+      ...(this.exhausted() ? { exhausted: true } : {}),
       water: clampWater(save.water),
       maxWater: MAX_WATER,
       serverTime: now,
@@ -1807,7 +1821,11 @@ export class HomeRoom extends DurableObject<Env> {
     this.bin = st.bin;
     save.inventory.coins = Math.max(0, save.inventory.coins + res.coinsDelta);
     save.stamina = res.stamina;
+    // Rest is the only cure for being worn out.
+    delete save.exhausted;
+    this.dashCarry = 0;
     const p = this.player;
+    if (p) p.motion.setTired(p.entity, this.maps.grids[p.map], false, now);
     if (p && kind !== "away") this.wakeByBed(p, now);
     this.persist({ save: true, farm: true, day: true });
     // A new morning: the hens lay.
@@ -1860,6 +1878,43 @@ export class HomeRoom extends DurableObject<Env> {
     return clampStamina(this.save!.stamina);
   }
 
+  /** Worn out since the last day reset (or stamina is simply empty). */
+  private exhausted(): boolean {
+    return isExhausted(this.stamina(), this.save?.exhausted);
+  }
+
+  /** The owner's movement, already slowed if they are worn out. */
+  private ownerMotion(): Motion {
+    return this.save && this.exhausted() ? Motion.tired() : new Motion();
+  }
+
+  /**
+   * Runs `f` on the owner's energy and writes it back to the save. Running out slows the owner
+   * and tells them why; the caller sends homeState and persists as it already does.
+   */
+  private useEnergy(p: HPlayer, now: number, f: (e: EnergyState) => EnergyChange): EnergyChange {
+    const save = this.save!;
+    const e: EnergyState = { stamina: this.stamina(), exhausted: this.exhausted(), dashCarry: this.dashCarry };
+    const change = f(e);
+    save.stamina = e.stamina;
+    this.dashCarry = e.dashCarry;
+    if (e.exhausted) save.exhausted = true;
+    if (change === "exhausted") {
+      p.motion.setTired(p.entity, this.maps.grids[p.map], true, now);
+      send(p.ws, { t: "notice", text: EXHAUSTED_NOTICE, kind: "error" });
+    }
+    return change;
+  }
+
+  /** Dashing at home drains the owner's stamina as it does in the zones. */
+  private chargeOwnerDash(p: HPlayer, now: number): void {
+    const change = this.useEnergy(p, now, (e) => chargeDash(e, p.motion.takeDashMs()));
+    if (change === "none") return;
+    this.sendHomeState(p);
+    // Every few points is enough: a lost point or two after an eviction only favours the player.
+    if (change === "exhausted" || this.stamina() % 5 === 0) this.persist({ save: true });
+  }
+
   /** Spends tool stamina; false (and a reject) when too tired. */
   private spendStamina(p: HPlayer, msg: ClientMsg, def: ItemDef): boolean {
     const cost = staminaCost(def.tool);
@@ -1869,7 +1924,7 @@ export class HomeRoom extends DurableObject<Env> {
       this.reject(p, msg, "You're too tired. Eat something or go to bed.");
       return false;
     }
-    this.save!.stamina = have - cost;
+    this.useEnergy(p, Date.now(), (e) => spendEnergy(e, cost));
     return true;
   }
 
@@ -1892,6 +1947,8 @@ export class HomeRoom extends DurableObject<Env> {
     this.act(p, "eat", now, def.id);
     this.sendHomeState(p);
     this.inventoryChanged(p, `Ate ${def.name} (+${gain} stamina)`);
+    // Food tops stamina up for mining and chopping, but being worn out lasts until the day resets.
+    if (this.exhausted()) send(p.ws, { t: "notice", text: RESTED_EATING_NOTICE, kind: "info" });
   }
 
   private onUnship(p: HPlayer, msg: Extract<ClientMsg, { t: "unship" }>): void {
@@ -1976,6 +2033,7 @@ export class HomeRoom extends DurableObject<Env> {
       if (out.reason) this.reject(p, msg, out.reason);
       return;
     }
+    if (farmLocked(this.exhausted(), out.effect)) return this.reject(p, msg, FARM_LOCKED_NOTICE);
     this.wrongTool = null;
     // The result is applied now; `impactAt` lets every client show it when the swing lands.
     const stamp = { by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
@@ -2049,10 +2107,7 @@ export class HomeRoom extends DurableObject<Env> {
   private wrongToolHit(p: HPlayer, msg: Extract<ClientMsg, { t: "use" }>, reason: string, key: ToolKey, now: number): void {
     const streak = nextWrongToolStreak(this.wrongTool, now);
     this.wrongTool = streak;
-    const have = this.stamina();
-    const cost = Math.min(have, wrongToolCost(streak.count));
-    if (cost > 0) {
-      this.save!.stamina = have - cost;
+    if (this.useEnergy(p, now, (e) => spendEnergy(e, wrongToolCost(streak.count))) !== "none") {
       this.sendHomeState(p);
       this.persist({ save: true });
     }

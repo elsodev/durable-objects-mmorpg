@@ -11,7 +11,9 @@ import { actionFrame, actionNameFor, impactFrameOf, ITEM_POSE_ACTS, swingFrame }
 import { toolTiming } from "../../shared/engine/toolTiming";
 import { heldFrameIndex, heldToShow } from "./held-logic";
 import { createPoseLayer } from "./poses";
-import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFps, walkFrame, type EntityProfile } from "./entityProfile";
+import { createDashFx } from "./dash-fx";
+import { strideFrame, strideRate } from "./dash-logic";
+import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFps, type EntityProfile } from "./entityProfile";
 
 /**
  * The single place an entity's textures are chosen. Today it is the catalog sprite key; when
@@ -45,6 +47,8 @@ interface Rec {
   state: EntityState;
   gen: number;
   clock: number;
+  /** Walk cycle position in frames: advances at the profile fps, faster dashing, slower worn out. */
+  stride: number;
   phaseMs: number;
   flashMs: number;
   removing: boolean;
@@ -99,6 +103,7 @@ export const createEntityLayer = ((
   const live = new Map<string, Rec>();
   const pool: Rec[] = [];
   const poses = createPoseLayer(art, layers);
+  const dash = createDashFx(art, layers);
   let gen = 0;
 
   function applyCharacter(rec: Rec, s: EntityState): void {
@@ -194,6 +199,7 @@ export const createEntityLayer = ((
       sprite.anchor.copyFrom(rec.body.anchor);
       sprite.position.copyFrom(rec.body.position);
       sprite.scale.copyFrom(rec.body.scale);
+      sprite.skew.copyFrom(rec.body.skew);
       sprite.alpha = rec.body.alpha;
       sprite.visible = true;
     }
@@ -224,6 +230,7 @@ export const createEntityLayer = ((
         state: s,
         gen: 0,
         clock: 0,
+        stride: 0,
         phaseMs: 0,
         flashMs: 0,
         removing: false,
@@ -246,6 +253,7 @@ export const createEntityLayer = ((
     rec.actKey = s.act ? `${s.act.k}:${s.act.at}` : "";
     rec.actStart = -Infinity;
     rec.clock = 0;
+    rec.stride = 0;
     rec.phaseMs = phaseOf(s.id) * 10_000;
     rec.flashMs = 0;
     rec.slide = null;
@@ -267,6 +275,9 @@ export const createEntityLayer = ((
   function release(rec: Rec): void {
     live.delete(rec.id);
     poses.release(rec.id);
+    dash.release(rec.id);
+    rec.body.skew.x = 0;
+    rec.heldBg.skew.x = rec.heldFg.skew.x = 0;
     rec.heldBg.visible = rec.heldFg.visible = false;
     rec.root.removeFromParent();
     rec.body.filters = null;
@@ -279,11 +290,12 @@ export const createEntityLayer = ((
     const p = rec.profile;
     const c = rec.char;
     rec.clock += dt;
+    rec.stride += (dt * walkFps(p, s) * strideRate(s.moving ? s.pace : undefined)) / 1000;
 
     const seated = isSeated(s);
     const animating = !seated && (s.moving || p.animateIdle);
     const frames = c.walk[s.facing] ?? c.walk.down;
-    const walkIndex = animating && frames.length > 0 ? walkFrame(rec.clock, walkFps(p, s), frames.length) : 0;
+    const walkIndex = animating && frames.length > 0 ? strideFrame(rec.stride, frames.length, s.moving ? s.pace : undefined) : 0;
     const tex = animating && frames.length > 0 ? frames[walkIndex] : c.idle[s.facing] ?? c.idle.down;
     const now = performance.now();
     let acting = false;
@@ -331,6 +343,8 @@ export const createEntityLayer = ((
 
     // /sleep and /piss draw over whatever the body showed above.
     const posed = seated ? { posed: false } : poses.draw(rec, s, c, now);
+    // A dash leans and bobs the walking body; the held tool copies it just below.
+    dash.apply(rec, acting || posed.posed || seated ? { ...s, moving: false } : s, walkIndex, frames.length, now);
     drawHeld(rec, s, heldToShow(s, { acting: acting || posed.posed, seated, dying: rec.deathT >= 0 }), walkIndex);
 
     // Higher off the ground = smaller, fainter shadow.
@@ -375,6 +389,7 @@ export const createEntityLayer = ((
     sync(states, dtMs) {
       const dt = Math.max(0, Math.min(MAX_DT, dtMs));
       gen++;
+      dash.tick(performance.now());
       for (let i = 0; i < states.length; i++) {
         const s = states[i];
         let rec = live.get(s.id);
@@ -444,6 +459,7 @@ export const createEntityLayer = ((
       flashFilters?.[0].destroy();
       shadowCtx.destroy();
       poses.destroy();
+      dash.destroy();
     },
   };
 }) satisfies CreateEntityLayer;

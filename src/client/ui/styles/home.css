@@ -218,3 +218,11 @@
   100% { opacity: 0; }
 }
 .home-stamina[hidden],
+/* Worn out until the day resets: the bar reads it in words and the label turns berry. */
+.home-stamina.is-exhausted .home-bar-label,
+.home-stamina.is-exhausted .home-bar-text {
+  color: var(--dm-berry);
+}
+.home-stamina.is-exhausted .home-bar-text {
+  white-space: nowrap;
+}

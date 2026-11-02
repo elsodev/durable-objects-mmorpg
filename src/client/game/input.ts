@@ -35,6 +35,17 @@ export function isMoveCode(code: string): boolean {
   return code in MOVE;
 }
 
+/** Shift is the dash key (either side). */
+export function isDashCode(code: string): boolean {
+  return code === "ShiftLeft" || code === "ShiftRight";
+}
+
+/** The held direction plus dash: Shift only counts while a direction is held. */
+export function dashDir(held: Iterable<string>, shift: boolean): { dx: number; dy: number; dash?: boolean } {
+  const d = dirFromKeys(held);
+  return shift && (d.dx !== 0 || d.dy !== 0) ? { ...d, dash: true } : d;
+}
+
 /** Held direction, each axis in {-1,0,1}; opposite keys cancel. Diagonals are not scaled here. */
 export function dirFromKeys(held: Iterable<string>): { dx: number; dy: number } {
   let dx = 0;
@@ -130,16 +141,18 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
   const slots = emitter<number>();
   const clicks = emitter<PointerInfo>();
   const moves = emitter<PointerInfo>();
-  const dirs = emitter<{ dir: { dx: number; dy: number }; at: number }>();
-  let lastDir = { dx: 0, dy: 0 };
+  const dirs = emitter<{ dir: { dx: number; dy: number; dash?: boolean }; at: number }>();
+  let lastDir: { dx: number; dy: number; dash?: boolean } = { dx: 0, dy: 0 };
+  /** Shift held (dash). Tracked like the move keys, so typing a capital letter in chat never counts. */
+  let shift = false;
 
   const focusBlocked = () => isEditable(doc.activeElement);
   const blocked = () => typing || focusBlocked();
 
   /** Reports a held-direction change right away, so movement doesn't wait for the next frame. */
   const dirChanged = (at: number) => {
-    const d = blocked() ? { dx: 0, dy: 0 } : dirFromKeys(held);
-    if (d.dx === lastDir.dx && d.dy === lastDir.dy) return;
+    const d = blocked() ? { dx: 0, dy: 0 } : dashDir(held, shift);
+    if (d.dx === lastDir.dx && d.dy === lastDir.dy && !!d.dash === !!lastDir.dash) return;
     lastDir = d;
     dirs.emit({ dir: d, at });
   };
@@ -153,8 +166,14 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
     if (blocked() || isEditable(e.target)) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return; // leave browser shortcuts alone
     const code = e.code;
+    if (isDashCode(code)) {
+      shift = true;
+      dirChanged(e.timeStamp);
+      return;
+    }
     if (isMoveCode(code)) {
       held.add(code);
+      shift = e.shiftKey;
       e.preventDefault(); // arrows would scroll the page
       dirChanged(e.timeStamp);
       return;
@@ -176,11 +195,13 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
   // Always release, even while typing, so a key held while focusing chat doesn't stick.
   const onKeyUp = (e: KeyboardEvent) => {
     held.delete(e.code);
+    if (isDashCode(e.code)) shift = false;
     dirChanged(e.timeStamp);
   };
 
   const clearHeld = () => {
     held.clear();
+    shift = false;
     dirChanged(performance.now());
   };
   const onVisibility = () => {
@@ -232,7 +253,7 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
   const input: Input = {
     dir() {
       if (blocked()) return { dx: 0, dy: 0 };
-      return dirFromKeys(held);
+      return dashDir(held, shift);
     },
     setTyping(t) {
       typing = t;

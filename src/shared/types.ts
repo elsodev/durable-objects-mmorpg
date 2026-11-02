@@ -101,6 +101,8 @@ export interface EntityState {
   act?: { k: string; at: number; item?: ItemId };
   /** Players only: the tool or weapon in their selected hotbar slot, drawn in their hand (shared/held.ts). */
   held?: ItemId;
+  /** Players only: running (Shift held) or worn out (slow walk). Absent: a normal walk. */
+  pace?: "dash" | "tired";
 }
 
 /** Character creator choices; every field is an option id listed in shared/look.ts. */

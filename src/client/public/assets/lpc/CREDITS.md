@@ -837,6 +837,12 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - Source: drawn by script for this game
 - Notes: Pose props. `bedroll.png` is a patchwork quilt and a pillow for `/sleep`, `zzz.png` is three frames of a rising Z, and `pee.png` holds the side and front stream frames plus the puddles for `/piss`. `calm.png` is the soft ground glow and the three light-mote frames for `/meditate`.
 
+### fx/dash_dust.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game
+- Notes: Four 16 × 16 frames of a dust puff kicked up behind a dashing character's feet: a small puff, a double puff, a billow and the last wisps. Warm outline and light from the top left, like the other fx sheets.
+
 ### map/island.png, map/pins.png
 - Authors: DurableMMO project
 - License: **CC0**
