@@ -38,6 +38,10 @@ export interface TerrainEntry {
   variants?: RectTuple[];
   /** Autotile blob rects (outer3x3, inner2x2, grassBankOverlay3x3, ...); values are RectTuples or notes. */
   edges?: Record<string, unknown>;
+  /** Animated terrain (water_anim): frame rects per sheet; parseWaterAnim reads these and the rest. */
+  frames?: Record<string, RectTuple[]>;
+  /** Animated terrain: per-style timing and drift ({ ms, flow: [x, y] }). */
+  styles?: Record<string, unknown>;
 }
 
 export interface SpriteEntry {

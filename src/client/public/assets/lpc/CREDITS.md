@@ -340,6 +340,12 @@ Body type: female, skin palette: amber.
 - Source: https://github.com/ElizaWy/LPC (Terrain/terrain_summer.png); https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
 - Notes: Original grass, dirt and shallows by Lanea Zimmerman; edited, animated and recolored by Eliza Wyatt.
 
+### terrain/water_anim.png
+- Authors: Eliza Wyatt (DeathsDarling), Lanea Zimmerman (Sharm)
+- License: **OGA-BY 3.0**
+- Source: https://github.com/ElizaWy/LPC (FX/Water Reflections.png and Terrain/terrain_summer.png); https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles
+- Notes: Derived by script. The surface frames are terrain_summer.png's open-water colour with the 4-frame loops of Eliza Wyatt's Water Reflections (shimmer and ripple rows) scattered over a seamless 192 px pattern, each loop starting on a different frame; each frame is drawn 2x2. The bank sheets are terrain_summer.png's grass and dirt pond banks with the flat open-water pixels made transparent. The lap line along the banks is traced in code from these bank pixels.
+
 ### terrain/tilled_soil.png
 - Authors: Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**

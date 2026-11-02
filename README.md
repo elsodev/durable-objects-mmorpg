@@ -214,7 +214,7 @@ All art is Liberated Pixel Cup (LPC) style, under CC-BY-SA 3.0, GPL 3.0 or 2.0, 
 
 Ore rocks and icons (stone, copper, iron, silver, gold, and the gem and diamond rocks recoloured from the silver sheet) are BlueCarrot16's "LPC Ore and Forge", recoloured by Eliza Wyatt (OGA-BY 3.0, https://opengameart.org/content/lpc-ore-and-forge).
 
-The village houses are Eliza Wyatt's LPC Brick House A/B and Paneled House A (OGA-BY 3.0), recoloured by script with colours from her Roofing and Walls sheets, some mirrored or widened, with her Brick Chimney A and flower boxes from her flowers sheet. The pond's lily pads and reeds come from her plants_summer sheet, and the benches from the decorations-medieval sheet. The quarry's cliff and cave mouth are cut from her cliff_summer sheet (with Lanea Zimmerman's grass), and the signpost from the decorations-medieval sheet with its painted shadow removed.
+The village houses are Eliza Wyatt's LPC Brick House A/B and Paneled House A (OGA-BY 3.0), recoloured by script with colours from her Roofing and Walls sheets, some mirrored or widened, with her Brick Chimney A and flower boxes from her flowers sheet. The animated water uses her Water Reflections loops over the summer terrain's water and banks. The pond's lily pads and reeds come from her plants_summer sheet, and the benches from the decorations-medieval sheet. The quarry's cliff and cave mouth are cut from her cliff_summer sheet (with Lanea Zimmerman's grass), and the signpost from the decorations-medieval sheet with its painted shadow removed.
 
 Some art is our own drawing, released as CC0: the emotes, the log walls, the doormat, the mine cart, the light glows, the flower-box planters, and a few icons.
 

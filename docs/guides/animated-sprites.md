@@ -77,6 +77,22 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
 - **Lids and doors:** these use named frames, `closed`, `opening` and `open`, for example the shipping bin and the cave chest. The renderer plays closed → opening → open and back again.
 - **Swaying plants:** trees and bushes sway in code (`SWAY_TYPES`). Don't draw sway frames for them.
 
+## Animated terrain (water)
+
+Ponds and rivers are animated by `src/client/render/water.ts`; the pure timing and layout live in `water-anim.ts` (unit-tested in `test/fe-water.test.ts`).
+
+- **Art:** `terrain/water_anim.png`, catalog `terrain.water_anim`:
+  - `frames.surface`: 4 frames of open water with Eliza Wyatt's water reflections. Each frame is a seamless 192 px (6-tile) pattern drawn 2x2, so any tile-sized window that starts inside the pattern fits.
+  - `banks`: the `terrain.water` bank sheets with the flat open water cut out, so the surface shows through them. The bank pixels themselves never change.
+  - `lap`: the colour of the lap line, and the sheet's water colours. The client traces the line from the bank pixels at load time (1–3 px off the bank), so it hugs grass tufts and rocks.
+  - `styles`: `ms` per frame and `flow` (drift in source px per second) for each `MapData.waterStyle`: `still` (ponds, lakes, the default) and `river`.
+- **One pattern in world space:** each tile shows the window of the pattern at its world position, so the surface runs on across tiles and chunks without seams. The pattern is 6 tiles wide and its glints run out of step, so there is no blinking grid. A river slides the window one whole pixel at a time, keeping the art crisp.
+- **Lap phase:** the line's stage is keyed to world pixels and steps every 40 px along the shore, so it travels along a bank instead of pulsing everywhere at once.
+- **Layers:** water sits under the cached ground chunks. Land never overlaps a water tile, and banks are drawn inside the water tile. Lily pads, reeds, docks and bridges are props or wood tiles, so they stay on top. Cached chunks skip rows of open water, so nothing paints over the water twice.
+- **Cost:** the surface is one sprite per run of water (cut every 6 tiles) sharing a handful of windows into the sheet. The ticker moves those windows only when the frame or the drift pixel changes. Still water is cached per chunk like the ground and redrawn only on a frame step.
+- **Adding a water style:** add it to `WaterStyle` in `src/shared/types.ts`, give it defaults in `DEFAULT_WATER_STYLES`, add it to the catalog's `styles`, and set `waterStyle` in the map's `build()` call.
+- **Fallback:** if the entry is missing or incomplete, `parseWaterAnim` returns null and water is drawn as still tiles, as before. The minimap and map panel always use still colours.
+
 ## Checking an animation
 
 - [ ] Every frame is in its grid cell, and nothing is cut off at the cell edge. Big swings need a bigger `frameSize`.

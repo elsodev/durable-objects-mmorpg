@@ -48,6 +48,26 @@ export function blobPiece(other: (dx: number, dy: number) => boolean, q: Quadran
   return null;
 }
 
+/**
+ * Source rect of one quadrant of a blob piece, given the sheet block's rect (3x3 outer or 2x2
+ * inner block of square tiles). `shift` moves the window by that fraction of a tile.
+ */
+export function pieceQuadRect(
+  block: { x: number; y: number; width: number },
+  piece: BlobPiece,
+  q: Quadrant,
+  shift: { x: number; y: number } = { x: 0, y: 0 },
+): { x: number; y: number; w: number; h: number } {
+  const tile = block.width / (piece.block === "outer" ? 3 : 2);
+  const half = tile / 2;
+  return {
+    x: block.x + piece.col * tile + (q & 1 ? half : 0) + Math.round(shift.x * tile),
+    y: block.y + piece.row * tile + (q & 2 ? half : 0) + Math.round(shift.y * tile),
+    w: half,
+    h: half,
+  };
+}
+
 /** Four quadrant pieces, or null when the tile needs no transition at all. */
 export function blobPieces(other: (dx: number, dy: number) => boolean): (BlobPiece | null)[] | null {
   const pieces = QUADRANTS.map((q) => blobPiece(other, q));
@@ -177,4 +197,45 @@ export function shoreSides(map: MapData, x: number, y: number): Sides & { nw: bo
     n: at(0, -1), e: at(1, 0), s: at(0, 1), w: at(-1, 0),
     nw: at(-1, -1), ne: at(1, -1), sw: at(-1, 1), se: at(1, 1),
   };
+}
+
+// ---------------------------------------------------------------- chunk bands
+
+export interface TileRect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
+ * Splits a chunk [x0, x1) x [y0, y1) into bands of consecutive rows that have something to draw,
+ * each trimmed to the columns that do. Rows of open animated water drop out, so the cached ground
+ * never paints a transparent quad over them (that overdraw costs real fill rate on big rivers).
+ */
+export function chunkBands(need: (x: number, y: number) => boolean, x0: number, y0: number, x1: number, y1: number): TileRect[] {
+  const out: TileRect[] = [];
+  let band: TileRect | null = null;
+  for (let y = y0; y < y1; y++) {
+    let lo = -1;
+    let hi = -1;
+    for (let x = x0; x < x1; x++) {
+      if (!need(x, y)) continue;
+      if (lo < 0) lo = x;
+      hi = x + 1;
+    }
+    if (lo < 0) {
+      band = null;
+      continue;
+    }
+    if (band) {
+      band.x0 = Math.min(band.x0, lo);
+      band.x1 = Math.max(band.x1, hi);
+      band.y1 = y + 1;
+    } else {
+      band = { x0: lo, y0: y, x1: hi, y1: y + 1 };
+      out.push(band);
+    }
+  }
+  return out;
 }

@@ -1237,6 +1237,95 @@
     64
    ]
   },
+  "water_anim": {
+   "file": "terrain/water_anim.png",
+   "note": "Animated water. frames.surface: 4 frames, each a seamless 192 px (6-tile) pattern of open water with Eliza Wyatt's water reflections, drawn 2x2 so any tile-sized window inside the pattern fits; laid in world space. banks: terrain.water edges with the flat open water cut out, so the surface shows through. lap: the client traces a lap line (color) just off the bank pixels of these sheets; water lists the sheets' water colours, which are not bank. styles: ms per frame and flow (drift in source px/s) per MapData.waterStyle.",
+   "styles": {
+    "still": {
+     "ms": 260
+    },
+    "river": {
+     "ms": 220,
+     "flow": [
+      6,
+      0
+     ]
+    }
+   },
+   "frames": {
+    "surface": [
+     [
+      0,
+      0,
+      384,
+      384
+     ],
+     [
+      384,
+      0,
+      384,
+      384
+     ],
+     [
+      768,
+      0,
+      384,
+      384
+     ],
+     [
+      1152,
+      0,
+      384,
+      384
+     ]
+    ]
+   },
+   "banks": {
+    "grassBankOverlay3x3": [
+     0,
+     384,
+     96,
+     96
+    ],
+    "dirtBankOverlay3x3": [
+     96,
+     384,
+     96,
+     96
+    ],
+    "grassInner2x2": [
+     192,
+     384,
+     64,
+     64
+    ],
+    "dirtInner2x2": [
+     256,
+     384,
+     64,
+     64
+    ]
+   },
+   "lap": {
+    "color": [
+     58,
+     175,
+     194
+    ],
+    "water": [
+     [
+      33,
+      112,
+      135
+     ],
+     [
+      42,
+      133,
+      152
+     ]
+    ]
+   }
+  },
   "stone": {
    "file": "terrain/castlefloors.png",
    "tile": [

@@ -1,19 +1,25 @@
 // Terrain renderer: one sprite per tile (plus transition quadrants and wall shading), grouped
 // into 16x16-tile chunks that are cached as textures, so the whole map costs ~20 quads per frame.
+// Water is the exception: render/water.ts animates it in a layer under the chunks.
 import { Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
 import { Ground, type MapData } from "../../shared/types";
 import { TILE, type Art, type CreateGroundLayer } from "../contracts";
 import {
   QUADRANTS,
+  chunkBands,
+  pieceQuadRect,
   planTile,
   shoreSides,
   wallShade,
   type BlobPiece,
   type BlobSet,
   type Quadrant,
+  type TileRect,
 } from "./ground-autotile";
+import { WaterLayer, type WaterArt } from "./water";
 
 export type { BlobSet } from "./ground-autotile";
+export type { WaterArt } from "./water";
 
 /** LPC blob sheet slices: a 3x3 patch block and a 2x2 inner-corner (hole) block, square tiles. */
 export interface GroundBlob {
@@ -28,6 +34,8 @@ export interface GroundBlob {
  */
 export interface GroundEdgeArt {
   groundBlob?(set: BlobSet): GroundBlob | null;
+  /** Animated water (surface and bank lap frames); null or absent draws water as still tiles. */
+  waterAnim?(): WaterArt | null;
 }
 
 export const CHUNK_TILES = 16;
@@ -41,7 +49,7 @@ const WALL_SHADOW = 0x1c1410;
 export class BlobTextures {
   private blobs = new Map<BlobSet, GroundBlob | null>();
   private quads = new Map<string, Texture | null>();
-  constructor(private art: Art & GroundEdgeArt) {}
+  constructor(private art: GroundEdgeArt) {}
 
   /**
    * The quadrant of a blob piece as its own texture, or null when the art has no such sheet.
@@ -55,14 +63,8 @@ export class BlobTextures {
     let tex: Texture | null = null;
     if (blob) {
       const sheet = piece.block === "outer" ? blob.outer3x3 : blob.inner2x2;
-      const tile = sheet.frame.width / (piece.block === "outer" ? 3 : 2);
-      const half = tile / 2;
-      const frame = new Rectangle(
-        sheet.frame.x + piece.col * tile + (q & 1 ? half : 0) + Math.round(shift.x * tile),
-        sheet.frame.y + piece.row * tile + (q & 2 ? half : 0) + Math.round(shift.y * tile),
-        half,
-        half,
-      );
+      const r = pieceQuadRect(sheet.frame, piece, q, shift);
+      const frame = new Rectangle(r.x, r.y, r.w, r.h);
       tex = new Texture({ source: sheet.source, frame });
     }
     this.quads.set(key, tex);
@@ -212,32 +214,54 @@ function interiorTile(art: Art, map: MapData, x: number, y: number, base: Ground
   return room.floor ? art.floor?.(room.floor, x, y) ?? null : null;
 }
 
-function buildChunk(art: Art, blobs: BlobTextures, map: MapData, cx: number, cy: number): Container | null {
+/**
+ * One chunk: its ground cached as textures, one per band of rows that has something to draw.
+ * With `water`, water tiles and their banks are left out (that layer draws them, animated, below),
+ * and rows of open water fall out of the bands entirely.
+ */
+function buildChunk(art: Art, blobs: BlobTextures, map: MapData, cx: number, cy: number, water: WaterLayer | null): Container | null {
   const x0 = cx * CHUNK_TILES;
   const y0 = cy * CHUNK_TILES;
   const x1 = Math.min(map.width, x0 + CHUNK_TILES);
   const y1 = Math.min(map.height, y0 + CHUNK_TILES);
+  const need = (x: number, y: number): boolean => {
+    const g = map.ground[y * map.width + x];
+    if (g === Ground.Void) return false;
+    if (!water || g !== Ground.Water) return true;
+    // Live water needs the chunk only for the drawn shoreline used when there is no bank art.
+    const plan = planTile(map, x, y);
+    return plan.blob !== null && !blobs.has(plan.blob.set);
+  };
+  const bands = chunkBands(need, x0, y0, x1, y1);
+  if (!bands.length) return null;
   const chunk = new Container();
-  chunk.position.set(x0 * TILE, y0 * TILE);
+  for (const r of bands) chunk.addChild(buildBand(art, blobs, map, r, water));
+  return chunk;
+}
+
+function buildBand(art: Art, blobs: BlobTextures, map: MapData, r: TileRect, water: WaterLayer | null): Container {
+  const band = new Container();
+  band.position.set(r.x0 * TILE, r.y0 * TILE);
   const tiles = new Container();
   const shade = new Graphics();
   const half = TILE / 2;
-  let any = false;
 
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
+  for (let y = r.y0; y < r.y1; y++) {
+    for (let x = r.x0; x < r.x1; x++) {
       const plan = planTile(map, x, y);
       if (plan.base === null) continue;
-      any = true;
-      const px = (x - x0) * TILE;
-      const py = (y - y0) * TILE;
+      const px = (x - r.x0) * TILE;
+      const py = (y - r.y0) * TILE;
       const blob = plan.blob && blobs.has(plan.blob.set) ? plan.blob : null;
       // Without blob art, a blended tile is drawn as its own kind with a hard edge.
       const base = plan.blob && !blob && plan.blobKind !== null ? plan.blobKind : plan.base;
+      const liveWater = water !== null && plan.base === Ground.Water;
       const indoorTex = interiorTile(art, map, x, y, base);
-      tiles.addChild(tileSprite(indoorTex ?? art.ground(base, x, y), px, py, TILE));
+      if (!liveWater) tiles.addChild(tileSprite(indoorTex ?? art.ground(base, x, y), px, py, TILE));
 
-      if (blob) {
+      if (blob && liveWater) {
+        // Banks of live water are drawn by the water layer.
+      } else if (blob) {
         for (const q of QUADRANTS) {
           const piece = blob.pieces[q];
           // Fully-inside quadrants of an overlay terrain (grass, tilled) still need that terrain
@@ -255,21 +279,17 @@ function buildChunk(art: Art, blobs: BlobTextures, map: MapData, cx: number, cy:
       drawWallShade(shade, map, x, y, px, py);
     }
   }
-  if (!any) {
-    chunk.destroy({ children: true });
-    tiles.destroy();
-    shade.destroy();
-    return null;
-  }
-  chunk.addChild(tiles, shade);
-  chunk.cullable = true;
-  chunk.cullArea = new Rectangle(0, 0, (x1 - x0) * TILE, (y1 - y0) * TILE);
-  chunk.cacheAsTexture({ scaleMode: "nearest", antialias: false });
-  return chunk;
+  band.addChild(tiles, shade);
+  band.cullable = true;
+  band.cullArea = new Rectangle(0, 0, (r.x1 - r.x0) * TILE, (r.y1 - r.y0) * TILE);
+  band.cacheAsTexture({ scaleMode: "nearest", antialias: false });
+  return band;
 }
 
 export const createGroundLayer: CreateGroundLayer = (art, map, layers) => {
-  const blobs = new BlobTextures(art as Art & GroundEdgeArt);
+  const edgeArt = art as Art & GroundEdgeArt;
+  const blobs = new BlobTextures(edgeArt);
+  const water = waterLayerFor(edgeArt, blobs, map);
   const root = new Container();
   root.label = "ground";
   if (map.ambient === "indoor") {
@@ -280,25 +300,51 @@ export const createGroundLayer: CreateGroundLayer = (art, map, layers) => {
   }
   const cols = Math.ceil(map.width / CHUNK_TILES);
   const rows = Math.ceil(map.height / CHUNK_TILES);
+  // Water sits under every chunk: its banks spill into the water tile, never onto the land beside it.
+  const waterRoot = new Container();
+  waterRoot.label = "water";
+  root.addChild(waterRoot);
   for (let cy = 0; cy < rows; cy++) {
     for (let cx = 0; cx < cols; cx++) {
-      const chunk = buildChunk(art, blobs, map, cx, cy);
+      const x0 = cx * CHUNK_TILES;
+      const y0 = cy * CHUNK_TILES;
+      const w = water?.layer.buildChunk(x0, y0, Math.min(map.width, x0 + CHUNK_TILES), Math.min(map.height, y0 + CHUNK_TILES));
+      if (w) waterRoot.addChild(w);
+      const chunk = buildChunk(art, blobs, map, cx, cy, water?.layer ?? null);
       if (chunk) root.addChild(chunk);
     }
   }
   layers.ground.addChild(root);
+  water?.layer.start();
 
   let destroyed = false;
   return {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      // Water first: it stops its ticker and drops its caches while its sprites still exist.
+      water?.layer.destroy();
       if (!root.destroyed) {
-        for (const c of root.children) c.cacheAsTexture(false);
+        for (const c of root.children) if (c !== waterRoot) for (const band of c.children) band.cacheAsTexture(false);
         root.removeFromParent();
         root.destroy({ children: true });
       }
+      water?.banks.destroy();
       blobs.destroy();
     },
   };
 };
+
+/** The animated water layer, or null when the map has no water or the art no water animation. */
+function waterLayerFor(art: GroundEdgeArt, blobs: BlobTextures, map: MapData): { layer: WaterLayer; banks: BlobTextures } | null {
+  if (!map.ground.includes(Ground.Water)) return null;
+  let anim: WaterArt | null = null;
+  try {
+    anim = art.waterAnim?.() ?? null;
+  } catch {
+    anim = null;
+  }
+  if (!anim) return null;
+  const banks = new BlobTextures(anim.banks);
+  return { layer: new WaterLayer(anim, banks, blobs, map), banks };
+}

@@ -218,7 +218,12 @@ export interface MapData {
   ambient: "day" | "cave" | "indoor";
   /** Home maps only: which of the home's maps this is. */
   homeMap?: HomeMapId;
+  /** How the client animates this map's water: ripples in place, or a current (default still). */
+  waterStyle?: WaterStyle;
 }
+
+/** Water animation per map: ponds and lakes shimmer in place, rivers drift with the current. */
+export type WaterStyle = "still" | "river";
 
 // ---------- Items & inventory ----------
 

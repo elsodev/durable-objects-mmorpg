@@ -84,5 +84,5 @@ export function buildRiverside(): MapData {
   // The far (south) bank is upper-valley forest: dense and out of reach.
   b.scatter("tree", 70, { x: 2, y: 33, w: 76, h: 5 });
 
-  return b.build({ zone: "riverside", name: "Mossbrook Riverside", ambient: "day" });
+  return b.build({ zone: "riverside", name: "Mossbrook Riverside", ambient: "day", waterStyle: "river" });
 }

@@ -2,11 +2,13 @@
 // Anything the catalog lacks (or that fails to load) comes from art/placeholders.ts, so the
 // game always renders, even with no art pack at all.
 import { Assets, Graphics, Texture, groupD8, type Application, type TextureSource } from "pixi.js";
-import { SCALE, type Art, type CharacterArt, type LoadArt, type Placeholders, type ShadowSize, type SpriteArt } from "../contracts";
+import { SCALE, SRC_TILE, type Art, type CharacterArt, type LoadArt, type Placeholders, type ShadowSize, type SpriteArt } from "../contracts";
 import { Ground, type Facing, type ItemId, type RockOre } from "../../shared/types";
 import type { CropLook } from "../../shared/engine";
 import { getItem } from "../../shared/items";
-import type { BlobSet, GroundBlob, GroundEdgeArt } from "../render/ground";
+import type { BlobSet, GroundBlob, GroundEdgeArt, WaterArt } from "../render/ground";
+import { pieceQuadRect, type BlobPiece, type Quadrant } from "../render/ground-autotile";
+import { parseWaterAnim } from "../render/water-anim";
 import type { Catalog, CharacterEntry, DirRows, PointTuple, RectTuple, SpriteEntry } from "./catalog-types";
 import { PROCEDURAL_INTERIOR_PROPS } from "./draw/interior";
 import { fitIcon, opaqueBox } from "./icon-fit";
@@ -365,6 +367,65 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
     return blob;
   };
 
+  // ---- animated water (render/water.ts)
+  let waterArt: WaterArt | null | undefined;
+  const waterAnim = (): WaterArt | null => {
+    if (waterArt !== undefined) return waterArt;
+    waterArt = null;
+    const rects = parseWaterAnim(cat.terrain?.water_anim, SRC_TILE);
+    const res = rects && (sheets.get(rects.file)?.resource as CanvasImageSource | undefined);
+    if (!rects || !res || typeof document === "undefined") return null;
+    const surface = rects.surface.map((r) => slice(rects.file, r));
+    if (surface.some((t) => !t)) return null;
+    const sets: Partial<Record<BlobSet, GroundBlob | null>> = {};
+    for (const bank of ["grass", "dirt"] as const) {
+      const outer3x3 = slice(rects.file, rects.banks[`${bank}BankOverlay3x3`]);
+      const inner2x2 = slice(rects.file, rects.banks[`${bank}Inner2x2`]);
+      sets[`water.${bank}`] = outer3x3 && inner2x2 ? { outer3x3, inner2x2 } : null;
+    }
+    // Bank pixels the lap line must stay off: anything opaque that isn't water.
+    const pix = (() => {
+      const c = document.createElement("canvas");
+      c.width = (res as { width: number }).width;
+      c.height = (res as { height: number }).height;
+      const g = c.getContext("2d", { willReadFrequently: true });
+      if (!g) return null;
+      g.drawImage(res, 0, 0);
+      return { data: g.getImageData(0, 0, c.width, c.height).data, width: c.width };
+    })();
+    const waterRgb = new Set(rects.lap.water.map(([r, g, b]) => (r << 16) | (g << 8) | b));
+    const solidCache = new Map<string, Uint8Array | null>();
+    const bankSolid = (set: BlobSet, piece: BlobPiece, q: Quadrant): Uint8Array | null => {
+      const key = `${set}|${piece.block}|${piece.col}|${piece.row}|${q}`;
+      if (solidCache.has(key)) return solidCache.get(key)!;
+      const bank = set === "water.grass" ? "grass" : set === "water.dirt" ? "dirt" : null;
+      let out: Uint8Array | null = null;
+      if (pix && bank) {
+        const [bx, by, bw] = rects.banks[piece.block === "outer" ? (`${bank}BankOverlay3x3` as const) : (`${bank}Inner2x2` as const)];
+        const r = pieceQuadRect({ x: bx, y: by, width: bw }, piece, q);
+        out = new Uint8Array(r.w * r.h);
+        for (let j = 0; j < r.h; j++) {
+          for (let i = 0; i < r.w; i++) {
+            const o = ((r.y + j) * pix.width + r.x + i) * 4;
+            const rgb = (pix.data[o]! << 16) | (pix.data[o + 1]! << 8) | pix.data[o + 2]!;
+            if (pix.data[o + 3]! > 0 && !waterRgb.has(rgb)) out[j * r.w + i] = 1;
+          }
+        }
+      }
+      solidCache.set(key, out);
+      return out;
+    };
+    waterArt = {
+      surface: surface as Texture[],
+      period: rects.period,
+      banks: { groundBlob: (set) => sets[set] ?? null },
+      bankSolid,
+      lapColor: rects.lap.color,
+      styles: rects.styles,
+    };
+    return waterArt;
+  };
+
   // ---- autotiled fences (render/fence.ts): composed per neighbour mask from the plain fence sheet
   const fenceCache = new Map<number, SpriteArt | null>();
   const fence = (mask: number): SpriteArt | null => {
@@ -408,6 +469,7 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
 
   const art: Art & GroundEdgeArt = {
     groundBlob,
+    waterAnim,
     fence,
     ground,
     floor,

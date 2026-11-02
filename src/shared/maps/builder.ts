@@ -315,7 +315,7 @@ export class MapBuilder {
     for (let i = 0; i < this.ground.length; i++) if (!seen[i] && !BLOCKING_GROUND.has(this.ground[i]!)) this.ground[i] = wall;
   }
 
-  build(meta: Pick<MapData, "zone" | "name" | "ambient" | "farmArea" | "floorArea" | "homeMap" | "farmGrass" | "noFarm">): MapData {
+  build(meta: Pick<MapData, "zone" | "name" | "ambient" | "farmArea" | "floorArea" | "homeMap" | "farmGrass" | "noFarm" | "waterStyle">): MapData {
     const map: MapData = {
       ...meta,
       width: this.width,
