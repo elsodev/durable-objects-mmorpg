@@ -11,6 +11,11 @@ import { Room } from "./interiors/room";
 export const HOME_IN_FLOOR = { x: 1, y: 3, w: 12, h: 8 } as const;
 /** Where a home with no bed gets one (map tiles, top-left of the 1x2 bed). */
 export const HOME_IN_BED = { x: 2, y: 3 } as const;
+/**
+ * Where a home with no wardrobe gets one (map tiles, top-left of the 2x1 wardrobe): against the
+ * back wall under the painting, clear of the bed, the hearth and both windows.
+ */
+export const HOME_IN_WARDROBE = { x: 9, y: 3 } as const;
 
 export function buildHomeInterior(): MapData {
   const room = new Room({

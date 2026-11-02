@@ -18,8 +18,10 @@ export type HomeClientMsg =
   | { t: "storePut"; id: string; slot: number; qty?: number; req?: string }
   /** Move up to `qty` (default: all) from storage slot `index` of `id` into the bag. */
   | { t: "storeTake"; id: string; index: number; qty?: number; req?: string }
-  /** Done with storage `id` (the door closes). */
-  | { t: "storeClose"; id: string };
+  /** Done with storage `id` (the door closes). Also shuts an open wardrobe. */
+  | { t: "storeClose"; id: string }
+  /** Open the placed wardrobe `id` to change clothes. Owner only, within reach; answered by {t:"wardrobe"}. */
+  | { t: "wardrobeOpen"; id: string };
 
 export interface ShipLine {
   item: ItemId;
@@ -70,7 +72,9 @@ export type HomeServerMsg =
    * show the panel. Sent to the owner only.
    */
   | { t: "storage"; id: string; item: ItemId; slots: (InventorySlot | null)[]; accepts: StorageAccepts; open?: boolean }
-  /** A storage piece's door opened or closed (everyone on that map sees it). */
+  /** The wardrobe `id` is open: show the character designer (owner only). */
+  | { t: "wardrobe"; id: string }
+  /** A storage piece's (or the wardrobe's) door opened or closed (everyone on that map sees it). */
   | { t: "lid"; id: string; open: boolean }
   /** The whole farm (replaces the client's copy, e.g. after a day end removed tiles). */
   | { t: "farmAll"; tiles: FarmTile[] }
@@ -106,6 +110,7 @@ export function validateHomeClientMsg(o: Record<string, unknown>): HomeClientMsg
       return { t: "unship", ...req };
     case "storeOpen":
     case "storeClose":
+    case "wardrobeOpen":
       return isObjId(o.id) ? { t: o.t, id: o.id } : null;
     case "storePut": {
       const qty = optQty(o.qty);

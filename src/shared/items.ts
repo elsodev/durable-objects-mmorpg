@@ -388,6 +388,15 @@ export function stepRotation(id: ItemId, r: Rotation, dir: 1 | -1 = 1): Rotation
   return ok[(i + dir + ok.length) % ok.length]!;
 }
 
+/** Furniture that opens the character designer (every house has one; see worker/home/wardrobe.ts). */
+export const WARDROBE_ITEM: ItemId = "wardrobe";
+/** Placed-object id of the house's own wardrobe: it can be moved but never picked up. */
+export const WARDROBE_ID = "wardrobe";
+
+export function isWardrobeItem(id: ItemId): boolean {
+  return id === WARDROBE_ITEM;
+}
+
 /** True for furniture you can sleep in. */
 export function isBedItem(id: ItemId): boolean {
   return getItem(id)?.bed === true;

@@ -41,6 +41,7 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   storePut: { deny: "That isn't yours to open." },
   storeTake: { deny: "That isn't yours to open." },
   storeClose: { deny: "That isn't yours to open." },
+  wardrobeOpen: { deny: "That's your host's wardrobe. You can change clothes in your own at home." },
   // Petting is harmless: the pet shows its love, but only the owner's affection is ever kept.
   petAnimal: { allow: "pet" },
   feedAnimal: { deny: "Only the owner feeds their animals." },

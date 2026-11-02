@@ -386,18 +386,18 @@ describe("HomeRoom save migration", () => {
     ctx.storage.data.set("objSeq", 2);
     const room = new HomeRoom(ctx as any, r.env) as any;
     await ctx.ready;
-    expect(room.objects.home_in.map((o: any) => o.id).sort()).toEqual(["bed", "o1"]);
+    expect(room.objects.home_in.map((o: any) => o.id).sort()).toEqual(["bed", "o1", "wardrobe"]);
     expect(room.objects.home).toEqual([]);
     expect(room.save.inventory.slots.filter(Boolean)).toEqual([{ item: "fence", qty: 1 }]);
     expect(room.mail.notes.at(-1).text).toMatch(/moved into your new house.*Fence/);
     expect(ctx.storage.data.get("layout")).toBe(HOME_LAYOUT);
-    expect((ctx.storage.data.get("homeObjects") as any).home_in).toHaveLength(2);
+    expect((ctx.storage.data.get("homeObjects") as any).home_in).toHaveLength(3);
 
     // Loading again does not migrate twice.
     const again = new HomeRoom(ctx as any, r.env) as any;
     await ctx.ready;
     expect(again.save.inventory.slots.filter(Boolean)).toEqual([{ item: "fence", qty: 1 }]);
-    expect(again.objects.home_in).toHaveLength(2);
+    expect(again.objects.home_in).toHaveLength(3);
     expect(again.mail.notes).toHaveLength(1);
   });
 
@@ -407,15 +407,15 @@ describe("HomeRoom save migration", () => {
     void ws;
     room.objects.home_in.push({ id: "o9", item: "lamp", x: 8, y: 5, rotation: 0 });
     const data = await room.exportHome("alice");
-    expect(data.objectsIn.map((o: any) => o.id).sort()).toEqual(["bed", "o9"]);
+    expect(data.objectsIn.map((o: any) => o.id).sort()).toEqual(["bed", "o9", "wardrobe"]);
     const target = r.room("bob") as any;
     await target.importHome("bob", "Bob", data);
-    expect(target.objects.home_in.map((o: any) => o.id).sort()).toEqual(["bed", "o9"]);
+    expect(target.objects.home_in.map((o: any) => o.id).sort()).toEqual(["bed", "o9", "wardrobe"]);
     // An old export (one list, old layout) is migrated on import.
     const old = { ...data, objects: [{ id: "o1", item: "lamp", x: 6, y: 8, rotation: 0 }] };
     delete old.objectsIn;
     const t2 = r.room("cleo") as any;
     await t2.importHome("cleo", "Cleo", old);
-    expect(t2.objects.home_in.map((o: any) => o.id).sort()).toEqual(["bed", "o1"]);
+    expect(t2.objects.home_in.map((o: any) => o.id).sort()).toEqual(["bed", "o1", "wardrobe"]);
   });
 });

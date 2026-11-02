@@ -118,6 +118,7 @@ import { BARN_ID, BARN_ITEM, BARN_CAPACITY, chickenById, collectEgg, layEggs } f
 import { AnimalHerd } from "./game/animalHerd";
 import { feedAnimal, petAnimal, petHen, type CareOutcome } from "./game/animalCare";
 import { eggSpots, eggViews, ensureBarn, yardAnimals } from "./home/ranch";
+import { ensureWardrobe, WARDROBE_ID, wardrobeRefusal } from "./home/wardrobe";
 import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../shared/spawns";
 import { canChangeLook, savedLook, shownLook } from "./game/look";
 import { RockField } from "./game/rockField";
@@ -417,7 +418,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.inviteTimes = Array.isArray(times) ? times.filter((t): t is number => typeof t === "number").slice(-100) : [];
     const hostName = got.get("hostName");
     this.hostName = typeof hostName === "string" ? hostName : null;
-    if (this.save) this.ensureBed();
+    if (this.save) this.ensureFixtures(Date.now());
     const unbroken = this.rocks.load(got.get("rocks") as Record<string, number> | undefined, got.get("rockSpawns"));
     this.trees.load(got.get("trees"));
     this.maps.rebuild(this.objects, unbroken, this.trees);
@@ -494,9 +495,18 @@ export class HomeRoom extends DurableObject<Env> {
     await this.scheduleRockAlarm(now);
   }
 
-  /** Adds the bed inside the house if this home has none (old saves, or a fresh home). */
-  private ensureBed(): void {
-    if (ensureBed(this.objects)) this.persist({ objects: true });
+  /**
+   * Adds the bed and the wardrobe inside the house if this home lacks them (old saves, or a fresh
+   * home). Furniture cleared off the wardrobe's spot goes back to the owner with a letter.
+   */
+  private ensureFixtures(now: number): void {
+    const bed = ensureBed(this.objects);
+    const wardrobe = ensureWardrobe(this.objects);
+    if (wardrobe.returned.length > 0) {
+      this.giveBack(wardrobe.returned, now, "Your house now has a wardrobe for changing clothes; it stands by the back wall.");
+      this.persist({ save: true, mail: true });
+    }
+    if (bed || wardrobe.changed) this.persist({ objects: true });
   }
 
   private setTransfer(t: PendingTransfer | null): void {
@@ -578,7 +588,7 @@ export class HomeRoom extends DurableObject<Env> {
         maxHp: PLAYER_MAX_HP,
         sprite: spriteForUser(userId),
       };
-      this.ensureBed();
+      this.ensureFixtures(Date.now());
       this.rebuildGrid();
       addNote(this.mail, "Welcome to your new home! Plant on any patch of grass, ship crops in the bin, and rest in your bed inside. — Bram, Mayor of Mossbrook", Date.now());
       this.persist({ mail: true, objects: true });
@@ -686,7 +696,7 @@ export class HomeRoom extends DurableObject<Env> {
     // Food from a fridge that found no place comes back too.
     for (const s of orphanedItems(data?.containers, kept)) if (!addItem(this.save.inventory, s.item, s.qty, s.quality)) addParcel(this.mail, s.item, s.qty);
     this.objSeq = objSeqFor(allObjects(this.objects));
-    this.ensureBed();
+    this.ensureFixtures(Date.now());
     this.rebuildGrid();
     this.dropPlayer(CLOSE_REPLACED, "Your home moved to your new account.");
     this.lease = null;
@@ -1552,6 +1562,8 @@ export class HomeRoom extends DurableObject<Env> {
       case "storeClose":
         if (p.openStore === msg.id) this.closeStore(p);
         return;
+      case "wardrobeOpen":
+        return this.onWardrobe(p, msg);
       case "petAnimal":
       case "feedAnimal":
       case "adoptAnimal":
@@ -1910,6 +1922,8 @@ export class HomeRoom extends DurableObject<Env> {
     save.look = { ...msg.look };
     p.entity.look = save.look;
     this.persist({ save: true });
+    // Standing still at the wardrobe: tick once so everyone here sees the new clothes now.
+    this.startTick();
   }
 
   /** What is on a tile, for the tool rules (shared/engine/toolRules.ts). */
@@ -2214,6 +2228,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (i < 0) return this.reject(p, msg, "That isn't here any more.");
     const obj = list[i];
     if (obj.id === BED_ID) return this.reject(p, msg, "Your bed stays. You can move it instead.");
+    if (obj.id === WARDROBE_ID) return this.reject(p, msg, "Your wardrobe stays. You can move it instead.");
     if (!containerEmpty(this.containers, obj.id)) return this.reject(p, msg, `Empty the ${getItem(obj.item)?.name.toLowerCase() ?? "storage"} first.`);
     if (obj.id === BARN_ID) return this.reject(p, msg, "The barn stays where it was built.");
     if (!this.inPlaceReach(p, obj.x, obj.y)) return this.reject(p, msg, "Too far away.");
@@ -2255,6 +2270,22 @@ export class HomeRoom extends DurableObject<Env> {
     this.persist({ containers: true });
     send(p.ws, storageMsg(obj, box));
     this.inventoryChanged(p);
+  }
+
+  /**
+   * Opens the wardrobe: its doors open for everyone on the map and the owner gets the character
+   * designer. The look itself comes back as an ordinary `setLook` (rate limited, validated).
+   */
+  private onWardrobe(p: HPlayer, msg: Extract<ClientMsg, { t: "wardrobeOpen" }>): void {
+    const obj = this.objects[p.map].find((o) => o.id === msg.id);
+    const why = wardrobeRefusal(obj, p.entity);
+    if (why || !obj) return this.reject(p, msg, why ?? "There's no wardrobe there.");
+    if (p.openStore && p.openStore !== obj.id) this.closeStore(p);
+    if (p.openStore !== obj.id) {
+      p.openStore = obj.id;
+      this.toMap(p.map, { t: "lid", id: obj.id, open: true });
+    }
+    send(p.ws, { t: "wardrobe", id: obj.id });
   }
 
   /** Shuts the owner's open storage piece (the door closes for everyone on that map). */

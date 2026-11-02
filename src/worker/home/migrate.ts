@@ -3,7 +3,7 @@
 // (placeOn "floor") moves inside the house, outdoor things (fence, scarecrow) stay in the yard,
 // and whatever no longer fits goes back to the owner.
 import { canPlace } from "../../shared/engine";
-import { getItem } from "../../shared/items";
+import { getItem, WARDROBE_ID } from "../../shared/items";
 import { HOME_IN_BED } from "../../shared/maps/home-in";
 import type { FarmTile, HomeMapId, ItemId, MapData, PlacedObject } from "../../shared/types";
 import { emptyObjects, HOME_IN, HOME_OUT, homeMap, type HomeObjects } from "./submaps";
@@ -14,6 +14,11 @@ export const HOME_LAYOUT = 2;
 /** Every home has a bed inside the house; it can be moved but not picked up. */
 export const BED_ID = "bed";
 export const BED_ITEM = "bed_simple";
+/** Every home has a wardrobe too (WARDROBE_ID), kept the same way (see home/wardrobe.ts). */
+export { WARDROBE_ID };
+
+/** Furniture a home always has: never handed back when it doesn't fit, it is put back instead. */
+const isFixture = (o: PlacedObject): boolean => o.id === BED_ID || o.id === WARDROBE_ID;
 
 /** The old single map's cottage floor started here; the house floor starts at HOME_IN floorArea. */
 const OLD_FLOOR_ORIGIN = { x: 3, y: 5 };
@@ -83,7 +88,7 @@ export function migrateObjects(legacy: readonly PlacedObject[], farm: FarmTile[]
     // Yard things only stay where they were; hunting the whole yard for a fence spot makes a mess.
     const spot = id === "home_in" ? findSpot(id, objects[id], farm, o, prefer) : fits(HOME_OUT, objects.home, farm, o) ? { ...o } : null;
     if (spot) objects[id].push(spot);
-    else if (o.id !== BED_ID) returned.push(o.item);
+    else if (!isFixture(o)) returned.push(o.item);
   }
   return { objects, returned };
 }
@@ -113,7 +118,7 @@ export function validateObjects(input: HomeObjects, farm: FarmTile[]): Migrated 
   for (const id of ["home_in", "home"] as const) {
     for (const o of input[id]) {
       if (mapForItem(o.item) === id && fits(homeMap(id), objects[id], id === "home" ? farm : [], o)) objects[id].push(o);
-      else if (o.id !== BED_ID) returned.push(o.item);
+      else if (!isFixture(o)) returned.push(o.item);
     }
   }
   return { objects, returned };

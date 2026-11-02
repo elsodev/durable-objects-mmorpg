@@ -159,6 +159,10 @@
   border-top: 2px dashed var(--dm-line);
   padding-top: 10px;
 }
+/* Randomize on the left, Cancel and Save together on the right. */
+#creator-random {
+  margin-right: auto;
+}
 @media (max-width: 560px) {
   .creator-body {
     grid-template-columns: 1fr;

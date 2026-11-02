@@ -87,6 +87,7 @@ The stump's anchor must sit on the trunk base of the tree art. Check by drawing 
   - Visitors can't open it.
   - A piece that still holds items can't be picked up.
   - Draw the door swinging out past the body in `open`, inside the same cell, so the rect stays fixed.
+- **The wardrobe:** opening it sends the same `lid` message while the character designer is open, so `closed`, `opening` and `open` frames on its catalog entry would play like the fridge's. The current art has no open frames, so it stays shut.
 
 ## Checking a lifecycle
 

@@ -15,7 +15,7 @@ import { createStore } from "../state/store";
 import { mountHud, type GameApi, type Hud, type SessionUser } from "../ui";
 import { createHomeUi } from "../ui/homeui";
 import { createStoragePanel } from "../ui/storage";
-import { STORE_WALK_AWAY, storeTarget } from "./storage-target";
+import { STORE_WALK_AWAY, storeTarget, wardrobeTarget } from "./storage-target";
 import { createVisitsUi } from "../ui/visits";
 import { createMailboxUi } from "../ui/mailbox";
 import { createDoorFade } from "../ui/door-fade";
@@ -24,7 +24,7 @@ import { MAILBOX_TAKE } from "../../shared/mail";
 import { visitsApi } from "../ui/visits-api";
 import type { InviteNotice, VisitInfo, VisitorEntry } from "../../shared/visits";
 import { clockMinutes, dayPhase, farmNow, formatClock, type HomeClock } from "../../shared/engine/homeclock";
-import { getItem, isBedItem } from "../../shared/items";
+import { getItem, isBedItem, isWardrobeItem, WARDROBE_ID } from "../../shared/items";
 import type { HomeServerMsg } from "../../shared/home";
 import { footstep } from "../audio/player";
 import { getMap, hasMap } from "../../shared/maps";
@@ -701,8 +701,11 @@ export async function startSession(
     }
   }
 
-  /** Character creator; firstTime when the save has no look yet (welcome.needsLook). */
-  function openWardrobe(firstTime: boolean): void {
+  /**
+   * Character creator; firstTime when the save has no look yet (welcome.needsLook). `piece`: the
+   * placed wardrobe it was opened from, whose doors shut again when the creator closes.
+   */
+  function openWardrobe(firstTime: boolean, piece?: string): void {
     if (creator || destroyed) return;
     world?.build.exit();
     syncBuildBanner();
@@ -718,6 +721,7 @@ export async function startSession(
     });
     void creator.done.then(() => {
       creator = null;
+      if (piece) send({ t: "storeClose", id: piece });
     });
   }
 
@@ -812,6 +816,10 @@ export async function startSession(
         if (it && getItem(it)?.storage) playSfx(msg.open ? "bin_open" : "bin_close");
         break;
       }
+      case "wardrobe":
+        if (creator) send({ t: "storeClose", id: msg.id });
+        else openWardrobe(false, msg.id);
+        break;
       case "bin":
         homeUi.setBin(msg.items, msg.total, !!msg.open);
         farmFx.bin(msg);
@@ -1359,6 +1367,9 @@ export async function startSession(
           void askSleep();
           break;
         }
+        // Visitors ask too: the server answers with a polite refusal.
+        const wardrobe = store.zone === "home" ? wardrobeTarget(store.objects.values(), me, ahead) : null;
+        if (wardrobe) return void send({ t: "wardrobeOpen", id: wardrobe });
         if (store.zone === "home" && !visiting) {
           const box = storeTarget(store.objects.values(), me, ahead);
           if (box) return void send({ t: "storeOpen", id: box });
@@ -1406,6 +1417,16 @@ export async function startSession(
     }
   }
 
+  /** A click on a wardrobe opens it in reach, else walks up to it. True when it was one. */
+  function wardrobeClick(me: Vec2, tile: Vec2): boolean {
+    const id = world?.farm.objectAt(tile);
+    const o = id ? store.objects.get(id) : undefined;
+    if (!o || !isWardrobeItem(o.item)) return false;
+    if (wardrobeTarget([o], me, me)) send({ t: "wardrobeOpen", id: o.id });
+    else moveTo(tile.x + 0.5, o.y + 1.5);
+    return true;
+  }
+
   function onClick(p: Parameters<Parameters<Input["onClick"]>[0]>[0]): void {
     const me = you();
     if (!world || !me) return;
@@ -1428,6 +1449,7 @@ export async function startSession(
 
     if (p.button !== 2 && animalClick(me, p.tile)) return;
 
+    if (store.zone === "home" && p.button !== 2 && wardrobeClick(me, tile)) return;
     if (visiting) {
       // A visitor's click helps harvest a crop in reach, or walks.
       if (p.button === 2) return;
@@ -1454,7 +1476,8 @@ export async function startSession(
         return;
       }
       if (obj) {
-        if (p.button === 2) {
+        // The house's own wardrobe can't be picked up: right-click moves it instead.
+        if (p.button === 2 && obj !== WARDROBE_ID) {
           sendTagged({ t: "pickup", id: obj }, "pickup");
           playSfx("pickup");
         } else {

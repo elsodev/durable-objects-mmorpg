@@ -1,6 +1,7 @@
 // Character creator ("Wardrobe"): live walking preview, one tab per look part, swatch buttons,
-// Randomize and Save. Shown after the first sign-in (save has no look) and from the HUD menu.
-// Stable ids: #creator, #creator-preview, #creator-random, #creator-save, #creator-close.
+// Randomize, Cancel and Save. Shown after the first sign-in (save has no look), from the HUD
+// menu and from the wardrobe in the house. Escape cancels (except the first time).
+// Stable ids: #creator, #creator-preview, #creator-random, #creator-cancel, #creator-save, #creator-close.
 import { LOOK_OPTIONS, randomLook, sameLook, type LookPart } from "../../shared/look";
 import type { Facing, Look } from "../../shared/types";
 import type { LookManifest, LookOptionArt } from "../art/look-logic";
@@ -151,6 +152,7 @@ export function openCreator(root: HTMLElement, opts: CreatorOptions): CreatorHan
     finish(look);
   });
   footer.appendChild(randomBtn);
+  if (!opts.firstTime) footer.appendChild(button("Cancel", "dm-btn", "creator-cancel", "close", () => finish(null)));
   footer.appendChild(saveBtn);
 
   for (const n of [header, intro, body, footer]) panel.appendChild(n);
