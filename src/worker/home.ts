@@ -642,6 +642,8 @@ export class HomeRoom extends DurableObject<Env> {
     this.save.hp = clampHp(save.hp, this.save.maxHp);
     // Zones spend stamina on mining and chopping too.
     if (save.stamina !== undefined) this.save.stamina = clampStamina(save.stamina);
+    // The village well and ponds refill the can away from home.
+    if (save.water !== undefined) this.save.water = clampWater(save.water);
     // Zones can wear the player out; only this home's day end clears it.
     if (save.exhausted === true) this.save.exhausted = true;
     // Zones only send a look the player changed there; never clear a saved one.

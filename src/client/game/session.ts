@@ -1084,7 +1084,10 @@ export async function startSession(
         }
         zoneStamina = msg.stamina;
         energy.setExhausted(!!msg.exhausted);
-        if (msg.water !== undefined && msg.maxWater !== undefined) hud.setWater?.(msg.water, msg.maxWater);
+        if (msg.water !== undefined && msg.maxWater !== undefined) {
+          hud.setWater?.(msg.water, msg.maxWater);
+          if (store.zone !== "home") farmFx.waterLevel(msg.water, msg.maxWater);
+        }
         if (store.zone !== "home") homeUi.setZoneStamina?.(msg.stamina, msg.max, !!msg.exhausted);
         break;
       case "chestOpened": {
@@ -1317,7 +1320,7 @@ export async function startSession(
     // The sword's whoosh starts with the swing; everything else is the sound of it landing.
     if (sfx === "tool_sword" && !clunk) combatSfx.swing(tile, store.sample(now));
     const land = (): void => {
-      if (atHome) farmFx.used(used, tile, req, water);
+      farmFx.used(used, tile, req, water, atHome);
       if (clunk) playSfx("tool_clunk");
       else if (sfx !== "tool_sword") playSfx(sfx);
       if (outcome?.ok) impactFx(tile, outcome.effect, used);

@@ -93,17 +93,40 @@ export function createFarmFx(d: FarmFxDeps) {
     w.effects.toss({ x: me.x, y: me.y - 1 }, { x: p.x + p.w / 2, y: p.y + p.h * 0.35 }, d.art.icon(item), land);
   }
 
+  /** The can's level from the home or, away from home, a zone's stamina update. */
+  function waterLevel(level: number, maxWater: number): void {
+    const msg = { water: level, maxWater };
+    const before = water;
+    water = msg.water;
+    if (!refillCue || !isRefill(refillCue.at, performance.now(), before, msg.water)) return;
+    const { tile } = refillCue;
+    refillCue = null;
+    const w = d.world();
+    if (!w) return;
+    // A well holds its water in the bowl near the top of its footprint; a pond tile on the ground.
+    const well = d.map()?.props.find((p) => p.type === "well" && tile.x >= p.x && tile.x < p.x + p.w && tile.y >= p.y && tile.y < p.y + p.h);
+    const at = well ? { x: well.x + well.w / 2, y: well.y + well.h * 0.62 } : { x: tile.x + 0.5, y: tile.y + 0.5 };
+    const sortY = well ? well.y + well.h + 0.01 : tile.y + 0.01;
+    d.playSfx("refill");
+    w.effects.ripple?.(at, sortY);
+    w.effects.burst(at, "water");
+    const max = msg.maxWater > 0 ? msg.maxWater : 1;
+    w.effects.meter?.((before ?? 0) / max, msg.water / max);
+  }
+
   return {
     redraw,
 
     /** A `use` was just sent for `item` on `tile` with request id `req` (home, as the owner). */
-    used(item: ItemId | null, tile: Vec2, req: string, water: number | null): void {
+    used(item: ItemId | null, tile: Vec2, req: string, water: number | null, atHome = true): void {
       const map = d.map();
       if (!map) return;
       if (item && getItem(item)?.tool === "water" && isWaterSource(map, tile.x, tile.y)) {
         refillCue = { tile, at: performance.now() };
         return;
       }
+      // Away from home only the refill has a cue; the farm prediction is the home's.
+      if (!atHome) return;
       const next = predictUse({
         item,
         tile,
@@ -133,23 +156,10 @@ export function createFarmFx(d: FarmFxDeps) {
     },
 
     homeState(msg: HomeState): void {
-      const before = water;
-      water = msg.water;
-      if (!refillCue || !isRefill(refillCue.at, performance.now(), before, msg.water)) return;
-      const { tile } = refillCue;
-      refillCue = null;
-      const w = d.world();
-      if (!w) return;
-      // A well holds its water in the bowl near the top of its footprint; a pond tile on the ground.
-      const well = d.map()?.props.find((p) => p.type === "well" && tile.x >= p.x && tile.x < p.x + p.w && tile.y >= p.y && tile.y < p.y + p.h);
-      const at = well ? { x: well.x + well.w / 2, y: well.y + well.h * 0.62 } : { x: tile.x + 0.5, y: tile.y + 0.5 };
-      const sortY = well ? well.y + well.h + 0.01 : tile.y + 0.01;
-      d.playSfx("refill");
-      w.effects.ripple?.(at, sortY);
-      w.effects.burst(at, "water");
-      const max = msg.maxWater > 0 ? msg.maxWater : 1;
-      w.effects.meter?.((before ?? 0) / max, msg.water / max);
+      waterLevel(msg.water, msg.maxWater);
     },
+
+    waterLevel,
 
     bin(msg: BinMsg): void {
       // Only a ship (or opening the bin) answers with open; join and unship updates just record.

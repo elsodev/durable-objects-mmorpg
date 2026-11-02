@@ -42,6 +42,7 @@ import {
   facingToTile,
   hurtAmount,
   isExhausted,
+  isWaterSource,
   impactDelayMs,
   KNOCKBACK_HALF_LIFE_MS,
   MAX_STAMINA,
@@ -917,6 +918,7 @@ export class ZoneRoom extends DurableObject<Env> {
       y: isSitting(p.entity) && p.standBack ? p.standBack.y : p.entity.y,
       lease: p.lease,
       stamina: p.stamina,
+      water: p.water,
       // Zones only ever set it; the home clears it when the day resets.
       ...(p.exhausted ? { exhausted: true } : {}),
       stats: { ...p.stats },
@@ -1191,6 +1193,8 @@ export class ZoneRoom extends DurableObject<Env> {
     if (!inToolReach(p.entity, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
     if (!isSwingTool(key)) p.entity.facing = facingToTile(p.entity, msg.x, msg.y);
     const world = this.world!;
+    // The village well and every pond or river fill the watering can, as at home.
+    if (key === "water" && isWaterSource(world.map, msg.x, msg.y)) return this.refillCan(p, msg);
     const weapon = weaponStats(def.id);
     // A sword sweeps the arc in front of you: everything in it is hit, whatever tile you aimed at.
     if (weapon?.arc && world.monsters.inArc(p.entity, p.entity.facing).length > 0) {
@@ -1227,6 +1231,14 @@ export class ZoneRoom extends DurableObject<Env> {
       if (!this.spendStamina(p, msg, def.tool)) return;
       return this.chop(p, msg, target, now, stamp);
     }
+  }
+
+  private refillCan(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>): void {
+    if (p.water >= MAX_WATER) return this.reject(p, msg, "Your watering can is already full.");
+    p.water = MAX_WATER;
+    p.dirty = true;
+    this.sendStamina(p);
+    send(p.ws, { t: "notice", text: "Watering can refilled", kind: "info" });
   }
 
   /**
