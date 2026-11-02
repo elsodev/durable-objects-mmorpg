@@ -2,9 +2,10 @@
 // whether you can fast-travel there from here.
 import { caveLevelOf } from "../../shared/caveLevels";
 import { isInteriorZone, type ZoneId } from "../../shared/types";
+import { doorFor, outsideOf } from "../../shared/maps/interiors/doors";
 
 export interface MapRow {
-  id: "home" | "village" | "riverside" | "quarry" | "caves";
+  id: "home" | "village" | "riverside" | "quarry" | "caves" | "jail";
   name: string;
   desc: string;
   here: boolean;
@@ -26,6 +27,7 @@ const PLACES: readonly Omit<MapRow, "here">[] = [
   { id: "riverside", name: "Riverside", desc: "The river, the dock and the fishing spots.", pin: { x: 44, y: 88 } },
   { id: "quarry", name: "Quarry", desc: "The cliffs east of the village and the cave mouth.", pin: { x: 80, y: 57 } },
   { id: "caves", name: "Caves", desc: "Ore, gems, treasure chests and monsters, four levels deep.", pin: { x: 84.4, y: 35 } },
+  { id: "jail", name: "Town Jail", desc: "The police station south of the quarry: the sheriff, and the cell.", pin: { x: 71.9, y: 70.5 } },
 ];
 
 /** "int_house_bram" -> "Bram's house", "int_inn" -> "the inn". */
@@ -35,14 +37,14 @@ export function buildingName(zone: string): string {
     const who = id.slice("house_".length);
     return `${who.charAt(0).toUpperCase()}${who.slice(1)}'s house`;
   }
-  return `the ${id === "townhall" ? "town hall" : id}`;
+  return `the ${id === "townhall" ? "town hall" : id === "police" ? "police station" : id}`;
 }
 
 export function mapRows(zone: ZoneId | null): MapRow[] {
   const cave = caveLevelOf(zone);
   const inside = zone && isInteriorZone(zone) ? buildingName(zone) : cave ? `depth ${cave.depth}` : undefined;
-  // Every building is in the village; every cave level is in the caves.
-  const at = cave ? "caves" : zone && isInteriorZone(zone) ? "village" : zone;
+  // Buildings pin to the map they stand in (the village, or the jail yard); cave levels to the caves.
+  const at = cave ? "caves" : zone && isInteriorZone(zone) ? outsideOf(doorFor(zone)) : zone;
   return PLACES.map((p) => ({ ...p, here: p.id === at, ...(p.id === at && inside ? { inside } : {}) }));
 }
 

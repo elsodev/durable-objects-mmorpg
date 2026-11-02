@@ -107,7 +107,7 @@ export function createMapPane(opts: MapPaneOpts): MapPane {
     const img = document.createElement("img");
     img.className = "map-island-art";
     img.src = ISLAND.src;
-    img.alt = "Map of the island: your farm in the west, the village in the middle, the river running south to the dock, and the quarry cliffs and cave in the east.";
+    img.alt = "Map of the island: your farm in the west, the village in the middle, the river running south to the dock, and the quarry cliffs and cave in the east, with the town jail south of them.";
     img.draggable = false;
     island.appendChild(img);
     // Pins from north to south, so a southern label draws over a northern pin.

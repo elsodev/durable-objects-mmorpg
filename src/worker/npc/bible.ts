@@ -7,13 +7,14 @@ import type { Birthday } from "../../shared/calendar";
 import { baseItem } from "../../shared/items";
 import { isRareCrop } from "../../shared/seeds";
 
-export const NPC_IDS = ["bram", "odette", "fenwick", "rue", "pip", "marlo", "sable", "iris", "grumm", "tess"] as const;
+export const NPC_IDS = ["bram", "odette", "fenwick", "rue", "pip", "marlo", "sable", "iris", "grumm", "tess", "sheriff"] as const;
 export type NpcId = (typeof NPC_IDS)[number];
 
 /**
  * Village buildings, the same ids as the interiors (shared/maps/interiors/doors.ts). Every one but
  * "market" (Odette's open-air stall) has an interior. All cottages are in the village; Rue lives
- * at the inn and Sable at the shrine, so they have no `house_` id.
+ * at the inn and Sable at the shrine, so they have no `house_` id. The police station stands in
+ * the jail yard south of the quarry; the sheriff lives in its back room.
  */
 export const BUILDING_IDS = [
   "townhall",
@@ -28,6 +29,7 @@ export const BUILDING_IDS = [
   "house_iris",
   "house_grumm",
   "house_tess",
+  "police",
 ] as const;
 export type BuildingId = (typeof BUILDING_IDS)[number];
 
@@ -68,6 +70,8 @@ export const PLACE_ZONE: Readonly<Record<PlaceId, SharedZoneId>> = {
   house_iris: "village",
   house_grumm: "village",
   house_tess: "village",
+  // The sheriff never leaves the station, so his places are the station itself.
+  police: "int_police",
   square: "village",
   fountain: "village",
   notice_board: "village",
@@ -770,6 +774,66 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       giftNeutral: ["A {item}! Thank you, {name}!"],
     },
   },
+  sheriff: {
+    id: "sheriff",
+    background:
+      "Hollis has worn the sheriff's star of Mossbrook for thirty years, longer than anyone can remember a crime worth the name. He came down from the upper valley as a young deputy, chasing a goat thief who turned out to be the goat, and stayed because the coffee at Rue's inn was the first he ever liked. He built the little stone police station south of the quarry with Grumm's stone and Fenwick's iron bars, and keeps a ledger of every warning he has ever given, every kindness he has seen, and every lost cat returned. He gives three warnings to anyone who speaks rudely to him and locks the fourth in the cell for five minutes to cool off, then makes them a cup of coffee on the way out. Bram calls him the most patient man in the valley; Pip calls him the scariest, which he secretly enjoys.",
+    secret:
+      "In thirty years he has never once locked the cell door all the way; the key sticks, and he is too proud to ask Fenwick to fix it. He also keeps a jar of biscuits in the cell for whoever ends up in it.",
+    wants: "A whole season with an empty cell, and to hand the star to someone fair before his knees give out.",
+    quirks: [
+      "polishes his star whenever he is thinking",
+      "writes everything down in a battered ledger",
+      "counts warnings out loud on his fingers",
+    ],
+    personality: "Gruff, fair and patient; slow to anger, quick to forgive, and secretly soft on strays and troublemakers alike.",
+    speechStyle: "Short, dry and deliberate, with a slow drawl. Calls people by name, counts things out, and ends warnings with a pause.",
+    sampleLines: [
+      "Three warnings. Then the cell. Then coffee. That's the order of things.",
+      "Quiet day. I like quiet days.",
+      "Visitors can talk through the bars all they like. Nobody walks through them.",
+      "Thirty years with this star and the worst I've arrested is a goat.",
+      "The ledger remembers. Mostly the kind things.",
+      "Road north takes you to the quarry, then on to the caves and the village.",
+      "Five minutes in the cell never hurt anyone. Gives a body time to think.",
+    ],
+    gifts: { loved: ["coffee"], liked: ["bread_roll", "fish_pie", "inn_stew"], disliked: ["bat_wing"], hated: ["slime_gel"] },
+    likes: ["quiet days", "strong coffee", "a tidy ledger", "folks who say please"],
+    dislikes: ["rudeness", "shouting", "an empty biscuit jar"],
+    relationships: [
+      { npc: "rue", bond: "Her coffee brought him to Mossbrook", gossip: "Rue makes the only coffee in the valley worth getting up for. Don't tell her I said so." },
+      { npc: "bram", bond: "Old friends who argue about speeches", gossip: "Bram once gave a speech at my door for an hour. I nearly locked myself in the cell." },
+      { npc: "grumm", bond: "Built the station from his stone", gossip: "Grumm cut every stone in this station. Grumbled about each one." },
+      { npc: "fenwick", bond: "Forged the cell bars", gossip: "Fenwick forged those bars. Finest iron in the valley, he says. He's right." },
+      { npc: "pip", bond: "Pretends to be stern with him", gossip: "Pip dares himself to touch the bars every week. I pretend not to see." },
+    ],
+    routine: day(
+      "police",
+      "police",
+      [
+        { from: 0, to: 6, place: "police", activity: "asleep in the back room" },
+        { from: 6, to: 8, place: "police", activity: "brewing the morning coffee" },
+        { from: 8, to: 18, place: "police", activity: "at his desk, keeping the peace" },
+        { from: 18, to: 22, place: "police", activity: "writing up the ledger" },
+        { from: 22, to: 24, place: "police", activity: "locking up for the night" },
+      ],
+      { from: 8, to: 18 },
+    ),
+    lovesToTalkAbout: ["keeping the peace", "his ledger", "the quiet roads", "good coffee"],
+    neverSay: [
+      "Never threaten anyone with harm; the cell is the worst that happens, and only the sheriff's ledger decides it.",
+      "Never claim to have jailed or to be about to jail someone; the station's rules decide that, not conversation.",
+    ],
+    memoryLines: {
+      firstMeet: ["Sheriff Hollis. New in town, {name}? Keep your nose clean and we'll get along fine.", "Well now. A new face. I'm Hollis, the sheriff. Welcome, {name}."],
+      welcomeBack: ["{name}. Back again. Staying out of trouble?", "Evening, {name}. Kettle's warm."],
+      rememberGift: ["Still got that {lastGift}, {name}. It's in the ledger.", "That {lastGift} you brought me went down a treat, {name}."],
+      giftLoved: ["A {item}? {name}, you just made an old sheriff's whole week."],
+      giftLiked: ["A {item}. Kind of you, {name}. Noted in the ledger."],
+      giftDisliked: ["A {item}. Hm. I'll file it somewhere, {name}."],
+      giftNeutral: ["Thank you, {name}. That's going in the ledger."],
+    },
+  },
 };
 
 /** Typed routines for the interiors/home-sim work: where each NPC lives, works and is hour by hour. */
@@ -836,6 +900,7 @@ export const NPC_BIRTHDAYS: Readonly<Record<NpcId, Birthday>> = {
   iris: { season: "winter", day: 3 },
   grumm: { season: "winter", day: 14 },
   tess: { season: "winter", day: 25 },
+  sheriff: { season: "fall", day: 13 },
 };
 
 export function birthdayOf(id: string): Birthday | undefined {
@@ -947,5 +1012,15 @@ export const NPC_DIALOGUE: Readonly<Record<NpcId, Partial<Record<string, string[
     Fri: ["Friday! Deep-level day! Well, every day is, but Fridays especially, {name}!"],
     spring: ["Spring rains flood the low tunnels, {name}. Careful down there!"],
     fall: ["Fall! The quarry's all orange and gold on the way in, {name}. Prettiest walk in the valley!"],
+  },
+  sheriff: {
+    birthday: ["My birthday, {name}. Thirty-odd years of them in this station. Coffee would do nicely.", "Birthday. Don't tell Bram, he'll make a speech."],
+    hearts9: ["{name}. If I ever hand this star on, it'll be to someone like you.", "{name}. The ledger's got a whole page about you. All good."],
+    hearts6: ["{name}! Coffee's on. Pull up a chair.", "{name}. Quiet roads lately. I reckon you've something to do with that."],
+    hearts2: ["Evening, {name}. Keeping out of trouble?", "{name}. Good to see a friendly face at the station."],
+    Mon: ["Monday, {name}. Fresh page in the ledger."],
+    Fri: ["Friday night. Folks get rowdy at the inn. Not you, I hope, {name}."],
+    fall: ["Fall, {name}. Leaves on the road and pumpkins on every porch."],
+    winter: ["Cold out, {name}. Even the cell's warmer than the road today."],
   },
 };

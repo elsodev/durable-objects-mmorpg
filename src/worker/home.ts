@@ -22,6 +22,7 @@
 import { sanitizeCaveTrail, type CaveTrail } from "../shared/caveLevels";
 import { DurableObject } from "cloudflare:workers";
 import { TRAVEL_SPAWN, travelBlock } from "../shared/travel";
+import { CELL_SPAWN, cleanJailUntil, cleanStrikes, isJailed, JAIL_ZONE, JAILED_REFUSAL } from "../shared/jail";
 import { devToolsEnabled, H_VISIT_LOOK, H_VISIT_OWNER, H_VISIT_RETURN, H_VISIT_SPRITE, type Env } from "./env";
 import type { HomeMapId, Inventory, Look, ZoneId } from "../shared/types";
 import { TICK_MS, type EntityState, type Facing, type FarmTile, type MapExit, type PlacedObject, type RockOre, type Vec2 } from "../shared/types";
@@ -222,6 +223,13 @@ export interface PlayerSave {
   /** Animal affection, adopted pets, the barn, hens and eggs (shared/animals.ts). Absent = none. */
   animals?: AnimalSave;
   /**
+   * End of a jail sentence (ms). Only this HomeRoom's jail()/unjail() RPCs write it; zones read it
+   * on load and never send it back, so a late zone save can't shorten or lengthen a sentence.
+   */
+  jailedUntil?: number;
+  /** Insults the sheriff has let go with a warning (0..3, shared/jail.ts); zones keep it. */
+  sheriffStrikes?: number;
+  /**
    * savePlayer: the exit just taken (recorded so the next join may use that spawn).
    * loadPlayer: the pending transfer, if any (consumed by the call).
    */
@@ -262,6 +270,15 @@ export interface PlayerPeek {
   zone: ZoneId;
   sprite: string;
   look?: Look;
+  /** Set while serving jail time: no visits until it ends. */
+  jailedUntil?: number;
+}
+
+/** Answer of the jail()/unjail() RPCs. */
+export interface JailAnswer {
+  ok: boolean;
+  /** No save yet: the account has never played. */
+  noSave?: boolean;
 }
 
 
@@ -310,6 +327,8 @@ export class HomeRoom extends DurableObject<Env> {
   private containers: Containers = {};
   private drops = new HomeDrops();
   private transfer: PendingTransfer | null = null;
+  /** Whose home the owner last opened a visit to (see noteVisit). */
+  private visiting: string | null = null;
   private rocks = new RockField(HOME_MAP);
   /** Collision grids and entity differs of the yard and the house. */
   private maps = new SubMaps(this.objects);
@@ -662,6 +681,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (save.caveTrail !== undefined) this.save.caveTrail = sanitizeCaveTrail(save.caveTrail);
     // Zones adopt pets and buy the barn and hens; the home lays and collects the eggs.
     if (save.animals !== undefined) this.save.animals = sanitizeAnimals(save.animals);
+    if (save.sheriffStrikes !== undefined) this.save.sheriffStrikes = cleanStrikes(save.sheriffStrikes);
     if (isZoneId(save.zone) && Number.isFinite(save.x) && Number.isFinite(save.y)) {
       this.save.zone = save.zone;
       this.save.x = save.x;
@@ -912,12 +932,95 @@ export class HomeRoom extends DurableObject<Env> {
   async peekPlayer(userId: string): Promise<PlayerPeek> {
     if (this.owner !== null && userId !== this.owner) throw new Error("not the owner of this home");
     const save = this.save;
+    const jailedUntil = cleanJailUntil(save?.jailedUntil, Date.now());
     return {
       name: save?.name ?? "Farmer",
       zone: save && isZoneId(save.zone) ? save.zone : "home",
       sprite: save?.sprite ?? spriteForUser(userId),
       ...(save?.look ? { look: structuredClone(save.look) } : {}),
+      ...(isJailed(jailedUntil, Date.now()) ? { jailedUntil } : {}),
     };
+  }
+
+  // ------------------------------------------------------------------ jail
+
+  /**
+   * RPC (admin /jail via SocialRoom, or a zone whose sheriff ran out of patience): the owner serves
+   * jail time until `until`. Persisted here, so it survives reconnects and hibernation; the next
+   * place they load into sends them to the cell. If the owner is home, or visiting someone, they
+   * are walked to the cell now; a zone holding them is told by the caller.
+   */
+  async jail(ownerId: string, until: number, text: string): Promise<JailAnswer> {
+    if (this.owner === null) return { ok: false, noSave: true };
+    await this.assertOwner(ownerId, false);
+    const now = Date.now();
+    const end = cleanJailUntil(until, now);
+    if (!this.save) return { ok: false, noSave: true };
+    if (!isJailed(end, now)) return { ok: false };
+    this.save.jailedUntil = end;
+    this.save.sheriffStrikes = 0;
+    const cell = getMap(JAIL_ZONE).spawns[CELL_SPAWN]!;
+    this.save.zone = JAIL_ZONE;
+    this.save.x = cell.x;
+    this.save.y = cell.y;
+    delete this.save.homeMap;
+    this.setTransfer({ to: JAIL_ZONE, spawn: CELL_SPAWN, at: now });
+    this.persist({ save: true });
+    const why = String(text).slice(0, 160);
+    const p = this.player;
+    if (p && !p.leaving) {
+      send(p.ws, { t: "notice", text: why, kind: "error" });
+      this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: JAIL_ZONE, spawn: CELL_SPAWN }, now);
+    }
+    await this.leaveVisit(ownerId, why);
+    return { ok: true };
+  }
+
+  /** RPC (admin /unjail): the sentence ends now. The police station lets them out of the cell. */
+  async unjail(ownerId: string): Promise<JailAnswer> {
+    if (this.owner === null) return { ok: false, noSave: true };
+    await this.assertOwner(ownerId, false);
+    if (!this.save) return { ok: false, noSave: true };
+    const was = isJailed(this.save.jailedUntil, Date.now());
+    delete this.save.jailedUntil;
+    this.persist({ save: true });
+    return { ok: was };
+  }
+
+  /**
+   * RPC (visit route): the owner just opened a visit to `hostId`'s home. Remembered so a jailing can
+   * reach them there (the host's HomeRoom holds that socket, not this one).
+   */
+  async noteVisit(ownerId: string, hostId: string): Promise<void> {
+    if (this.owner !== null && ownerId !== this.owner) return;
+    if (typeof hostId !== "string" || !hostId || hostId.length > 128) return;
+    this.visiting = hostId;
+    await this.ctx.storage.put("visiting", hostId);
+  }
+
+  /** Ends the owner's visit elsewhere, if any, sending them to the cell. */
+  private async leaveVisit(ownerId: string, text: string): Promise<void> {
+    const host = this.visiting ?? ((await this.ctx.storage.get<string>("visiting")) || null);
+    if (!host || host === ownerId) return;
+    try {
+      await this.env.HOME.get(this.env.HOME.idFromName(host)).jailVisitor(host, ownerId, text);
+    } catch (err) {
+      console.warn("jail: visit end failed", err);
+    }
+  }
+
+  /** RPC (the jailed visitor's own HomeRoom): their visit here is over; off to the cell. */
+  async jailVisitor(hostId: string, visitorId: string, text: string): Promise<boolean> {
+    if (this.owner === null || hostId !== this.owner) return false;
+    const v = this.visitors.byUser(visitorId);
+    if (!v) return false;
+    v.returnTo = JAIL_ZONE;
+    this.visitors.sendTo(v, String(text).slice(0, 160), JAIL_ZONE, CELL_SPAWN);
+    markLeft(this.invites, v.userId, Date.now(), true);
+    this.persist({ invites: true });
+    if (this.player) send(this.player.ws, { t: "notice", text: `${v.name} was taken away to the town jail.`, kind: "info" });
+    this.sendVisitorList();
+    return true;
   }
 
   /**
@@ -960,6 +1063,8 @@ export class HomeRoom extends DurableObject<Env> {
       return new Response("Forbidden", { status: 403 });
     }
     const save = this.ensureSave(id.userId, id.name);
+    // Serving jail time: home is out of bounds, straight back to the cell.
+    if (!id.guest && isJailed(save.jailedUntil, Date.now())) return this.backToJail(save);
     // A barn bought in town is built before anyone stands on its lot; hens settle and lay.
     this.settleAnimals(Date.now());
     // Home takes the session over from whatever zone held it.
@@ -1011,6 +1116,24 @@ export class HomeRoom extends DurableObject<Env> {
     if (waiting.length > 0) send(server, { t: "invites", invites: waiting });
     this.startTick();
     void this.scheduleRockAlarm();
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /**
+   * A jailed owner tried to come home (a reload, an old tab): the socket opens only to say where
+   * they belong, records the way to the cell and closes. No lease is taken.
+   */
+  private backToJail(save: Omit<PlayerSave, "lease">): Response {
+    const [client, server] = Object.values(new WebSocketPair());
+    this.ctx.acceptWebSocket(server);
+    const cell = getMap(JAIL_ZONE).spawns[CELL_SPAWN]!;
+    Object.assign(save, { zone: JAIL_ZONE, x: cell.x, y: cell.y });
+    delete save.homeMap;
+    this.setTransfer({ to: JAIL_ZONE, spawn: CELL_SPAWN, at: Date.now() });
+    this.persist({ save: true });
+    send(server, { t: "notice", text: JAILED_REFUSAL, kind: "error" });
+    send(server, { t: "zone", to: JAIL_ZONE, spawn: CELL_SPAWN });
+    closeQuietly(server, 1000, "jailed");
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -1598,6 +1721,7 @@ export class HomeRoom extends DurableObject<Env> {
         this.toAll({ t: "emote", from: p.entity.id, code: msg.code });
         return;
       case "travel": {
+        if (isJailed(this.save?.jailedUntil, now)) return send(p.ws, { t: "notice", text: JAILED_REFUSAL, kind: "error" });
         // Home owns the save, so takeExit writes it before sending {t:"zone"} (as with the road).
         const why = travelBlock(msg.to, "home", now, p.lastTravel ?? 0);
         if (why) return send(p.ws, { t: "notice", text: why, kind: "error" });

@@ -1,7 +1,8 @@
-// Admin tools shared by client and server: the /shout, /kick and /unban commands, shout text rules
+// Admin tools shared by client and server: the /shout, /kick, /unban, /jail and /unjail commands, shout text rules
 // and the "removed" signals. Pure: no DOM, no Workers APIs. Who is an admin is decided only by the
 // Worker (ADMIN_EMAILS); nothing here grants anything.
 import { isValidName } from "./names";
+import { parseJailCommand } from "./jail";
 
 /** Longest shout, in code points. Long enough for a sentence, short enough to read as it scrolls. */
 export const SHOUT_MAX_LEN = 200;
@@ -55,6 +56,9 @@ export type AdminCommand =
   | { cmd: "shout"; text: string }
   | { cmd: "kick"; name: string; reason: string }
   | { cmd: "unban"; name: string }
+  /** Lock a player in the police station cell for `minutes` (shared/jail.ts). */
+  | { cmd: "jail"; name: string; minutes: number }
+  | { cmd: "unjail"; name: string }
   | { cmd: "error"; message: string };
 
 const SHOUT = /^\/(?:shout|announce)(?:\s+|$)(.*)$/is;
@@ -84,7 +88,7 @@ export function parseAdminCommand(line: string): AdminCommand | null {
     if (!isValidName(name)) return { cmd: "error", message: `"${String(name).slice(0, 20)}" isn't a player name.` };
     return { cmd: "unban", name };
   }
-  return null;
+  return parseJailCommand(text);
 }
 
 /** A shout is still worth showing to someone who just came online. */

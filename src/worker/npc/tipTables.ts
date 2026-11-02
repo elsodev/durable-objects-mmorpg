@@ -332,4 +332,32 @@ export const NPC_TIPS: Readonly<Record<NpcId, readonly Tip[]>> = {
       about: ["lost", "ladder", "depth", "deep", "level", "back", "up"],
     },
   ],
+  // The jail (shared/jail.ts nextInsult and JAIL_DEFAULT_MINUTES, worker/zone.ts keepJail and
+  // onTravel, maps/interiors/police.ts), travel (ui/map-pane.ts), chat (ui/chat.ts).
+  sheriff: [
+    {
+      line: "Three warnings, {name}. Speak rudely to me a fourth time and you'll spend five minutes in the cell. Then the count starts over.",
+      about: ["insult", "rude", "warning", "warnings", "jail", "cell", "arrest"],
+    },
+    {
+      line: "Nobody walks through those bars. Friends can stand this side and talk to whoever's inside for as long as they like.",
+      about: ["visit", "cell", "bars", "friend", "talk", "inside"],
+    },
+    {
+      line: "While you're in the cell you can't travel, go home or walk out. When your time's up the door opens on its own.",
+      about: ["cell", "leave", "home", "travel", "out", "time", "release"],
+    },
+    {
+      line: "The road north takes you to the quarry, then the caves and the village. Press M for the map and you can travel straight there.",
+      about: ["map", "travel", "quarry", "caves", "village", "road", "way", "where"],
+    },
+    {
+      line: "Lost your way in the caves? If you fall down there you wake in your own bed, a little poorer. Never more than a hundred coins.",
+      about: ["caves", "fall", "faint", "die", "coins", "bed"],
+    },
+    {
+      line: "Want a quiet word with someone? Type /whisper and a name. Keeps it between the two of you.",
+      about: ["whisper", "chat", "private", "message", "talk"],
+    },
+  ],
 };

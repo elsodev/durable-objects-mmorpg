@@ -117,6 +117,14 @@ export class VisitorSet {
     return this.byWs.delete(v.ws);
   }
 
+  /** Ends the visit and sends the visitor to `to` (the town jail) instead of back where they came from. */
+  sendTo(v: Visitor, reason: string, to: ZoneId, spawn: string): void {
+    this.byWs.delete(v.ws);
+    send(v.ws, { t: "notice", text: reason, kind: "error" });
+    send(v.ws, { t: "zone", to, spawn });
+    closeQuietly(v.ws, 1000, "visit over");
+  }
+
   /** Ends the visit: notice, then "go back where you came from", then close. */
   sendHome(v: Visitor, reason: string): void {
     this.byWs.delete(v.ws);

@@ -6,7 +6,7 @@
 import { Ground, type MapData } from "../types";
 import { MapBuilder } from "./builder";
 import { deriveSeats } from "./interiors/rules";
-import { BUILDING_DOORS } from "./interiors/doors";
+import { doorsIn } from "./interiors/doors";
 import { buildPond } from "./pond";
 import { buildYards } from "./yards";
 
@@ -88,7 +88,7 @@ export function buildVillage(): MapData {
   b.prop("house_grumm", 51, 36, { id: "house_se2" });
   // Keep scattered trees and rocks off every building's walls and front step: a canopy beside a
   // house hides its windows, and one in front hides the door.
-  for (const id of BUILDING_DOORS.map((d) => d.villageProp)) {
+  for (const id of doorsIn("village").map((d) => d.villageProp)) {
     const p = b.propById(id);
     if (p) b.reserve({ x: p.x - 2, y: p.y - 1, w: p.w + 4, h: p.h + 3 });
   }
@@ -96,7 +96,7 @@ export function buildVillage(): MapData {
 
   // Every building is enterable: its door tile is an exit into the interior, and leaving the
   // interior puts you two tiles south of the door (spawns reserve the doorstep from scatter).
-  for (const d of BUILDING_DOORS) {
+  for (const d of doorsIn("village")) {
     b.exit({ x: d.door.x, y: d.door.y, w: 1, h: 1 }, d.zone, "from_village");
     b.spawn(`from_${d.zone}`, d.door.x, d.door.y + 2);
   }

@@ -7,6 +7,7 @@ import { CAVE_LEVEL_BUILDERS } from "./cave-levels";
 import { buildCaves } from "./caves";
 import { buildHome } from "./home";
 import { buildHomeInterior } from "./home-in";
+import { buildJailYard } from "./jailyard";
 import { INTERIOR_BUILDERS } from "./interiors";
 import { buildQuarry } from "./quarry";
 import { buildRiverside } from "./riverside";
@@ -22,6 +23,7 @@ const BUILDERS: Record<MapId, () => MapData> = {
   riverside: buildRiverside,
   caves: buildCaves,
   quarry: buildQuarry,
+  jail: buildJailYard,
   ...CAVE_LEVEL_BUILDERS,
   ...INTERIOR_BUILDERS,
 };

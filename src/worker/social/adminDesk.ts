@@ -1,9 +1,10 @@
 // Admin actions handled by SocialRoom: /shout (a banner for everyone online), /kick (disconnect
-// and ban) and /unban. Every action re-checks `actor.admin`, which comes only from the
+// and ban), /unban, and /jail and /unjail (the police station's cell, shared/jail.ts). Every action re-checks `actor.admin`, which comes only from the
 // x-dmmo-admin header the Worker set on that socket. The room supplies sockets, D1 lookups and
 // the "close everywhere" call through AdminHost, so this logic is testable without a Durable Object.
 import { REMOVED_TEXT, SHOUT_MIN_INTERVAL_MS, cleanReason, cleanShout, shoutIsFresh, type Shout } from "../../shared/admin";
 import { BanBook, cleanIp, type BanRecord } from "./bans";
+import { jailedText, jailEndsAt, minutesLabel, parseJailMinutes } from "../../shared/jail";
 
 export interface AdminActor {
   userId: string;
@@ -38,6 +39,13 @@ export interface AdminHost {
   /** Tells them and closes every socket they have, here and in every zone and home. */
   remove(userId: string, text: string): void;
   log(line: string): void;
+  /**
+   * Saves the sentence in their HomeRoom (which walks them to the cell if they are home or
+   * visiting) and tells every zone to lock them up if they are there. Throws when the home fails.
+   */
+  jail(userId: string, until: number, text: string): Promise<{ ok: boolean; noSave?: boolean }>;
+  /** Ends the sentence in their HomeRoom and lets them out wherever they are. True if they were in. */
+  unjail(userId: string): Promise<boolean>;
 }
 
 export type AdminAnswer = { ok: boolean; text: string };
@@ -47,7 +55,7 @@ const KICK_LOG_MAX = 100;
 
 export interface KickLogEntry {
   at: number;
-  action: "kick" | "unban";
+  action: "kick" | "unban" | "jail" | "unjail";
   by: string;
   byName: string;
   userId: string;
@@ -131,7 +139,66 @@ export class AdminDesk {
     return { ok: true, text: `${rec.name} can play in Mossbrook again.` };
   }
 
-  /** Every kick and unban goes to the Worker log and a short list kept in storage. */
+  /** Looks a player up by name (online first), for kick and jail. Throws when D1 can't answer. */
+  private async target(name: string): Promise<UserInfo | null> {
+    const here = this.host.online(name);
+    return here ? ((await this.host.userById(here.userId)) ?? { ...here, email: null, guest: false }) : await this.host.userByName(name);
+  }
+
+  /**
+   * /jail name [minutes] or the player card's Send to Jail: `minutes` defaults to 5 and must be
+   * 1..1440. Admins and guests can't be jailed, nor can you jail yourself.
+   */
+  async jail(actor: AdminActor, name: string, rawMinutes: unknown, now: number): Promise<AdminAnswer> {
+    if (!actor.admin) return { ok: false, text: NOT_ADMIN };
+    const minutes = parseJailMinutes(rawMinutes);
+    if (minutes === null) return { ok: false, text: "Jail time is whole minutes from 1 to 1440." };
+    let target: UserInfo | null;
+    try {
+      target = await this.target(name);
+    } catch (err) {
+      this.host.log(`admin jail lookup failed: ${String(err)}`);
+      return { ok: false, text: "Couldn't look that player up. Try again in a moment." };
+    }
+    if (!target) return { ok: false, text: `There's no player called ${name}.` };
+    if (target.userId === actor.userId) return { ok: false, text: "You can't jail yourself." };
+    if (target.guest) return { ok: false, text: `${target.name} is a guest and can only be at home.` };
+    if (this.host.isAdminEmail(target.email)) return { ok: false, text: `${target.name} is an admin and can't be jailed.` };
+    let r: { ok: boolean; noSave?: boolean };
+    try {
+      r = await this.host.jail(target.userId, jailEndsAt(now, minutes), jailedText(minutes, false));
+    } catch (err) {
+      this.host.log(`admin jail failed: ${String(err)}`);
+      r = { ok: false };
+    }
+    if (!r.ok) return { ok: false, text: r.noSave ? `${target.name} hasn't played yet.` : "That didn't work. Try again in a moment." };
+    await this.record({ at: now, action: "jail", by: actor.userId, byName: actor.name, userId: target.userId, name: target.name, reason: `${minutes} min` });
+    return { ok: true, text: `${target.name} is in jail for ${minutesLabel(minutes)}. /unjail ${target.name} lets them out.` };
+  }
+
+  async unjail(actor: AdminActor, name: string, now: number): Promise<AdminAnswer> {
+    if (!actor.admin) return { ok: false, text: NOT_ADMIN };
+    let target: UserInfo | null;
+    try {
+      target = await this.target(name);
+    } catch (err) {
+      this.host.log(`admin unjail lookup failed: ${String(err)}`);
+      return { ok: false, text: "Couldn't look that player up. Try again in a moment." };
+    }
+    if (!target) return { ok: false, text: `There's no player called ${name}.` };
+    let was: boolean;
+    try {
+      was = await this.host.unjail(target.userId);
+    } catch (err) {
+      this.host.log(`admin unjail failed: ${String(err)}`);
+      return { ok: false, text: "That didn't work. Try again in a moment." };
+    }
+    if (!was) return { ok: false, text: `${target.name} isn't in jail.` };
+    await this.record({ at: now, action: "unjail", by: actor.userId, byName: actor.name, userId: target.userId, name: target.name });
+    return { ok: true, text: `${target.name} is out of jail.` };
+  }
+
+  /** Every kick, unban, jail and unjail goes to the Worker log and a short list kept in storage. */
   private async record(e: KickLogEntry): Promise<void> {
     this.host.log(`admin ${e.action}: ${JSON.stringify(e)}`);
     const prev = await this.host.storage.get("kicklog");

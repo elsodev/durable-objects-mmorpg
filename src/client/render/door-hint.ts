@@ -3,7 +3,7 @@
 // the cave passages' "← Depth 3: ..."). The text comes from shared map data only.
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import { TILE, type Layers } from "../contracts";
-import { doorFor } from "../../shared/maps/interiors/doors";
+import { doorFor, outsideOf } from "../../shared/maps/interiors/doors";
 import { isInteriorZone, type MapData, type Vec2 } from "../../shared/types";
 
 /** How close (tiles, feet to the door tile's edge) you must be to see the hint. */
@@ -30,7 +30,7 @@ export function doorHintAt(map: MapData, pos: Vec2): DoorHint | null {
     if (e.label) text = e.label;
     else if (e.map) text = e.map === "home_in" ? "Enter House" : "Exit to Yard";
     else if (isInteriorZone(e.to)) text = `Enter ${doorFor(e.to).name}`;
-    else if (isInteriorZone(map.zone) && e.to === "village") text = "Exit to Village";
+    else if (isInteriorZone(map.zone) && e.to === outsideOf(doorFor(map.zone))) text = e.to === "jail" ? "Exit to Jail Yard" : "Exit to Village";
     // The cave mouth is a doorway in the quarry's cliff, and the tunnel's end leads back out.
     else if (map.zone === "quarry" && e.to === "caves") text = "Enter the Caves";
     else if (map.zone === "caves" && e.to === "quarry") text = "Exit to Quarry";

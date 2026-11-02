@@ -87,6 +87,10 @@ export const INTERIOR_PROP_FOOTPRINTS = {
   basket: { w: 1, h: 1 },
   produce_pile: { w: 1, h: 1 },
   bellows: { w: 1, h: 1 },
+  // The police station's cell front: a run of iron bars (art rises well above the tile) and the
+  // locked cell door in it. Both block; nobody walks through.
+  jail_bars: { w: 1, h: 1 },
+  jail_door: { w: 1, h: 1 },
   // Hung on the north wall (row 1 of the wall pieces); walkable, drawn in front of the wall.
   painting_landscape: { w: 2, h: 1 },
   painting_sea: { w: 2, h: 1 },

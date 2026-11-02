@@ -1,0 +1,42 @@
+/* Jail countdown (ui/jail-timer.ts): an iron-grey plate with a little barred window. */
+.jail-timer {
+  position: absolute;
+  top: 140px;
+  left: 14px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 8px;
+  font-family: var(--dm-font-pixel);
+  color: #f1ece0;
+  background: linear-gradient(180deg, #5d6470 0%, #454b56 100%);
+  border: 3px solid #2a2d35;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18), 0 3px 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.jail-timer[hidden] {
+  display: none;
+}
+.jail-timer-bars {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #1f2228;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, #2a2d35 0 3px, transparent 3px 7px),
+    #8a93a1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+.jail-timer-title {
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ffd27a;
+}
+.jail-timer-left {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}

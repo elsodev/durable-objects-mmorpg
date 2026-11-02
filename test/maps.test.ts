@@ -5,15 +5,17 @@ import { buildHome } from "../src/shared/maps/home";
 import { NPC_SCHEDULE, placeZone } from "../src/shared/npcSchedule";
 import { isFarmable } from "../src/shared/engine";
 import { BUILDING_DOORS } from "../src/shared/maps/interiors";
+import { CELL_SPAWN } from "../src/shared/jail";
 import { BLOCKING_GROUND, CAVE_DEPTH_ZONES, Ground, INTERIOR_ZONES, type MapData, type MapId, type ZoneId } from "../src/shared/types";
 
-const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", "quarry", ...CAVE_DEPTH_ZONES, ...INTERIOR_ZONES];
+const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", "quarry", "jail", ...CAVE_DEPTH_ZONES, ...INTERIOR_ZONES];
 const SIZES: Partial<Record<MapId, [number, number]>> = {
   home: [40, 30],
   village: [64, 48],
   riverside: [80, 40],
   caves: [72, 56],
   quarry: [40, 30],
+  jail: [40, 30],
 };
 const NPC_HOMES: Record<string, ZoneId> = {
   bram: "village",
@@ -26,6 +28,7 @@ const NPC_HOMES: Record<string, ZoneId> = {
   iris: "riverside",
   grumm: "caves",
   tess: "caves",
+  sheriff: "int_police",
 };
 
 /** NPCs a zone's map must place: its outdoor workers, plus everyone whose routine visits it. */
@@ -144,7 +147,8 @@ describe.each(ZONES)("map %s", (zone) => {
     const seen = bfs(map, grid, map.spawns.default!);
     const reach = (x: number, y: number) => seen[Math.floor(y) * map.width + Math.floor(x)] === 1;
     for (const e of map.exits) expect(exitTiles(e).some((t) => reach(t.x, t.y)), `exit to ${e.to}`).toBe(true);
-    for (const [name, s] of Object.entries(map.spawns)) expect(reach(s.x, s.y), name).toBe(true);
+    // The police cell is behind locked bars on purpose: only the server puts anyone there.
+    for (const [name, s] of Object.entries(map.spawns)) if (!(zone === "int_police" && name === CELL_SPAWN)) expect(reach(s.x, s.y), name).toBe(true);
     for (const n of map.npcs) {
       const stall = stallOf(map, n);
       // A shopkeeper behind a counter is talked to from the tile in front of the stall.

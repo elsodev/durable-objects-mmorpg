@@ -1101,6 +1101,14 @@
    "derivedSit": [
     "torso/shirts/torso_clothes_corset"
    ]
+  },
+  "sheriff": {
+   "base": "../characters/sheriff.png",
+   "act": "../characters/sheriff.act.png",
+   "missing": [],
+   "derivedSit": [
+    "torso/vest/torso_clothes_vest"
+   ]
   }
  }
 }

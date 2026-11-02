@@ -32,6 +32,7 @@ export type HomeStub = Pick<
   | "addInvite"
   | "dismissInvite"
   | "peekPlayer"
+  | "noteVisit"
   | "fetch"
 >;
 

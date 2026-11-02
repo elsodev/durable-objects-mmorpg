@@ -19,6 +19,8 @@ export const PROP_FOOTPRINTS = {
   house_grumm: { w: 6, h: 4 },
   house_pip: { w: 8, h: 4 },
   town_hall: { w: 8, h: 5 },
+  /** The jail yard's police station (stone, slate roof, barred windows, a sheriff's star). */
+  police_station: { w: 6, h: 4 },
   inn: { w: 8, h: 5 },
   blacksmith: { w: 6, h: 4 },
   market_stall: { w: 3, h: 2 },

@@ -314,6 +314,33 @@
 .pc-actions .pc-kick.dm-btn-accent {
   color: var(--dm-cream);
 }
+/* Admin only: minutes box and "Send to Jail" on one full-width row. */
+.pc-actions .pc-jail {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pc-jail-min {
+  width: 52px;
+  min-width: 0;
+  padding: 3px 4px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--dm-text);
+  background: var(--dm-cream);
+  border: 1px solid var(--dm-berry);
+  border-radius: 4px;
+}
+.pc-jail-unit {
+  font-size: 12px;
+  color: var(--dm-text-dim);
+}
+.pc-actions .pc-jail-send {
+  flex: 1;
+  color: var(--dm-berry-dark);
+  border-color: var(--dm-berry);
+}
 .pc-actions:empty,
 .pc-msg:empty,
 .pc-stats[hidden],

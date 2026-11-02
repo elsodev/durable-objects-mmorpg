@@ -99,7 +99,7 @@ export function musicKeyForZone(zone: string | null, music: Readonly<Record<stri
 }
 
 function borrowedMusic(zone: string): string[] {
-  if (zone === "quarry") return ["riverside", "village"];
+  if (zone === "quarry" || zone === "jail") return ["riverside", "village"];
   if (isCaveDepthZone(zone)) return ["caves"];
   if (!zone.startsWith("int_")) return [];
   if (zone === "int_inn") return ["festival", "village"];

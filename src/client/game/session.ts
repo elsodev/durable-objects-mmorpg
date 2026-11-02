@@ -99,7 +99,7 @@ function sameTarget(a: StampedMsg, b: StampedMsg): boolean {
 import { isSwingTool, toolKeyOf, type ToolEffect, type ToolOutcome, type ToolTarget } from "../../shared/engine/toolRules";
 import { createSocialConnection } from "../net/social";
 import { emitSocial, onSocial as onSocialEvent } from "../social-events";
-import { parseChatInput, type ChatTab, type SocialServerMsg } from "../../shared/social";
+import { parseChatInput, type ChatTab, type SocialClientMsg, type SocialServerMsg } from "../../shared/social";
 import { ANIMAL_PREFIX, ANIMAL_REACH } from "../../shared/animals";
 import { BARN_ID, BARN_SIZE, BARN_SPOT } from "../../shared/ranch";
 import { ANIMAL_HEAR_RANGE, animalLoveSfx } from "../audio/audio-logic";
@@ -385,12 +385,16 @@ export async function startSession(
     }),
     isAdmin: () => isAdmin,
     adminCommand(cmd) {
-      const msg =
+      const msg: SocialClientMsg =
         cmd.cmd === "shout"
-          ? ({ t: "shout", text: cmd.text } as const)
+          ? { t: "shout", text: cmd.text }
           : cmd.cmd === "kick"
-            ? ({ t: "kick", name: cmd.name, ...(cmd.reason ? { reason: cmd.reason } : {}) } as const)
-            : ({ t: "unban", name: cmd.name } as const);
+            ? { t: "kick", name: cmd.name, ...(cmd.reason ? { reason: cmd.reason } : {}) }
+            : cmd.cmd === "jail"
+              ? { t: "jail", name: cmd.name, minutes: cmd.minutes }
+              : cmd.cmd === "unjail"
+                ? { t: "unjail", name: cmd.name }
+                : { t: "unban", name: cmd.name };
       if (!social.send(msg)) system("Admin tools are reconnecting. Try again in a moment.");
     },
     tradeOpen: () => tradeUi.isOpen(),
@@ -1098,6 +1102,9 @@ export async function startSession(
       case "zone":
         playSfx("door");
         joinZone(msg.to, msg.spawn);
+        break;
+      case "jail":
+        hud.jail?.(msg.until, msg.serverTime);
         break;
       case "reject":
         onReject(msg);

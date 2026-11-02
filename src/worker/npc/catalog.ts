@@ -1,4 +1,4 @@
-// The 10 NPCs of Mossbrook.
+// The 11 NPCs of Mossbrook.
 import type { ItemId } from "../../shared/types";
 import type { ShopOffer } from "../../shared/protocol";
 import { getItem } from "../../shared/items";
@@ -864,6 +864,88 @@ export const NPCS: Record<string, NpcDef> = {
       ],
     },
   },
+
+  sheriff: {
+    id: "sheriff",
+    name: "Hollis",
+    sprite: "sheriff",
+    zone: "int_police",
+    role: "Sheriff of Mossbrook, keeper of the police station and its cell",
+    personality:
+      "A gruff but fair old sheriff with a drooping moustache and a soft spot for strays. He keeps the peace with patience and a ledger, gives three warnings to anyone who insults him, and locks the fourth in the cell to cool off.",
+    knowledge: [
+      LORE.critters,
+      LORE.bridge,
+      "The police station stands in the jail yard, down the road south of the quarry.",
+      "Hollis keeps a ledger of every warning. Three insults earn a warning each; the fourth earns five minutes in the cell.",
+      "Visitors may talk to anyone in the cell through the bars, but only the sheriff holds the key.",
+    ],
+    lines: {
+      greet: [
+        "Evening, {name}. Wipe your boots; the floor's just swept.",
+        "{name}. Keeping out of trouble, I hope?",
+        "Ah, {name}. Come in, the kettle's warm and the cell's empty. Mostly.",
+        "Sheriff Hollis. What can I do for you, {name}?",
+        "Well now, {name}. Social call, or are you here to confess?",
+      ],
+      buy: [
+        "This is a police station, {name}, not a shop. Odette sells seeds in the village.",
+        "Nothing for sale here but good advice. Fenwick has tools up in the village.",
+        "I don't sell, I keep the peace. Try the market stalls.",
+      ],
+      sell: [
+        "I don't buy, {name}. Grumm takes ore at the quarry, Odette takes crops.",
+        "No trading at the station. The quarry's just up the road.",
+        "Keep your goods, {name}. The market buys what I won't.",
+      ],
+      quest: [
+        "Keep the peace, {name}. That's the only job I hand out.",
+        "The village is gathering wood and stone for the bridge. Honest work keeps folks out of my cell.",
+        "Slimes and bats in the caves. Carry a sword and don't make me write a report.",
+        "If you see trouble, tell me. If you are trouble, I'll find you.",
+        "Tend your friendships, {name}. A kind word a day keeps the cell empty.",
+      ],
+      ask_info: [
+        "Three warnings, {name}. Insult me a fourth time and you'll have five minutes to think about it.",
+        "The cell's behind those bars. Friends can visit and talk through them, but nobody walks in.",
+        "The road north goes up to the quarry, then on to the caves and the village.",
+        "Fall in the caves and you wake in your own bed, a little poorer. Never more than a hundred coins.",
+        "Gifts mean most on a birthday. The hearts list shows whose day it is.",
+        "Folks in the cell can't travel or go home until their time's up. Rules are rules.",
+      ],
+      smalltalk: [
+        "Quiet day. I like quiet days.",
+        "Thirty years with this badge and the worst I've arrested is a goat. Twice.",
+        "I keep a ledger. Every warning, every kindness. Mostly kindnesses.",
+        "The coffee here is terrible. That's how you know it's a real police station.",
+        "Some nights I leave the cell door open for the cat. Don't tell anyone.",
+      ],
+      rude: [
+        "Watch your tongue, {name}. I'm counting.",
+        "That's not how we talk in my station.",
+        "Careful now. I've a ledger and a key.",
+      ],
+      goodbye: [
+        "Mind how you go, {name}.",
+        "Stay out of trouble, {name}.",
+        "Off you go. Keep your nose clean.",
+        "Safe roads, {name}.",
+      ],
+      idle: [
+        "...where did I put that key...",
+        "Quiet day.",
+        "*polishes badge*",
+        "...ledger's nearly full...",
+        "Hm. Coffee's cold again.",
+        "Keep the peace.",
+      ],
+      thinking_fail: [
+        "Hm? Sorry, {name}, I was filling in a report. Say again?",
+        "My ears aren't what they were. Once more?",
+        "Hold on, the ink ran dry. What was that?",
+      ],
+    },
+  },
 };
 
 /**
@@ -881,6 +963,7 @@ export const NPC_GIFTS: Record<string, ItemId[]> = {
   iris: ["herb_mint", "mushroom"],
   grumm: ["stone"],
   tess: [],
+  sheriff: [],
 };
 
 /** Own-key lookup: npc ids can arrive from clients. */

@@ -355,7 +355,7 @@ interface Users {
   [name: string]: UserInfo;
 }
 
-function desk(opts: { users?: Users; online?: string[]; failLookup?: boolean } = {}) {
+function desk(opts: { users?: Users; online?: string[]; failLookup?: boolean; noSave?: string[]; failJail?: boolean } = {}) {
   const users: Users = opts.users ?? {
     et: { userId: "et1", name: "ET", email: "et@x.com", guest: false },
     bob: { userId: "bob1", name: "Bob", email: "bob@x.com", guest: false },
@@ -366,6 +366,7 @@ function desk(opts: { users?: Users; online?: string[]; failLookup?: boolean } =
   const kv = new Map<string, unknown>();
   const shouts: Shout[] = [];
   const removed: { userId: string; text: string }[] = [];
+  const jailed = new Map<string, { until: number; text: string }>();
   const logs: string[] = [];
   const bans = new BanBook(storage);
   const byId = (id: string) => Object.values(users).find((u) => u.userId === id) ?? null;
@@ -390,8 +391,15 @@ function desk(opts: { users?: Users; online?: string[]; failLookup?: boolean } =
     sessionIps: async (id) => (id === "bob1" ? ["198.51.100.20", "203.0.113.7"] : []),
     remove: (userId, text) => void removed.push({ userId, text }),
     log: (l) => void logs.push(l),
+    jail: async (userId, until, text) => {
+      if (opts.failJail) throw new Error("home down");
+      if ((opts.noSave ?? []).includes(userId)) return { ok: false, noSave: true };
+      jailed.set(userId, { until, text });
+      return { ok: true };
+    },
+    unjail: async (userId) => jailed.delete(userId),
   };
-  return { d: new AdminDesk(host), shouts, removed, logs, bans, kv };
+  return { d: new AdminDesk(host), shouts, removed, logs, bans, kv, jailed };
 }
 
 const et = { userId: "et1", name: "ET", admin: true };
@@ -494,5 +502,68 @@ describe("removed signals", () => {
     expect(CLOSE_REMOVED).toBeGreaterThanOrEqual(4000);
     expect(CLOSE_REMOVED).toBeLessThan(5000);
     expect(HTTP_REMOVED).toBe(451);
+  });
+});
+
+describe("jail and unjail", () => {
+  it("refuses non-admins and never touches anyone's save", async () => {
+    const { d, jailed } = desk();
+    expect(await d.jail(bobActor, "Amy", 5, T0)).toEqual({ ok: false, text: "Only admins can do that." });
+    expect(await d.unjail(bobActor, "Amy", T0)).toEqual({ ok: false, text: "Only admins can do that." });
+    expect(jailed.size).toBe(0);
+  });
+
+  it("jails for 5 minutes by default, or the minutes given, and logs it", async () => {
+    const { d, jailed, kv } = desk();
+    const r = await d.jail(et, "bob", undefined, T0);
+    expect(r).toEqual({ ok: true, text: "Bob is in jail for 5 minutes. /unjail Bob lets them out." });
+    expect(jailed.get("bob1")).toEqual({ until: T0 + 5 * 60_000, text: "You've been sent to jail for 5 minutes." });
+    await d.jail(et, "Bob", 90, T0);
+    expect(jailed.get("bob1")!.until).toBe(T0 + 90 * 60_000);
+    const log = kv.get("kicklog") as { action: string; reason?: string }[];
+    expect(log.map((e) => e.action)).toEqual(["jail", "jail"]);
+    expect(log[1]!.reason).toBe("90 min");
+  });
+
+  it("refuses bad minutes, yourself, admins, guests, unknown names and players with no save", async () => {
+    const { d, jailed } = desk({ noSave: ["bob1"] });
+    for (const m of [0, -3, 1.5, 1441, "ten", 1e9]) expect((await d.jail(et, "Bob", m, T0)).text).toMatch(/whole minutes from 1 to 1440/);
+    expect((await d.jail(et, "ET", 5, T0)).text).toBe("You can't jail yourself.");
+    expect((await d.jail(et, "Amy", 5, T0)).text).toBe("Amy is an admin and can't be jailed.");
+    expect((await d.jail(et, "Guest_ab12cd", 5, T0)).ok).toBe(false);
+    expect((await d.jail(et, "Nobody", 5, T0)).text).toBe("There's no player called Nobody.");
+    expect((await d.jail(et, "Bob", 5, T0)).text).toBe("Bob hasn't played yet.");
+    expect(jailed.size).toBe(0);
+  });
+
+  it("answers kindly when the home or the lookup is down", async () => {
+    expect((await desk({ failJail: true }).d.jail(et, "Bob", 5, T0)).ok).toBe(false);
+    expect((await desk({ failLookup: true }).d.jail(et, "Bob", 5, T0)).text).toMatch(/Couldn't look that player up/);
+  });
+
+  it("/unjail lets them out once", async () => {
+    const { d, jailed } = desk();
+    await d.jail(et, "Bob", 5, T0);
+    expect(await d.unjail(et, "Bob", T0 + 1)).toEqual({ ok: true, text: "Bob is out of jail." });
+    expect(jailed.size).toBe(0);
+    expect(await d.unjail(et, "Bob", T0 + 2)).toEqual({ ok: false, text: "Bob isn't in jail." });
+  });
+
+  it("parses /jail and /unjail, and the social socket only carries valid ones", () => {
+    expect(parseAdminCommand("/jail Bob")).toEqual({ cmd: "jail", name: "Bob", minutes: 5 });
+    expect(parseAdminCommand("/jail Bob 30")).toEqual({ cmd: "jail", name: "Bob", minutes: 30 });
+    expect(parseAdminCommand("/jail Bob 0")?.cmd).toBe("error");
+    expect(parseAdminCommand("/jail Bob 2000")?.cmd).toBe("error");
+    expect(parseAdminCommand("/jail Bob 5 extra")?.cmd).toBe("error");
+    expect(parseAdminCommand("/jail")?.cmd).toBe("error");
+    expect(parseAdminCommand("/unjail Bob")).toEqual({ cmd: "unjail", name: "Bob" });
+    expect(parseAdminCommand("/release Bob")).toEqual({ cmd: "unjail", name: "Bob" });
+    expect(parseAdminCommand("/jailbreak")).toBeNull();
+    expect(decodeSocialClient(JSON.stringify({ t: "jail", name: "Bob", minutes: 10 }))).toEqual({ t: "jail", name: "Bob", minutes: 10 });
+    expect(decodeSocialClient(JSON.stringify({ t: "jail", name: "Bob" }))).toEqual({ t: "jail", name: "Bob" });
+    expect(decodeSocialClient(JSON.stringify({ t: "jail", name: "Bob", minutes: 0 }))).toBeNull();
+    expect(decodeSocialClient(JSON.stringify({ t: "jail", name: "Bob", minutes: "5" }))).toBeNull();
+    expect(decodeSocialClient(JSON.stringify({ t: "jail", name: "<b>" }))).toBeNull();
+    expect(decodeSocialClient(JSON.stringify({ t: "unjail", name: "Bob" }))).toEqual({ t: "unjail", name: "Bob" });
   });
 });

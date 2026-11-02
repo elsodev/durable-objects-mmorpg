@@ -60,6 +60,8 @@ export const NPC_JOBS: Readonly<Record<string, Job>> = {
   marlo: { at: "work", from: 8, to: 18 },
   iris: { at: "work", from: 8, to: 18 },
   grumm: { at: "work", from: 8, to: 17 },
+  // The sheriff keeps his desk in the police station round the clock (he lives in the back room).
+  sheriff: { at: "police", from: 0, to: 24 },
 };
 
 const shift = (npcId: string): ScheduleBand[] => {
@@ -98,6 +100,8 @@ export const NPC_SCHEDULE: Readonly<Record<string, readonly ScheduleBand[]>> = {
   grumm: day("inn", "house_grumm", [...shift("grumm"), { from: 17, to: 18, at: "about" }]),
   // Tess pins up her maps on the notice board before heading down the tunnels.
   tess: day("townhall", "house_tess", [{ from: 8, to: 9, at: "about" }]),
+  // The sheriff never leaves the police station: his desk by day, the back room by night.
+  sheriff: [{ from: 0, to: 24, at: "police" }],
 };
 
 /** True while the NPC's working hours are on (it has a job and `hour` is inside them). */

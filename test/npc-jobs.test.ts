@@ -31,6 +31,7 @@ const WORKPLACE: Record<string, SharedZoneId> = {
   marlo: "riverside",
   iris: "riverside",
   grumm: "caves",
+  sheriff: "int_police",
 };
 
 afterEach(() => vi.useRealTimers());
@@ -50,8 +51,9 @@ describe("job hours", () => {
       for (let h = job.from; h < job.to; h++) expect(npcZoneAt(id, h), `${id}@${h}`).toBe(jobZone(id));
   });
 
-  it("lets everyone but the innkeeper off in the evening; the inn stays open until midnight", () => {
-    for (const id of Object.keys(NPC_JOBS)) if (id !== "rue") expect(onShift(id, 20), id).toBe(false);
+  it("lets everyone but the innkeeper and the sheriff off in the evening; the inn stays open until midnight", () => {
+    for (const id of Object.keys(NPC_JOBS)) if (id !== "rue" && id !== "sheriff") expect(onShift(id, 20), id).toBe(false);
+    for (let h = 0; h < 24; h++) expect(onShift("sheriff", h)).toBe(true);
     expect(onShift("rue", 20)).toBe(true);
     expect(onShift("rue", 23)).toBe(true);
     expect(onShift("rue", 2)).toBe(false);
@@ -71,6 +73,7 @@ describe("job hours", () => {
     near("int_townhall", "bram", "mayor_desk", 1);
     near("int_inn", "rue", "bar_counter_2", 1);
     near("int_smithy", "fenwick", "anvil", 2.5);
+    near("int_police", "sheriff", "sheriff_desk", 1);
   });
 });
 

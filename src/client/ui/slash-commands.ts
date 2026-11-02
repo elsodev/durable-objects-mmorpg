@@ -61,6 +61,8 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "shout", aliases: ["announce"], args: "message", description: "Admin: a banner for everyone online", available: admin },
   { name: "kick", aliases: [], args: "name [reason]", description: "Admin: remove a player from Mossbrook", available: admin },
   { name: "unban", aliases: [], args: "name", description: "Admin: let a removed player back in", available: admin },
+  { name: "jail", aliases: [], args: "name [minutes]", description: "Admin: lock a player in the cell (default 5 min)", available: admin },
+  { name: "unjail", aliases: ["release"], args: "name", description: "Admin: let a player out of jail", available: admin },
   { name: "day", aliases: [], args: "", description: "Dev: end the day now", available: (c) => c.devTools && c.homeOwner },
   { name: "time", aliases: [], args: "hour", description: "Dev: set your home clock, e.g. /time 21", available: (c) => c.devTools && c.homeOwner },
   { name: "hour", aliases: [], args: "hour", description: "Dev: run village routines as if at this UTC hour", available: (c) => c.devTools && !c.atHome },

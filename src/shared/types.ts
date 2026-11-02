@@ -5,12 +5,15 @@ export const TILE_PX = 16;
 export const TICK_HZ = 10;
 export const TICK_MS = 1000 / TICK_HZ;
 
-/** Shared maps (outdoors, plus the caves). The quarry is the outdoor approach to the cave mouth. */
-export type OutdoorZoneId = "village" | "riverside" | "caves" | "quarry";
-export const OUTDOOR_ZONES: OutdoorZoneId[] = ["village", "riverside", "caves", "quarry"];
 /**
- * Building interiors: public shared rooms behind the village doors (maps in shared/maps/interiors).
- * Houses are named after the villager who lives there.
+ * Shared maps (outdoors, plus the caves). The quarry is the outdoor approach to the cave mouth; the
+ * town jail (police station and its yard) lies south of the quarry.
+ */
+export type OutdoorZoneId = "village" | "riverside" | "caves" | "quarry" | "jail";
+export const OUTDOOR_ZONES: OutdoorZoneId[] = ["village", "riverside", "caves", "quarry", "jail"];
+/**
+ * Building interiors: public shared rooms behind the village doors (maps in shared/maps/interiors),
+ * plus the police station in the jail yard. Houses are named after the villager who lives there.
  */
 export const INTERIOR_ZONES = [
   "int_townhall",
@@ -24,6 +27,7 @@ export const INTERIOR_ZONES = [
   "int_house_iris",
   "int_house_grumm",
   "int_house_tess",
+  "int_police",
 ] as const;
 export type InteriorZoneId = (typeof INTERIOR_ZONES)[number];
 /**
@@ -105,6 +109,8 @@ export interface EntityState {
   pace?: "dash" | "tired";
   /** Players only: an admin (set by the server from the Worker's check); clients draw a halo. */
   admin?: boolean;
+  /** Players only: serving jail time (shared/jail.ts); clients may mark them. */
+  jailed?: boolean;
 }
 
 /** Character creator choices; every field is an option id listed in shared/look.ts. */

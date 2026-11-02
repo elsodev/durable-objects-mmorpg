@@ -1,10 +1,12 @@
 // Player card (#player-card): right-click (or touch long-press) a player in the world, or a player's
 // name in chat. Shows a portrait, online/zone, lifetime stats and friendship from
 // GET /api/players/:id/card, with Add friend / Whisper / Trade / Invite home / Mute buttons, and Kick for
-// admins (two clicks: "Kick" then "Remove <name>?"; the server checks admin rights). Your own card
+// admins (two clicks: "Kick" then "Remove <name>?") plus a minutes box and "Send to Jail" (the
+// server checks admin rights on both). Your own card
 // has no buttons. Closes on Esc, a click outside (which then does nothing else), or when the player
 // walks away. Names and stats are untrusted: textContent only.
 import type { PlayerCard as CardData } from "../../shared/players";
+import { JAIL_DEFAULT_MINUTES, JAIL_MAX_MINUTES, parseJailMinutes } from "../../shared/jail";
 import { friendsApi } from "./friends-api";
 import { CONFIRM_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX, whisperPrefill } from "./friends-logic";
 import type { MuteStore } from "./mutes";
@@ -43,6 +45,8 @@ export interface PlayerCardOpts {
   trade?(hit: PlayerHit): void;
   /** Admins: remove this player from the server (shown only where CardContext.admin). */
   kick?(name: string): void;
+  /** Admins: send this player to the cell for `minutes` (the server checks rights and range). */
+  jail?(name: string, minutes: number): void;
   mutes: MuteStore;
   notice(text: string, kind: "info" | "error" | "loot"): void;
   api?: MutesApi;
@@ -174,6 +178,9 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
       } else if (kind === "kick") {
         if (!opts.kick) continue;
         actions.appendChild(button("Kick", "player-card-kick", (b) => onKick(target, b), "pc-kick"));
+      } else if (kind === "jail") {
+        if (!opts.jail) continue;
+        actions.appendChild(jailRow(target));
       } else {
         const on = muted();
         actions.appendChild(button(on ? "Unmute" : "Mute", "player-card-mute", (b) => void onMute(!on, b), on ? "" : "pc-mute"));
@@ -229,6 +236,37 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
     armedKick = null;
     hide();
     opts.kick?.(target.name);
+  }
+
+  /** Minutes box (default 5) and "Send to Jail"; bad input is refused here and again by the server. */
+  function jailRow(target: PlayerHit): HTMLElement {
+    const row = el("div", "pc-jail");
+    const input = el("input", "pc-jail-min");
+    input.type = "number";
+    input.min = "1";
+    input.max = String(JAIL_MAX_MINUTES);
+    input.step = "1";
+    input.value = String(JAIL_DEFAULT_MINUTES);
+    input.id = "player-card-jail-minutes";
+    input.setAttribute("aria-label", "Jail minutes");
+    const unit = el("span", "pc-jail-unit", "min");
+    const send = button("Send to Jail", "player-card-jail", () => {
+      const minutes = parseJailMinutes(input.value);
+      if (minutes === null) {
+        say(`Jail time is whole minutes from 1 to ${JAIL_MAX_MINUTES}.`, "error");
+        return;
+      }
+      hide();
+      opts.jail?.(target.name, minutes);
+    }, "pc-jail-send");
+    input.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") send.click();
+    });
+    row.appendChild(input);
+    row.appendChild(unit);
+    row.appendChild(send);
+    return row;
   }
 
   async function onMute(on: boolean, b: HTMLButtonElement): Promise<void> {

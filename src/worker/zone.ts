@@ -83,6 +83,26 @@ import { CLOSE_ABUSE, SocketLimiter } from "./game/rateLimit";
 import { arrivedFrom, resolveSpawn, routeExit, transferHonoured } from "./game/spawn";
 import { CLOSE_SESSION_ENDED, recheckDue, sessionStillValid } from "./game/session";
 import { CLOSE_REMOVED } from "../shared/admin";
+import {
+  CELL_SPAWN,
+  cleanJailUntil,
+  cleanStrikes,
+  isJailed,
+  JAIL_DEFAULT_MINUTES,
+  JAIL_ZONE,
+  JAILED_REFUSAL,
+  jailedText,
+  jailEndsAt,
+  jailPlacement,
+  RELEASE_SPAWN,
+  RELEASED_TEXT,
+  UNJAILED_TEXT,
+  nextInsult,
+} from "../shared/jail";
+import { POLICE_CELL } from "../shared/maps/interiors/police";
+import { arrestLine, isInsult, SHERIFF_ID, warningLine } from "./npc/sheriff";
+import { jevClient } from "./npc/jev";
+import { JEV_UNITS, utcDay } from "./game/npcGate";
 import { timeout } from "./game/timeout";
 import { stripControls } from "./npc/text";
 import { scheduleHour } from "../shared/npcSchedule";
@@ -237,6 +257,10 @@ interface ZPlayer {
   climb?: { exit: MapExit; until: number };
   /** Affection with the village animals, pets, barn and hens (saved with the player). */
   animals: AnimalSave;
+  /** End of their jail sentence (ms), while they serve one (shared/jail.ts). */
+  jailedUntil?: number;
+  /** Insults the sheriff has let go with a warning (saved with the player). */
+  strikes: number;
 }
 
 interface World {
@@ -445,7 +469,13 @@ export class ZoneRoom extends DurableObject<Env> {
     // it); otherwise resume the saved position, so neither a reload nor a crafted URL teleports.
     const spawn = safeSpawnName(world.map.spawns, id.spawn);
     const transfer = save.transfer && "at" in save.transfer ? save.transfer : null;
-    const at = resolveSpawn(world.map.spawns, world.zone, spawn, save, transfer, Date.now());
+    let at = resolveSpawn(world.map.spawns, world.zone, spawn, save, transfer, Date.now());
+    // The police station: inmates always land in the cell, everyone else never does.
+    const jailed = isJailed(cleanJailUntil(save.jailedUntil, Date.now()), Date.now());
+    if (world.zone === JAIL_ZONE) {
+      const place = jailPlacement(jailed, at, POLICE_CELL);
+      if (place) at = world.map.spawns[place === "cell" ? CELL_SPAWN : RELEASE_SPAWN]!;
+    }
     const from = arrivedFrom(spawn, transferHonoured(world.map.spawns, world.zone, spawn, transfer, Date.now()), isZoneId);
 
     const [client, server] = Object.values(new WebSocketPair());
@@ -487,6 +517,11 @@ export class ZoneRoom extends DurableObject<Env> {
     this.sendStamina(p);
     this.deliverInvites(p);
     this.startTick();
+    // Serving time somewhere else (a reload, an old tab, a jailing while on the way): to the cell.
+    if (p.jailedUntil !== undefined) {
+      if (world.zone === JAIL_ZONE) this.sendJail(p);
+      else this.toCell(p, JAILED_REFUSAL);
+    }
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -551,7 +586,13 @@ export class ZoneRoom extends DurableObject<Env> {
       bonds: sanitizeBonds(save.bonds),
       caveTrail: sanitizeCaveTrail(save.caveTrail),
       animals: sanitizeAnimals(save.animals),
+      strikes: cleanStrikes(save.sheriffStrikes),
     };
+    const until = cleanJailUntil(save.jailedUntil, Date.now());
+    if (isJailed(until, Date.now())) {
+      p.jailedUntil = until;
+      p.entity.jailed = true;
+    }
     this.players.set(ws, p);
     return p;
   }
@@ -702,12 +743,13 @@ export class ZoneRoom extends DurableObject<Env> {
         }
         continue;
       }
+      if (!this.keepJail(p, now)) continue;
       acks.set(p, p.motion.step(p.entity, world.grid, now));
       if (p.motion.takeMoved()) p.dirty = true;
       this.energyChanged(p, chargeDash(p, p.motion.takeDashMs()), now);
       const exit = exitAt(world.map, p.entity.x, p.entity.y);
       // A donation in flight finishes first (its refund must land in this zone's save).
-      if (exit && !p.donation) {
+      if (exit && !p.donation && p.jailedUntil === undefined) {
         if (exit.climb) this.startClimb(p, exit, now);
         else void this.takeExit(p, exit);
       }
@@ -977,6 +1019,7 @@ export class ZoneRoom extends DurableObject<Env> {
       bonds: p.bonds,
       caveTrail: p.caveTrail,
       animals: p.animals,
+      sheriffStrikes: p.strikes,
       ...(p.look ? { look: p.look } : {}),
       ...override,
     };
@@ -1261,6 +1304,7 @@ export class ZoneRoom extends DurableObject<Env> {
     }
     this.broadcast({ t: "chat", from: p.entity.id, name: p.name, text, at: now });
     const npc = this.world!.npcs.nearest(p.entity, NPC_CHAT_RANGE);
+    if (npc?.id === SHERIFF_ID) return this.sheriffHears(p, npc, text, now, false);
     if (npc) {
       this.world!.npcs.talk(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, text, now);
       // Overheard zone chat: hearts move, but the conversation window opens only on interact.
@@ -1285,6 +1329,7 @@ export class ZoneRoom extends DurableObject<Env> {
     if (verdict === "tooFast") return this.reject(p, msg, "Slow down a little.");
     if (verdict === "muted") return this.reject(p, msg, `You are muted for ${Math.ceil(guard.mutedFor(now) / 1000)}s (repeating yourself).`);
     this.broadcast({ t: "chat", from: p.entity.id, name: p.name, text, at: now });
+    if (npc.id === SHERIFF_ID) return this.sheriffHears(p, npc, text, now, true);
     this.world!.npcs.talk(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, text, now, { judge: true });
   }
 
@@ -1295,6 +1340,146 @@ export class ZoneRoom extends DurableObject<Env> {
     if (!p || !npc) return;
     const now = Date.now();
     this.bondChanged(p, npc.entity, bondChat(p.bonds, npc.id, verdict, p.inv, now, Math.random, this.rates), false);
+  }
+
+  // ------------------------------------------------------------------ jail & the sheriff
+
+  /**
+   * Once a tick per player: release them when their time is up, send an inmate who is anywhere but
+   * the cell to it, and keep everyone else out of it. False when the player just left this zone.
+   */
+  private keepJail(p: ZPlayer, now: number): boolean {
+    const world = this.world!;
+    if (p.jailedUntil !== undefined && !isJailed(p.jailedUntil, now)) this.release(p, RELEASED_TEXT);
+    if (p.jailedUntil !== undefined && world.zone !== JAIL_ZONE) {
+      this.toCell(p, null);
+      return false;
+    }
+    if (world.zone !== JAIL_ZONE) return true;
+    const place = jailPlacement(p.jailedUntil !== undefined, p.entity, POLICE_CELL);
+    if (place) this.teleport(p, place === "cell" ? CELL_SPAWN : RELEASE_SPAWN);
+    return true;
+  }
+
+  /** Puts a player down on a named spawn of this map (the cell, or just outside its door). */
+  private teleport(p: ZPlayer, spawn: string): void {
+    const pos = this.world!.map.spawns[spawn];
+    if (!pos) return;
+    this.getUp(p);
+    p.motion.stop();
+    Object.assign(p.entity, { x: pos.x, y: pos.y, moving: false, facing: "down" });
+    p.dirty = true;
+    p.saveSoon.schedule();
+  }
+
+  /** The jailed player's countdown (null: free). */
+  private sendJail(p: ZPlayer): void {
+    send(p.ws, { t: "jail", until: p.jailedUntil ?? null, serverTime: Date.now() });
+  }
+
+  /** Into the cell: here if this is the police station, otherwise through the door to it. */
+  private toCell(p: ZPlayer, text: string | null): void {
+    if (text) send(p.ws, { t: "notice", text, kind: "error" });
+    if (this.world!.zone === JAIL_ZONE) {
+      this.teleport(p, CELL_SPAWN);
+      this.sendJail(p);
+      return;
+    }
+    this.trades.cancel(p, "You were taken to jail, so the trade was called off.", `${p.name} was taken to jail, so the trade was called off.`);
+    void this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: JAIL_ZONE, spawn: CELL_SPAWN });
+  }
+
+  /** Locks `p` up until `until` (already saved in their HomeRoom by the caller). */
+  private lockUp(p: ZPlayer, until: number, text: string): void {
+    p.jailedUntil = until;
+    p.entity.jailed = true;
+    p.strikes = 0;
+    this.toCell(p, text);
+  }
+
+  /** Lets `p` go: out of the cell (in the police station), with a notice. */
+  private release(p: ZPlayer, text: string): void {
+    p.jailedUntil = undefined;
+    delete p.entity.jailed;
+    send(p.ws, { t: "notice", text, kind: "info" });
+    this.sendJail(p);
+    if (this.world!.zone === JAIL_ZONE && jailPlacement(false, p.entity, POLICE_CELL)) this.teleport(p, RELEASE_SPAWN);
+  }
+
+  /** RPC (SocialRoom, after the player's HomeRoom saved the sentence): lock them up if they are here. */
+  async jailUser(userId: string, until: number, text: string): Promise<number> {
+    if (!isJailed(until, Date.now())) return 0;
+    let n = 0;
+    for (const p of [...this.players.values()]) {
+      if (p.userId !== userId) continue;
+      this.lockUp(p, until, String(text).slice(0, 160));
+      n++;
+    }
+    return n;
+  }
+
+  /** RPC (admin /unjail): let them out if they are here. */
+  async unjailUser(userId: string): Promise<number> {
+    let n = 0;
+    for (const p of this.players.values()) {
+      if (p.userId !== userId || p.jailedUntil === undefined) continue;
+      this.release(p, UNJAILED_TEXT);
+      n++;
+    }
+    return n;
+  }
+
+  /**
+   * A line said to the sheriff. He first decides (Jev, or the word list) whether it is an insult;
+   * the strike count, his warning and the arrest on the fourth are all decided here, never by the
+   * model. Anything else he answers like any villager. The tick never waits for this.
+   */
+  private sheriffHears(p: ZPlayer, npc: NonNullable<ReturnType<NpcRunner["byEntityId"]>>, text: string, now: number, judge: boolean): void {
+    const speaker = { userId: p.userId, entityId: p.entity.id, name: p.name };
+    void this.insultClient(p.userId, now)
+      .then((client) => isInsult({ playerName: p.name, text }, client))
+      .catch(() => false)
+      .then((insult) => {
+        if (this.players.get(p.ws) !== p || !this.world) return;
+        const at = Date.now();
+        if (insult) return this.insulted(p, npc, at);
+        this.world.npcs.talk(npc, speaker, text, at, judge ? { judge: true } : {});
+        if (!judge) this.bondChanged(p, npc.entity, bondTalk(p.bonds, npc.id, p.inv, at, Math.random, this.rates), false);
+      });
+  }
+
+  /** Jev for the insult check when AI is on and the spend limits allow one more call; else null. */
+  private async insultClient(userId: string, now: number) {
+    const { AI, JEV_MODEL, AI_GATEWAY_ID, NPC_AI_MODE } = this.env;
+    if (NPC_AI_MODE === "off" || !AI || !JEV_MODEL) return null;
+    try {
+      const stub = this.env.AI_BUDGET.get(this.env.AI_BUDGET.idFromName("global"));
+      if ((await stub.tryConsume({ userId, units: JEV_UNITS, day: utcDay(now) })) !== true) return null;
+    } catch {
+      return null;
+    }
+    return jevClient(AI, JEV_MODEL, AI_GATEWAY_ID);
+  }
+
+  private insulted(p: ZPlayer, npc: NonNullable<ReturnType<NpcRunner["byEntityId"]>>, now: number): void {
+    const r = nextInsult(p.strikes);
+    p.strikes = r.strikes;
+    p.saveSoon.schedule();
+    this.bondChanged(p, npc.entity, bondChat(p.bonds, npc.id, "bad", p.inv, now, Math.random, this.rates), false);
+    this.broadcast({ t: "emote", from: npc.entity.id, code: "angry" });
+    const pick = Math.floor(Math.random() * 4);
+    const say = (line: string) => this.broadcast({ t: "chat", from: npc.entity.id, name: npc.entity.name, text: line, at: now, to: p.entity.id });
+    if (!r.jail) {
+      say(warningLine(r.warning, p.name, pick));
+      return;
+    }
+    say(arrestLine(p.name, pick));
+    // Already inside on a longer sentence: the sheriff never shortens it.
+    const until = Math.max(p.jailedUntil ?? 0, jailEndsAt(now, JAIL_DEFAULT_MINUTES));
+    this.lockUp(p, until, jailedText(JAIL_DEFAULT_MINUTES, true));
+    void this.home(p.userId)
+      .jail(p.userId, until, jailedText(JAIL_DEFAULT_MINUTES, true))
+      .catch((err) => console.error("sheriff: saving the sentence failed", err));
   }
 
   private onUse(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, now: number): void {
@@ -1557,6 +1742,7 @@ export class ZoneRoom extends DurableObject<Env> {
    * always loads the saved state and no late save from here can be refused as stale.
    */
   private onTravel(p: ZPlayer, to: TravelZone, now: number): void {
+    if (p.jailedUntil !== undefined) return send(p.ws, { t: "notice", text: JAILED_REFUSAL, kind: "error" });
     const why = travelBlock(to, this.world!.zone, now, p.lastTravel ?? 0);
     if (why) return send(p.ws, { t: "notice", text: why, kind: "error" });
     p.lastTravel = now;
@@ -1967,6 +2153,7 @@ export class ZoneRoom extends DurableObject<Env> {
   /** Local dev only: "/warp caves_3_top [spawn]" walks you through an exit to anywhere shared. */
   private devWarp(p: ZPlayer, zone: string, spawn: string | undefined): void {
     if (!isZoneId(zone) || zone === "home") return send(p.ws, { t: "notice", text: "Usage: /warp zone_id [spawn]", kind: "info" });
+    if (p.jailedUntil !== undefined) return send(p.ws, { t: "notice", text: JAILED_REFUSAL, kind: "error" });
     void this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: zone, spawn: spawn ?? "default" });
   }
 

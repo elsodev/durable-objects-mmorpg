@@ -301,6 +301,11 @@ export type ServerMsg =
    * made elsewhere arrive on the social socket as payloads "notices" and "noticeVotes".
    */
   | { t: "notices"; posts: NoticeView[]; open?: boolean; nextPostAt?: number; posted?: boolean }
+  /**
+   * Your jail sentence (shared/jail.ts): it ends at `until` (server ms), or null once you are free.
+   * The client shows the countdown from it, offset by `serverTime`.
+   */
+  | { t: "jail"; until: number | null; serverTime: number }
   | HomeServerMsg
   | VisitServerMsg
   | TradeServerMsg;

@@ -7,6 +7,7 @@ import { CAVE_DEPTH_ZONES, type ZoneId } from "./types";
 import { isValidName } from "./names";
 import { EMOTES, isEmote, type EmoteCode } from "./emotes";
 import { cleanReason, cleanShout, type Shout } from "./admin";
+import { parseJailMinutes } from "./jail";
 
 // ---------------------------------------------------------------- emotes
 
@@ -181,7 +182,11 @@ export type SocialClientMsg =
   /** Admins only: disconnect a player and keep them out. */
   | { t: "kick"; name: string; reason?: string }
   /** Admins only: let a removed player back in. */
-  | { t: "unban"; name: string };
+  | { t: "unban"; name: string }
+  /** Admins only: lock a player in the police station cell (minutes 1..1440, default 5). */
+  | { t: "jail"; name: string; minutes?: number }
+  /** Admins only: let a jailed player out. */
+  | { t: "unjail"; name: string };
 
 export type SocialServerMsg =
   /** `admin` only for admins; `shout` is the latest announcement when it is a few minutes old at most. */
@@ -199,7 +204,7 @@ export type SocialServerMsg =
   /** You were removed by an admin; the socket closes with CLOSE_REMOVED next. */
   | { t: "removed"; text: string };
 
-const ZONE_IDS: readonly ZoneId[] = ["village", "riverside", "caves", "quarry", ...CAVE_DEPTH_ZONES, "home"];
+const ZONE_IDS: readonly ZoneId[] = ["village", "riverside", "caves", "quarry", "jail", ...CAVE_DEPTH_ZONES, "home"];
 export const MAX_SOCIAL_FRAME = 1024;
 
 /** Validates a social socket frame, copying only known fields. */
@@ -239,6 +244,14 @@ export function decodeSocialClient(raw: unknown): SocialClientMsg | null {
     }
     case "unban":
       return isValidName(o.name) ? { t: "unban", name: o.name } : null;
+    case "jail": {
+      if (!isValidName(o.name)) return null;
+      if (o.minutes === undefined) return { t: "jail", name: o.name };
+      const minutes = parseJailMinutes(o.minutes);
+      return minutes === null || typeof o.minutes !== "number" ? null : { t: "jail", name: o.name, minutes };
+    }
+    case "unjail":
+      return isValidName(o.name) ? { t: "unjail", name: o.name } : null;
     default:
       return null;
   }

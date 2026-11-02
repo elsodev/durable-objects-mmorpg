@@ -18,6 +18,7 @@ import { errorJson, setAdminAndIp, stripIdentityHeaders } from "../http/util";
 import { originAllowed } from "../http/origin";
 import { encodeHeaderName } from "../http/ws";
 import { isUserId } from "../../shared/friends";
+import { JAILED_REFUSAL } from "../../shared/jail";
 import { GUEST_VISITS_ERROR, homeOf, type VisitEnv } from "./routes";
 
 /** "/ws/visit/abc" -> "abc"; anything else -> null. */
@@ -45,7 +46,15 @@ export async function forwardVisit(request: Request, env: VisitEnv, ownerId: str
   if (!originAllowed(request.headers.get("origin"), env)) return errorJson(403, "bad origin");
 
   // Read-only: the visitor's own home keeps its lease and save; we only learn where they came from.
-  const me = await homeOf(env, user.id).peekPlayer(user.id);
+  const mine = homeOf(env, user.id);
+  const me = await mine.peekPlayer(user.id);
+  if (me.jailedUntil) return errorJson(403, JAILED_REFUSAL);
+  // Remembered so a jailing during the visit can reach this socket (it lives in the host's home).
+  try {
+    await mine.noteVisit(user.id, ownerId);
+  } catch {
+    // Best effort: without it a jailing mid-visit waits for the visit to end.
+  }
   const headers = stripIdentityHeaders(request.headers);
   headers.set(H_USER_ID, user.id);
   headers.set(H_USER_NAME, encodeHeaderName(user.name));

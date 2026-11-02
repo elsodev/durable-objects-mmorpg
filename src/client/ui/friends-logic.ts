@@ -15,6 +15,8 @@ const ZONE_LABELS: Record<string, string> = {
   riverside: "Riverside",
   caves: "Caves",
   quarry: "Quarry",
+  jail: "Town Jail",
+  int_police: "Police Station",
   home: "At home",
 };
 

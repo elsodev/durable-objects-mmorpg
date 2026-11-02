@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { getMap, PROP_FOOTPRINTS } from "../src/shared/maps";
-import { BUILDING_DOORS, BUILDING_IDS, HOUSE_OWNERS, villageSpawnFor } from "../src/shared/maps/interiors";
+import { BUILDING_DOORS, BUILDING_IDS, doorsIn, HOUSE_OWNERS, outsideOf, villageSpawnFor } from "../src/shared/maps/interiors";
+import { doorFor } from "../src/shared/maps/interiors/doors";
+import { CELL_SPAWN, inRect } from "../src/shared/jail";
+import { POLICE_CELL } from "../src/shared/maps/interiors/police";
 import { buildCollision, canStand, exitAt, findPath, isBlocked } from "../src/shared/engine";
 import {
   inBand,
@@ -19,17 +22,18 @@ import { musicKeyForZone } from "../src/client/audio/audio-logic";
 
 const BUILDING_TYPES = new Set(["town_hall", "inn", "blacksmith", ...HOUSE_OWNERS.map((o) => `house_${o}`)]);
 const village = getMap("village");
+const VILLAGE_DOORS = doorsIn("village");
 
 describe("village doors", () => {
   it("every building on the village map has exactly one door", () => {
     const buildings = village.props.filter((p) => BUILDING_TYPES.has(p.type));
-    expect(buildings.length).toBe(BUILDING_DOORS.length);
-    for (const b of buildings) expect(BUILDING_DOORS.filter((d) => d.villageProp === b.id), b.id).toHaveLength(1);
+    expect(buildings.length).toBe(VILLAGE_DOORS.length);
+    for (const b of buildings) expect(VILLAGE_DOORS.filter((d) => d.villageProp === b.id), b.id).toHaveLength(1);
   });
 
   it("each door tile is in the bottom row of its building and is an exit into the matching interior", () => {
     const grid = buildCollision(village);
-    for (const d of BUILDING_DOORS) {
+    for (const d of VILLAGE_DOORS) {
       const b = village.props.find((p) => p.id === d.villageProp)!;
       expect(d.door.y, d.zone).toBe(b.y + b.h - 1);
       expect(d.door.x >= b.x && d.door.x < b.x + b.w, d.zone).toBe(true);
@@ -45,11 +49,27 @@ describe("village doors", () => {
 
   it("only the door tile of a building is cut out of its footprint", () => {
     const grid = buildCollision(village);
-    for (const d of BUILDING_DOORS) {
+    for (const d of VILLAGE_DOORS) {
       const b = village.props.find((p) => p.id === d.villageProp)!;
       for (let y = b.y; y < b.y + b.h; y++)
         for (let x = b.x; x < b.x + b.w; x++) expect(isBlocked(grid, x, y), `${b.id} ${x},${y}`).toBe(!(x === d.door.x && y === d.door.y));
     }
+  });
+});
+
+describe("jail yard door", () => {
+  it("the police station's door in the jail yard leads into the station and back", () => {
+    const yard = getMap("jail");
+    const [d] = doorsIn("jail");
+    expect(d?.zone).toBe("int_police");
+    const b = yard.props.find((p) => p.id === d!.villageProp)!;
+    expect(b.type).toBe("police_station");
+    expect(d!.door.y).toBe(b.y + b.h - 1);
+    const grid = buildCollision(yard);
+    expect(exitAt(yard, d!.door.x + 0.5, d!.door.y + 0.5)?.to).toBe("int_police");
+    expect(findPath(grid, yard.spawns.from_int_police!, { x: d!.door.x + 0.5, y: d!.door.y + 0.5 })).not.toBeNull();
+    for (let y = b.y; y < b.y + b.h; y++)
+      for (let x = b.x; x < b.x + b.w; x++) expect(isBlocked(grid, x, y), `${x},${y}`).toBe(!(x === d!.door.x && y === d!.door.y));
   });
 });
 
@@ -91,7 +111,10 @@ function besideTiles(map: MapData, grid: ReturnType<typeof buildCollision>, p: M
 describe.each(INTERIOR_ZONES)("interior %s", (zone) => {
   const map = getMap(zone);
   const grid = buildCollision(map);
-  const start = map.spawns.from_village!;
+  const outside = outsideOf(doorFor(zone));
+  const start = map.spawns[`from_${outside}`]!;
+  /** The police cell is locked: its furniture is used from inside, by whoever is jailed. */
+  const inCell = (p: { x: number; y: number }) => zone === "int_police" && inRect(POLICE_CELL, p);
 
   it("is an indoor room without monsters or rocks, using only known props", () => {
     expect(map.ambient).toBe("indoor");
@@ -103,12 +126,12 @@ describe.each(INTERIOR_ZONES)("interior %s", (zone) => {
     expect(map.height).toBeLessThanOrEqual(16);
   });
 
-  it("has one door, back to its village door, and you arrive just inside it", () => {
+  it("has one door, back to its outdoor door, and you arrive just inside it", () => {
     expect(map.exits).toHaveLength(1);
     const e = map.exits[0]!;
-    expect(e.to).toBe("village");
+    expect(e.to).toBe(outside);
     expect(e.spawn).toBe(`from_${zone}`);
-    expect(village.spawns[e.spawn]).toBeDefined();
+    expect(getMap(outside).spawns[e.spawn]).toBeDefined();
     expect(e.y).toBe(map.height - 1); // in the south wall
     expect(Math.floor(start.x)).toBe(e.x);
     expect(e.y - Math.floor(start.y)).toBe(2);
@@ -128,7 +151,10 @@ describe.each(INTERIOR_ZONES)("interior %s", (zone) => {
       if (p.walkable || p.type.startsWith("iwall_") || p.type === "stairs_up") continue;
       const spots = besideTiles(map, grid, p).filter((t) => t.y >= 3);
       expect(spots.length, p.id).toBeGreaterThan(0);
-      expect(spots.some((t) => findPath(grid, start, { x: t.x + 0.5, y: t.y + 0.5 }) !== null), p.id).toBe(true);
+      const from = inCell(p) ? map.spawns[CELL_SPAWN]! : start;
+      // Bars are used (talked through) from either side.
+      const ok = (f: { x: number; y: number }) => spots.some((t) => findPath(grid, f, { x: t.x + 0.5, y: t.y + 0.5 }) !== null);
+      expect(ok(from) || (p.type.startsWith("jail_") && ok(map.spawns[CELL_SPAWN]!)), p.id).toBe(true);
     }
   });
 

@@ -530,6 +530,7 @@ const DRAWERS: Record<OutdoorPropType, Drawer> = {
   house_small: () => withOutline(houseSmall()),
   house_large: () => withOutline(houseLarge()),
   town_hall: () => withOutline(townHall()),
+  police_station: () => withOutline(houseLarge()),
   inn: () => withOutline(inn()),
   blacksmith: () => withOutline(blacksmith()),
   market_stall: marketStall,

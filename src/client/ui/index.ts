@@ -88,7 +88,7 @@ export interface GameApi {
   canTrade?(): boolean;
   /** The server said this account is an admin (shout, kick, unban). The server re-checks every command. */
   isAdmin?(): boolean;
-  /** Sends an admin command (/shout, /kick, /unban, or the player card's Kick) to the server. */
+  /** Sends an admin command (/shout, /kick, /unban, /jail, /unjail, or the player card's Kick / Send to Jail) to the server. */
   adminCommand?(cmd: Exclude<AdminCommand, { cmd: "error" }>): void;
 }
 
@@ -138,6 +138,8 @@ export interface Hud {
   shout?(s: Shout): void;
   /** Admin tools on or off (the Options tab's Shout button, the card's Kick). */
   setAdmin?(on: boolean): void;
+  /** Your jail sentence: the countdown plate until `until` (server ms), hidden when null. */
+  jail?(until: number | null, serverTime: number): void;
 }
 
 /**

@@ -159,7 +159,7 @@ describe("look actions", () => {
 
   it("plans catalog characters from their whole-figure sheets, skipping actions they lack", async () => {
     const m = parseLookManifest(await customJson())!;
-    expect(Object.keys(m.characters)).toHaveLength(14);
+    expect(Object.keys(m.characters)).toHaveLength(15);
     const p = actionPlan(m, { sprite: "miner" }, "pickaxe")!;
     expect(p.files).toEqual(["tools/pickaxe.bg.png", "../characters/miner.png", "tools/pickaxe.fg.png"]);
     expect(actionPlan(m, { sprite: "fisher" }, "fishing_rod")!.files).toContain("../characters/fisher.act.png");

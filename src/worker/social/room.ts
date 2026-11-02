@@ -5,7 +5,7 @@
 //
 // RPC for other Durable Objects: presence(), recordStat(), notify(), presenceOf(), closeSession(),
 // and the village notice board (noticeList/Post/Vote/Delete; see noticeDesk.ts for why it lives here).
-// Admin tools (adminDesk.ts): /shout, /kick, /unban from admin sockets, and banCheck() for the Worker.
+// Admin tools (adminDesk.ts): /shout, /kick, /unban, /jail, /unjail from admin sockets, and banCheck() for the Worker.
 // Subclass hook: onPresenceChange() fires when a user comes online, goes offline or changes zone.
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "../env";
@@ -36,7 +36,7 @@ import { AdminDesk, type AdminActor, type AdminHost, type UserInfo } from "./adm
 import { BanBook, cleanIp, type BanVerdict } from "./bans";
 import { CLOSE_REMOVED, type Shout } from "../../shared/admin";
 import { isAdminEmail } from "../admin/config";
-import { removeFromGame } from "../admin/disconnect";
+import { jailInZones, removeFromGame, unjailInZones } from "../admin/disconnect";
 
 /** Friend lists are cached briefly so a burst of zone changes costs one D1 query. */
 const FRIEND_CACHE_MS = 60_000;
@@ -303,6 +303,10 @@ export class SocialRoom extends DurableObject<Env> {
         return void this.answerAdmin(c, this.admin.kick(this.actor(c), msg.name, msg.reason, now));
       case "unban":
         return void this.answerAdmin(c, this.admin.unban(this.actor(c), msg.name, now));
+      case "jail":
+        return void this.answerAdmin(c, this.admin.jail(this.actor(c), msg.name, msg.minutes, now));
+      case "unjail":
+        return void this.answerAdmin(c, this.admin.unjail(this.actor(c), msg.name, now));
     }
   }
 
@@ -543,6 +547,16 @@ export class SocialRoom extends DurableObject<Env> {
         void removeFromGame(this.env, userId, text).catch((err) => console.error("remove from game failed", err));
       },
       log: (line) => console.log(line),
+      jail: async (userId, until, text) => {
+        const r = await this.env.HOME.get(this.env.HOME.idFromName(userId)).jail(userId, until, text);
+        if (r.ok) void jailInZones(this.env, userId, until, text).catch((err) => console.error("jail in zones failed", err));
+        return r;
+      },
+      unjail: async (userId) => {
+        const r = await this.env.HOME.get(this.env.HOME.idFromName(userId)).unjail(userId);
+        void unjailInZones(this.env, userId).catch((err) => console.error("unjail in zones failed", err));
+        return r.ok;
+      },
     };
   }
 

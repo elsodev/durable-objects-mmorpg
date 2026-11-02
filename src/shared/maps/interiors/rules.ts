@@ -2,7 +2,8 @@
 // no problems, and the tests run the same checks over every interior (and fuzzed seeds).
 
 import { buildCollision, canStand, isBlocked } from "../../engine";
-import type { Facing, MapData, MapProp, Seat } from "../../types";
+import type { Facing, MapData, MapProp, Seat, Vec2 } from "../../types";
+import { CELL_SPAWN } from "../../jail";
 import { columnsBehindTallFurniture } from "./room";
 import {
   ALONG_WALL_PROPS,
@@ -68,9 +69,10 @@ export function reachable(map: MapData): { grid: ReturnType<typeof buildCollisio
   const grid = buildCollision(map);
   const seen = new Uint8Array(map.width * map.height);
   const s = map.spawns.from_village ?? map.spawns.default!;
-  const start = Math.floor(s.y) * map.width + Math.floor(s.x);
-  const queue = [start];
-  seen[start] = 1;
+  // A locked room (the police cell) is used by whoever the server puts inside, so it counts too.
+  const starts = [s, map.spawns[CELL_SPAWN]].filter((p): p is Vec2 => !!p).map((p) => Math.floor(p.y) * map.width + Math.floor(p.x));
+  const queue = [...new Set(starts)];
+  for (const start of queue) seen[start] = 1;
   for (let i = 0; i < queue.length; i++) {
     const c = queue[i]!;
     const x = c % map.width;

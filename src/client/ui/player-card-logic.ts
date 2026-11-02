@@ -49,7 +49,7 @@ export function friendButton(f: Friendship): { label: string; action: FriendActi
   }
 }
 
-export type CardButton = "friend" | "whisper" | "trade" | "invite" | "mute" | "kick";
+export type CardButton = "friend" | "whisper" | "trade" | "invite" | "mute" | "kick" | "jail";
 
 export interface CardContext {
   viewerGuest: boolean;
@@ -74,7 +74,8 @@ export function cardButtons(hit: Pick<PlayerHit, "self" | "admin">, card: Player
   if (ctx.canTrade) out.push("trade");
   if (ctx.homeOwner) out.push("invite");
   out.push("mute");
-  return [...out, ...kick];
+  // Jail needs a save to hold the sentence, so guests can only be kicked.
+  return [...out, ...kick, ...(kick.length ? (["jail"] as CardButton[]) : [])];
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

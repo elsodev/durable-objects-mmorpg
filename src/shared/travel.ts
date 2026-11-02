@@ -3,7 +3,7 @@
 // through an exit, so nothing is lost between the two Durable Objects. Pure.
 import type { ZoneId } from "./types";
 
-export const TRAVEL_ZONES = ["home", "village", "riverside", "quarry", "caves"] as const;
+export const TRAVEL_ZONES = ["home", "village", "riverside", "quarry", "caves", "jail"] as const;
 export type TravelZone = (typeof TRAVEL_ZONES)[number];
 
 export function isTravelZone(v: unknown): v is TravelZone {

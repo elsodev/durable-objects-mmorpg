@@ -9,7 +9,7 @@ export interface StatRow {
   value: string;
 }
 
-const OUTDOOR_LABEL: Record<string, string> = { village: "village", riverside: "riverside", caves: "caves", quarry: "quarry", home: "home" };
+const OUTDOOR_LABEL: Record<string, string> = { village: "village", riverside: "riverside", caves: "caves", quarry: "quarry", jail: "town jail yard", home: "home" };
 
 /** "in the village", "in the inn", "in Pip's house". */
 function zonePhrase(zone: ZoneId): string {
@@ -20,7 +20,7 @@ function zonePhrase(zone: ZoneId): string {
     const owner = zone.slice("int_house_".length);
     return `in ${owner.charAt(0).toUpperCase()}${owner.slice(1)}'s house`;
   }
-  return `in the ${zone.slice("int_".length).replace("townhall", "town hall")}`;
+  return `in the ${zone.slice("int_".length).replace("townhall", "town hall").replace("police", "police station")}`;
 }
 
 export function statsVisible(zone: ZoneId | null, stats: SocialStats | null): boolean {

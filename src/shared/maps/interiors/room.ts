@@ -10,7 +10,7 @@
 import { Ground, type HomeMapId, type InteriorZoneId, type MapData, type MapExit, type MapProp } from "../../types";
 import { MapBuilder } from "../builder";
 import type { PropType } from "../props";
-import { doorFor } from "./doors";
+import { doorFor, outsideOf } from "./doors";
 import { TALL_WALL_PROPS, WALL_DECOR_PROPS, wallPiece, type WallFeature, type WallStyle } from "./props";
 import { deriveSeats } from "./rules";
 
@@ -34,7 +34,7 @@ export interface RoomSpec {
   wallPattern?: string;
   /** Display name; village interiors default to their door's name. */
   name?: string;
-  /** Where the door leads; default the village (spawn "from_<zone>"). */
+  /** Where the door leads; default the map the building stands in (spawn "from_<zone>"). */
   exit?: Pick<MapExit, "to" | "spawn" | "map">;
   /** Name of the spawn just inside the door; default "from_village". */
   entrySpawn?: string;
@@ -66,7 +66,7 @@ export class Room {
     }
 
     // Way in and out: the door column stays clear of furniture for two rows.
-    const out = spec.exit ?? { to: "village", spawn: `from_${spec.zone}` };
+    const out = spec.exit ?? { to: spec.zone === "home" ? "village" : outsideOf(doorFor(spec.zone)), spawn: `from_${spec.zone}` };
     b.exit({ x: door.x, y: door.y, w: 1, h: 1 }, out.to, out.spawn, out.map);
     b.spawn("default", door.x, door.y - 2);
     b.spawn(spec.entrySpawn ?? "from_village", door.x, door.y - 2);

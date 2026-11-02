@@ -1016,6 +1016,78 @@
     60
    ],
    "shadow": "character"
+  },
+  "sheriff": {
+   "file": "characters/sheriff.png",
+   "frameW": 64,
+   "frameH": 64,
+   "name": "Sheriff Hollis",
+   "body": "male",
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 9
+     },
+     "left": {
+      "row": 1,
+      "frames": 9
+     },
+     "down": {
+      "row": 2,
+      "frames": 9
+     },
+     "right": {
+      "row": 3,
+      "frames": 9
+     }
+    },
+    "slash": {
+     "up": {
+      "row": 4,
+      "frames": 6
+     },
+     "left": {
+      "row": 5,
+      "frames": 6
+     },
+     "down": {
+      "row": 6,
+      "frames": 6
+     },
+     "right": {
+      "row": 7,
+      "frames": 6
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    }
+   },
+   "anchor": [
+    32,
+    60
+   ],
+   "shadow": "character"
   }
  },
  "terrain": {
@@ -4138,6 +4210,25 @@
     "h": 4
    },
    "note": "Grumm's house: blue-grey stone, brown roof",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "police_station": {
+   "file": "buildings/police_station.png",
+   "rect": [
+    24,
+    0,
+    208,
+    201
+   ],
+   "anchor": [
+    104,
+    199
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 4
+   },
+   "note": "Police station: red brick, slate roof, barred windows, a star plaque over the door",
    "doorHint": "door is on the front (bottom) face"
   }
  },
@@ -7924,6 +8015,42 @@
      9
     ]
    ]
+  },
+  "jail_bars": {
+   "file": "interior/jail.png",
+   "rect": [
+    0,
+    0,
+    32,
+    80
+   ],
+   "anchor": [
+    16,
+    79
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "cell bars: 32 px run, tiles side by side"
+  },
+  "jail_door": {
+   "file": "interior/jail.png",
+   "rect": [
+    32,
+    0,
+    32,
+    80
+   ],
+   "anchor": [
+    16,
+    79
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "locked cell door in a run of bars"
   }
  },
  "ores": {

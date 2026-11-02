@@ -41,6 +41,7 @@ import { tradeMenuChoices } from "./slot-menu-logic";
 import { parseTradeCommand } from "../../shared/trade";
 import { parseAdminCommand } from "../../shared/admin";
 import { createShoutBanner, type ShoutBanner } from "./shout-banner";
+import { createJailTimer, type JailTimer } from "./jail-timer";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -254,6 +255,17 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         top: () => {
           const m = topMenu.getBoundingClientRect();
           return m.height > 0 && m.top < 120 ? m.bottom + 8 : null;
+        },
+      }),
+    null,
+  );
+  const jailTimer: JailTimer | null = safe(
+    "jail timer",
+    () =>
+      createJailTimer(hud, {
+        place: () => {
+          const r = status.getBoundingClientRect();
+          return r.height > 0 ? { x: r.left, y: r.bottom + 8 } : null;
         },
       }),
     null,
@@ -515,6 +527,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         }),
         trade: (hit) => game.requestTrade?.(hit),
         kick: (name) => game.adminCommand?.({ cmd: "kick", name, reason: "" }),
+        jail: (name, minutes) => game.adminCommand?.({ cmd: "jail", name, minutes }),
         addFriend: (name) => friends.addByName(name),
         friendsChanged: () => void friends.refresh(),
         prefillChat,
@@ -905,6 +918,9 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     },
     setAdmin(on) {
       shoutBtn.hidden = !on;
+    },
+    jail(until, serverTime) {
+      jailTimer?.set(until, serverTime);
     },
     setIconSource(src: (item: ItemId) => string) {
       safe("icons", () => setIconSource(src), undefined);

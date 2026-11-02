@@ -117,8 +117,10 @@ describe("admin UI rules", () => {
 
   it("offers Kick on the player card only to admins, never on admins or yourself", () => {
     expect(cardButtons({ self: false }, card, ctx)).not.toContain("kick");
-    expect(cardButtons({ self: false }, card, { ...ctx, admin: true })).toEqual(["friend", "whisper", "mute", "kick"]);
+    expect(cardButtons({ self: false }, card, { ...ctx, admin: true })).toEqual(["friend", "whisper", "mute", "kick", "jail"]);
     expect(cardButtons({ self: false, admin: true }, card, { ...ctx, admin: true })).not.toContain("kick");
+    expect(cardButtons({ self: false, admin: true }, card, { ...ctx, admin: true })).not.toContain("jail");
+    expect(cardButtons({ self: false }, card, ctx)).not.toContain("jail");
     expect(cardButtons({ self: true }, card, { ...ctx, admin: true })).toEqual([]);
   });
 
@@ -132,14 +134,17 @@ describe("admin UI rules", () => {
     const home: SlashContext = { atHome: true, homeOwner: true, guest: false, devTools: false };
     const labels = (c: SlashContext) => slashSuggestions("/", c).map((s) => s.label);
     expect(labels(village)).not.toContain("/shout");
-    expect(labels({ ...village, admin: true })).toEqual(expect.arrayContaining(["/shout", "/kick", "/unban"]));
+    expect(labels({ ...village, admin: true })).toEqual(expect.arrayContaining(["/shout", "/kick", "/unban", "/jail", "/unjail"]));
+    expect(labels(village)).not.toContain("/jail");
     expect(labels({ ...village, admin: true, guest: true })).not.toContain("/shout");
     const adminKick = slashSuggestions("/kick", { ...home, admin: true });
     expect(adminKick).toHaveLength(1);
     expect(adminKick[0]!.description).toMatch(/remove a player/i);
     expect(slashSuggestions("/kick", home)[0]!.description).toBe("Send a visitor home");
     for (const c of SLASH_COMMANDS.filter((c) => /^Admin:/.test(c.description))) {
-      expect(parseAdminCommand(`/${c.name} Bob hi`)?.cmd, c.name).toBe(c.name === "unban" ? "unban" : c.name === "kick" ? "kick" : "shout");
+      const want: Record<string, string> = { unban: "unban", kick: "kick", jail: "jail", unjail: "unjail" };
+      const line = c.name === "jail" ? "/jail Bob 5" : `/${c.name} Bob hi`;
+      expect(parseAdminCommand(line)?.cmd, c.name).toBe(want[c.name] ?? "shout");
     }
   });
 

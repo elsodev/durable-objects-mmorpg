@@ -84,8 +84,8 @@ const WEEKDAY_NAME: Record<Weekday, string> = {
   Fri: "Friday",
   Sat: "Saturday",
 };
-const OUTDOOR_NAME: Record<string, string> = { village: "the village", riverside: "the riverside", caves: "the caves", quarry: "the quarry" };
-const ROOM_NAME: Record<string, string> = { int_townhall: "the town hall", int_inn: "the inn", int_smithy: "the smithy" };
+const OUTDOOR_NAME: Record<string, string> = { village: "the village", riverside: "the riverside", caves: "the caves", quarry: "the quarry", jail: "the jail yard" };
+const ROOM_NAME: Record<string, string> = { int_townhall: "the town hall", int_inn: "the inn", int_smithy: "the smithy", int_police: "the police station" };
 
 /** Plain place name for a zone ("the inn", "Bram's house"). */
 export function zonePlace(zone: SharedZoneId): string {

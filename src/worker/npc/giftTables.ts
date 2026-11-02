@@ -20,6 +20,7 @@ export const GIFT_TABLES: Readonly<Record<NpcId, readonly ItemId[]>> = {
   iris: ["cauldron", "herb_box", "potted_plant", "cupboard", "bookshelf", "wall_shelf"],
   grumm: ["mine_cart", "ore_crate", "coal_pile", "barrel", "grindstone", "wall_sconce"],
   tess: ["painting_landscape", "writing_desk", "basket", "sack", "dresser", "wardrobe"],
+  sheriff: ["wall_clock", "writing_desk", "bookshelf", "barrel", "candle", "wall_sconce"],
 };
 
 export type Rarity = "common" | "uncommon" | "rare";

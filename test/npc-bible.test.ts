@@ -64,7 +64,7 @@ describe("NPC bible", () => {
   it.each(NPC_IDS)("%s routine uses fixed building ids and covers the whole day", (id) => {
     const r = NPC_ROUTINES[id];
     // Matches the interiors: Rue sleeps at the inn, Sable at the shrine, everyone else in a cottage.
-    expect(r.home).toBe(({ rue: "inn", sable: "shrine" } as Record<string, string>)[id] ?? `house_${id}`);
+    expect(r.home).toBe(({ rue: "inn", sable: "shrine", sheriff: "police" } as Record<string, string>)[id] ?? `house_${id}`);
     if (r.home.startsWith("house_")) expect(BUILDING_IDS).toContain(r.home);
     expect(isPlaceId(r.work)).toBe(true);
     expect(r.workHours.from).toBeLessThan(r.workHours.to);
@@ -83,7 +83,7 @@ describe("NPC bible", () => {
 
   it("uses exactly the interiors' building ids", () => {
     expect([...BUILDING_IDS].sort()).toEqual(
-      ["townhall", "inn", "smithy", "market", "house_bram", "house_odette", "house_fenwick", "house_pip", "house_marlo", "house_iris", "house_grumm", "house_tess"].sort(),
+      ["townhall", "inn", "smithy", "market", "house_bram", "house_odette", "house_fenwick", "house_pip", "house_marlo", "house_iris", "house_grumm", "house_tess", "police"].sort(),
     );
     for (const id of NPC_IDS) {
       const r = NPC_ROUTINES[id];
@@ -95,7 +95,7 @@ describe("NPC bible", () => {
   });
 
   it("puts every place in a zone", () => {
-    for (const p of PLACE_IDS) expect(["village", "riverside", "caves"]).toContain(PLACE_ZONE[p]);
+    for (const p of PLACE_IDS) expect(["village", "riverside", "caves", "int_police"]).toContain(PLACE_ZONE[p]);
   });
 
   it("has the hard rules the owner asked for", () => {
