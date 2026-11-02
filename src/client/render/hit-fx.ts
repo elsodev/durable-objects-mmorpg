@@ -4,7 +4,7 @@ import { Container, Graphics, Sprite, Texture, Ticker } from "pixi.js";
 import type { Art, Layers } from "../contracts";
 import { SCALE, TILE } from "../contracts";
 import type { ItemId, Vec2 } from "../../shared/types";
-import { crackLines, fallAngle, particleBurst, shakeOffset, type Particle } from "./hit-fx-logic";
+import { crackLines, fallAngle, particleBurst, reboundFrame, shakeOffset, type Particle } from "./hit-fx-logic";
 
 export type ChipKind = "stone" | "leaf" | "wood" | "slime" | "bat" | "rock_crab";
 
@@ -39,6 +39,11 @@ interface Drop {
   dx: number;
   t: number;
 }
+interface Spark {
+  s: Sprite;
+  frames: Texture[];
+  t: number;
+}
 interface Fall {
   s: Sprite;
   dir: 1 | -1;
@@ -55,6 +60,8 @@ export interface HitFx {
   crack(id: string, at: Vec2, stage: number, need: number): void;
   /** Tips a tree sprite over (it fades as it lands), then calls done. */
   fall(s: Sprite, dir: 1 | -1, done: () => void): void;
+  /** A tool rebounding off something it can't work: a spark at the impact point (tile coords) and grit. */
+  rebound(at: Vec2, chip: ChipKind): void;
   /** Item icons popping out of a tile in little arcs. */
   drops(at: Vec2, items: readonly ItemId[]): void;
   destroy(): void;
@@ -68,6 +75,15 @@ export function createHitFx(art: Art, layers: Layers): HitFx {
   const shakes: Shake[] = [];
   const drops: Drop[] = [];
   const falls: Fall[] = [];
+  const sparks: Spark[] = [];
+  let sparkFrames: Texture[] | null | undefined;
+  const reboundFrames = (): Texture[] | null => {
+    if (sparkFrames === undefined) {
+      const a = art.prop("fx_rebound");
+      sparkFrames = a.frames && a.frames.length > 1 ? a.frames : null;
+    }
+    return sparkFrames;
+  };
   const cracks = new Map<string, Graphics>();
   let seed = 1;
   const rand = () => {
@@ -119,6 +135,17 @@ export function createHitFx(art: Art, layers: Layers): HitFx {
         drops.splice(i, 1);
       }
     }
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const k = sparks[i]!;
+      k.t += dt;
+      const f = reboundFrame(k.t, k.frames.length);
+      if (f < 0) {
+        k.s.destroy();
+        sparks.splice(i, 1);
+        continue;
+      }
+      k.s.texture = k.frames[f]!;
+    }
     for (let i = falls.length - 1; i >= 0; i--) {
       const fl = falls[i]!;
       fl.t += dt;
@@ -138,7 +165,7 @@ export function createHitFx(art: Art, layers: Layers): HitFx {
   };
   Ticker.shared.add(tick);
 
-  return {
+  const api: HitFx = {
     shake(s, amp = 1.5) {
       if (!s || s.destroyed) return;
       const prev = shakes.find((k) => k.s === s);
@@ -189,6 +216,19 @@ export function createHitFx(art: Art, layers: Layers): HitFx {
       falls.push({ s, dir, t: 0, done });
     },
 
+    rebound(at, chip) {
+      const frames = reboundFrames();
+      if (frames) {
+        const s = new Sprite(frames[0]!);
+        s.anchor.set(0.5);
+        s.scale.set(SCALE);
+        s.position.set(at.x * TILE, at.y * TILE);
+        root.addChild(s);
+        sparks.push({ s, frames, t: 0 });
+      }
+      api.chips(at, chip, 3, 0.2);
+    },
+
     drops(at, items) {
       items.forEach((item, i) => {
         const s = new Sprite(art.icon(item));
@@ -207,7 +247,8 @@ export function createHitFx(art: Art, layers: Layers): HitFx {
       for (const g of cracks.values()) g.destroy();
       cracks.clear();
       root.destroy({ children: true });
-      live.length = shakes.length = drops.length = falls.length = 0;
+      live.length = shakes.length = drops.length = falls.length = sparks.length = 0;
     },
   };
+  return api;
 }

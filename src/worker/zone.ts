@@ -96,9 +96,11 @@ import {
   toolKeyOf,
   TREE_RULES,
   weaponStats,
+  type ToolKey,
   type ToolTarget,
   type WeaponStats,
 } from "../shared/engine/toolRules";
+import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, sellTo, shopToday } from "./game/shop";
 import { donate, GOAL_DEFS, goalsView, sanitizeProgress, type GoalProgress } from "./game/goals";
 import { regen } from "./game/vitals";
@@ -158,6 +160,8 @@ interface ZPlayer {
   donation: Promise<void> | null;
   dirty: boolean;
   lastUse: number;
+  /** Wrong-tool hits in a row (axe on a rock...): each one tires you more. */
+  wrongTool?: WrongToolStreak;
   lastHurt: number;
   lastRegen: number;
   /** No monster can hurt them before this (after each hit). */
@@ -952,14 +956,17 @@ export class ZoneRoom extends DurableObject<Env> {
         monster: !!monster,
         rock: rock?.ore ?? null,
         tree: tree ? { stage: tree.stage, size: tree.size } : null,
+        boulder: boulderAt(world.map.props, msg.x, msg.y),
       },
       now,
     );
     const out = resolveToolUse(key, target, { farm: false, power: def.power });
     if (!out.ok) {
+      if (out.bounce) return this.wrongToolHit(p, msg, out.reason, key, now);
       if (out.reason) this.reject(p, msg, out.reason);
       return;
     }
+    p.wrongTool = undefined;
     // Applied now; clients show it when the swing lands (see ImpactStamp).
     const stamp: ImpactStamp = { by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
     if (out.effect === "hitMonster" && monster && weapon) return this.strikeAtImpact(p, weapon, monster.id, key);
@@ -971,6 +978,21 @@ export class ZoneRoom extends DurableObject<Env> {
       if (!this.spendStamina(p, msg, def.tool)) return;
       return this.chop(p, msg, target, now, stamp);
     }
+  }
+
+  /** The tool rebounded: tire the player (more for each wrong hit in a row) and let others see it. */
+  private wrongToolHit(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, reason: string, key: ToolKey, now: number): void {
+    const streak = nextWrongToolStreak(p.wrongTool, now);
+    p.wrongTool = streak;
+    const cost = Math.min(p.stamina, wrongToolCost(streak.count));
+    if (cost > 0) {
+      p.stamina -= cost;
+      p.dirty = true;
+      this.sendStamina(p);
+    }
+    this.reject(p, msg, wrongToolNotice(reason, streak.count));
+    const bounce: ServerMsg = { t: "bounce", x: msg.x, y: msg.y, by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
+    for (const o of this.players.values()) if (o !== p) send(o.ws, bounce);
   }
 
   private mine(

@@ -293,6 +293,15 @@
   border-color: var(--dm-moss, #6b8e4e);
 }
 
+/* The same notice again: a small bump so the player sees it registered. */
+.dlg-notice.is-again {
+  animation: dlg-notice-again 220ms ease-out;
+}
+@keyframes dlg-notice-again {
+  40% {
+    transform: scale(1.04);
+  }
+}
 .dlg-notice.is-leaving {
   opacity: 0;
   transform: translateY(-6px);
@@ -359,6 +368,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dlg-notice,
+  .dlg-notice.is-again,
   .dlg-bar-fill {
     animation: none;
     transition: none;

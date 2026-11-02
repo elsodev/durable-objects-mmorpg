@@ -75,6 +75,7 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
 
 - **Looping props:** list the frames as an array in `frames` (for example the campfire, fireplace, forge, candles and wall torches). They loop at a steady rate, with each prop offset by its tile position so neighbours don't flicker in sync.
 - **Lids and doors:** these use named frames, `closed`, `opening` and `open`, for example the shipping bin and the cave chest. The renderer plays closed → opening → open and back again.
+- **One-shot effects:** short effects that play once, like the tool-rebound spark (`fx/rebound_spark.png`, catalog `props.fx_rebound`), list their frames like a looping prop. The code plays them once (`REBOUND_FRAME_MS` in `src/client/render/hit-fx-logic.ts`) and places them clear of the character's head. Draw them centred in the cell, with the anchor in the middle.
 - **Swaying plants:** trees and bushes sway in code (`SWAY_TYPES`). Don't draw sway frames for them.
 
 ## Animated terrain (water)

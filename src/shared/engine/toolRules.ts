@@ -16,6 +16,8 @@ export type ToolTarget =
   | { kind: "rock"; ore: Ore }
   | { kind: "tree"; size: TreeSize }
   | { kind: "stump" }
+  /** A big decorative boulder: solid, and no tool breaks it. */
+  | { kind: "boulder" }
   /** Pond, lake or well: the watering can refills. */
   | { kind: "water" }
   /** Tilled soil; `crop` is "ready" when it can be harvested, "dead" when it died of thirst. */
@@ -49,7 +51,13 @@ export type ToolOutcome =
    * Nothing happens. `swing`: the tool still swings (a "clunk"); `reason`: a gentle notice, empty
    * when a swing at nothing needs no comment.
    */
-  | { ok: false; swing: boolean; reason: string };
+  | {
+      ok: false;
+      swing: boolean;
+      reason: string;
+      /** The tool struck something solid it can't work (axe on a rock, pickaxe on a tree): it rebounds. */
+      bounce?: true;
+    };
 
 export interface Drop {
   item: ItemId;
@@ -228,6 +236,7 @@ const TOOL_NAME: Record<ToolKey, string> = {
 
 const ok = (effect: ToolEffect): ToolOutcome => ({ ok: true, effect });
 const no = (reason: string, swing = true): ToolOutcome => ({ ok: false, swing, reason });
+const rebound = (reason: string): ToolOutcome => ({ ok: false, swing: true, reason, bounce: true });
 const SWINGS: ReadonlySet<ToolKey> = new Set(["hoe", "water", "pickaxe", "axe", "sword"]);
 
 /** True for items that swing (play a tool animation) whatever they hit. */
@@ -235,8 +244,19 @@ export function isSwingTool(key: ToolKey): boolean {
   return SWINGS.has(key);
 }
 
-/** The gentle wrong-tool notice for hitting a rock, tree or stump with `key`. */
-function bounce(key: ToolKey, target: "rock" | "tree" | "stump"): string {
+type Solid = "rock" | "tree" | "stump" | "boulder";
+
+/** The gentle wrong-tool notice for hitting a rock, tree, stump or boulder with `key`. */
+function bounce(key: ToolKey, target: Solid): ToolOutcome {
+  return rebound(bounceText(key, target));
+}
+
+function bounceText(key: ToolKey, target: Solid): string {
+  if (target === "boulder") {
+    return key === "pickaxe"
+      ? "Your pickaxe bounces off the boulder. It's far too big to break."
+      : `Your ${TOOL_NAME[key]} bounces off the boulder. It's far too big to break.`;
+  }
   const thing = target === "rock" ? "the rock" : target === "tree" ? "the tree" : "the stump";
   if (target !== "rock" && key === "pickaxe") return `Your pickaxe bounces off ${thing}. You need an axe for that.`;
   if (target === "rock" && key === "axe") return "Your axe bounces off the rock. You need a pickaxe for that.";
@@ -263,7 +283,8 @@ export function resolveToolUse(key: ToolKey, target: ToolTarget, opts: { farm: b
     case "hoe":
       if (target.kind === "grass") return ok("till");
       if (target.kind === "soil") return no("Already tilled.");
-      if (target.kind === "rock" || target.kind === "tree" || target.kind === "stump") return no(bounce(key, target.kind));
+      if (target.kind === "rock" || target.kind === "tree" || target.kind === "stump") return bounce(key, target.kind);
+      if (target.kind === "boulder") return bounce(key, "boulder");
       if (target.kind === "water") return no("You can't till water.");
       return no("You can't till here.");
     case "water":
@@ -280,16 +301,16 @@ export function resolveToolUse(key: ToolKey, target: ToolTarget, opts: { farm: b
       if (target.kind === "rock") {
         return (opts.power ?? 1) >= ROCK_RULES[target.ore].power ? ok("hitRock") : no("You need a stronger pickaxe.");
       }
-      if (target.kind === "tree" || target.kind === "stump") return no(bounce(key, target.kind));
+      if (target.kind === "tree" || target.kind === "stump" || target.kind === "boulder") return bounce(key, target.kind);
       return no("");
     case "axe":
       if (target.kind === "tree") return ok("hitTree");
       // Stumps clear only at home: in shared zones a cleared tile could open a path around a gate.
       if (target.kind === "stump") return opts.farm ? ok("hitStump") : no("The stump is rooted fast. It will grow back in time.");
-      if (target.kind === "rock") return no(bounce(key, "rock"));
+      if (target.kind === "rock" || target.kind === "boulder") return bounce(key, target.kind);
       return no("");
     case "sword":
-      if (target.kind === "rock" || target.kind === "tree" || target.kind === "stump") return no(bounce(key, target.kind));
+      if (target.kind === "rock" || target.kind === "tree" || target.kind === "stump" || target.kind === "boulder") return bounce(key, target.kind);
       return no("");
     case "other":
       if (target.kind === "bin" && opts.farm) return ok("ship");
@@ -390,6 +411,8 @@ export interface TargetProbe {
   bin?: boolean;
   /** Farmable, empty ground (home farm area, no prop or furniture). */
   farmable?: boolean;
+  /** A big decorative boulder covers the tile. */
+  boulder?: boolean;
 }
 
 /** One priority order for both sides: monsters, rocks, trees, soil, water, the bin, then bare ground. */
@@ -397,6 +420,7 @@ export function classifyTarget(p: TargetProbe, now: number): ToolTarget {
   if (p.monster) return { kind: "monster" };
   if (p.rock) return { kind: "rock", ore: p.rock };
   if (p.tree) return p.tree.stage === "stump" ? { kind: "stump" } : { kind: "tree", size: p.tree.size };
+  if (p.boulder) return { kind: "boulder" };
   if (p.soil) {
     const crop = !p.soil.crop ? "none" : p.soil.dead ? "dead" : harvestable(p.soil, now) ? "ready" : "growing";
     return { kind: "soil", crop };

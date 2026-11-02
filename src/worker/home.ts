@@ -121,8 +121,10 @@ import {
   STUMP_RULE,
   toolKeyOf,
   TREE_RULES,
+  type ToolKey,
   type ToolTarget,
 } from "../shared/engine/toolRules";
+import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { binPayout, sanitizeBin, shipSlot, unshipLast, type BinEntry } from "./game/shipping";
 import { endHomeDay, type DayEndKind } from "./game/homeDay";
 import { sanitizeClock } from "./game/homeState";
@@ -256,6 +258,8 @@ interface HPlayer {
 export class HomeRoom extends DurableObject<Env> {
   private owner: string | null = null;
   private save: Omit<PlayerSave, "lease"> | null = null;
+  /** Wrong-tool hits in a row (axe on a rock...): each one tires the owner more. */
+  private wrongTool: WrongToolStreak | null = null;
   private lease: string | null = null;
   private farm: FarmTile[] = [];
   /** Placed furniture per home map. */
@@ -1770,6 +1774,7 @@ export class HomeRoom extends DurableObject<Env> {
         water: this.isWaterSource(x, y),
         bin: HOME_MAP.props.some((pr) => pr.type === "shipping_bin" && pointInRect(pr, x, y)),
         farmable: isFarmable(HOME_MAP, x, y, this.objects.home),
+        boulder: boulderAt(HOME_MAP.props, x, y),
       },
       fnow,
     );
@@ -1800,9 +1805,11 @@ export class HomeRoom extends DurableObject<Env> {
     const target = this.targetAt(msg.x, msg.y, fnow);
     const out = resolveToolUse(key, target, { farm: true, power: def.power });
     if (!out.ok) {
+      if (out.bounce) return this.wrongToolHit(p, msg, out.reason, key, now);
       if (out.reason) this.reject(p, msg, out.reason);
       return;
     }
+    this.wrongTool = null;
     // The result is applied now; `impactAt` lets every client show it when the swing lands.
     const stamp = { by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
     const tile = this.farm.find((t) => t.x === msg.x && t.y === msg.y);
@@ -1869,6 +1876,22 @@ export class HomeRoom extends DurableObject<Env> {
       case "hitMonster":
         return; // no monsters at home
     }
+  }
+
+  /** The tool rebounded: tire the owner (more for each wrong hit in a row) and let visitors see it. */
+  private wrongToolHit(p: HPlayer, msg: Extract<ClientMsg, { t: "use" }>, reason: string, key: ToolKey, now: number): void {
+    const streak = nextWrongToolStreak(this.wrongTool, now);
+    this.wrongTool = streak;
+    const have = this.stamina();
+    const cost = Math.min(have, wrongToolCost(streak.count));
+    if (cost > 0) {
+      this.save!.stamina = have - cost;
+      this.sendHomeState(p);
+      this.persist({ save: true });
+    }
+    this.reject(p, msg, wrongToolNotice(reason, streak.count));
+    const bounce: ServerMsg = { t: "bounce", x: msg.x, y: msg.y, by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
+    for (const o of this.present()) if (o !== p && o.map === p.map) send(o.ws, bounce);
   }
 
   private mine(

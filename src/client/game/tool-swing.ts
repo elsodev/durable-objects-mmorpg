@@ -2,6 +2,7 @@
 // the target tile. Its effect (predicted soil, chips, splash) lands at the impact frame from the
 // shared toolTiming table, and input stays locked for the whole swing. The server still decides
 // what happens; its echo of your own tool act is ignored so the swing doesn't play twice.
+import { boulderAt } from "../../shared/engine/wrongTool";
 import {
   classifyTarget,
   facingToward,
@@ -121,6 +122,7 @@ export function targetAtTile(w: TileWorld, tile: Vec2, now: number): ToolTarget 
       water: (inMap && map.ground[y * map.width + x] === Ground.Water) || map.props.some((p) => p.type === "well" && pointInRect(p, x, y)),
       bin: w.farm && map.props.some((p) => p.type === "shipping_bin" && pointInRect(p, x, y)),
       farmable: w.farm && isFarmable(map, x, y, [...w.objects]),
+      boulder: boulderAt(map.props, x, y),
     },
     now,
   );

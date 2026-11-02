@@ -7316,6 +7316,45 @@
    },
    "shadow": "small",
    "note": "ripe crop as a garden decoration"
+  },
+  "fx_rebound": {
+   "file": "fx/rebound_spark.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    16
+   ],
+   "frames": [
+    [
+     0,
+     0,
+     32,
+     32
+    ],
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     64,
+     0,
+     32,
+     32
+    ],
+    [
+     96,
+     0,
+     32,
+     32
+    ]
+   ]
   }
  },
  "ores": {

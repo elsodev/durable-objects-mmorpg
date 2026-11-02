@@ -161,6 +161,11 @@ export type ServerMsg =
    */
   | ({ t: "rock"; id: string; broken: boolean; hits?: number; need?: number; drops?: ItemId[]; ore?: RockOre } & ImpactStamp)
   /**
+   * A tool rebounded off something it can't work (axe on a rock, pickaxe on a tree, anything on a
+   * boulder) at tile x,y. Sent to the others in the zone; the swinger shows it from its own swing.
+   */
+  | ({ t: "bounce"; x: number; y: number } & ImpactStamp)
+  /**
    * A tree was hit (`hits` of `need`, stage unchanged), fell to a stump, was cleared ("gone") or
    * grew back ("tree", hits 0). `drops` are what popped out.
    */

@@ -315,6 +315,12 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       return { x: x + corr.x, y: y + corr.y, facing, moving };
     },
 
+    face(f) {
+      // A swing turns you toward its tile. Without this the predictor kept the facing of your
+      // last step, and reconcile handed that back once the swing ended, so you spun away.
+      if (!moving && !path && lastDir.dx === 0 && lastDir.dy === 0) facing = f;
+    },
+
     reset(at, f) {
       // seq stays monotonic so a late ack from before the reset can't drop newer inputs.
       x = at.x;

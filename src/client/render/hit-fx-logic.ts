@@ -81,3 +81,37 @@ export function crackLines(id: string, stage: number, need: number): [number, nu
   }
   return out;
 }
+
+/** Tool rebound spark: ms per frame of the four-frame sheet (fx/rebound_spark.png). */
+export const REBOUND_FRAME_MS = 80;
+export const REBOUND_FRAMES = 4;
+
+/** Frame of the rebound spark `t` ms in, or -1 once it has played. */
+export function reboundFrame(t: number, frames = REBOUND_FRAMES, ms = REBOUND_FRAME_MS): number {
+  if (t < 0) return 0;
+  const f = Math.floor(t / ms);
+  return f < frames ? f : -1;
+}
+
+/**
+ * How far the swinger is knocked back by a rebound (tiles), pointing away from what was hit.
+ * Small: a jolt, not a shove.
+ */
+export const REBOUND_RECOIL = 0.18;
+export function reboundRecoil(from: Vec2, hit: Vec2, amount = REBOUND_RECOIL): Vec2 {
+  const dx = from.x - hit.x;
+  const dy = from.y - hit.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return { x: 0, y: amount };
+  return { x: (dx / len) * amount, y: (dy / len) * amount };
+}
+
+/** Where a swung tool meets what is in front of the swinger (tile coords), clear of their own head. */
+export function toolContactPoint(at: Vec2, facing: "up" | "down" | "left" | "right"): Vec2 {
+  const reach = 0.7;
+  const chest = 0.55;
+  const dx = facing === "left" ? -reach : facing === "right" ? reach : 0;
+  // Facing away, the head (about 1.5 tiles up) would hide it: the spark goes at the top of the head, under the name tag.
+  const dy = facing === "up" ? -0.85 : facing === "down" ? 0.5 : 0;
+  return { x: at.x + dx, y: at.y - chest + dy };
+}

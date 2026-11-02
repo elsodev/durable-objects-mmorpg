@@ -252,6 +252,8 @@ export interface Predictor {
   moveTo(target: Vec2): ClientMsg;
   state(): { x: number; y: number; facing: Facing; moving: boolean };
   reset(at: Vec2, facing: Facing): void;
+  /** Turn on the spot (a tool swing faces its tile); ignored while walking. */
+  face?(facing: Facing): void;
 }
 export type CreatePredictor = (getMap: () => MapData | null, getBlockedExtras: () => { objects: PlacedObject[]; rocks: Vec2[]; cleared?: Vec2[] }) => Predictor;
 

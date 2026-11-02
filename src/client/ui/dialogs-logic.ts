@@ -58,3 +58,8 @@ export function progress(have: number, qty: number): number {
 export function itemName(id: ItemId): string {
   return getItem(id)?.name ?? id;
 }
+
+/** Is `next` the same notice as `prev` again (or `prev` with more added, like a tiredness warning)? */
+export function repeatsNotice(prev: string, next: string): boolean {
+  return prev.length > 0 && (next === prev || next.startsWith(prev) || prev.startsWith(next));
+}

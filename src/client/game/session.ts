@@ -72,6 +72,7 @@ import {
   type LocalSwing,
 } from "./tool-swing";
 import { ImpactQueue, impactDueMs } from "./impact";
+import { reboundRecoil, toolContactPoint } from "../render/hit-fx-logic";
 import { INTERP_DELAY_MS } from "../state/interp";
 
 type StampedMsg = Extract<ServerMsg, { t: "farm" | "rock" | "tree" }>;
@@ -793,6 +794,9 @@ export async function startSession(
       case "reject":
         onReject(msg);
         break;
+      case "bounce":
+        onBounceMsg(msg);
+        break;
       case "needAccount":
         void askForAccount(msg.reason);
         break;
@@ -1033,6 +1037,7 @@ export async function startSession(
     if (s) {
       swing = s;
       localAct = s.act;
+      predictor.face?.(s.facing);
     }
     const req = sendTagged({ t: "use", slot: selectedSlot, x: tile.x, y: tile.y }, "use");
     const used = usableItem(inv, selectedSlot);
@@ -1048,6 +1053,7 @@ export async function startSession(
       if (clunk) playSfx("tool_clunk");
       else if (sfx !== "tool_sword") playSfx(sfx);
       if (outcome?.ok) impactFx(tile, outcome.effect, used);
+      else if (outcome?.bounce && store.youId) reboundFx(tile, store.youId);
     };
     // Seeds and other non-swings land at once; a swing lands at its impact frame (see frame()).
     if (s) onImpact = land;
@@ -1074,6 +1080,54 @@ export async function startSession(
       w.trees.hit(tree.id);
       shownHits.add(tree.id);
     }
+  }
+
+  /** A tool rebounded off `tile`: a spark and grit where it struck, and the swinger jolts back. */
+  function reboundFx(tile: Vec2, by: string): void {
+    const w = world;
+    const m = map();
+    if (!w || !m) return;
+    const t = probeTarget(tile);
+    const wood = t?.kind === "tree" || t?.kind === "stump";
+    const who = by === store.youId ? you() : store.sample(performance.now()).find((e) => e.id === by);
+    // The spark goes where the blade meets the thing, in front of the swinger at arm height, so
+    // their own head doesn't hide it.
+    const at = who ? toolContactPoint(who, who.facing) : { x: tile.x + 0.5, y: tile.y + 0.5 };
+    w.hitFx.rebound(at, wood ? "wood" : "stone");
+    if (who) w.entities.nudge?.(by, reboundRecoil(who, { x: tile.x + 0.5, y: tile.y + 0.5 }));
+  }
+
+  /** What sits on a tile, as the rules see it (ignores the selected item). */
+  function probeTarget(tile: Vec2): ToolTarget | null {
+    const m = map();
+    if (!m) return null;
+    const farm = store.zone === "home" && !visiting;
+    return targetAtTile(
+      { map: m, farm, farmTiles: store.farm, objects: store.objects.values(), brokenRocks: store.brokenRocks, rockOres: store.rockOres, trees: store.trees, monsters: [] },
+      tile,
+      farmTime(),
+    );
+  }
+
+  /** Someone else's tool rebounded: show it when their swing lands. */
+  function onBounceMsg(msg: Extract<ServerMsg, { t: "bounce" }>): void {
+    if (msg.by === store.youId || !msg.by) return;
+    const now = performance.now();
+    const due = impactDueMs(msg, {
+      youId: store.youId,
+      nowMs: now,
+      serverNow: serverNow(),
+      localImpactMs: null,
+      remoteLagMs: INTERP_DELAY_MS + TICK_MS / 2 + conn.rtt() / 2,
+    });
+    const w = world;
+    const by = msg.by;
+    setTimeout(() => {
+      if (!destroyed && world === w) {
+        reboundFx({ x: msg.x, y: msg.y }, by);
+        playSfx("tool_clunk");
+      }
+    }, Math.max(0, due - now));
   }
 
   /** True (once) when `msg` is the server's echo of a hit your swing already showed. */

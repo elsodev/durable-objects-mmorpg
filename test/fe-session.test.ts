@@ -86,6 +86,8 @@ describe("items in slots", () => {
     expect(clickUsesTool("hoe", { ok: true }, { kind: "grass" })).toBe(true);
     expect(clickUsesTool("hoe", { ok: false, reason: "You can't till here." }, { kind: "none" })).toBe(false);
     expect(clickUsesTool("pickaxe", { ok: false, reason: "bounces" }, { kind: "tree" })).toBe(true);
+    // A boulder: the axe rebounds off it (a swing), not "Can't walk there."
+    expect(clickUsesTool("axe", { ok: false, reason: "bounces" }, { kind: "boulder" })).toBe(true);
     expect(clickUsesTool("axe", { ok: false, reason: "" }, { kind: "none" })).toBe(false);
     expect(clickUsesTool("hoe", { ok: false, reason: "Already tilled." }, { kind: "soil" })).toBe(true);
     expect(clickUsesTool("sword_wood", { ok: false, reason: "" }, { kind: "none" })).toBe(true);

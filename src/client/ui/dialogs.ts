@@ -2,7 +2,7 @@
 // All text goes through textContent; server and item names are never parsed as HTML.
 import type { ShopOffer, VillageGoal } from "../../shared/protocol";
 import type { Inventory, ItemId } from "../../shared/types";
-import { clampQty, donatePlan, itemName, maxAffordable, MAX_STEP_QTY, progress, sellRows } from "./dialogs-logic";
+import { clampQty, donatePlan, itemName, maxAffordable, MAX_STEP_QTY, progress, repeatsNotice, sellRows } from "./dialogs-logic";
 import { mountAccountForm } from "./auth";
 import { iconFor } from "./icons";
 import { itemTip } from "./item-tip";
@@ -352,14 +352,33 @@ export const createNotices: CreateNotices = (root) => {
     setTimeout(done, 400);
   }
 
+  const timers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+  const schedule = (n: HTMLElement, kind: string) => {
+    clearTimeout(timers.get(n));
+    timers.set(n, setTimeout(() => dismiss(n), kind === "error" ? NOTICE_MS + 1500 : NOTICE_MS));
+  };
+
   return {
     notice(text, kind) {
-      const n = el("div", `dlg-notice dlg-notice-${kind}`, String(text).slice(0, MAX_TEXT));
+      const msg = String(text).slice(0, MAX_TEXT);
+      // The same notice again (hitting a rock over and over): refresh the newest one instead of
+      // stacking copies down the screen.
+      const last = stack.lastElementChild as HTMLElement | null;
+      if (last && !last.classList.contains("is-leaving") && last.dataset.kind === kind && repeatsNotice(last.textContent ?? "", msg)) {
+        last.textContent = msg;
+        last.classList.remove("is-again");
+        void last.offsetWidth;
+        last.classList.add("is-again");
+        if (kind === "error") uiSound("error");
+        return schedule(last, kind);
+      }
+      const n = el("div", `dlg-notice dlg-notice-${kind}`, msg);
+      n.dataset.kind = kind;
       n.addEventListener("click", () => dismiss(n));
       add(stack, n);
       while (stack.childElementCount > MAX_NOTICES) stack.firstElementChild?.remove();
       if (kind === "error") uiSound("error");
-      setTimeout(() => dismiss(n), kind === "error" ? NOTICE_MS + 1500 : NOTICE_MS);
+      schedule(n, kind);
     },
   };
 };

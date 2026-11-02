@@ -804,3 +804,9 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - License: **CC0** (gel, stars, cells 0 and 64-96) / **CC-BY-SA 3.0 / GPL 3.0** (bat wing, cell 32: share-alike, same as monsters/bat.png)
 - Source: https://github.com/OpenGameArt/LiberatedPixelCup (sprite/original/CharlesGabriel/PNG/bat.png) for the wing
 - Notes: The gel uses colours sampled from monsters/slime.png.
+
+### fx/rebound_spark.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game
+- Notes: Four-frame spark shown when a tool rebounds off something it can't work (axe on a rock, pickaxe on a tree, any tool on a boulder).

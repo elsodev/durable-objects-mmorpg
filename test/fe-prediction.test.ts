@@ -252,3 +252,23 @@ describe("collision cache", () => {
     expect(p.state().x).toBeLessThan(6);
   });
 });
+
+describe("turning on the spot for a swing", () => {
+  it("keeps facing the swing's tile after walking there, even before the server catches up", () => {
+    const { p } = setup();
+    p.moveTo({ x: 1.5, y: 3.5 });
+    hold(p, 0, 0, 2000);
+    expect(p.state()).toMatchObject({ facing: "left", moving: false });
+    p.face?.("up");
+    // Unacked steps from the walk are still pending: reconcile must not hand "left" back.
+    p.reconcile(you(1.5, 3.5, "left"), 0);
+    expect(p.state().facing).toBe("up");
+  });
+
+  it("ignores a turn while walking", () => {
+    const { p } = setup();
+    p.step(1, 0, FRAME);
+    p.face?.("up");
+    expect(p.state().facing).toBe("right");
+  });
+});

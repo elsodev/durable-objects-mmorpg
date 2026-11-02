@@ -77,7 +77,7 @@ export function usableHere(inv: Inventory, slot: number, zone: ZoneId | null): s
 export function clickUsesTool(item: string, outcome: { ok: boolean; reason?: string } | null, target: { kind: string } | null): boolean {
   if (getItem(item)?.tool === "sword") return true;
   if (outcome?.ok) return true;
-  return !!target && ["rock", "tree", "stump", "monster", "soil", "water"].includes(target.kind);
+  return !!target && ["rock", "tree", "stump", "boulder", "monster", "soil", "water"].includes(target.kind);
 }
 
 /** Interact target for a prop: the shipping bin sells the selected stack, other props take their id. */
