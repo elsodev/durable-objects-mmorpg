@@ -45,7 +45,7 @@ The whole game is one Worker plus a few Durable Objects. There is no separate ga
 | **Cron Triggers** | A daily job (`src/worker/cron.ts`) deletes guest accounts idle for over 30 days, with their home, uploads and villager memories. |
 | **Observability** | Worker logs are on (`"observability"` in `wrangler.jsonc`). |
 
-Clef (`@cf/cloudflare/clef`, a Workers AI decision model) makes fast typed villager decisions and judges replies in the conversation window. `JEV_MODEL` picks the model: `@cf/cloudflare/clef`, `@cf/cloudflare/clef-flash`, or TypeSafe's `typesafe/jev` (which needs Unified Billing credits). With `JEV_MODEL` empty, rules and word lists do the same job. Every NPC model call (lines, Think agent turns, decisions) goes through the AI Gateway named in `AI_GATEWAY_ID`.
+Clef Flash (`@cf/cloudflare/clef-flash`, a fast 9B Workers AI decision model) makes fast typed villager decisions and judges replies in the conversation window. `JEV_MODEL` picks the model: `@cf/cloudflare/clef-flash`, the larger `@cf/cloudflare/clef`, or TypeSafe's `typesafe/jev` (which needs Unified Billing credits). With `JEV_MODEL` empty, rules and word lists do the same job. Every NPC model call (lines, Think agent turns, decisions) goes through the AI Gateway named in `AI_GATEWAY_ID`.
 
 ### How the load is kept down
 
@@ -183,7 +183,7 @@ Optional services:
 
 - **Workers AI** is on by default in production (`NPC_AI_MODE=on`, model in `NPC_MODEL`). `AI_DAILY_NEURONS` caps daily spend. When the budget runs out NPCs fall back to scripted lines.
 - **AI Gateway**: `AI_GATEWAY_ID` (default `durable-mmo`) routes every NPC model call through that gateway, for logs, caching and Unified Billing. Create a gateway with that name in the dashboard (AI → AI Gateway) or change the var to yours. Set it to `""` to call Workers AI directly.
-- **Typed NPC decisions** use `JEV_MODEL` (default `@cf/cloudflare/clef`, billed as normal Workers AI: $0.24 per million input tokens, output free). `typesafe/jev` also works but is a third-party model billed through Unified Billing credits. Set `JEV_MODEL` to `""` for rule-based decisions only. Failed or slow decision calls (1.5 s) fall back to rules.
+- **Typed NPC decisions** use `JEV_MODEL` (default `@cf/cloudflare/clef-flash`, billed as normal Workers AI: $0.038 per million input tokens, output free; `@cf/cloudflare/clef` is $0.24, and then raise `JEV_UNITS` in `src/worker/game/npcGate.ts` to about 12). `typesafe/jev` also works but is a third-party model billed through Unified Billing credits. Set `JEV_MODEL` to `""` for rule-based decisions only. Failed or slow decision calls (1.5 s) fall back to rules.
 - **Turnstile** captcha on sign-up and sign-in: the site key and secret above. Without a secret, production sign-up and sign-in answer 503. Set `CAPTCHA_DISABLED=1` to run without a captcha on purpose.
 
 ### Drop rates
