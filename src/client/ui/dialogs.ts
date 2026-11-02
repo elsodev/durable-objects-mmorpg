@@ -6,6 +6,8 @@ import { clampQty, donatePlan, itemName, maxAffordable, MAX_STEP_QTY, progress, 
 import { mountAccountForm } from "./auth";
 import { iconFor } from "./icons";
 import { itemTip } from "./item-tip";
+import { bumpBag, floatCost } from "./buy-fx";
+import { spentOnBuy, type PendingBuy } from "./buy-fx-logic";
 import { uiSound } from "./sound";
 import type { CreateAccountPrompt, CreateGoals, CreateNotices, CreateShop } from "./index";
 import "./styles/dialogs.css";
@@ -142,6 +144,8 @@ export const createShop: CreateShop = (root, opts) => {
   let inv: Inventory = { coins: 0, slots: [] };
   let tab: "buy" | "sell" = "buy";
   const buyQty = new Map<ItemId, number>();
+  /** The last Buy press, so the price floats up only once the server has taken the coins. */
+  let pendingBuy: (PendingBuy & { item: ItemId }) | null = null;
   const sellQty = new Map<number, number>();
 
   function setTab(t: "buy" | "sell") {
@@ -163,9 +167,11 @@ export const createShop: CreateShop = (root, opts) => {
     if (offers.length === 0) return [el("li", "dlg-empty", "Nothing for sale today.")];
     return offers.map((o) => {
       const li = el("li", "dlg-row");
+      li.dataset.item = o.item;
       const price = el("span", "dlg-price");
       const action = button("Buy", "dm-btn-primary dlg-action", () => {
         const qty = buyQty.get(o.item) ?? 1;
+        pendingBuy = { total: o.price * qty, coinsBefore: inv.coins, at: performance.now(), item: o.item };
         opts.send({ t: "buy", npc, item: o.item, qty });
       }, "confirm");
       const refresh = () => {
@@ -237,10 +243,19 @@ export const createShop: CreateShop = (root, opts) => {
       if (!wasOpen) uiSound("open");
     },
     setInventory(i) {
+      const spent = spentOnBuy(pendingBuy, i.coins, performance.now());
+      const bought = pendingBuy?.item;
+      if (spent > 0) pendingBuy = null;
       inv = i;
       // Sell quantities are keyed by slot; a changed inventory can move items around.
       sellQty.clear();
       if (!dialog.hidden) render();
+      if (spent > 0 && bought) {
+        // After render, so the cost rises from the row's fresh Buy button.
+        const btn = list.querySelector<HTMLElement>(`[data-item="${CSS.escape(bought)}"] .dlg-action`);
+        if (btn) floatCost(btn, spent);
+        bumpBag();
+      }
     },
     close() {
       // Sounds only when it was actually open (Esc in the world calls this every time).

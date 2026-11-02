@@ -36,6 +36,7 @@ import { itemTip } from "./item-tip";
 import { createNameFlash, itemTitle, type NameFlash } from "./item-tip-logic";
 import { gaugeLabel, holdsWater, waterGauge, type WaterLevel } from "./water-gauge";
 import { createSlotMenu, type SlotMenu } from "./slot-menu";
+import { BAG_BUMP_EVENT, replayClass } from "./buy-fx";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -177,6 +178,12 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
 
   // --- menu (top-right)
   const inventoryBtn = menuButton("Bag", "bag", "hud-btn-inventory", "I", () => toggleInventory());
+  const onBagBump = () => {
+    // The HUD is rebuilt on sign-in; an old one drops its listener the first time it's bumped.
+    if (!inventoryBtn.isConnected) document.removeEventListener(BAG_BUMP_EVENT, onBagBump);
+    else replayClass(inventoryBtn, "is-bag-bump");
+  };
+  document.addEventListener(BAG_BUMP_EVENT, onBagBump);
   const goalsBtn = menuButton("Goals", "goals", "hud-btn-goals", "G", () => toggleGoals());
   const friendsBtn = menuButton("Friends", "friends", "hud-btn-friends", "O", () => menu.toggle("friends"));
   const bondsBtn = menuButton("Hearts", "hearts", "hud-btn-bonds", "H", () => menu.toggle("hearts"));

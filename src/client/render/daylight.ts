@@ -6,7 +6,7 @@ import { Container, Sprite, Texture } from "pixi.js";
 import type { Layers, LightSpot, LitWindowsView, SpriteArt } from "../contracts";
 import { TILE } from "../contracts";
 import { daylightTint, interiorTint, lampStrength } from "../../shared/engine/homeclock";
-import { windowGlow } from "./light-points";
+import { glowAlpha, windowGlow } from "./light-points";
 import { createLitWindows } from "./lit-windows";
 
 export interface Daylight {
@@ -97,7 +97,8 @@ export function createDaylight(layers: Layers, opts: DaylightOpts = {}): Dayligh
       glows.visible = k > 0 && !!tex;
       if (!glows.visible) return;
       let n = 0;
-      for (const l of lights) glowAt(n++, l, k, timeMs);
+      const a = glowAlpha(k, lights.length, !!opts.indoor);
+      for (const l of lights) glowAt(n++, l, a, timeMs);
       for (const l of spill) glowAt(n++, l, k * WINDOW_GLOW_ALPHA, timeMs);
       for (let i = n; i < pool.length; i++) pool[i]!.visible = false;
     },

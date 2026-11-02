@@ -6,7 +6,7 @@ import catalog from "../src/client/public/assets/lpc/catalog.json";
 import type { SpriteEntry } from "../src/client/art/catalog-types";
 import { asPoint, asRect } from "../src/client/art/slice";
 import { SCALE, TILE } from "../src/client/contracts";
-import { LIGHT_SOURCES, LIT_WINDOWS, lightSpots, litWindowsAt, windowGlow } from "../src/client/render/light-points";
+import { glowAlpha, LIGHT_SOURCES, LIT_WINDOWS, lightSpots, litWindowsAt, windowGlow } from "../src/client/render/light-points";
 import { allowedRotations, getItem, ITEMS } from "../src/shared/items";
 import { getMap } from "../src/shared/maps";
 import { PROP_FOOTPRINTS } from "../src/shared/maps/props";
@@ -154,5 +154,19 @@ describe("lit windows", () => {
     const g = windowGlow(v.windows[0]!, 1.5);
     expect(g).toEqual({ x: (512 - 10 * SCALE + 11 * SCALE) / TILE, y: (704 - 109 * SCALE + 7 * SCALE) / TILE, radius: 1.5 });
     expect(litWindowsAt("tree", 0, 0, 0)).toBeNull();
+  });
+});
+
+describe("glow brightness", () => {
+  it("indoor lamps glow softer than outdoor ones", () => {
+    expect(glowAlpha(1, 1, true)).toBeLessThan(glowAlpha(1, 1, false));
+  });
+  it("many lamps share the light instead of washing the room out", () => {
+    expect(glowAlpha(1, 12, true)).toBeLessThan(glowAlpha(1, 3, true));
+    // The total stays bounded: twelve lamps are at most twice as bright as three.
+    expect(12 * glowAlpha(1, 12, true)).toBeLessThanOrEqual(2 * 3 * glowAlpha(1, 3, true) + 1e-9);
+  });
+  it("is off when the lamps are off", () => {
+    expect(glowAlpha(0, 5, false)).toBe(0);
   });
 });

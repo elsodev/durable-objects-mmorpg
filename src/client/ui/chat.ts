@@ -333,7 +333,11 @@ export const createChat: CreateChat = (root, opts) => {
     } else if (e.key === "Escape") {
       e.preventDefault();
       if (!picker.hidden) setPicker(false);
-      else input.blur();
+      else {
+        // A lone "/" from the slash key is not a draft worth keeping.
+        if (input.value === "/") input.value = "";
+        input.blur();
+      }
     }
   });
   input.addEventListener("keyup", (e) => e.stopPropagation());
@@ -348,6 +352,19 @@ export const createChat: CreateChat = (root, opts) => {
         input.focus();
       }
       return;
+    }
+    // "/" from the game opens chat with the command list showing.
+    if (e.key === "/" && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && e.target !== input && !isEditable(document.activeElement)) {
+      const a = document.activeElement;
+      if (a === null || a === document.body || a instanceof HTMLCanvasElement) {
+        e.preventDefault();
+        input.focus();
+        input.value = "/";
+        input.setSelectionRange(1, 1);
+        dismissedFor = null;
+        refreshSlash();
+        return;
+      }
     }
     if (e.key !== "Enter" || e.repeat || e.isComposing || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.target === input || isEditable(document.activeElement)) return;

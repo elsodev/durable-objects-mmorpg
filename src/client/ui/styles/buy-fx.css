@@ -1,0 +1,53 @@
+.buy-fx-cost {
+  position: fixed;
+  z-index: 1000;
+  transform: translate(-50%, -100%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  font-family: var(--dm-font-pixel, inherit);
+  font-weight: 700;
+  font-size: 18px;
+  color: #c0392b;
+  text-shadow:
+    1px 0 0 #fff6e0,
+    -1px 0 0 #fff6e0,
+    0 1px 0 #fff6e0,
+    0 -1px 0 #fff6e0,
+    0 2px 0 rgba(58, 36, 20, 0.35);
+  animation: buy-fx-rise 900ms ease-out forwards;
+}
+@keyframes buy-fx-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -260%);
+  }
+}
+.hud-menu-btn.is-bag-bump {
+  animation: bag-bump 520ms ease-out;
+}
+@keyframes bag-bump {
+  0% { transform: translateY(0) rotate(0); }
+  15% { transform: translateY(2px) scale(1.06, 0.92) rotate(0); }
+  35% { transform: translateY(-3px) rotate(-7deg); }
+  55% { transform: translateY(0) rotate(6deg); }
+  75% { transform: rotate(-3deg); }
+  100% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .buy-fx-cost {
+    animation: none;
+    transform: translate(-50%, -160%);
+  }
+  .hud-menu-btn.is-bag-bump {
+    animation: none;
+  }
+}

@@ -4754,13 +4754,13 @@
    "file": "props/decorations_medieval.png",
    "rect": [
     128,
-    704,
+    685,
     64,
-    32
+    51
    ],
    "anchor": [
     32,
-    30
+    49
    ],
    "footprintTiles": {
     "w": 2,

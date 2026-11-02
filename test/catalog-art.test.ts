@@ -4,6 +4,8 @@
 import { describe, expect, it } from "vitest";
 import catalog from "../src/client/public/assets/lpc/catalog.json";
 import { allowedRotations, ITEMS } from "../src/shared/items";
+import { getMap } from "../src/shared/maps";
+import type { MapId } from "../src/shared/types";
 import { asPoint, asRect, furnitureView, viewAnchorPx } from "../src/client/art/slice";
 import type { RectTuple, SpriteEntry } from "../src/client/art/catalog-types";
 import { pngSize, readPng, type Png } from "./png";
@@ -207,5 +209,52 @@ describe("placeable furniture art", () => {
   it("the fridge has closed, opening and open frames", () => {
     const e = entryFor("fridge") as SpriteEntry & { frames?: Record<string, unknown> };
     expect(Object.keys(e.frames ?? {})).toEqual(["closed", "opening", "open"]);
+  });
+});
+
+/**
+ * Props whose rect edge touches neighbouring art in a packed sheet, or tiles that join up on the
+ * map (bench halves, fence runs, cliff and dock pieces). Checked by eye; nothing is cut off.
+ */
+const PROP_NEIGHBOURS: Readonly<Record<string, string>> = {
+  bench_left: "joins bench_right",
+  bench_right: "joins bench_left",
+  well: "stone wall packed to the left",
+  fence_deco: "fence pieces tile vertically",
+  crate: "crates packed on every side",
+  hay_bale: "the next bale's strap touches the right edge",
+  bush: "bushes packed below and right",
+  dock: "dock planks tile",
+  cliff_face: "cliff tiles join",
+  cliff_vines: "cliff tiles join",
+  cave_mouth: "cliff tiles join",
+  shipping_bin: "lid frames packed below and right",
+};
+
+describe("map prop art", () => {
+  it("no prop placed on a map is cut off at its rect edge", () => {
+    const used = new Set<string>();
+    const maps: MapId[] = ["village", "riverside", "caves", "quarry", "home", "home_in"];
+    for (const id of maps) for (const p of getMap(id).props) used.add(p.type);
+    const props = (catalog as unknown as { props: Record<string, SpriteEntry> }).props;
+    const bad: string[] = [];
+    for (const t of used) {
+      const e = props[t];
+      const rect = e && asRect(e.rect);
+      if (!e?.file || !rect) continue;
+      const cut = bleeds(png(e.file), rect);
+      if (cut.length && !Object.hasOwn(PROP_NEIGHBOURS, t)) bad.push(`${t}: ${cut.join(",")}`);
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it("the hay bale stack is whole, top bale included", () => {
+    const e = (catalog as unknown as { props: Record<string, SpriteEntry> }).props.hay_bale!;
+    const [x, y, w] = asRect(e.rect)!;
+    const img = png(e.file!);
+    // Nothing of the stack sits just above the rect: the top bale is inside it.
+    let above = 0;
+    for (let i = 0; i < w; i++) if (img.alpha(x + i, y - 1) > 0) above++;
+    expect(above).toBe(0);
   });
 });

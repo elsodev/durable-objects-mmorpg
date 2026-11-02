@@ -84,3 +84,17 @@ export function litWindowsAt(type: string, x: number, y: number, z: number): Lit
 export function windowGlow(r: { x: number; y: number; w: number; h: number }, radius: number): LightSpot {
   return { x: (r.x + r.w / 2) / TILE, y: (r.y + r.h / 2) / TILE, radius };
 }
+
+/** Indoors the lamps sit close together in a small room, so each one glows softer. */
+export const INDOOR_GLOW = 0.55;
+/** Beyond this many glows the room would wash out, so each one dims as more are added. */
+export const GLOW_CROWD = 3;
+
+/**
+ * Alpha for each lamp glow at lamp strength `k` with `count` glows on screen. Glows overlap and
+ * add up, so many lamps share a light budget instead of each adding its full brightness.
+ */
+export function glowAlpha(k: number, count: number, indoor: boolean): number {
+  const crowd = count > GLOW_CROWD ? Math.sqrt(GLOW_CROWD / count) : 1;
+  return k * crowd * (indoor ? INDOOR_GLOW : 1);
+}
