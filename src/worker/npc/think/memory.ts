@@ -267,6 +267,7 @@ export const TOOL_GUIDE = [
   "- set_mood: how you feel now.",
   "- suggest_quest: point them to a village goal (bridge, fair, lantern).",
   "- walk_to: step toward a nearby place in your zone.",
+  "Use tools only through tool calls. Never write a tool name, its arguments or JSON in your words: the visitor only hears what you say aloud.",
 ].join("\n");
 
 /** Top of the system prompt: identity and the hard rules. Context blocks follow it. */

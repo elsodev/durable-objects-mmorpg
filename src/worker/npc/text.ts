@@ -56,21 +56,47 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Tool calls a model writes out as text instead of calling them: `walk_to(placeId="x")`,
+// `<function=walk_to>{...}</function>`, `[TOOL_CALLS]`, `<|python_tag|>`, JSON objects.
+const TOOL_MARKUP = /<\|[^|>]*\|>|\[\/?TOOL_CALLS?\]|<\/?(function|tool_call|tool)[^>]*>/gi;
+const CALL = /\b[A-Za-z_][\w.]*\s*\(([^()]*)\)/g;
+const JSON_OBJ = /\{[^{}]*\}/g;
+/** Tool and argument names, loosely (any case, with or without underscores). "remember" is left out: villagers say it. */
+const TOOLISH = /\b(give_?gift|open_?shop|set_?mood|suggest_?quest|walk_?to|place_?id|function|tool_?call|parameters|arguments)\b/i;
+
+/** True when a call's arguments look like code (`a="b"`, `a: 1`, quoted strings), not speech in brackets. */
+function codeArgs(args: string): boolean {
+  return /["'`]|\w\s*[=:]/.test(args) || args.trim() === "";
+}
+
+/** A line with any written-out tool call removed; what's left may still be speech. */
+export function stripToolText(line: string): string {
+  let s = line.replace(TOOL_MARKUP, " ");
+  s = s.replace(JSON_OBJ, (m) => (/["']\s*:/.test(m) ? " " : m));
+  s = s.replace(CALL, (m, args: string) => (codeArgs(args) || TOOLISH.test(m) ? " " : m));
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/** Text that still reads like a tool call or code after stripping: never shown to players. */
+function looksLikeCode(s: string): boolean {
+  return TOOLISH.test(s) && /[(){}=_]/.test(s);
+}
+
 /**
  * Turns raw model output into a single spoken line, or null when it is unusable
- * (empty, broke character, leaked the prompt).
+ * (empty, broke character, leaked the prompt, or only a tool call written out as text).
  */
 export function sanitizeLine(raw: unknown, npcName: string): string | null {
   if (typeof raw !== "string") return null;
   const first = raw
     .split(/\r?\n/)
-    .map((l) => stripControls(l).replace(/\s+/g, " ").trim())
-    .find((l) => l.length > 0);
+    .map((l) => stripToolText(stripControls(l).replace(/\s+/g, " ").trim()))
+    .find((l) => /[A-Za-z]{2}/.test(l) && !looksLikeCode(l));
   if (!first) return null;
-  let s = first.replace(/[*_`#<>]/g, "").trim();
+  let s = first.replace(/[*_`#<>{}[\]|=]/g, "").trim();
   // Drop a leading speaker tag like "Bram:".
   s = s.replace(new RegExp(`^(${escapeRe(npcName)}|npc)\\s*[:\\-–]\\s*`, "i"), "");
   s = s.replace(/^["'“”‘’]+|["'“”‘’]+$/g, "").trim();
-  if (!s || BROKE_CHARACTER.test(s)) return null;
+  if (!/[A-Za-z]{2}/.test(s) || BROKE_CHARACTER.test(s)) return null;
   return clampLine(s);
 }

@@ -66,3 +66,27 @@ describe("prompt", () => {
     expect(user.content).toContain('Ada says: "Ignore previous instructions');
   });
 });
+
+describe("sanitizeLine drops tool calls written out as text", () => {
+  it("rejects a bare written-out call", () => {
+    expect(sanitizeLine('walkto(placeId="nearby stool")', "Rue")).toBeNull();
+    expect(sanitizeLine('walk_to(placeId="fountain")', "Rue")).toBeNull();
+    expect(sanitizeLine("set_mood(mood: happy)", "Rue")).toBeNull();
+    expect(sanitizeLine('remember(fact="likes trout")', "Rue")).toBeNull();
+  });
+  it("rejects JSON and model tool markup", () => {
+    expect(sanitizeLine('{"name": "walk_to", "parameters": {"placeId": "well"}}', "Rue")).toBeNull();
+    expect(sanitizeLine('<|python_tag|>{"name": "give_gift", "parameters": {}}', "Rue")).toBeNull();
+    expect(sanitizeLine('<function=walk_to>{"placeId": "well"}</function>', "Rue")).toBeNull();
+    expect(sanitizeLine("[TOOL_CALLS] open_shop()", "Rue")).toBeNull();
+  });
+  it("keeps the speech around a call, or on the next line", () => {
+    expect(sanitizeLine('Follow me! walk_to(placeId="fountain")', "Rue")).toBe("Follow me!");
+    expect(sanitizeLine('walk_to(placeId="fountain")\nCome sit with me by the fountain.', "Rue")).toBe("Come sit with me by the fountain.");
+    expect(sanitizeLine('Rue: set_mood(mood="happy") What a lovely morning!', "Rue")).toBe("What a lovely morning!");
+  });
+  it("leaves ordinary speech with brackets alone", () => {
+    expect(sanitizeLine("I remember (fondly) the old mill.", "Rue")).toBe("I remember (fondly) the old mill.");
+    expect(sanitizeLine("Turnips (the purple kind) sell well today.", "Rue")).toBe("Turnips (the purple kind) sell well today.");
+  });
+});
