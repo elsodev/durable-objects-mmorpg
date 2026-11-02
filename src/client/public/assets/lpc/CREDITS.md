@@ -322,6 +322,12 @@ Body type: female, skin palette: amber.
 - Source: https://github.com/ElizaWy/LPC (Terrain/cliff_summer.png)
 - Notes: Original by Eliza Wyatt; Lanea Zimmerman's dirt and grass integrated.
 
+### terrain/cave_cliff.png
+- Authors: Eliza Wyatt (DeathsDarling), Lanea Zimmerman (Sharm)
+- License: **OGA-BY 3.0**
+- Source: derived from terrain/cliff_summer.png (https://github.com/ElizaWy/LPC, Terrain/cliff_summer.png)
+- Notes: Quarry cliff pieces cut and composited by script: the cave mouth (the sheet's wide cave entrance under the grass cliff lip, with its middle floor ledge and the grass inside the opening painted over in the sheet's own dark cave colours so it reads as one deep hole), a plain cliff face and the sheet's hanging-vine face with the plain face's grass fringe along its foot.
+
 ### terrain/jagged_stone_walls.png
 - Authors: Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**
@@ -539,6 +545,12 @@ Derived: ElizaWy Wood Bridge A with planks removed.
 - License: **CC-BY-SA 3.0 / GPL 3.0 (individual parts also CC0 / CC-BY 3.0 / OGA-BY 3.0)**
 - Source: https://github.com/DrJamgo/love2d-lpc-tiles (decorations-medieval.png, see CREDITS-decorations-medieval.txt); https://opengameart.org/content/lpc-signposts-graves-line-cloths-and-scare-crow; https://opengameart.org/content/lpc-hanging-signs; https://opengameart.org/content/lpc-city-outside; https://opengameart.org/content/statues-fountains-collection; https://opengameart.org/content/lpc-style-well; https://opengameart.org/content/lpc-guido-bos-entries-cut-up; https://opengameart.org/content/rpg-tiles-cobble-stone-paths-town-objects
 - Notes: Compiled sheet "decorations-medieval" from love2d-lpc-tiles (GPL-3.0 repo); full per-pack credit list reproduced in that repo's CREDITS-decorations-medieval.txt.
+
+### props/sign_post.png
+- Authors: as props/decorations_medieval.png (the LPC signpost)
+- License: **CC-BY-SA 3.0 / GPL 3.0**
+- Source: derived from props/decorations_medieval.png (rect 193,128 30x32); https://opengameart.org/content/lpc-signposts-graves-line-cloths-and-scare-crow
+- Notes: The signpost cut out on its own with its baked-in, semi-transparent ground shadow removed (static props cast no shadow).
 
 ### props/farming_fishing.png
 - Authors: Daniel Eddeland (Daneeklu)

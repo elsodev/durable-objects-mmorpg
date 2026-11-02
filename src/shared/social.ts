@@ -180,7 +180,7 @@ export type SocialServerMsg =
   | { t: "social"; payload: { t: string } & Record<string, unknown> }
   | { t: "pong"; at: number };
 
-const ZONE_IDS: readonly ZoneId[] = ["village", "riverside", "caves", "home"];
+const ZONE_IDS: readonly ZoneId[] = ["village", "riverside", "caves", "quarry", "home"];
 export const MAX_SOCIAL_FRAME = 1024;
 
 /** Validates a social socket frame, copying only known fields. */

@@ -57,6 +57,7 @@ describe("game menu state", () => {
 describe("map tab", () => {
   it("marks where you are; buildings count as the village", () => {
     expect(mapRows("riverside").find((r) => r.here)?.id).toBe("riverside");
+    expect(mapRows("quarry").find((r) => r.here)?.id).toBe("quarry");
     const inn = mapRows("int_inn").find((r) => r.here)!;
     expect(inn.id).toBe("village");
     expect(inn.inside).toBe("the inn");

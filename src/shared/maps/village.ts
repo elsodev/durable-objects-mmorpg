@@ -1,7 +1,7 @@
 // Village: the shared hub (64x48). Central square with fountain + notice board, Town Hall to the
 // north, a pond west of it, market stalls east, blacksmith south-east, inn west, and each
 // villager's own house (with its yard or garden) around the edges.
-// Main roads: east-west along y 23..24 (home <-> caves), north-south along x 31..32 (hall <-> river).
+// Main roads: east-west along y 23..24 (home <-> quarry and the caves), north-south along x 31..32 (hall <-> river).
 
 import { Ground, type MapData } from "../types";
 import { MapBuilder } from "./builder";
@@ -20,14 +20,14 @@ export function buildVillage(): MapData {
   // ---- exits & spawns ----
   b.exit({ x: 0, y: 22, w: 1, h: 4 }, "home", "from_village");
   b.exit({ x: 30, y: 47, w: 4, h: 1 }, "riverside", "from_village");
-  b.exit({ x: 63, y: 22, w: 1, h: 4 }, "caves", "from_village");
+  b.exit({ x: 63, y: 22, w: 1, h: 4 }, "quarry", "from_village");
   b.spawn("from_home", 2, 24); // a row below the "← Home" sign so its label never sits on your name tag
   b.spawn("from_riverside", 31, 45);
-  b.spawn("from_caves", 61, 24); // (same for the "Caves →" sign)
+  b.spawn("from_quarry", 61, 24); // (same for the "Quarry →" sign)
   // Signposts beside each exit path.
   b.prop("sign_post", 3, 22, { id: "sign_home", label: "← Home" });
   b.prop("sign_post", 29, 45, { id: "sign_riverside", label: "↓ Riverside" });
-  b.prop("sign_post", 60, 22, { id: "sign_caves", label: "Caves →" });
+  b.prop("sign_post", 60, 22, { id: "sign_quarry", label: "Quarry & Caves →" });
   b.spawn("default", 27, 24);
 
   // ---- roads & square ----

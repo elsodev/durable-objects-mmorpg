@@ -6,6 +6,7 @@ import { buildCaves } from "./caves";
 import { buildHome } from "./home";
 import { buildHomeInterior } from "./home-in";
 import { INTERIOR_BUILDERS } from "./interiors";
+import { buildQuarry } from "./quarry";
 import { buildRiverside } from "./riverside";
 import { buildVillage } from "./village";
 
@@ -18,6 +19,7 @@ const BUILDERS: Record<MapId, () => MapData> = {
   village: buildVillage,
   riverside: buildRiverside,
   caves: buildCaves,
+  quarry: buildQuarry,
   ...INTERIOR_BUILDERS,
 };
 

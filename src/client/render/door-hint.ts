@@ -24,6 +24,9 @@ export function doorHintAt(map: MapData, pos: Vec2): DoorHint | null {
     if (e.map) text = e.map === "home_in" ? "Enter House" : "Exit to Yard";
     else if (isInteriorZone(e.to)) text = `Enter ${doorFor(e.to).name}`;
     else if (isInteriorZone(map.zone) && e.to === "village") text = "Exit to Village";
+    // The cave mouth is a doorway in the quarry's cliff, and the tunnel's end leads back out.
+    else if (map.zone === "quarry" && e.to === "caves") text = "Enter the Caves";
+    else if (map.zone === "caves" && e.to === "quarry") text = "Exit to Quarry";
     if (!text) continue;
     const dx = Math.max(e.x - pos.x, 0, pos.x - (e.x + e.w));
     const dy = Math.max(e.y - pos.y, 0, pos.y - (e.y + e.h));

@@ -1,6 +1,6 @@
 // Caves (72x56): one map holding the entrance hall (safe miner camp) and three "floors" as
 // separate chambers linked by tunnels, each tunnel mouth marked by a ladder.
-//   hall    (west)        - miner camp, grumm + tess, exit west to the village
+//   hall    (west)        - miner camp, grumm + tess; a tunnel south leads out to the quarry
 //   floor 1 (north)       - copper rocks, slimes
 //   floor 2 (north-east)  - iron rocks, bats
 //   floor 3 (south)       - gem rocks, rock crabs
@@ -33,17 +33,19 @@ export function buildCaves(): MapData {
   // ---- carve chambers and tunnels ----
   for (const c of [HALL, FLOOR1, FLOOR2, FLOOR3]) b.blob(c.cx, c.cy, c.rx, c.ry, Ground.Stone, 0.3);
   const tunnel = (pts: { x: number; y: number }[]) => b.path(pts, 2, Ground.Stone, [Ground.CaveWall, Ground.Stone]);
-  tunnel([{ x: 0, y: 27 }, { x: 4, y: 27 }]); // entrance from the village
+  tunnel([{ x: 10, y: 33 }, { x: 10, y: 40 }]); // the way out, up to the cave mouth in the quarry
   tunnel([{ x: 18, y: 24 }, { x: 24, y: 24 }, { x: 24, y: 14 }, { x: 27, y: 14 }]); // hall -> floor 1
   tunnel([{ x: 42, y: 11 }, { x: 50, y: 11 }]); // floor 1 -> floor 2
   tunnel([{ x: 60, y: 21 }, { x: 60, y: 38 }]); // floor 2 -> floor 3
-  b.sealUnreachable(4, 28, Ground.CaveWall);
+  b.fill({ x: 9, y: 37, w: 4, h: 4 }, Ground.Stone); // a little landing at the tunnel's end
+  b.sealUnreachable(11, 28, Ground.CaveWall);
 
   // ---- exits & spawns ----
-  b.exit({ x: 0, y: 27, w: 1, h: 2 }, "village", "from_caves");
-  b.spawn("from_village", 3, 28); // two rows below the sign: its label clears your name tag
+  // The tunnel's end is the back of the quarry's cave mouth: you come in facing north.
+  b.exit({ x: 10, y: 41, w: 2, h: 1 }, "quarry", "from_caves");
+  b.spawn("from_quarry", 10, 38);
   b.spawn("default", 6, 28);
-  b.prop("sign_post", 3, 26, { id: "sign_village", label: "← Village" });
+  b.prop("sign_post", 12, 38, { id: "sign_quarry", label: "↓ Quarry" });
 
   // ---- miner camp (safe: no monsters in the hall) ----
   b.npc("grumm", 9, 26, 2);

@@ -4315,10 +4315,10 @@
    "shadow": "character"
   },
   "sign_post": {
-   "file": "props/decorations_medieval.png",
+   "file": "props/sign_post.png",
    "rect": [
-    193,
-    128,
+    0,
+    0,
     30,
     32
    ],
@@ -4334,8 +4334,7 @@
     15,
     9
    ],
-   "labelNote": "Arrow board (~30x10 px) is too small for text: draw the destination label on a small plate centred horizontally on labelAnchor, just above the sign (e.g. bottom of plate at labelAnchor.y - 6).",
-   "shadow": "character"
+   "labelNote": "Arrow board (~30x10 px) is too small for text: draw the destination label on a small plate centred horizontally on labelAnchor, just above the sign (e.g. bottom of plate at labelAnchor.y - 6)."
   },
   "well": {
    "file": "props/decorations_medieval.png",
@@ -4799,6 +4798,60 @@
     "w": 4,
     "h": 1
    }
+  },
+  "cave_mouth": {
+   "file": "terrain/cave_cliff.png",
+   "rect": [
+    0,
+    0,
+    96,
+    128
+   ],
+   "anchor": [
+    48,
+    128
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 4
+   },
+   "note": "cliff with the cave opening; the opening (x 3..90) spans all three footprint columns of the bottom row, where the map cuts the exit into the footprint"
+  },
+  "cliff_face": {
+   "file": "terrain/cave_cliff.png",
+   "rect": [
+    96,
+    0,
+    64,
+    128
+   ],
+   "anchor": [
+    32,
+    128
+   ],
+   "footprintTiles": {
+    "w": 2,
+    "h": 4
+   },
+   "note": "straight cliff (grass lip on top); tiles seamlessly beside cave_mouth and cliff_vines"
+  },
+  "cliff_vines": {
+   "file": "terrain/cave_cliff.png",
+   "rect": [
+    160,
+    0,
+    96,
+    128
+   ],
+   "anchor": [
+    48,
+    128
+   ],
+   "footprintTiles": {
+    "w": 3,
+    "h": 4
+   },
+   "note": "straight cliff with hanging vines"
   },
   "fireplace": {
    "file": "interior/kit.png",

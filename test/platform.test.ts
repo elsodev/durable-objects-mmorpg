@@ -24,7 +24,7 @@ describe("ws routing", () => {
   });
   it("lets guests only into home", () => {
     expect(zoneAllowed("home", true)).toBe(true);
-    for (const z of ["village", "riverside", "caves"] as const) {
+    for (const z of ["village", "riverside", "caves", "quarry"] as const) {
       expect(zoneAllowed(z, true)).toBe(false);
       expect(zoneAllowed(z, false)).toBe(true);
     }

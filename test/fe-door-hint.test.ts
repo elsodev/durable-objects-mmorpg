@@ -24,4 +24,13 @@ describe("door hints", () => {
     expect(doorHintAt(village, village.spawns.default!)).toBeNull();
     expect(doorHintAt(getMap("riverside"), getMap("riverside").spawns.default!)).toBeNull();
   });
+
+  it("invites you into the cave mouth and shows the way back out", () => {
+    const quarry = getMap("quarry");
+    const caves = getMap("caves");
+    expect(doorHintAt(quarry, quarry.spawns.from_caves!)?.text).toBe("Enter the Caves");
+    expect(doorHintAt(quarry, quarry.spawns.from_village!)).toBeNull();
+    const out = caves.exits.find((e) => e.to === "quarry")!;
+    expect(doorHintAt(caves, { x: out.x + 1, y: out.y - 0.5 })?.text).toBe("Exit to Quarry");
+  });
 });

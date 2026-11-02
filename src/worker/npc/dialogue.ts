@@ -84,7 +84,7 @@ const WEEKDAY_NAME: Record<Weekday, string> = {
   Fri: "Friday",
   Sat: "Saturday",
 };
-const OUTDOOR_NAME: Record<string, string> = { village: "the village", riverside: "the riverside", caves: "the caves" };
+const OUTDOOR_NAME: Record<string, string> = { village: "the village", riverside: "the riverside", caves: "the caves", quarry: "the quarry" };
 const ROOM_NAME: Record<string, string> = { int_townhall: "the town hall", int_inn: "the inn", int_smithy: "the smithy" };
 
 /** Plain place name for a zone ("the inn", "Bram's house"). */

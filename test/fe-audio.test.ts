@@ -62,6 +62,10 @@ describe("musicKeyForZone", () => {
   it("uses the title track when there is no zone", () => expect(musicKeyForZone(null, music)).toBe("title"));
   it("uses the zone's track", () => expect(musicKeyForZone("caves", music)).toBe("caves"));
   it("returns null for a zone with no track", () => expect(musicKeyForZone("riverside", music)).toBeNull());
+  it("lets the quarry borrow the open-air track", () => {
+    expect(musicKeyForZone("quarry", { ...music, riverside: {} })).toBe("riverside");
+    expect(musicKeyForZone("quarry", { ...music, village: {} })).toBe("village");
+  });
 });
 
 describe("pickVariant", () => {

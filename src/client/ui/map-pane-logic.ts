@@ -2,7 +2,7 @@
 import { isInteriorZone, type ZoneId } from "../../shared/types";
 
 export interface MapRow {
-  id: "home" | "village" | "riverside" | "caves";
+  id: "home" | "village" | "riverside" | "quarry" | "caves";
   name: string;
   desc: string;
   here: boolean;
@@ -14,6 +14,7 @@ const PLACES: readonly Omit<MapRow, "here">[] = [
   { id: "home", name: "Your farm", desc: "Your fields, your house and the mailbox." },
   { id: "village", name: "Village", desc: "Town hall, inn, smithy, market and the villagers' cottages." },
   { id: "riverside", name: "Riverside", desc: "The river, the dock and the fishing spots." },
+  { id: "quarry", name: "Quarry", desc: "The cliffs east of the village and the cave mouth." },
   { id: "caves", name: "Caves", desc: "Ore, gems, treasure chests and monsters." },
 ];
 

@@ -13,6 +13,7 @@ const ZONE_LABELS: Record<string, string> = {
   village: "Village",
   riverside: "Riverside",
   caves: "Caves",
+  quarry: "Quarry",
   home: "At home",
 };
 

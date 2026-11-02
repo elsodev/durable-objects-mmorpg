@@ -7,12 +7,13 @@ import { isFarmable } from "../src/shared/engine";
 import { BUILDING_DOORS } from "../src/shared/maps/interiors";
 import { BLOCKING_GROUND, Ground, INTERIOR_ZONES, type MapData, type MapId, type ZoneId } from "../src/shared/types";
 
-const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", ...INTERIOR_ZONES];
+const ZONES: MapId[] = ["home", "home_in", "village", "riverside", "caves", "quarry", ...INTERIOR_ZONES];
 const SIZES: Partial<Record<MapId, [number, number]>> = {
   home: [40, 30],
   village: [64, 48],
   riverside: [80, 40],
   caves: [72, 56],
+  quarry: [40, 30],
 };
 const NPC_HOMES: Record<string, ZoneId> = {
   bram: "village",

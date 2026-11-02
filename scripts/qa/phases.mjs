@@ -273,7 +273,8 @@ async function goVillage(page) {
   const s = await state(page);
   if (s.zone === "village") return;
   if (s.zone === "riverside") { await walk(page, 39.5, 1.5, "to riverside exit", 40000); await moveInto(page, 39.5, 0.4, "village"); return; }
-  if (s.zone === "caves") { await walk(page, 3.5, 27.5, "to caves exit", 40000); await moveInto(page, 0.4, 27.5, "village"); return; }
+  if (s.zone === "caves") { await walk(page, 10.5, 39.5, "to caves exit", 40000); await moveInto(page, 10.5, 41.5, "quarry"); }
+  if ((await state(page)).zone === "quarry") { await walk(page, 1.5, 15.5, "to quarry exit", 40000); await moveInto(page, 0.4, 15.5, "village"); return; }
   if (s.zone.startsWith("int_")) throw new Error("goVillage from " + s.zone);
   await goHome(page);
   await walk(page, 38.5, 12.5, "to village exit", 40000);
@@ -516,8 +517,11 @@ async function fight(page, item, max = 12, near = null) {
 // ---------------------------------------------------------------- 5. combat
 async function goCaves(page) {
   await goVillage(page);
-  await walk(page, 61.5, 23.5, "to caves exit", 40000);
-  await moveInto(page, 63.4, 23.5, "caves");
+  await walk(page, 61.5, 23.5, "to quarry exit", 40000);
+  await moveInto(page, 63.4, 23.5, "quarry");
+  // Up the road to the cave mouth in the cliff, and in.
+  await walk(page, 26.5, 7.5, "to the cave mouth", 40000);
+  await moveInto(page, 26.5, 5.5, "caves");
 }
 const groundOf = (page) => page.evaluate(() => { const g = {}; for (const m of window.__msgs) { if (m.t === "welcome") { for (const k of Object.keys(g)) delete g[k]; for (const x of m.ground ?? []) g[x.id] = x; } if (m.t === "ground") { for (const x of m.upd) g[x.id] = x; for (const d of m.del) delete g[d]; } } return Object.values(g); });
 /** Round trip of an emote echo: the baseline delay for anything the server sends back at once. */

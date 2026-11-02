@@ -324,8 +324,10 @@ async function main() {
     await shot(pb, "68-riverside-monsters");
     await walk(pb, 39.5, 1.5, "B back to exit", 40000);
     await page_moveInto(pb, 39.5, 0.4, "village");
-    await walk(pb, 61.5, 23.5, "B to caves exit", 40000);
-    await page_moveInto(pb, 63.4, 23.5, "caves");
+    await walk(pb, 61.5, 23.5, "B to quarry exit", 40000);
+    await page_moveInto(pb, 63.4, 23.5, "quarry");
+    await walk(pb, 26.5, 7.5, "B to the cave mouth", 40000);
+    await page_moveInto(pb, 26.5, 5.5, "caves");
     await wait(pb, 1500);
     const cm = (await state(pb)).ents.filter((e) => e.kind === "monster");
     if (cm[0]) { await walk(pb, cm[0].x - 4, cm[0].y, "B toward cave monster", 30000, true); await wait(pb, 800); }

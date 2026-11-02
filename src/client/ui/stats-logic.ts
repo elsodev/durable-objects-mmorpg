@@ -8,7 +8,7 @@ export interface StatRow {
   value: string;
 }
 
-const OUTDOOR_LABEL: Record<string, string> = { village: "village", riverside: "riverside", caves: "caves", home: "home" };
+const OUTDOOR_LABEL: Record<string, string> = { village: "village", riverside: "riverside", caves: "caves", quarry: "quarry", home: "home" };
 
 /** "in the village", "in the inn", "in Pip's house". */
 function zonePhrase(zone: ZoneId): string {

@@ -368,6 +368,23 @@ function ladder(): PixelGrid {
   return g;
 }
 
+/** Rock face with a grass lip, optionally with a dark cave opening in its lower part. */
+function cliff(wTiles: number, mouth: boolean): PixelGrid {
+  const g = canvas(wTiles, 4, 0);
+  const w = wTiles * T;
+  const rock = 0x7f4c31;
+  g.rect(0, 0, w, 12, P.grass);
+  g.rect(0, 12, w, 4, shade(rock, -0.35));
+  g.rect(0, 16, w, 4 * T - 16, rock);
+  for (let y = 24; y < 4 * T; y += 10) g.hline(0, y + ((y / 10) % 2) * 3, w, shade(rock, -0.2));
+  g.rect(0, 4 * T - 4, w, 4, P.grass);
+  if (mouth) {
+    g.rect(3, 48, w - 6, 4 * T - 48, 0x2e1f1c);
+    g.ellipse(w / 2, 48, w / 2 - 3, 18, 0x2e1f1c);
+  }
+  return g;
+}
+
 function mineCart(): PixelGrid {
   const g = canvas(2, 1, 20); // 64 x 52
   // Rails.
@@ -516,6 +533,9 @@ const DRAWERS: Record<OutdoorPropType, Drawer> = {
   lantern_post: lanternPost,
   sign_post: signPost,
   ladder,
+  cave_mouth: () => cliff(3, true),
+  cliff_face: () => cliff(2, false),
+  cliff_vines: () => cliff(3, false),
   mine_cart: mineCart,
   campfire,
   cottage,

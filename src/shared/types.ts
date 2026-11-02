@@ -5,9 +5,9 @@ export const TILE_PX = 16;
 export const TICK_HZ = 10;
 export const TICK_MS = 1000 / TICK_HZ;
 
-/** Outdoor shared maps. */
-export type OutdoorZoneId = "village" | "riverside" | "caves";
-export const OUTDOOR_ZONES: OutdoorZoneId[] = ["village", "riverside", "caves"];
+/** Shared maps (outdoors, plus the caves). The quarry is the outdoor approach to the cave mouth. */
+export type OutdoorZoneId = "village" | "riverside" | "caves" | "quarry";
+export const OUTDOOR_ZONES: OutdoorZoneId[] = ["village", "riverside", "caves", "quarry"];
 /**
  * Building interiors: public shared rooms behind the village doors (maps in shared/maps/interiors).
  * Houses are named after the villager who lives there.

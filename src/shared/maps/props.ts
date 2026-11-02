@@ -34,6 +34,13 @@ export const PROP_FOOTPRINTS = {
   bridge_broken: { w: 4, h: 3 },
   lantern_post: { w: 1, h: 1 },
   ladder: { w: 1, h: 1 },
+  /**
+   * Quarry cliff, lip to foot (the whole face blocks). Pieces line up side by side into one wall;
+   * the cave mouth's bottom row is cut back out of its footprint by the exit into the caves.
+   */
+  cave_mouth: { w: 3, h: 4 },
+  cliff_face: { w: 2, h: 4 },
+  cliff_vines: { w: 3, h: 4 },
   mine_cart: { w: 2, h: 1 },
   campfire: { w: 1, h: 1 },
   /** Signpost beside an exit; its MapProp.label names where the exit leads. */

@@ -91,12 +91,14 @@ export function musicKeyForZone(zone: string | null, music: Readonly<Record<stri
   const has = (k: string) => Object.prototype.hasOwnProperty.call(music, k);
   const key = zone ?? "title";
   if (has(key)) return key;
-  // Interiors borrow a track: the inn gets the lively one, homes the cosy one, the rest the village's.
-  for (const k of interiorMusic(key)) if (has(k)) return k;
+  // Places without a track of their own borrow one: the inn gets the lively one, homes the cosy
+  // one, the quarry the open-air riverside one, the rest the village's.
+  for (const k of borrowedMusic(key)) if (has(k)) return k;
   return null;
 }
 
-function interiorMusic(zone: string): string[] {
+function borrowedMusic(zone: string): string[] {
+  if (zone === "quarry") return ["riverside", "village"];
   if (!zone.startsWith("int_")) return [];
   if (zone === "int_inn") return ["festival", "village"];
   if (zone.startsWith("int_house_")) return ["home", "village"];

@@ -68,7 +68,7 @@ describe("planTile", () => {
     expect(planTile(mapOf([" "]), 0, 0).base).toBeNull();
   });
   it("plans every tile of the real maps without throwing", () => {
-    for (const zone of ["home", "village", "riverside", "caves"] as const) {
+    for (const zone of ["home", "village", "riverside", "caves", "quarry"] as const) {
       const m = getMap(zone);
       for (let y = 0; y < m.height; y++) for (let x = 0; x < m.width; x++) {
         planTile(m, x, y);

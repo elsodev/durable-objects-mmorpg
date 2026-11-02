@@ -15,7 +15,7 @@ A cozy multiplayer farming game set in the valley of Mossbrook, with light monst
 - Your own home farm: till, plant, water and harvest over 20 crops that grow in real time (skip a day of watering and they wilt; three dry days and they die). Common seeds come from the market, rarer ones from monsters, and the rarest from villager friends. Decorate with furniture and fences
 - Silver and gold crops: your farming level grows with every harvest and raises the odds, some crops give extras, and each harvest is rolled from a fixed seed (owner, day, tile) so retrying can't reroll it. Rules live in `src/shared/engine/harvest.ts`
 - Tools land mid-swing: the soil, chips or splash show at the tool's impact frame for you and for anyone watching (timings in `src/shared/engine/toolTiming.ts`)
-- Shared zones (village, riverside, caves) with other players, chat, shops and village goals everyone contributes to
+- Shared zones (village, riverside, the quarry and its caves) with other players, chat, shops and village goals everyone contributes to
 - Mining in the caves: stone, copper, iron, silver, gold, gem crystal and diamond rocks. Gold and diamond rocks are very rare (about 3% and 0.6% of cave rocks), sit mostly on the deepest floor, need the iron pickaxe and take 6 and 8 hits. Ship any stone, ore, gem, forage, fish or material in your shipping bin at its full value, or sell ore to the smith on the spot for 60% of it. Ore tiers live in `src/shared/engine/rockOres.ts`
 - Mining, tree chopping and light combat against slimes, bats and rock crabs: rocks and trees take several hits, trees fall to stumps and regrow, and every tool can hit monsters (swords hit hardest). Tool rules live in `src/shared/engine/toolRules.ts`
 - Ten villagers who chat and react. Their decisions come from rules, optionally TypeSafe Jev, with lines from Workers AI
@@ -213,7 +213,7 @@ All art is Liberated Pixel Cup (LPC) style, under CC-BY-SA 3.0, GPL 3.0 or 2.0, 
 
 Ore rocks and icons (stone, copper, iron, silver, gold, and the gem and diamond rocks recoloured from the silver sheet) are BlueCarrot16's "LPC Ore and Forge", recoloured by Eliza Wyatt (OGA-BY 3.0, https://opengameart.org/content/lpc-ore-and-forge).
 
-The village houses are Eliza Wyatt's LPC Brick House A/B and Paneled House A (OGA-BY 3.0), recoloured by script with colours from her Roofing and Walls sheets, some mirrored or widened, with her Brick Chimney A and flower boxes from her flowers sheet. The pond's lily pads and reeds come from her plants_summer sheet, and the benches from the decorations-medieval sheet.
+The village houses are Eliza Wyatt's LPC Brick House A/B and Paneled House A (OGA-BY 3.0), recoloured by script with colours from her Roofing and Walls sheets, some mirrored or widened, with her Brick Chimney A and flower boxes from her flowers sheet. The pond's lily pads and reeds come from her plants_summer sheet, and the benches from the decorations-medieval sheet. The quarry's cliff and cave mouth are cut from her cliff_summer sheet (with Lanea Zimmerman's grass), and the signpost from the decorations-medieval sheet with its painted shadow removed.
 
 Some art is our own drawing, released as CC0: the emotes, the log walls, the doormat, the mine cart, the light glows, the flower-box planters, and a few icons.
 

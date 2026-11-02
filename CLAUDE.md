@@ -5,7 +5,7 @@ Cozy multiplayer farming game with light monster hunting and mining, running on 
 ## Architecture
 
 - **Worker** (`src/worker/index.ts`) is the only entry point: Better Auth at `/api/auth/*`, `/api/me`, uploads at `/api/uploads`, R2 files at `/files/*`, WebSockets at `/ws/:zone`, and the static client for everything else.
-- **ZoneRoom** Durable Object (`src/worker/zone.ts`): one per shared map (`village`, `riverside`, `caves`). Authoritative tick loop at 10 Hz, players, NPCs, monsters, rocks, shops, village goals.
+- **ZoneRoom** Durable Object (`src/worker/zone.ts`): one per shared map (`village`, `quarry`, `riverside`, `caves`). Authoritative tick loop at 10 Hz, players, NPCs, monsters, rocks, shops, village goals.
 - **HomeRoom** Durable Object (`src/worker/home.ts`): one per player (`idFromName(userId)`). The player's save file (inventory, coins, hp, farm tiles, placed objects) and their private home map. Zones load and save players through its RPC methods.
 - **SocialRoom** Durable Object (`src/worker/social/room.ts`): one global instance behind `/ws/social`. World chat, whispers by name, presence (ZoneRoom/HomeRoom report joins/leaves via `presence()`), "today" stats (`recordStat()`), and `notify(userId, payload)` / `presenceOf(ids)` for other Durable Objects. Call it fire-and-forget through `src/worker/social/hooks.ts`.
 - **NpcAgent** Durable Object (`src/worker/npc/think/agent.ts`, Cloudflare Project Think `@cloudflare/think`): one per (NPC, player), `idFromName("<npcId>:<userId>")`. Holds only that pair's memory and transcript, so an NPC never knows about other players. Its tools return intents; ZoneRoom validates and applies them. Personas live in `src/worker/npc/bible.ts`.
