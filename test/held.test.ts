@@ -27,6 +27,8 @@ describe("held item selection", () => {
   it("holds tools and weapons only", () => {
     for (const t of ["hoe", "watering_can", "pickaxe", "pickaxe_iron", "axe", "sword_wood", "sword_copper"]) expect(isHoldable(t), t).toBe(true);
     for (const t of ["seed_turnip", "chair_wood", "turnip", "copper_ore", "nope", "", null, undefined]) expect(isHoldable(t), String(t)).toBe(false);
+    // Prepared food rides in the hand, ready to eat.
+    for (const t of ["bread_roll", "coffee"]) expect(isHoldable(t), t).toBe(true);
   });
 
   it("reads the hotbar slot of the given inventory", () => {

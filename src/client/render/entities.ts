@@ -1,5 +1,6 @@
 // Players, NPCs and monsters: one pooled Container per entity (ground shadow + body sprite),
 // y-sorted in layers.sorted, animated by facing/moving with manual frame stepping.
+import { getItem } from "../../shared/items";
 import { ColorMatrixFilter, Container, Graphics, GraphicsContext, Sprite } from "pixi.js";
 import type { AnimalPose, Art, CharacterArt, CreateEntityLayer, EntityLayer, HeldArt, Layers } from "../contracts";
 import { SCALE, TILE } from "../contracts";
@@ -13,7 +14,7 @@ import { heldFrameIndex, heldToShow } from "./held-logic";
 import { createPoseLayer } from "./poses";
 import { createDashFx } from "./dash-fx";
 import { createFoodHand } from "./food-in-hand";
-import { strideFrame, strideRate } from "./dash-logic";
+import { isFootStrike, strideFrame, strideRate } from "./dash-logic";
 import { createHaloArt, makeHalo, updateHalo, type Halo } from "./halo";
 import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFps, type EntityProfile } from "./entityProfile";
 
@@ -73,6 +74,10 @@ interface Rec {
   /** Monster pose act (slime crouch / leap) and when it was first seen. */
   poseKey: string;
   poseStart: number;
+  /** Walk frame last drawn (-1 when not walking), to catch the frame a foot lands on. */
+  stepFrame: number;
+  /** A foot landed since footstepOf() last asked. */
+  stepped: boolean;
   /** Admin halo (EntityState.admin), built the first time this record draws an admin. */
   halo: Halo | null;
 }
@@ -278,6 +283,8 @@ export const createEntityLayer = ((
         poseKey: "",
         poseStart: 0,
         halo: null,
+        stepFrame: -1,
+        stepped: false,
       };
     }
     rec.id = s.id;
@@ -294,6 +301,8 @@ export const createEntityLayer = ((
     rec.deathT = -1;
     rec.poseKey = s.act ? `${s.act.k}:${s.act.at}` : "";
     rec.poseStart = -Infinity;
+    rec.stepFrame = -1;
+    rec.stepped = false;
     rec.body.alpha = 1;
     rec.removing = false;
     rec.body.filters = null;
@@ -331,6 +340,12 @@ export const createEntityLayer = ((
     const frames = c.walk[s.facing] ?? c.walk.down;
     const walkIndex = animating && frames.length > 0 ? strideFrame(rec.stride, frames.length, s.moving ? s.pace : undefined) : 0;
     const tex = animating && frames.length > 0 ? frames[walkIndex] : c.idle[s.facing] ?? c.idle.down;
+    // Footsteps follow the art: a step sounds on the frames where a foot touches the ground, so
+    // the sound keeps time with walking, dashing and the slow tired shuffle alike.
+    if (animating && s.moving && frames.length > 2) {
+      if (walkIndex !== rec.stepFrame && isFootStrike(walkIndex, frames.length)) rec.stepped = true;
+      rec.stepFrame = walkIndex;
+    } else rec.stepFrame = -1;
     const now = performance.now();
     let acting = false;
     if (seated) {
@@ -379,9 +394,13 @@ export const createEntityLayer = ((
     const posed = seated ? { posed: false } : poses.draw(rec, s, c, now);
     // A dash leans and bobs the walking body; the held tool copies it just below.
     dash.apply(rec, acting || posed.posed || seated ? { ...s, moving: false } : s, walkIndex, frames.length, now);
-    drawHeld(rec, s, heldToShow(s, { acting: acting || posed.posed, seated, dying: rec.deathT >= 0 }), walkIndex);
+    const shown = heldToShow(s, { acting: acting || posed.posed, seated, dying: rec.deathT >= 0 });
+    drawHeld(rec, s, shown, walkIndex);
     const eating = acting && !seated && s.act?.k === "eat" && rec.actKey === `${s.act.k}:${s.act.at}`;
-    foodHand.draw(rec.food, rec.body, s, eating ? now - rec.actStart : null);
+    // Eating plays the bites; otherwise selected food rides in the hand, ready to eat.
+    if (!foodHand.draw(rec.food, rec.body, s, eating ? now - rec.actStart : null)) {
+      foodHand.carry(rec.food, rec.body, s, shown && getItem(shown)?.kind === "food" ? shown : null);
+    }
 
     // Higher off the ground = smaller, fainter shadow.
     const height = lift / (TILE * 0.75);
@@ -461,6 +480,12 @@ export const createEntityLayer = ((
       return rec && !rec.removing ? rec.head : null;
     },
 
+    footstepOf(id) {
+      const rec = live.get(id);
+      if (!rec?.stepped) return false;
+      rec.stepped = false;
+      return true;
+    },
     foodOf(id) {
       const rec = live.get(id);
       if (!rec || rec.removing || !rec.food.visible) return null;

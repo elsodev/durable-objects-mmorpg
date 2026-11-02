@@ -123,8 +123,8 @@ export function pitchFor(rand: () => number, spread = 0.04): number {
 /** Minimum gap between two plays of the same sfx key, in ms. */
 export const MIN_GAP_MS: Readonly<Record<string, number>> = {
   ui_hover: 60,
-  step_grass: 200,
-  step_stone: 200,
+  step_grass: 110,
+  step_stone: 110,
   npc_talk: 120,
   error: 150,
 };
@@ -147,7 +147,8 @@ export class Throttle {
   }
 }
 
-export const FOOTSTEP_INTERVAL_MS = 280;
+// Steps are timed by the walk art; this only guards against a double hit on a frame hiccup.
+export const FOOTSTEP_INTERVAL_MS = 120;
 
 /** Footstep sfx for a ground kind: hard surfaces click, everything else rustles. */
 export function footstepKey(groundKind: string): "step_grass" | "step_stone" {

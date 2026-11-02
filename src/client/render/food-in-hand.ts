@@ -6,7 +6,7 @@ import { Rectangle, Sprite, Texture } from "pixi.js";
 import type { Art } from "../contracts";
 import type { EntityState, ItemId } from "../../shared/types";
 import { getItem } from "../../shared/items";
-import { biteMask, foodPose, mouthSide, type Box, type Tip } from "./eat-logic";
+import { biteMask, carryPose, foodPose, mouthSide, type Box, type Tip } from "./eat-logic";
 
 /** Shadows and glows under icons are fainter than this; they'd float under a hand. */
 const SOLID_ALPHA = 128;
@@ -17,6 +17,8 @@ export interface FoodHand {
    * with `body` (same anchor point, scale and alpha). Returns true while it's drawn.
    */
   draw(sprite: Sprite, body: Sprite, s: EntityState, ageMs: number | null): boolean;
+  /** Shows selected food (`item`) carried at the side, lined up with `body`. False when hidden. */
+  carry(sprite: Sprite, body: Sprite, s: EntityState, item: ItemId | null): boolean;
   destroy(): void;
 }
 
@@ -123,6 +125,22 @@ export function createFoodHand(art: Art): FoodHand {
       // The body sprite is anchored on the feet point; the grip is in source px at its scale.
       sprite.position.set(body.position.x + pose.dx * Math.abs(body.scale.x), body.position.y + pose.dy * Math.abs(body.scale.y));
       sprite.rotation = pose.tilt;
+      sprite.scale.set(1);
+      sprite.alpha = body.alpha;
+      sprite.visible = true;
+      return true;
+    },
+    carry(sprite, body, s, item) {
+      const pose = item ? carryPose(s.facing) : null;
+      const tex = pose?.visible ? cut(item!, 0, mouthSide(s.facing)) : null;
+      if (!pose || !tex) {
+        sprite.visible = false;
+        return false;
+      }
+      if (sprite.texture !== tex) sprite.texture = tex;
+      sprite.anchor.set(0.5);
+      sprite.position.set(body.position.x + pose.dx * Math.abs(body.scale.x), body.position.y + pose.dy * Math.abs(body.scale.y));
+      sprite.rotation = 0;
       sprite.scale.set(1);
       sprite.alpha = body.alpha;
       sprite.visible = true;

@@ -8,13 +8,14 @@ import type { Inventory, ItemId } from "./types";
 export const HOTBAR_SIZE = 8;
 
 /**
- * Tools and weapons are drawn in the hand; seeds, crops and furniture are not. Carried tools
+ * Tools, weapons and prepared food are drawn in the hand; seeds, crops and furniture are not. Carried tools
  * that are never swung (the flashlight) have no `tool` kind and stay in the bag.
  */
 export function isHoldable(item: ItemId | null | undefined): boolean {
   if (!item) return false;
   const def = getItem(item);
-  return def?.kind === "tool" && def.tool !== undefined;
+  // Prepared food (bakery and inn dishes) is carried in the hand too, ready to eat.
+  return (def?.kind === "tool" && def.tool !== undefined) || def?.kind === "food";
 }
 
 /** The item drawn in the hand for hotbar `slot` of `inv`, or undefined when there is none. */

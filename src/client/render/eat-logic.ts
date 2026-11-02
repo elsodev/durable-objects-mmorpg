@@ -134,3 +134,20 @@ export function biteMask(w: number, h: number, box: Box, bites: number, side: 1 
   }
   return out;
 }
+
+/**
+ * Food carried in the hand while it's selected (not eating): the fist at the side, per facing, in
+ * source px of the 64 px walk frame. Facing up the body hides it. `bob` lifts it with the
+ * walk cycle's body bob so it rides each step.
+ */
+const CARRY: Readonly<Record<Exclude<Facing, "up">, { x: number; y: number }>> = {
+  down: { x: 22, y: 46 },
+  left: { x: 29, y: 46 },
+  right: { x: 35, y: 46 },
+};
+
+export function carryPose(facing: Facing, bob = 0): { dx: number; dy: number; visible: boolean } {
+  if (facing === "up") return { dx: 0, dy: 0, visible: false };
+  const g = CARRY[facing];
+  return { dx: g.x - FEET.x, dy: g.y - FEET.y - bob, visible: true };
+}

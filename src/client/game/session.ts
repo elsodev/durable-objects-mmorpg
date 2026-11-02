@@ -1659,6 +1659,9 @@ export async function startSession(
         if (store.zone === "home") break;
         const npc = nearestNpc(me, store.sample(performance.now()));
         const pet = npc ? null : nearestAnimal(me, store.sample(performance.now()), ANIMAL_REACH);
+        // Prepared food is for eating: Q eats it even with a villager beside you.
+        const selected = store.inventory.slots[selectedSlot]?.item;
+        if (selected && getItem(selected)?.kind === "food" && edibleSelected()) return eatSelected();
         if (!npc && !pet && edibleSelected()) return eatSelected();
         if (pet) {
           if (!store.inventory.slots[selectedSlot]) return notice("Pick some food in your hotbar first.", "error");
@@ -1900,8 +1903,8 @@ export async function startSession(
     editMode.update(dt);
     const focus = editMode.focus() ?? me;
     if (focus) camera.follow(focus.x, focus.y);
-    // The audio module rate-limits steps itself, so calling every moving frame is fine.
-    if (me?.moving) footstep(groundNameAt(me.x, me.y));
+    // A step sounds when the walk art puts a foot down, so it matches walking, dashing and tired.
+    if (me && world.entities.footstepOf?.(me.id)) footstep(groundNameAt(me.x, me.y));
     combatSfx.frame(states, me, performance.now());
     camera.update(dt);
     world.effects.update(dt, me ? { x: me.x, y: me.y } : null);
