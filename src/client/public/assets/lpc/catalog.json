@@ -4387,22 +4387,42 @@
    "note": "own-made overlay: the cottage's window panes lit warm (only the panes are opaque); drawn over the cottage at night"
   },
   "fountain": {
-   "file": "props/fountain_a.png",
+   "file": "props/decorations_medieval.png",
    "rect": [
     0,
-    0,
+    516,
     64,
-    82
+    60
    ],
    "anchor": [
     32,
-    80
+    59
    ],
    "footprintTiles": {
     "w": 2,
-    "h": 2
+    "h": 1
    },
-   "shadow": "medium"
+   "frames": [
+    [
+     0,
+     516,
+     64,
+     60
+    ],
+    [
+     64,
+     516,
+     64,
+     60
+    ],
+    [
+     128,
+     516,
+     64,
+     60
+    ]
+   ],
+   "note": "stone village fountain on dry ground (3 water frames); its shadow is in the art"
   },
   "notice_board": {
    "file": "props/decorations_medieval.png",

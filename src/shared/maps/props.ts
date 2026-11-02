@@ -22,7 +22,8 @@ export const PROP_FOOTPRINTS = {
   inn: { w: 8, h: 5 },
   blacksmith: { w: 6, h: 4 },
   market_stall: { w: 3, h: 2 },
-  fountain: { w: 3, h: 3 },
+  // Only the stone basin blocks; its spout is drawn over whoever walks behind it.
+  fountain: { w: 2, h: 1 },
   notice_board: { w: 2, h: 1 },
   well: { w: 2, h: 2 },
   shipping_bin: { w: 2, h: 1 },

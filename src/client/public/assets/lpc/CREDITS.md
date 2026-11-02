@@ -573,12 +573,6 @@ Derived: ElizaWy Wood Bridge A with planks removed.
 - Source: https://github.com/ElizaWy/LPC (Objects/Small Items/); https://opengameart.org/content/lpc-dungeon-elements; https://opengameart.org/content/lpc-woodshop
 - Notes: Fire, Camp and Buckets: Sharm + Eliza Wyatt; Lumber: BlueCarrot16 + Eliza Wyatt.
 
-### props/fountain_a.png
-- Authors: Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling)
-- License: **OGA-BY 3.0**
-- Source: https://github.com/ElizaWy/LPC (Structure/Misc/Fountain A.png); https://opengameart.org/content/lpc-arabic-elements
-- Notes: Original by Lanea Zimmerman; recolors by Eliza Wyatt.
-
 ### props/ladder.png
 - Authors: Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**

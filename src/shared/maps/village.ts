@@ -49,7 +49,7 @@ export function buildVillage(): MapData {
   b.path([{ x: 52, y: 40 }, { x: 52, y: 42 }, { x: 50, y: 42 }], 2);
 
   // ---- square furniture ----
-  b.prop("fountain", 30, 19, { id: "fountain" });
+  b.prop("fountain", 31, 21, { id: "fountain" });
   b.prop("notice_board", 35, 18, { id: "notice_board" });
   for (const [x, y] of [[24, 17], [39, 17], [24, 30], [39, 30]] as const) b.prop("lantern_post", x, y);
   // Benches on the north side of the square, looking out over it.
@@ -59,11 +59,11 @@ export function buildVillage(): MapData {
   b.prop("bench_right", 38, 18, { id: "bench_square_4" });
   // Where villagers stand about on the square: round the fountain (facing it, so two of them
   // chat across it), by the notice board, at the well, browsing the stalls.
-  b.hangout("fountain", 29, 20, "right");
-  b.hangout("fountain", 33, 20, "left");
-  b.hangout("fountain", 30, 22, "up");
+  b.hangout("fountain", 30, 21, "right");
+  b.hangout("fountain", 33, 21, "left");
+  b.hangout("fountain", 31, 22, "up");
   b.hangout("fountain", 32, 22, "up");
-  b.hangout("fountain", 31, 18, "down");
+  b.hangout("fountain", 32, 19, "down");
   b.hangout("notice", 35, 19, "up");
   b.hangout("well", 21, 29, "up");
   b.hangout("market", 43, 20, "up");

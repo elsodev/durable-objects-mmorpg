@@ -7,8 +7,6 @@ export const MAX_LOG_LINES = 100;
 export const MAX_NAME_LEN = 32;
 /** Log fades after this long without new lines or interaction. */
 export const IDLE_FADE_MS = 10_000;
-/** Within this many px of the bottom counts as "following" the log. */
-export const STICK_PX = 24;
 
 /** Stable hue (0..359) for a name, so each speaker keeps one color. FNV-1a. */
 export function nameHue(name: string): number {

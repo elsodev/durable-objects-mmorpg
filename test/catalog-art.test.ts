@@ -223,6 +223,7 @@ const PROP_NEIGHBOURS: Readonly<Record<string, string>> = {
   fence_deco: "fence pieces tile vertically",
   crate: "crates packed on every side",
   hay_bale: "the next bale's strap touches the right edge",
+  fountain: "the second fountain set starts right below the first",
   bush: "bushes packed below and right",
   dock: "dock planks tile",
   cliff_face: "cliff tiles join",

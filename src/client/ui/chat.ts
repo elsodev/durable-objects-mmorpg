@@ -15,7 +15,6 @@ import {
   nameColor,
   outgoingText,
   placeholderFor,
-  STICK_PX,
   TAB_LABELS,
   unreadTabs,
   cycleTab,
@@ -150,6 +149,13 @@ export const createChat: CreateChat = (root, opts) => {
   const refreshPlaceholder = () => {
     input.placeholder = placeholderFor(tab, isGuest());
   };
+
+  const toBottom = (): void => {
+    log.scrollTop = log.scrollHeight;
+    requestAnimationFrame(() => (log.scrollTop = log.scrollHeight));
+  };
+  // The log grows and shrinks as the box wakes and idles; keep the newest line in view.
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => (log.scrollTop = log.scrollHeight)).observe(log);
 
   function selectTab(t: ChatTab): void {
     tab = t;
@@ -399,7 +405,6 @@ export const createChat: CreateChat = (root, opts) => {
     const line = displayLine(name, text);
     if (!line.text) return;
     const channel: ChatChannel = lineOpts.channel ?? (kind === "system" ? "system" : "zone");
-    const stick = log.scrollHeight - log.scrollTop - log.clientHeight <= STICK_PX;
 
     const el = document.createElement("div");
     el.className = `chat-line chat-${kind} chat-ch-${channel}`;
@@ -430,7 +435,8 @@ export const createChat: CreateChat = (root, opts) => {
     log.appendChild(el);
 
     while (log.childElementCount > MAX_LOG_LINES) log.firstElementChild?.remove();
-    if (stick) log.scrollTop = log.scrollHeight;
+    // New text always shows: jump to the newest line, and again once layout settles.
+    toBottom();
     for (const t of unreadTabs(tab, channel)) tabEls.get(t)?.classList.add("unread");
     if (lineVisible(tab, channel)) wake();
   };
