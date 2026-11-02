@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import catalog from "../src/client/public/assets/lpc/catalog.json";
-import { LIE, puddleAt, puddleOffset, streamPlacement, ZZZ_LIFE_MS, zzzAt } from "../src/client/render/pose-logic";
+import { breathAt, HIP_Y, LIE, MEDITATE, MOTE_LIFE_MS, moteAt, puddleAt, puddleOffset, streamPlacement, ZZZ_LIFE_MS, zzzAt } from "../src/client/render/pose-logic";
 import { SLASH_COMMANDS } from "../src/client/ui/slash-commands";
 import { PEE_MS, PUDDLE_MS } from "../src/shared/poses";
 
@@ -46,5 +46,53 @@ describe("pose drawing", () => {
     const names = SLASH_COMMANDS.map((c) => c.name);
     expect(names).toContain("sleep");
     expect(names).toContain("piss");
+  });
+});
+
+describe("meditating", () => {
+  it("uses every look's cross-legged sit frame", async () => {
+    const custom = (await import("../src/client/public/assets/lpc/custom/custom.json")).default as {
+      actions: Record<string, { frames: string[]; hold?: boolean }>;
+      characters: Record<string, { missing: string[] }>;
+    };
+    expect(custom.actions.meditate).toMatchObject({ frames: ["sit,1"], hold: true });
+    for (const c of Object.values(custom.characters)) expect(c.missing).not.toContain("meditate");
+  });
+
+  it("breathes slowly and drops the name tag to the seated head", () => {
+    const lo = breathAt(0);
+    const hi = breathAt(MEDITATE.breathMs / 2);
+    expect(hi.glow).toBeGreaterThan(lo.glow);
+    expect(breathAt(MEDITATE.breathMs).glow).toBeCloseTo(lo.glow);
+    expect(MEDITATE.head).toBeLessThan(50);
+  });
+
+  it("motes drift up, fade in and out, and stay near the body", () => {
+    const a = moteAt(MOTE_LIFE_MS * 0.2, 3)!;
+    const b = moteAt(MOTE_LIFE_MS * 0.9, 3)!;
+    expect(b.y).toBeLessThan(a.y);
+    expect(b.alpha).toBeLessThan(a.alpha);
+    expect(moteAt(MOTE_LIFE_MS, 3)).toBeNull();
+    for (let i = 0; i < 10; i++) expect(Math.abs(moteAt(0, i)!.x)).toBeLessThanOrEqual(MEDITATE.mote.halfWidth + 2);
+  });
+
+  it("has its art and a slash command", () => {
+    const props = catalog.props as Record<string, unknown>;
+    expect(props.fx_calm_glow).toBeTruthy();
+    expect(props.fx_mote).toBeTruthy();
+    expect(SLASH_COMMANDS.some((c) => c.name === "meditate")).toBe(true);
+  });
+});
+
+describe("pee stream", () => {
+  it("starts at the hips, not the chest or face", () => {
+    for (const f of ["left", "right", "down"] as const) expect(streamPlacement(f)!.y).toBeGreaterThanOrEqual(HIP_Y);
+    expect(HIP_Y).toBeGreaterThan(-22);
+  });
+});
+
+describe("meditation motes", () => {
+  it("never rise over the face", () => {
+    for (let i = 0; i < 12; i++) expect(Math.abs(moteAt(0, i)!.x)).toBeGreaterThanOrEqual(6);
   });
 });

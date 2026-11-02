@@ -36,15 +36,21 @@ export function zzzAt(age: number, index: number): { dx: number; dy: number; fra
   };
 }
 
+/**
+ * Crotch height above the feet point in source px. LPC legs run from about y 44 to the feet at
+ * y 60 on every adult and teen body, so the stream starts there, not at the hands or chest.
+ */
+export const HIP_Y = -17;
+
 /** Pee stream placement by facing; null facing up (the body hides it). `flip` mirrors the side arc. */
 export function streamPlacement(facing: Facing): { kind: "side" | "front"; x: number; y: number; flip: boolean; front: boolean } | null {
   switch (facing) {
     case "right":
-      return { kind: "side", x: 6, y: -26, flip: false, front: true };
+      return { kind: "side", x: 7, y: HIP_Y, flip: false, front: true };
     case "left":
-      return { kind: "side", x: -6, y: -26, flip: true, front: true };
+      return { kind: "side", x: -7, y: HIP_Y, flip: true, front: true };
     case "down":
-      return { kind: "front", x: 0, y: -22, flip: false, front: true };
+      return { kind: "front", x: 0, y: HIP_Y + 1, flip: false, front: true };
     case "up":
       return null;
   }
@@ -65,7 +71,7 @@ export function puddleOffset(facing: Facing): Vec2 {
 }
 
 /** The stream's height in source px is stretched to reach the ground from the hip. */
-export const STREAM_STRETCH = 1.6;
+export const STREAM_STRETCH = 1.1;
 export const STREAM_FRAME_MS = 90;
 
 /** Puddle frame (0 small .. 2 full) and alpha `age` ms after the pee started; null once dried up. */
@@ -76,4 +82,47 @@ export function puddleAt(age: number): { frame: number; alpha: number } | null {
   const frame = age < PEE_MS * 0.3 ? 0 : age < PEE_MS * 0.7 ? 1 : 2;
   const fadeFrom = total - 3000;
   return { frame, alpha: age < fadeFrom ? 0.9 : 0.9 * (1 - (age - fadeFrom) / 3000) };
+}
+
+/**
+ * Meditating: the character's own cross-legged frame (generator sit frame 1), facing the viewer.
+ * The head sits about 14 px lower than standing, so the name tag drops with it. A soft glow
+ * pulses under them and light motes drift up past the shoulders.
+ */
+export const MEDITATE = {
+  /** Name tag height above the feet point, in source px (standing is 50). */
+  head: 36,
+  /** Glow centre, from the feet point. */
+  glow: { x: 0, y: -2 },
+  /** One full breath (glow pulse and the body's slight rise). */
+  breathMs: 3600,
+  /** Motes spawn around the body within this half width, start this high and rise this far. */
+  mote: { halfWidth: 13, y: -12, rise: 30 },
+} as const;
+
+export const MOTE_EVERY_MS = 600;
+const MOTE_LANES = [-1, 0.7, -0.7, 1] as const;
+export const MOTE_LIFE_MS = 2400;
+
+/** Glow alpha and body lift (source px) `age` ms into meditating: a slow in-and-out breath. */
+export function breathAt(age: number): { glow: number; lift: number } {
+  const f = (Math.sin((Math.max(0, age) / MEDITATE.breathMs) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+  return { glow: 0.55 + 0.4 * f, lift: Math.round(f) };
+}
+
+/**
+ * The `index`-th light mote, `age` ms after it appeared: offset from the feet point (source px),
+ * frame (small to big and back) and alpha; null once it has faded. Each mote takes a fixed side
+ * from its index, so the pattern stays the same for everyone watching.
+ */
+export function moteAt(age: number, index: number): { x: number; y: number; frame: number; alpha: number } | null {
+  if (age < 0 || age >= MOTE_LIFE_MS) return null;
+  const f = age / MOTE_LIFE_MS;
+  // Four lanes beside the body, never over the face.
+  const side = MOTE_LANES[(index * 3) % MOTE_LANES.length]!;
+  const x = Math.round(side * MEDITATE.mote.halfWidth + Math.sin(f * Math.PI * 2 + index) * 2);
+  const y = Math.round(MEDITATE.mote.y - f * MEDITATE.mote.rise);
+  const frame = f < 0.25 ? 0 : f < 0.7 ? 1 : 2;
+  const alpha = f < 0.15 ? f / 0.15 : f > 0.75 ? (1 - f) / 0.25 : 1;
+  return { x, y, frame, alpha };
 }

@@ -1,13 +1,14 @@
-// The /sleep and /piss poses (shared/poses.ts), drawn over any character without new body frames:
-// lying down turns the character's own back-view frame on its side under a quilt, so every body
-// type and outfit works; peeing is the standing frame plus a stream and a puddle. Geometry and
+// The /sleep, /meditate and /piss poses (shared/poses.ts), drawn over any character without new
+// body frames: lying down turns the character's own back-view frame on its side under a quilt,
+// meditating uses each look's own cross-legged frame, so every body type and outfit works;
+// peeing is the standing frame plus a stream and a puddle. Geometry and
 // timing are in pose-logic.ts.
 import { Container, Sprite, type Texture } from "pixi.js";
 import type { Art, CharacterArt, Layers } from "../contracts";
 import { SCALE, TILE } from "../contracts";
 import { PEE_MS } from "../../shared/poses";
 import type { EntityState } from "../../shared/types";
-import { LIE, puddleAt, puddleOffset, STREAM_FRAME_MS, STREAM_STRETCH, streamPlacement, ZZZ_EVERY_MS, ZZZ_LIFE_MS, zzzAt } from "./pose-logic";
+import { breathAt, LIE, MEDITATE, MOTE_EVERY_MS, MOTE_LIFE_MS, moteAt, puddleAt, puddleOffset, STREAM_FRAME_MS, STREAM_STRETCH, streamPlacement, ZZZ_EVERY_MS, ZZZ_LIFE_MS, zzzAt } from "./pose-logic";
 
 /** What the entity layer needs from one entity's display record. */
 export interface PoseTarget {
@@ -38,6 +39,8 @@ interface Extras {
   zzz: Sprite[];
   stream: Sprite | null;
   puddleSeen: boolean;
+  glow: Sprite | null;
+  motes: Sprite[];
 }
 
 interface Puddle {
@@ -76,7 +79,7 @@ export function createPoseLayer(art: Art, layers: Layers): PoseLayer {
     }
     t.shadow.visible = true;
     if (!e) return;
-    for (const s of [e.quilt, e.pillow, e.stream, ...e.zzz]) s?.destroy();
+    for (const s of [e.quilt, e.pillow, e.stream, e.glow, ...e.zzz, ...e.motes]) s?.destroy();
     extras.delete(t.id);
   };
 
@@ -107,13 +110,13 @@ export function createPoseLayer(art: Art, layers: Layers): PoseLayer {
       const k = act?.k;
       let e = extras.get(t.id);
       const key = act ? `${act.k}:${act.at}` : "";
-      if (!act || (k !== "lie" && k !== "pee") || (k === "lie" && s.moving)) {
+      if (!act || (k !== "lie" && k !== "pee" && k !== "meditate") || (k !== "pee" && s.moving)) {
         clear(t, c, e);
         return { posed: false };
       }
       if (!e || e.key !== key) {
         clear(t, c, e);
-        e = { key, start: now, quilt: null, pillow: null, zzz: [], stream: null, puddleSeen: false };
+        e = { key, start: now, quilt: null, pillow: null, zzz: [], stream: null, puddleSeen: false, glow: null, motes: [] };
         extras.set(t.id, e);
       }
       const age = now - e.start;
@@ -158,6 +161,44 @@ export function createPoseLayer(art: Art, layers: Layers): PoseLayer {
         return { posed: true, head: LIE.head * SCALE };
       }
 
+      if (k === "meditate") {
+        // The look's own cross-legged frame facing the viewer; standing idle while it loads.
+        const art = c.action?.("meditate");
+        t.body.texture = art?.frames.down[0] ?? c.idle.down;
+        const b = breathAt(age);
+        t.body.position.set(0, -b.lift * SCALE);
+        if (!e.glow) {
+          e.glow = sprite("fx_calm_glow");
+          if (e.glow) t.root.addChildAt(e.glow, Math.max(0, t.root.getChildIndex(t.body)));
+        }
+        if (e.glow) {
+          e.glow.position.set(MEDITATE.glow.x * SCALE, MEDITATE.glow.y * SCALE);
+          e.glow.alpha = b.glow;
+        }
+        // A new mote every MOTE_EVERY_MS, each drifting up and fading.
+        const mf = get("fx_mote")?.frames;
+        if (mf) {
+          const live = Math.ceil(MOTE_LIFE_MS / MOTE_EVERY_MS);
+          while (e.motes.length < live) {
+            const m = sprite("fx_mote");
+            if (!m) break;
+            t.root.addChild(m);
+            e.motes.push(m);
+          }
+          const newest = Math.floor(age / MOTE_EVERY_MS);
+          e.motes.forEach((m, i) => {
+            const n = newest - i;
+            const st = n >= 0 ? moteAt(age - n * MOTE_EVERY_MS, n) : null;
+            m.visible = !!st;
+            if (!st) return;
+            m.texture = mf[st.frame]!;
+            m.alpha = st.alpha;
+            m.position.set(st.x * SCALE, st.y * SCALE);
+          });
+        }
+        return { posed: true, head: MEDITATE.head * SCALE };
+      }
+
       // Pee: the idle frame of the way they face, a stream while it lasts, and a puddle that stays.
       t.body.texture = c.idle[s.facing] ?? c.idle.down;
       if (!e.puddleSeen) {
@@ -193,7 +234,7 @@ export function createPoseLayer(art: Art, layers: Layers): PoseLayer {
     release(id) {
       const e = extras.get(id);
       if (!e) return;
-      for (const s of [e.quilt, e.pillow, e.stream, ...e.zzz]) s?.destroy();
+      for (const s of [e.quilt, e.pillow, e.stream, e.glow, ...e.zzz, ...e.motes]) s?.destroy();
       extras.delete(id);
     },
 

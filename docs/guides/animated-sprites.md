@@ -108,13 +108,64 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
   3. Credit it.
   4. Check it in the browser on at least two body types, facing all four ways. A screencast (CDP `Page.startScreencast`) shows the frames more reliably than screenshots, because headless screenshots are slower than the effect.
 
-## Poses (`/sleep` and `/piss`)
+## Poses (`/sleep`, `/meditate` and `/piss`)
 
-- **No new character frames:** poses reuse each body's own sheet, so they work for every body type and look.
-  - `/sleep` takes the `idle.up` frame and rotates it to lie flat, head to the west. A pillow is drawn behind it, a quilt over it, and Z's rise from the head.
-  - `/piss` keeps the standing idle frame and adds a stream (`fx_pee_side` or `fx_pee_front`, mirrored for left) and a puddle on the ground layer that fades after `PUDDLE_MS`.
-- **Where it lives:** offsets and timing are in `src/client/render/pose-logic.ts`; drawing is in `src/client/render/poses.ts`. The server only sets the player's act (`lie` or `pee`), and any move, tool use or sit ends it.
-- **Redrawing the props:** keep the sizes in `catalog.json` (`fx_quilt`, `fx_pillow`, `fx_zzz`, `fx_pee_*`, `fx_puddle`) or update their anchors there, then check both poses on two body types in the browser.
+Poses are whole-body states a player strikes with a chat command. They hold until the player moves (sleep, meditate) or end on their own (piss). They never need new frames drawn per body, so every body type, outfit and villager sprite gets them for free.
+
+### The poses
+
+| Command (aliases) | Act kind | Body frame used | Props drawn around it | Ends |
+|---|---|---|---|---|
+| `/sleep` (`/lie`, `/nap`) | `lie` | `idle.up`, rotated −90° so the head points west | `fx_pillow` behind the head, `fx_quilt` over the body, rising `fx_zzz` | moving, a tool, sitting |
+| `/meditate` (`/meditation`) | `meditate` | the look's own `meditate` action: generator sit frame 1 (cross-legged), always facing down | `fx_calm_glow` under the body (pulses with the breath), `fx_mote` lights drifting up beside it | moving, a tool, sitting |
+| `/piss` (`/pee`) | `pee` | standing idle of the facing | `fx_pee_side` (left/right, mirrored for left) or `fx_pee_front` from the hips, then `fx_puddle` on the ground layer | after `PEE_MS`; the puddle dries after `PUDDLE_MS` |
+
+Facing up while peeing shows no stream: the body hides it.
+
+### How a pose flows through the code
+
+1. **Command:** `src/shared/poses.ts` lists the poses (`POSES`), their act kinds (`POSE_ACT`) and their chat words (`POSE_COMMANDS`). `parseChatInput` in `src/shared/social.ts` turns `/meditate` into a `pose` intent, and `src/client/ui/slash-commands.ts` lists it in the command menu.
+2. **Server:** the client sends `{ t: "pose", pose }`. `ZoneRoom.onPose` and `HomeRoom` check `poseRefusal` (not while sitting, moving, or mid-swing), throttle to one pose per `POSE_MIN_INTERVAL_MS`, and set `entity.act`. Moving, using a tool or sitting calls `endPose`, which clears it. Visitors can't pose in someone else's home (`worker/visit/permissions.ts`).
+3. **Client:** `entities.ts` asks `poses.draw()` (in `src/client/render/poses.ts`) each frame before the held tool. When it returns `posed: true`, the held tool and tool actions are skipped. If it returns `head`, the name tag moves to that height.
+4. **Numbers:** every offset, size and timing lives in `src/client/render/pose-logic.ts`, in source pixels from the feet point (multiplied by `SCALE` when drawn). The pure helpers (`zzzAt`, `breathAt`, `moteAt`, `streamPlacement`, `puddleAt`) are unit tested in `test/fe-poses.test.ts`.
+
+### Reference points on an LPC frame
+
+All humanoid sheets are 64 × 64 with the feet point at (32, 60). Measure offsets from there:
+
+| Point | Source px from the feet | Used by |
+|---|---|---|
+| Top of the head (standing) | about −50 | default name tag height |
+| Mouth | about −34 | nothing should start here |
+| Hips / crotch | −17 (`HIP_Y`) | where the pee stream starts |
+| Seated head (cross-legged) | about −36 (`MEDITATE.head`) | name tag while meditating |
+| Lying body length | about 49 px from head to feet | `LIE.body` offset centres it on the tile |
+
+### Adding a new pose
+
+1. Add the pose to `POSES`, give it an act kind in `POSE_ACT` and its words in `POSE_COMMANDS`. If it holds until the player moves, add its act to `HELD_ACTS`.
+2. Add a slash-command entry so it shows in the menu.
+3. Pick the body frame:
+   - **An existing action frame:** add an action in `custom/custom.json` `actions` pointing at it (for example `"meditate": { "frames": ["sit,1"], "hold": true }`). Composed looks and catalog characters both get it, because every act sheet has the same rows. A catalog character that lacks it lists it in `missing`, and the pose falls back to its idle frame.
+   - **A transformed idle frame:** rotate or offset `idle.<facing>`, as sleep does.
+4. Draw the props as one small CC0 sheet in `assets/lpc/fx/`. Add each piece to `catalog.json` `props` as `fx_<name>` with a pixel `anchor`, and `frames` for animation. Credit it in `CREDITS.md`.
+5. Add the drawing branch in `poses.ts`:
+   - Put props **behind** the body with `addChildAt(sprite, indexOf(body))`, and props **in front** with `addChild`.
+   - Ground marks that should outlive the pose (like puddles) go in `layers.groundOverlay` at world coordinates.
+   - Destroy everything in `clear` and `release`.
+6. Keep the geometry and timing in `pose-logic.ts` and test it.
+7. Check in the browser:
+   - at least two body types (male and female), and a villager if villagers can use it;
+   - every facing the pose allows;
+   - mid-animation and after it ends;
+   - that moving ends it cleanly, with no props left behind.
+
+### Common mistakes
+
+- **Effects starting from the wrong body part:** measure from the feet point using the table above, not by eye from the hands. The stream once started at chest height (−26) and read as coming from the mouth.
+- **Particles over the face:** keep motes and sparkles in lanes beside the body (`MOTE_LANES`).
+- **Forgetting the name tag:** a lower or rotated body needs a `head` value, or the tag floats over empty space.
+- **Shadows:** a lying body hides the standing shadow. Seated and standing poses keep it.
 
 ## Monsters
 

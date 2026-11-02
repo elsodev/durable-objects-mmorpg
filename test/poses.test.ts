@@ -37,6 +37,7 @@ describe("pose rules", () => {
     expect(poseShowing({ k: POSE_ACT.sleep, at: 0 }, 1e9)).toBe(true);
     expect(poseShowing({ k: POSE_ACT.pee, at: 0 }, PEE_MS - 1)).toBe(true);
     expect(poseShowing({ k: POSE_ACT.pee, at: 0 }, PEE_MS)).toBe(false);
+    expect(poseShowing({ k: POSE_ACT.meditate, at: 0 }, 1e9)).toBe(true);
     const e = { act: { k: "lie", at: 0 } } as { act?: { k: string; at: number } };
     endPose(e as never);
     expect(e.act).toBeUndefined();

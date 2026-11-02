@@ -114,7 +114,7 @@ describe("look actions", () => {
 
   it("lists the actions and maps every farming/combat tool item to one", async () => {
     const m = parseLookManifest(await customJson())!;
-    expect(Object.keys(m.actions).sort()).toEqual(["eat", "faint", "fishing", "harvest", "hoe", "hold_up", "hurt", "sit", "sit_ground", "smash", "sword", "watering"]);
+    expect(Object.keys(m.actions).sort()).toEqual(["eat", "faint", "fishing", "harvest", "hoe", "hold_up", "hurt", "meditate", "sit", "sit_ground", "smash", "sword", "watering"]);
     expect(Object.keys(m.tools).sort()).toEqual([...TOOL_ITEMS].sort());
     expect(m.tools.hoe!.action).toBe("hoe");
     expect(m.tools.watering_can!.action).toBe("watering");

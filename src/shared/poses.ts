@@ -1,8 +1,8 @@
-// Poses a player strikes with a chat command: /sleep lies down on the ground, /piss relieves
-// yourself on the spot. A villager who sees the second one is not amused. Pure (no clock).
+// Poses a player strikes with a chat command: /sleep lies down on the ground, /meditate sits
+// cross-legged, /piss relieves yourself on the spot. A villager who sees the second one is not amused. Pure (no clock).
 import type { EntityState, Vec2 } from "./types";
 
-export const POSES = ["sleep", "pee"] as const;
+export const POSES = ["sleep", "pee", "meditate"] as const;
 export type PoseCode = (typeof POSES)[number];
 
 export function isPose(v: unknown): v is PoseCode {
@@ -10,7 +10,7 @@ export function isPose(v: unknown): v is PoseCode {
 }
 
 /** The act kind (EntityState.act.k) each pose plays. */
-export const POSE_ACT: Readonly<Record<PoseCode, string>> = { sleep: "lie", pee: "pee" };
+export const POSE_ACT: Readonly<Record<PoseCode, string>> = { sleep: "lie", pee: "pee", meditate: "meditate" };
 export const POSE_ACTS: ReadonlySet<string> = new Set(Object.values(POSE_ACT));
 
 /** How long a pee lasts; lying down lasts until you move. */
@@ -23,12 +23,15 @@ export const POSE_MIN_INTERVAL_MS = 1500;
 export const PEE_WITNESS_RANGE = 5;
 
 /** Chat command words for each pose ("/sleep", "/piss"...). */
-export const POSE_COMMANDS: Readonly<Record<string, PoseCode>> = { sleep: "sleep", lie: "sleep", nap: "sleep", piss: "pee", pee: "pee" };
+export const POSE_COMMANDS: Readonly<Record<string, PoseCode>> = { sleep: "sleep", lie: "sleep", nap: "sleep", piss: "pee", pee: "pee", meditate: "meditate", meditation: "meditate" };
 
-/** Is a pose act still showing at `now`? Lying holds until the act is cleared (by moving). */
+/** Poses that hold until the player moves (the rest end on their own). */
+const HELD_ACTS: ReadonlySet<string> = new Set(["lie", "meditate"]);
+
+/** Is a pose act still showing at `now`? Lying and meditating hold until the act is cleared (by moving). */
 export function poseShowing(act: EntityState["act"], now: number): boolean {
   if (!act || !POSE_ACTS.has(act.k)) return false;
-  return act.k === "lie" || now - act.at < PEE_MS;
+  return HELD_ACTS.has(act.k) || now - act.at < PEE_MS;
 }
 
 /** Why the player can't strike a pose right now, or null when they can. */

@@ -7538,6 +7538,52 @@
     16
    ]
   },
+  "fx_calm_glow": {
+   "file": "fx/calm.png",
+   "rect": [
+    0,
+    0,
+    48,
+    16
+   ],
+   "anchor": [
+    24,
+    8
+   ]
+  },
+  "fx_mote": {
+   "file": "fx/calm.png",
+   "rect": [
+    0,
+    16,
+    8,
+    8
+   ],
+   "anchor": [
+    4,
+    4
+   ],
+   "frames": [
+    [
+     0,
+     16,
+     8,
+     8
+    ],
+    [
+     8,
+     16,
+     8,
+     8
+    ],
+    [
+     16,
+     16,
+     8,
+     8
+    ]
+   ]
+  },
   "fx_zzz": {
    "file": "fx/zzz.png",
    "rect": [

@@ -795,6 +795,15 @@
    "hold": true,
    "source": "generator sit animation, frame 0 (seated on the ground)"
   },
+  "meditate": {
+   "frameSize": 64,
+   "frames": [
+    "sit,1"
+   ],
+   "ms": 200,
+   "hold": true,
+   "source": "generator sit animation, frame 1 (cross-legged on the ground)"
+  },
   "harvest": {
    "frameSize": 64,
    "frames": [
