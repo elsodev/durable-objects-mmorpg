@@ -1,8 +1,31 @@
 import { describe, expect, it } from "vitest";
 import catalog from "../src/client/public/assets/lpc/catalog.json";
-import { breathAt, HIP_Y, LIE, MEDITATE, MOTE_LIFE_MS, moteAt, puddleAt, puddleOffset, streamPlacement, ZZZ_LIFE_MS, zzzAt } from "../src/client/render/pose-logic";
+import {
+  breathAt,
+  CHEER,
+  cheerLift,
+  DANCE,
+  danceAt,
+  HIP_Y,
+  LIE,
+  MEDITATE,
+  MOTE_LIFE_MS,
+  moteAt,
+  noteAt,
+  puddleAt,
+  puddleOffset,
+  SIT_GROUND,
+  sparkleAt,
+  streamPlacement,
+  THINK,
+  thinkFrame,
+  WAVE_STEP_MS,
+  waveFrame,
+  ZZZ_LIFE_MS,
+  zzzAt,
+} from "../src/client/render/pose-logic";
 import { SLASH_COMMANDS } from "../src/client/ui/slash-commands";
-import { PEE_MS, PUDDLE_MS } from "../src/shared/poses";
+import { CHEER_MS, PEE_MS, POSE_COMMANDS, PUDDLE_MS } from "../src/shared/poses";
 
 describe("pose drawing", () => {
   it("lays the body on its tile, head west, with the quilt over the body and pillow under the head", () => {
@@ -94,5 +117,109 @@ describe("pee stream", () => {
 describe("meditation motes", () => {
   it("never rise over the face", () => {
     for (let i = 0; i < 12; i++) expect(Math.abs(moteAt(0, i)!.x)).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe("ground poses", () => {
+  const custom = async () =>
+    (await import("../src/client/public/assets/lpc/custom/custom.json")).default as {
+      actions: Record<string, { frames: string[]; hold?: boolean }>;
+      characters: Record<string, { missing: string[] }>;
+    };
+
+  it("sits on the ground with every look's own sit frame, the tag at the seated head", async () => {
+    const c = await custom();
+    expect(c.actions.sit_ground).toMatchObject({ frames: ["sit,0"], hold: true });
+    expect(c.actions.wave!.frames).toEqual(["slash,4", "slash,5"]);
+    expect(c.actions.think!.frames).toEqual(["thrust,7"]);
+    for (const ch of Object.values(c.characters)) for (const a of ["sit_ground", "wave", "think"]) expect(ch.missing).not.toContain(a);
+    for (const f of ["up", "left", "down", "right"] as const) {
+      expect(SIT_GROUND.head[f]).toBeLessThan(50);
+      expect(SIT_GROUND.head[f]).toBeGreaterThan(30);
+    }
+  });
+
+  it("waves back and forth", () => {
+    expect(waveFrame(0)).toBe(0);
+    expect(waveFrame(WAVE_STEP_MS)).toBe(1);
+    expect(waveFrame(WAVE_STEP_MS * 2)).toBe(0);
+    expect(waveFrame(-5)).toBe(0);
+  });
+
+  it("cheers in hops that land between, with sparkles around the head", () => {
+    expect(cheerLift(0)).toBe(0);
+    expect(cheerLift(CHEER.hopMs * 0.35)).toBe(CHEER.hopHeight);
+    expect(cheerLift(CHEER.hopMs * 0.85)).toBe(0);
+    expect(cheerLift(-1)).toBe(0);
+    for (let i = 0; i < CHEER.sparkles.length; i++) {
+      const s = sparkleAt(0, i)!;
+      // Beside the upper body, clear of the name tag above the head.
+      expect(s.y).toBeLessThan(-20);
+      expect(s.y).toBeGreaterThan(-48);
+      expect(Math.abs(s.x)).toBeGreaterThanOrEqual(15);
+    }
+    expect(sparkleAt(CHEER.sparkleLifeMs, 0)).toBeNull();
+    expect(CHEER_MS).toBeGreaterThan(CHEER.hopMs * 3);
+  });
+
+  it("dances side to side on the beat with step frames, never past the sheet", () => {
+    const facings = [0, 1, 2, 3].map((b) => danceAt(b * DANCE.beatMs, 9).facing);
+    expect(facings).toEqual(["left", "down", "right", "down"]);
+    expect(danceAt(0, 9).frame).not.toBe(danceAt(DANCE.beatMs, 9).frame);
+    expect(danceAt(0, 1).frame).toBe(0);
+    expect(danceAt(0, 9).lift).toBe(0);
+    expect(danceAt(DANCE.beatMs * 0.75, 9).lift).toBe(1);
+  });
+
+  it("notes rise on alternating sides and fade", () => {
+    const a = noteAt(0, 0)!;
+    const b = noteAt(0, 1)!;
+    expect(Math.sign(a.x)).toBe(-Math.sign(b.x));
+    const late = noteAt(DANCE.noteLifeMs * 0.9, 0)!;
+    expect(late.y).toBeLessThan(a.y);
+    expect(late.alpha).toBeLessThan(1);
+    expect(noteAt(DANCE.noteLifeMs, 0)).toBeNull();
+  });
+
+  it("fills the thought bubble one dot at a time, then holds three", () => {
+    expect(thinkFrame(0)).toBe(0);
+    expect(thinkFrame(THINK.dotMs)).toBe(1);
+    expect(thinkFrame(THINK.dotMs * 2)).toBe(2);
+    expect(thinkFrame(THINK.loopMs - 1)).toBe(2);
+    expect(thinkFrame(THINK.loopMs)).toBe(0);
+    // Above the name tag (standing head 50), not over the face.
+    expect(THINK.bubble.y).toBeLessThan(-50);
+  });
+
+  it("has catalog art for the props", () => {
+    const props = catalog.props as unknown as Record<string, { file: string; frames?: unknown[] }>;
+    expect(props.fx_think!.frames).toHaveLength(3);
+    expect(props.fx_note!.frames).toHaveLength(2);
+    expect(props.fx_sparkle!.frames).toHaveLength(3);
+  });
+
+  it("lists every pose in the slash suggestions, aliases matching the parser", () => {
+    for (const [word, pose] of Object.entries(POSE_COMMANDS)) {
+      const cmd = SLASH_COMMANDS.find((c) => c.name === word || c.aliases.includes(word));
+      expect(cmd, word).toBeTruthy();
+      expect(POSE_COMMANDS[cmd!.name], word).toBe(pose);
+    }
+    for (const name of ["sit", "wave", "cheer", "dance", "think"]) {
+      const cmd = SLASH_COMMANDS.find((c) => c.name === name)!;
+      expect(cmd.description.length).toBeGreaterThan(5);
+      expect(cmd.args).toBe("");
+    }
+  });
+
+  it("offers every pose but /piss to a visitor", () => {
+    const visiting = { atHome: true, homeOwner: false, guest: false, devTools: false };
+    const village = { atHome: false, homeOwner: false, guest: true, devTools: false };
+    const usable = (ctx: typeof visiting) => SLASH_COMMANDS.filter((c) => c.available(ctx)).map((c) => c.name);
+    for (const n of ["sit", "sleep", "meditate", "wave", "cheer", "dance", "think"]) {
+      expect(usable(visiting)).toContain(n);
+      expect(usable(village)).toContain(n);
+    }
+    expect(usable(visiting)).not.toContain("piss");
+    expect(usable(village)).toContain("piss");
   });
 });

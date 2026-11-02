@@ -103,7 +103,7 @@ describe("chat input parsing", () => {
 
   it("passes unknown commands to zone chat (e.g. the /day dev tool)", () => {
     expect(parseChatInput("/day", "world", null)).toEqual({ kind: "zone", text: "/day" });
-    expect(parseChatInput("/wave", "all", null)).toEqual({ kind: "zone", text: "/wave" });
+    expect(parseChatInput("/shrug", "all", null)).toEqual({ kind: "zone", text: "/shrug" });
   });
 });
 

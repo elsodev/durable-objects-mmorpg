@@ -210,12 +210,12 @@ describe("visitor permission matrix", () => {
     tradeCancel: { t: "tradeCancel" },
   };
 
-  it("allows only walking, chat, ping, petting and harvest-use", () => {
+  it("allows only walking, chat, ping, poses, petting and harvest-use", () => {
     const allowed = Object.entries(VISITOR_RULES)
       .filter(([, v]) => "allow" in v)
       .map(([k]) => k)
       .sort();
-    expect(allowed).toEqual(["chat", "emote", "hold", "move", "moveTo", "petAnimal", "ping", "use"]);
+    expect(allowed).toEqual(["chat", "emote", "hold", "move", "moveTo", "petAnimal", "ping", "pose", "use"]);
     for (const m of Object.values(samples)) expect(visitorVerdict(m as ClientMsg)).toBe(VISITOR_RULES[m.t]);
   });
 
@@ -225,7 +225,7 @@ describe("visitor permission matrix", () => {
     const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
     const denied = Object.values(samples).filter((m) => "deny" in VISITOR_RULES[m.t]);
     expect(denied.map((m) => m.t).sort()).toEqual(
-      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "moveObjects", "pickup", "pickupObjects", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete", "tradeRequest", "tradeAnswer", "tradeAdd", "tradeRemove", "tradeCoins", "tradeReady", "tradeConfirm", "tradeCancel"].sort(),
+      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "moveObjects", "pickup", "pickupObjects", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete", "tradeRequest", "tradeAnswer", "tradeAdd", "tradeRemove", "tradeCoins", "tradeReady", "tradeConfirm", "tradeCancel"].sort(),
     );
     for (const m of denied) {
       const msg = m.t === "setLook" ? { t: "setLook", look: { body: "x" } } : m;
@@ -668,6 +668,26 @@ describe("at home together", () => {
     await sendMsg(r, "alice", guest, { t: "chat", text: "/invite user_1" });
     expect(owner.of("chat")).toEqual([]);
     expect(guest.last("notice").text).toMatch(/didn't go through/);
+  });
+
+  it("visitors may sit, wave or dance (not pee); walking ends the pose", async () => {
+    const { guest } = await aliceHostsBasil();
+    const room = r.room("alice") as any;
+    const v = room.visitors.get(guest);
+    expect(visitorVerdict({ t: "pose", pose: "pee" })).toEqual({ deny: expect.stringMatching(/someone else's home/) });
+    await sendMsg(r, "alice", guest, { t: "pose", pose: "pee" });
+    expect(guest.last("reject").reason).toMatch(/someone else's home/);
+    expect(v.entity.act).toBeUndefined();
+    await sendMsg(r, "alice", guest, { t: "pose", pose: "sit" });
+    expect(v.entity.act).toMatchObject({ k: "sit_ground" });
+    // Rate limited: a second pose right away is dropped.
+    await sendMsg(r, "alice", guest, { t: "pose", pose: "dance" });
+    expect(v.entity.act).toMatchObject({ k: "sit_ground" });
+    vi.advanceTimersByTime(1600);
+    await sendMsg(r, "alice", guest, { t: "pose", pose: "dance" });
+    expect(v.entity.act).toMatchObject({ k: "dance" });
+    await sendMsg(r, "alice", guest, { t: "move", dx: 1, dy: 0, seq: 1 });
+    expect(v.entity.act).toBeUndefined();
   });
 
   it("visitor emotes reach everyone at home", async () => {

@@ -877,6 +877,25 @@
    ],
    "ms": 250,
    "source": "generator thrust frames 2 and 7 (both hands up at the chest, item drawn above the head)"
+  },
+  "wave": {
+   "frameSize": 64,
+   "frames": [
+    "slash,4",
+    "slash,5"
+   ],
+   "ms": 180,
+   "hold": true,
+   "source": "generator slash frames 4 and 5 (hand raised, then arm out): the /wave and /cheer poses alternate them"
+  },
+  "think": {
+   "frameSize": 64,
+   "frames": [
+    "thrust,7"
+   ],
+   "ms": 200,
+   "hold": true,
+   "source": "generator thrust frame 7 (hand up at the chin), held facing the viewer for /think"
   }
  },
  "tools": {

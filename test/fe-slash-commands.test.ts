@@ -58,7 +58,7 @@ describe("slash suggestions", () => {
   it("completes the command, with a space when it takes arguments", () => {
     const [w] = slashSuggestions("/w", village);
     expect(w).toMatchObject({ completion: "/w ", syntax: "name message" });
-    const [day] = slashSuggestions("/da", { ...myHome, devTools: true });
+    const [day] = slashSuggestions("/day", { ...myHome, devTools: true });
     expect(day!.completion).toBe("/day");
   });
 

@@ -1,9 +1,10 @@
-// What a visitor may do in someone else's home: walk, talk, emote, pet the animals and help harvest ready crops. Checked
+// What a visitor may do in someone else's home: walk, talk, emote, strike a pose, pet the animals and help harvest ready crops. Checked
 // by HomeRoom on every visitor message. The table is keyed by every ClientMsg type, so a new
 // message type fails to compile until someone decides whether visitors may send it.
+import { visitorMayPose } from "../../shared/poses";
 import type { ClientMsg } from "../../shared/protocol";
 
-export type VisitorAction = "move" | "chat" | "emote" | "ping" | "harvest" | "hold" | "pet";
+export type VisitorAction = "move" | "chat" | "emote" | "pose" | "ping" | "harvest" | "hold" | "pet";
 export type VisitorVerdict = { allow: VisitorAction } | { deny: string };
 
 const NOT_YOURS = "Only the owner can do that here.";
@@ -37,7 +38,8 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   moveSlot: { deny: "You can tidy your bag after the visit." },
   dropItem: { deny: "Drop things in your own home." },
   sortBag: { deny: "You can tidy your bag after the visit." },
-  pose: { deny: "Not in someone else's home." },
+  // Sitting, waving or dancing is harmless; visitorVerdict still refuses the one pose that isn't.
+  pose: { allow: "pose" },
   // A visitor's save lives in their own HomeRoom; the client just leaves the visit instead.
   travel: { deny: "Leave the visit first." },
   storeOpen: { deny: "That isn't yours to open." },
@@ -64,6 +66,9 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   tradeCancel: { deny: TRADE_ELSEWHERE },
 };
 
+const NO_POSE: VisitorVerdict = { deny: "Not in someone else's home." };
+
 export function visitorVerdict(msg: ClientMsg): VisitorVerdict {
+  if (msg.t === "pose" && !visitorMayPose(msg.pose)) return NO_POSE;
   return VISITOR_RULES[msg.t] ?? { deny: NOT_YOURS };
 }

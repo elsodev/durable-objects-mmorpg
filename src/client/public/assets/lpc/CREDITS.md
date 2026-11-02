@@ -843,6 +843,12 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - Source: drawn by script for this game
 - Notes: Four 16 × 16 frames of a dust puff kicked up behind a dashing character's feet: a small puff, a double puff, a billow and the last wisps. Warm outline and light from the top left, like the other fx sheets.
 
+### fx/social.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game
+- Notes: Pose props. Three thought-bubble frames (one, two, three dots) for `/think`, two music notes for `/dance` and three sparkle frames for `/cheer`.
+
 ### map/island.png, map/pins.png
 - Authors: DurableMMO project
 - License: **CC0**

@@ -1505,7 +1505,7 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   private handle(p: HPlayer, msg: ClientMsg, now: number): void {
-    // Moving or swinging ends a pose (lying on the ground, peeing).
+    // Moving or swinging ends a pose (sitting or lying on the ground, dancing, peeing).
     if ((msg.t === "move" && (msg.dx !== 0 || msg.dy !== 0)) || msg.t === "moveTo" || msg.t === "use") endPose(p.entity);
     switch (msg.t) {
       case "move":
@@ -1658,6 +1658,8 @@ export class HomeRoom extends DurableObject<Env> {
   private handleVisitor(v: Visitor, msg: ClientMsg, now: number): void {
     const verdict = visitorVerdict(msg);
     if ("deny" in verdict) return this.reject(v, msg, verdict.deny);
+    // Walking or harvesting ends a pose, as it does for the owner.
+    if ((msg.t === "move" && (msg.dx !== 0 || msg.dy !== 0)) || msg.t === "moveTo" || msg.t === "use") endPose(v.entity);
     switch (msg.t) {
       case "move":
         v.motion.onMove(v.entity, this.maps.grids[v.map], msg.dx, msg.dy, msg.seq, now);
@@ -1683,6 +1685,15 @@ export class HomeRoom extends DurableObject<Env> {
         return; // a visitor's bag isn't loaded here: nothing to show in their hand
       case "petAnimal":
         return this.visitorPet(v, msg, now);
+      case "pose": {
+        if (now - (v.lastPose ?? 0) < POSE_MIN_INTERVAL_MS) return;
+        const why = poseRefusal(v.entity, now);
+        if (why) return this.reject(v, msg, why);
+        v.lastPose = now;
+        v.entity.act = { k: POSE_ACT[msg.pose], at: now };
+        this.startTick();
+        return;
+      }
       default:
         return this.reject(v, msg, "Only the owner can do that here.");
     }

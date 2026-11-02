@@ -76,7 +76,7 @@ export type ClientMsg =
   | { t: "ping"; at: number }
   /** Emote bubble above your head for everyone in this zone/home (codes in shared/emotes.ts). */
   | { t: "emote"; code: EmoteCode }
-  /** Strike a pose: lie down on the ground, or pee on the spot (shared/poses.ts). */
+  /** Strike a pose: sit or lie on the ground, wave, dance... (shared/poses.ts). Moving ends it. */
   | { t: "pose"; pose: PoseCode }
   /** Fast travel (Map tab): the room saves you with the destination, then answers with `zone`. */
   | { t: "travel"; to: TravelZone }

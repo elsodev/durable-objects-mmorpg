@@ -761,6 +761,8 @@ export class ZoneRoom extends DurableObject<Env> {
     p.lastHurt = now;
     p.dirty = true;
     p.entity.hp = Math.max(0, (p.entity.hp ?? max) - dmg);
+    // A bite knocks you out of a pose (nobody keeps dancing through it).
+    endPose(p.entity);
     this.broadcast({ t: "hurt", id: p.entity.id, dmg, ms: PLAYER_IFRAME_MS });
     if (p.entity.hp <= 0) this.faint(p);
   }
@@ -1317,7 +1319,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   /**
-   * /sleep lies down on the ground until you move; /piss stands and pees for a moment. Every
+   * /sleep, /sit, /dance... hold until you move; /wave and /piss play for a moment. Every
    * villager close enough to see the second one resets your hearts with them to zero, glares,
    * shows an angry emote and says so.
    */
@@ -1517,7 +1519,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private getUp(p: ZPlayer): void {
-    // Moving or swinging ends a pose (lying on the ground, peeing).
+    // Moving or swinging ends a pose (sitting or lying on the ground, dancing, peeing).
     endPose(p.entity);
     if (!isSitting(p.entity)) return;
     const world = this.world!;

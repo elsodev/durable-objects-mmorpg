@@ -28,6 +28,7 @@ export interface Visitor {
   lastAck: number | undefined;
   lastUse: number;
   lastEmote: number;
+  lastPose?: number;
   limiter: SocketLimiter;
   sid: string | null;
   authCheckedAt: number;

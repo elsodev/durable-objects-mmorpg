@@ -38,9 +38,15 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "world", aliases: ["g", "global"], args: "message", description: "Talk to everyone online", available: account },
   { name: "zone", aliases: ["s", "say"], args: "message", description: "Talk to people nearby", available: always },
   { name: "emote", aliases: ["e", "em"], args: "code", description: "Show an emote over your head", options: EMOTES, available: always },
+  { name: "sit", aliases: [], args: "", description: "Sit down on the ground (move to get up)", available: always },
   { name: "sleep", aliases: ["lie", "nap"], args: "", description: "Lie down on the ground (move to get up)", available: always },
   { name: "meditate", aliases: ["meditation"], args: "", description: "Sit cross-legged and meditate (move to get up)", available: always },
-  { name: "piss", aliases: ["pee"], args: "", description: "Relieve yourself (villagers who see it won't forgive you)", available: always },
+  { name: "wave", aliases: ["hi"], args: "", description: "Wave hello", available: always },
+  { name: "cheer", aliases: ["yay"], args: "", description: "Hop and cheer", available: always },
+  { name: "dance", aliases: [], args: "", description: "Dance on the spot (move to stop)", available: always },
+  { name: "think", aliases: ["hmm"], args: "", description: "Stop and think (move to stop)", available: always },
+  // Visitors can strike every pose but this one (worker/visit/permissions.ts).
+  { name: "piss", aliases: ["pee"], args: "", description: "Relieve yourself (villagers who see it won't forgive you)", available: (c) => !(c.atHome && !c.homeOwner) },
   { name: "friend", aliases: [], args: "name", description: "Send a friend request", available: account },
   { name: "trade", aliases: [], args: "name", description: "Ask a player near you to trade", available: (c) => !c.guest && !c.atHome },
   { name: "mute", aliases: [], args: "name", description: "Hide a player's chat and requests", available: account },
@@ -69,7 +75,8 @@ export interface SlashSuggestion {
   completion: string;
 }
 
-export const MAX_SUGGESTIONS = 16;
+/** The popup scrolls, so this only guards against a runaway list; a bare "/" fits every command. */
+export const MAX_SUGGESTIONS = 32;
 
 /**
  * Suggestions for the chat input. "/" lists every command available here; "/em" narrows it by

@@ -1,4 +1,4 @@
-// Pure parts of the /sleep and /piss poses (render/poses.ts): where the pieces go and which frame
+// Pure parts of the chat-command poses (render/poses.ts): where the pieces go and which frame
 // shows when. Offsets are source pixels relative to the feet point (multiply by SCALE).
 import { PEE_MS, PUDDLE_MS } from "../../shared/poses";
 import type { Facing, Vec2 } from "../../shared/types";
@@ -171,4 +171,114 @@ export function climbAt(kind: "climb_down" | "climb_up", age: number, ms: number
   }
   const dy = -Math.round(CLIMB.rise * f) - bob;
   return { frame, dy, alpha: f < 0.7 ? 1 : Math.max(0, Math.round((1 - (f - 0.7) / 0.3) * 100) / 100), clipY: null, head: CLIMB.head - dy };
+}
+
+/**
+ * Sitting on the ground (/sit): the look's own generator "sit" frame 0, one knee up and a hand on
+ * the ground behind, for the way they face. The frame keeps the standing feet anchor, so the body
+ * already rests on its tile and the shadow stays put; only the head is lower. Name tag heights
+ * (source px above the feet) follow each facing's measured head top on every body type, plus the
+ * same few px of room the standing tag gets.
+ */
+export const SIT_GROUND = {
+  head: { up: 39, left: 41, down: 48, right: 40 } as Readonly<Record<Facing, number>>,
+} as const;
+
+/** Waving: hand raised, then arm out, a step every WAVE_STEP_MS (generator slash frames 4 and 5). */
+export const WAVE_STEP_MS = 220;
+
+/** Which of the two wave frames shows `age` ms in: 0 (hand up) or 1 (arm out). */
+export function waveFrame(age: number): 0 | 1 {
+  return Math.floor(Math.max(0, age) / WAVE_STEP_MS) % 2 === 0 ? 0 : 1;
+}
+
+/**
+ * Cheering: hops in place with a hand thrown up (the wave's raised-hand frame), and sparkles pop
+ * around the head. Lift is in source px above the ground.
+ */
+export const CHEER = {
+  hopMs: 450,
+  hopHeight: 6,
+  /** Sparkle spots beside the head and shoulders (feet-relative source px), below the name tag. */
+  sparkles: [
+    { x: -17, y: -40 },
+    { x: 17, y: -32 },
+    { x: -16, y: -26 },
+    { x: 18, y: -44 },
+  ] as readonly Vec2[],
+  sparkleEveryMs: 300,
+  sparkleLifeMs: 600,
+} as const;
+
+/** Height of the hop `age` ms into a cheer; on the ground between hops. */
+export function cheerLift(age: number): number {
+  if (age < 0) return 0;
+  const phase = (age % CHEER.hopMs) / CHEER.hopMs;
+  // Airborne for the first 70% of each hop, a short crouch on landing.
+  return phase < 0.7 ? Math.round(Math.sin((phase / 0.7) * Math.PI) * CHEER.hopHeight) : 0;
+}
+
+/** The `index`-th sparkle `age` ms after it appeared: where, which frame, or null once gone. */
+export function sparkleAt(age: number, index: number): { x: number; y: number; frame: number } | null {
+  if (age < 0 || age >= CHEER.sparkleLifeMs) return null;
+  const f = age / CHEER.sparkleLifeMs;
+  const spot = CHEER.sparkles[index % CHEER.sparkles.length]!;
+  return { x: spot.x, y: spot.y, frame: f < 0.3 ? 0 : f < 0.7 ? 1 : 2 };
+}
+
+/**
+ * Dancing: a side-to-side shuffle on the beat built from the look's own walk frames (left, front,
+ * right, front, each beat a step on alternating feet) with a bounce, and music notes drifting up.
+ */
+export const DANCE = {
+  beatMs: 340,
+  steps: ["left", "down", "right", "down"] as readonly Facing[],
+  /** Walk frames used for a step (alternating feet); frame 0 is standing. */
+  stepFrames: [2, 6] as const,
+  /** Notes start beside the head (clear of the name tag) and drift up and outwards. */
+  note: { x: 17, y: -34, rise: 24 },
+  noteEveryMs: 680,
+  noteLifeMs: 1600,
+} as const;
+
+/** The dance pose `age` ms in: which way the body turns, which walk frame and how high it bounces. */
+export function danceAt(age: number, walkFrames: number): { facing: Facing; frame: number; lift: number } {
+  const t = Math.max(0, age);
+  const beat = Math.floor(t / DANCE.beatMs);
+  const facing = DANCE.steps[beat % DANCE.steps.length]!;
+  const want = DANCE.stepFrames[beat % 2]!;
+  const frame = want < walkFrames ? want : 0;
+  // Up on the off-beat, down on the beat.
+  const lift = (t % DANCE.beatMs) < DANCE.beatMs / 2 ? 0 : 1;
+  return { facing, frame, lift };
+}
+
+/** The `index`-th note `age` ms after it appeared: offset, which note and alpha; null once gone. */
+export function noteAt(age: number, index: number): { x: number; y: number; frame: number; alpha: number } | null {
+  if (age < 0 || age >= DANCE.noteLifeMs) return null;
+  const f = age / DANCE.noteLifeMs;
+  const side = index % 2 === 0 ? 1 : -1;
+  return {
+    x: Math.round(side * (DANCE.note.x + f * 4) + Math.sin(f * Math.PI * 2) * 2),
+    y: Math.round(DANCE.note.y - f * DANCE.note.rise),
+    frame: index % 2,
+    alpha: f < 0.7 ? 1 : Math.round((1 - (f - 0.7) / 0.3) * 100) / 100,
+  };
+}
+
+/**
+ * Thinking: the hand-at-chin frame (generator thrust frame 7) facing the viewer, with a thought
+ * bubble above and right of the name tag whose dots fill in one by one, then stay a while.
+ */
+export const THINK = {
+  /** Bubble's bottom-left corner (its tail end) from the feet point. */
+  bubble: { x: 4, y: -58 },
+  dotMs: 450,
+  loopMs: 2600,
+} as const;
+
+/** Thought-bubble frame `age` ms in: 0 (one dot), 1 (two) or 2 (three, held to the end of the loop). */
+export function thinkFrame(age: number): 0 | 1 | 2 {
+  const t = Math.max(0, age) % THINK.loopMs;
+  return t < THINK.dotMs ? 0 : t < THINK.dotMs * 2 ? 1 : 2;
 }
