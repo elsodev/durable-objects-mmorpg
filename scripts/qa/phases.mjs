@@ -542,7 +542,7 @@ phase("combat", async (ctx) => {
   await goRiverside(pa);
   await wait(pa, 1500);
   check("stamina bar shows in zones", await pa.isVisible("#home-stamina").catch(() => false));
-  check("clock and can hidden in zones", !(await pa.isVisible("#home-clock").catch(() => true)) && !(await pa.isVisible("#home-water").catch(() => true)));
+  check("clock and can hidden in zones", !(await pa.isVisible("#home-clock").catch(() => true)));
   await shot(pa, "qa-22-zone-hud-stamina");
   const ground = await groundOf(pa);
   const forage = ground.filter((g) => g.forage);

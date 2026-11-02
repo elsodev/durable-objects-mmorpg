@@ -70,13 +70,6 @@
   min-width: 2.2em;
   text-align: right;
 }
-.home-water {
-  font-size: var(--dm-fs-sm);
-  color: var(--dm-sky);
-}
-.home-water.is-empty {
-  color: var(--dm-berry);
-}
 .home-eat[hidden] {
   display: none;
 }
@@ -192,6 +185,3 @@
   100% { opacity: 0; }
 }
 .home-stamina[hidden],
-.home-water[hidden] {
-  display: none;
-}

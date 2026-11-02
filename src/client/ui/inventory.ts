@@ -8,6 +8,7 @@ import { itemTip } from "./item-tip";
 import { itemTitle } from "./item-tip-logic";
 import type { CreateInventoryPanel, InventoryPanel } from "./index";
 import { uiSound } from "./sound";
+import { gaugeLabel, holdsWater, waterGauge, type WaterLevel } from "./water-gauge";
 import "./styles/inventory.css";
 
 export { formatCoins, tooltipInfo, type TooltipInfo } from "./inventory-format";
@@ -30,6 +31,7 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
   const slotCount = Math.min(MAX_SLOTS, INVENTORY_COLS * INVENTORY_ROWS);
   let inv: Inventory = { coins: 0, slots: [] };
   let open = false;
+  let water: WaterLevel | null = null;
 
   const panel = el("section", "dm-panel inv-panel");
   panel.id = "inventory-panel";
@@ -95,14 +97,18 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
     for (let i = 0; i < slotEls.length; i++) {
       const { btn, img, qty } = slotEls[i];
       const slot = inv.slots[i];
+      btn.querySelector(".slot-water")?.remove();
       if (slot) {
+        const gauge = waterGauge(slot.item, water);
+        if (gauge) btn.appendChild(gauge);
         const src = iconFor(slot.item);
         if (img.getAttribute("src") !== src) img.src = src;
         img.hidden = false;
         qty.textContent = slot.qty > 1 ? String(slot.qty) : "";
         btn.classList.remove("is-empty");
         btn.removeAttribute("aria-disabled");
-        btn.setAttribute("aria-label", itemTitle(slot.item, slot.qty));
+        const level = water && holdsWater(slot.item) ? `, ${gaugeLabel(water)}` : "";
+        btn.setAttribute("aria-label", itemTitle(slot.item, slot.qty) + level);
       } else {
         img.removeAttribute("src");
         img.hidden = true;
@@ -118,6 +124,10 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
   const panelApi: InventoryPanel = {
     setInventory(next) {
       inv = next;
+      render();
+    },
+    setWater(level) {
+      water = level;
       render();
     },
     toggle() {

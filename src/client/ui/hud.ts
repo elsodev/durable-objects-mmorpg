@@ -32,6 +32,7 @@ import type { SocialStats } from "../../shared/social";
 import { statRows, statsVisible } from "./stats-logic";
 import { itemTip } from "./item-tip";
 import { createNameFlash, itemTitle, type NameFlash } from "./item-tip-logic";
+import { gaugeLabel, holdsWater, waterGauge, type WaterLevel } from "./water-gauge";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -140,6 +141,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   root.appendChild(hud);
 
   let inv: Inventory | null = null;
+  let water: WaterLevel | null = null;
   let selected = 0;
   let typing = false;
   let buildMode = false;
@@ -553,7 +555,8 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       }
       b.classList.remove("empty");
       const name = itemName(s.item);
-      b.setAttribute("aria-label", `Slot ${i + 1}: ${itemTitle(s.item, s.qty)}`);
+      const level = water && holdsWater(s.item) ? `, ${gaugeLabel(water)}` : "";
+      b.setAttribute("aria-label", `Slot ${i + 1}: ${itemTitle(s.item, s.qty)}${level}`);
       const src = itemIcon(s.item);
       if (src) {
         const img = el("img");
@@ -566,6 +569,8 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         b.appendChild(el("span", { className: "hud-slot-letter", text: name.charAt(0).toUpperCase() }));
       }
       if (s.qty > 1) b.appendChild(el("span", { className: "dm-qty", text: String(s.qty) }));
+      const gauge = waterGauge(s.item, water);
+      if (gauge) b.appendChild(gauge);
     });
   }
 
@@ -694,6 +699,12 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       mapPane.refresh();
       refreshGuest();
       chat.setGuest?.(safe("isGuest", () => game.isGuest(), false));
+    },
+    setWater(level: number, max: number) {
+      if (water && water.water === level && water.max === max) return;
+      water = { water: level, max };
+      renderHotbar();
+      inventory.setWater?.(water);
     },
     setInventory(next: Inventory) {
       applyInventory(next);

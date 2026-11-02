@@ -1,4 +1,5 @@
-// Home simulation UI: clock + day, stamina and watering can rows in the status panel, the sleep
+// Home simulation UI: clock + day and stamina rows in the status panel (the watering can shows its
+// water as a bar under its slot, ui/water-gauge.ts), the sleep
 // confirmation, the end-of-day summary, the shipping bin panel, the "going to sleep" countdown
 // and the morning fade. DOM only; every text is set with textContent.
 import type { DaySummary, ShipLine } from "../../shared/home";
@@ -105,12 +106,9 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
   add(staminaEl, el("span", "home-bar-label", "Energy"), el("span", "home-bar-track"));
   staminaEl.lastElementChild!.appendChild(staminaFill);
   staminaEl.appendChild(staminaText);
-  const waterEl = el("div", "home-water");
-  waterEl.id = "home-water";
-  waterEl.title = "Watering can: refill at the well or the pond";
   const eatBtn = btn("Eat (Q)", "dm-btn dm-btn-small home-eat", "home-eat", () => opts.eat());
   eatBtn.hidden = true;
-  add(rows, clockEl, staminaEl, waterEl, eatBtn);
+  add(rows, clockEl, staminaEl, eatBtn);
   const status = root.querySelector("#hud-status");
   if (status) status.appendChild(rows);
   else {
@@ -204,7 +202,6 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       // In zones the rows stay hidden until the zone reports your stamina (setZoneStamina).
       rows.hidden = !atHome;
       clockEl.hidden = !atHome;
-      waterEl.hidden = !atHome;
       staminaEl.hidden = false;
       if (!atHome) {
         eatBtn.hidden = true;
@@ -215,7 +212,6 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
     setVisiting(visiting) {
       if (!home) return; // zones: only the stamina bar, whatever setAtHome left
       staminaEl.hidden = visiting;
-      waterEl.hidden = visiting;
       if (visiting) eatBtn.hidden = true;
     },
     setZoneStamina(stamina, maxStamina) {
@@ -227,10 +223,8 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       timeEl.textContent = label;
       clockEl.classList.toggle("is-night", night);
     },
-    setVitals(stamina, maxStamina, water, maxWater) {
+    setVitals(stamina, maxStamina) {
       setBar(stamina, maxStamina);
-      waterEl.textContent = `Watering can ${water}/${maxWater}`;
-      waterEl.classList.toggle("is-empty", water <= 0);
     },
     setEdible(item) {
       eatBtn.hidden = !item;

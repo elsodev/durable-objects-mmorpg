@@ -17,6 +17,7 @@ import type { EmoteCode } from "../../shared/emotes";
 import type { PlayerHit } from "./player-card-logic";
 import type { MuteSet } from "./mute-logic";
 import type { SlotDrag } from "./slot-drag";
+import type { WaterLevel } from "./water-gauge-logic";
 export type { PlayerHit } from "./player-card-logic";
 
 export interface SessionUser {
@@ -86,6 +87,8 @@ export interface ChatLineOpts {
 export interface Hud {
   setZone(zone: ZoneId, title: string): void;
   setInventory(inv: Inventory): void;
+  /** Water left in the watering can: a small bar under its slot (hotbar and inventory). */
+  setWater?(water: number, max: number): void;
   setSelectedSlot(slot: number): void;
   setHp(hp: number, maxHp: number): void;
   addChat(name: string, text: string, kind?: "player" | "npc" | "system", opts?: ChatLineOpts): void;
@@ -126,6 +129,7 @@ export { mountHud } from "./hud";
 // ---------- component contracts used by ui/hud.ts ----------
 export interface InventoryPanel {
   setInventory(inv: Inventory): void;
+  setWater?(level: WaterLevel): void;
   toggle(): void;
   close(): void;
   isOpen(): boolean;

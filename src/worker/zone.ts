@@ -35,6 +35,7 @@ import {
   canAdd,
   canStand,
   clampStamina,
+  clampWater,
   dist,
   exitAt,
   facingToTile,
@@ -42,6 +43,7 @@ import {
   impactDelayMs,
   KNOCKBACK_HALF_LIFE_MS,
   MAX_STAMINA,
+  MAX_WATER,
   passOutPenalty,
   PLAYER_IFRAME_MS,
   moveSlot,
@@ -185,6 +187,8 @@ interface ZPlayer {
   iframeUntil: number;
   /** Tool stamina, carried from the home save (mining and chopping cost it here too). */
   stamina: number;
+  /** Water left in the can (from the home save); zones only show it. */
+  water: number;
   /** While seated: where the player stood before sitting (they get up there). */
   standBack?: { x: number; y: number };
   lastAck: number | undefined;
@@ -486,6 +490,7 @@ export class ZoneRoom extends DurableObject<Env> {
       lastRegen: 0,
       iframeUntil: 0,
       stamina: clampStamina(save.stamina),
+      water: clampWater(save.water),
       lastAck: undefined,
       interest: new PlayerInterest(this.nextPhase++),
       lastShop: new Map(),
@@ -726,7 +731,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private sendStamina(p: ZPlayer): void {
-    send(p.ws, { t: "stamina", stamina: p.stamina, max: MAX_STAMINA });
+    send(p.ws, { t: "stamina", stamina: p.stamina, max: MAX_STAMINA, water: p.water, maxWater: MAX_WATER });
   }
 
   /** Mining and chopping cost stamina like at home; false (and a reject) when too tired. */

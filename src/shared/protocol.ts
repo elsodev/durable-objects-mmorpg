@@ -230,7 +230,7 @@ export type ServerMsg =
   /** Ground items you can see came or went. */
   | { t: "ground"; upd: GroundItemView[]; del: string[] }
   /** Zones: your stamina changed (mining and chopping cost it like at home). */
-  | { t: "stamina"; stamina: number; max: number }
+  | { t: "stamina"; stamina: number; max: number; /** Water in your can, so the slot gauge shows away from home too. */ water?: number; maxWater?: number }
   | HomeServerMsg
   | VisitServerMsg;
 

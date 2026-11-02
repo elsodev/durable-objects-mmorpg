@@ -740,6 +740,8 @@ export async function startSession(
       case "homeState":
         home = msg;
         homeUi.setVitals(msg.stamina, msg.maxStamina, msg.water, msg.maxWater);
+        // A visitor is sent a full can that isn't theirs.
+        if (!visiting) hud.setWater?.(msg.water, msg.maxWater);
         farmFx.homeState(msg);
         farmFx.redraw();
         break;
@@ -859,6 +861,7 @@ export async function startSession(
           notice("You're getting tired. Eat something, or rest at home.", "info");
         }
         zoneStamina = msg.stamina;
+        if (msg.water !== undefined && msg.maxWater !== undefined) hud.setWater?.(msg.water, msg.maxWater);
         if (store.zone !== "home") homeUi.setZoneStamina?.(msg.stamina, msg.max);
         break;
       case "chestOpened": {
