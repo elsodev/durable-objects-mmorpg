@@ -111,6 +111,8 @@ export const TABLE_SORT_BIAS = 0.75;
 
 /** Sort key for a solid prop whose feet are at `fy` (world px). */
 export function propSortZ(p: MapProp, fy: number): number {
+  // A ladder leans on the wall north of its tile: anyone stepping onto it to climb is in front.
+  if (p.type === "ladder") return p.y * TILE + 0.5;
   return SURFACE_PROPS.has(p.type) ? fy + TABLE_SORT_BIAS : fy;
 }
 

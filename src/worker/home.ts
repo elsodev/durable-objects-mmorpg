@@ -95,6 +95,9 @@ import {
   tillTile,
   waterTile,
 } from "../shared/engine";
+import { dropSpot, sortBag, takeForDrop } from "../shared/engine";
+import { viewOf } from "./game/groundItems";
+import { HomeDrops } from "./home/drops";
 import {
   cleanName,
   entityIdFor,
@@ -289,6 +292,7 @@ export class HomeRoom extends DurableObject<Env> {
   private objSeq = 0;
   /** Storage furniture contents (fridges), by object id. */
   private containers: Containers = {};
+  private drops = new HomeDrops();
   private transfer: PendingTransfer | null = null;
   private rocks = new RockField(HOME_MAP);
   /** Collision grids and entity differs of the yard and the house. */
@@ -390,6 +394,7 @@ export class HomeRoom extends DurableObject<Env> {
       "homeObjects",
       "mail",
       "containers",
+      "drops",
     ]);
     const owner = got.get("owner");
     this.owner = typeof owner === "string" ? owner : null;
@@ -402,6 +407,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.loadObjects(got.get("layout"), got.get("homeObjects"), got.get("objects"), Date.now());
     this.objSeq = objSeqFor(allObjects(this.objects), got.get("objSeq"));
     this.containers = sanitizeContainers(got.get("containers"), allObjects(this.objects));
+    this.drops.load(got.get("drops"), Date.now());
     this.transfer = sanitizeTransfer(got.get("transfer"));
     this.clock = sanitizeClock(got.get("clock"), Date.now());
     this.bin = sanitizeBin(got.get("bin"));
@@ -520,6 +526,7 @@ export class HomeRoom extends DurableObject<Env> {
     inbox?: boolean;
     mail?: boolean;
     containers?: boolean;
+    drops?: boolean;
   }): void {
     const entries: Record<string, unknown> = {};
     if (keys.save && this.save) entries.save = this.save;
@@ -531,6 +538,7 @@ export class HomeRoom extends DurableObject<Env> {
     }
     if (keys.mail) entries.mail = this.mail;
     if (keys.containers) entries.containers = this.containers;
+    if (keys.drops) entries.drops = this.drops.record();
     if (keys.rocks) {
       entries.rocks = this.rocks.record();
       entries.rockSpawns = this.rocks.spawnRecord();
@@ -1064,7 +1072,7 @@ export class HomeRoom extends DurableObject<Env> {
       inventory: isVisitor ? VISITOR_INVENTORY : this.save!.inventory,
       farm: yard ? this.farm : [],
       objects: this.objects[who.map],
-      ground: yard ? eggViews(this.animals(), !isVisitor) : [],
+      ground: [...(yard ? eggViews(this.animals(), !isVisitor) : []), ...this.drops.on[who.map].visibleTo(isVisitor ? "" : this.owner!)],
       brokenRocks: yard ? this.rocks.brokenIds() : [],
       trees: yard ? this.trees.stages() : [],
       ...(visit ? { visit: { ownerId: this.owner!, ownerName: this.save!.name, returnTo: visit.returnTo } } : {}),
@@ -1313,6 +1321,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (exit) this.takeExit(p, exit, now);
 
     if (p.leaving) return;
+    this.tickDrops(p, now);
     for (const v of this.visitors.all()) {
       const a = v.motion.step(v.entity, this.maps.grids[v.map], now);
       const vexit = exitAt(homeMap(v.map), v.entity.x, v.entity.y);
@@ -1415,6 +1424,49 @@ export class HomeRoom extends DurableObject<Env> {
     send(p.ws, r);
   }
 
+  /** Puts a bag stack on the ground in front of you (see home/drops.ts). */
+  private onDropItem(p: HPlayer, msg: Extract<ClientMsg, { t: "dropItem" }>, now: number): void {
+    const save = this.save!;
+    const pile = this.drops.on[p.map];
+    const at = dropSpot(this.maps.grids[p.map], p.entity, p.entity.facing);
+    const out = takeForDrop(save.inventory, msg.slot, msg.qty);
+    if (!out) {
+      this.reject(p, msg, "There's nothing to drop there.");
+      return send(p.ws, { t: "inventory", inventory: save.inventory });
+    }
+    const g = pile.discard(this.owner!, out.item, out.qty, at, now);
+    if (!g) {
+      addItem(save.inventory, out.item, out.qty);
+      this.reject(p, msg, "There's no room on the ground here.");
+      return send(p.ws, { t: "inventory", inventory: save.inventory });
+    }
+    send(p.ws, { t: "ground", upd: [viewOf(g)], del: [] });
+    this.persist({ drops: true });
+    this.inventoryChanged(p);
+    this.startTick();
+  }
+
+  /** Walk-over pickup of what the owner dropped, and dropped things running out of time. */
+  private tickDrops(p: HPlayer, now: number): void {
+    let changed = false;
+    for (const m of HOME_MAPS) {
+      const pile = this.drops.on[m];
+      for (const g of pile.expire(now)) {
+        changed = true;
+        if (p.map === m) send(p.ws, { t: "ground", upd: [], del: [g.id] });
+      }
+      if (m !== p.map) continue;
+      for (const g of pile.ownedNear(this.owner!, p.entity)) {
+        if (!addItem(this.save!.inventory, g.item, g.qty)) continue;
+        pile.take(g.id);
+        changed = true;
+        send(p.ws, { t: "ground", upd: [], del: [g.id] });
+        this.inventoryChanged(p, `+${g.qty} ${getItem(g.item)?.name ?? g.item}`);
+      }
+    }
+    if (changed) this.persist({ drops: true });
+  }
+
   private inventoryChanged(p: HPlayer, loot?: string): void {
     const save = this.save!;
     applyHeld(p.entity, save.inventory, p.heldSlot);
@@ -1504,6 +1556,11 @@ export class HomeRoom extends DurableObject<Env> {
       case "feedAnimal":
       case "adoptAnimal":
         return this.onAnimal(p, msg, now);
+      case "dropItem":
+        return this.onDropItem(p, msg, now);
+      case "sortBag":
+        if (sortBag(this.save!.inventory)) return this.inventoryChanged(p);
+        return send(p.ws, { t: "inventory", inventory: this.save!.inventory });
       case "moveSlot":
         if (!moveSlot(this.save!.inventory, msg.from, msg.to, msg.qty)) {
           this.reject(p, msg, "Can't move that there.");

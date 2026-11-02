@@ -47,6 +47,9 @@ import {
   passOutPenalty,
   PLAYER_IFRAME_MS,
   moveSlot,
+  dropSpot,
+  takeForDrop,
+  sortBag,
   removeFromSlot,
   rockRand,
   rollMonsterDrops,
@@ -982,6 +985,11 @@ export class ZoneRoom extends DurableObject<Env> {
         return this.reject(p, msg, "You can only do that at home.");
       case "moveSlot":
         return this.onMoveSlot(p, msg);
+      case "dropItem":
+        return this.onDropItem(p, msg, now);
+      case "sortBag":
+        if (sortBag(p.inv)) return this.inventoryChanged(p);
+        return send(p.ws, { t: "inventory", inventory: p.inv });
       case "setLook":
         return this.onSetLook(p, msg, now);
       case "hold":
@@ -1012,6 +1020,27 @@ export class ZoneRoom extends DurableObject<Env> {
       // Resync: the client moved it optimistically.
       return send(p.ws, { t: "inventory", inventory: p.inv });
     }
+    this.inventoryChanged(p);
+  }
+
+  /** Puts a bag stack on the ground in front of you; yours to pick up again for a few minutes. */
+  private onDropItem(p: ZPlayer, msg: Extract<ClientMsg, { t: "dropItem" }>, now: number): void {
+    const world = this.world!;
+    if (p.climb) return this.reject(p, msg, "Not while climbing.");
+    const at = dropSpot(world.grid, p.entity, p.entity.facing);
+    const out = takeForDrop(p.inv, msg.slot, msg.qty);
+    if (!out) {
+      this.reject(p, msg, "There's nothing to drop there.");
+      return send(p.ws, { t: "inventory", inventory: p.inv });
+    }
+    const g = world.ground.discard(p.userId, out.item, out.qty, at, now);
+    if (!g) {
+      addItem(p.inv, out.item, out.qty);
+      this.reject(p, msg, "There's no room on the ground here.");
+      return send(p.ws, { t: "inventory", inventory: p.inv });
+    }
+    this.groundAdded(g);
+    this.saveGround();
     this.inventoryChanged(p);
   }
 

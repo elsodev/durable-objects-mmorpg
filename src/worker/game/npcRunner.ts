@@ -1,5 +1,6 @@
 // NPCs of one shared zone: wandering, reacting to chat/interact, and the AI spend limits.
 // Conversations run async next to the tick; the tick never awaits them.
+import { sanitizeLine } from "../npc/text";
 import { isInteriorZone, type EntityState, type Facing, type MapData, type NpcSpawn, type Seat, type SharedZoneId, type Vec2 } from "../../shared/types";
 import { msToNextHour, npcNextZone, npcPresent, npcPrevZone, scheduleHour } from "../../shared/npcSchedule";
 import { pickStop, roamsOutdoors } from "../../shared/npcHangouts";
@@ -771,6 +772,8 @@ export class NpcRunner {
       }
     }
     if (gifted) await this.storage.put(giftKey, today);
+    // Last check before anyone hears it: no tool calls, JSON or reasoning, whatever the source.
+    if (line) line = sanitizeLine(line, npc.def?.name ?? npc.id);
     if (!line) {
       const scripted = npc.def?.lines.thinking_fail?.[0] ?? "Hmm?";
       // With a mind, a failed call falls back to scripted lines: the reserved budget was for one turn.
@@ -885,7 +888,7 @@ export class NpcRunner {
     const req = { playerId: speaker.userId, playerName: speaker.name, item };
     const local = () => giftReply(npc.id as NpcId, item, speaker.name, this.rand);
     const out = this.mind ? await withTimeout(this.mind.receiveGift(npc.id, req).catch(() => local()), GIFT_TIMEOUT_MS, local()) : local();
-    const clean = cleanChat(out.reply);
+    const clean = cleanChat(sanitizeLine(out.reply, npc.def.name) ?? local().reply);
     if (!clean) return;
     npc.pendingEmote = EMOTE_STATUS[GIFT_EMOTE[out.taste] ?? "happy"] ?? "!";
     this.showEmote(npc);

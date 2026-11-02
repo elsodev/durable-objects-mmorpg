@@ -77,6 +77,16 @@ export function stripToolText(line: string): string {
   return s.replace(/\s+/g, " ").trim();
 }
 
+// Reasoning some models write before answering: <think>...</think> (or an unclosed <think> to the
+// end), and "Thought:"/"Reasoning:" preambles. None of it is meant to be heard.
+const THINK_BLOCK = /<(think|thinking|reasoning|reflection)>[\s\S]*?(<\/\1>|$)/gi;
+const THINK_LINE = /^\s*(thought|thinking|reasoning|analysis|plan|action|action input|observation)\s*:.*$/gim;
+
+/** Raw model output without its reasoning. */
+export function stripReasoning(raw: string): string {
+  return raw.replace(THINK_BLOCK, "\n").replace(/<\/?(think|thinking|reasoning|reflection)>/gi, "\n").replace(THINK_LINE, "");
+}
+
 /** Text that still reads like a tool call or code after stripping: never shown to players. */
 function looksLikeCode(s: string): boolean {
   return TOOLISH.test(s) && /[(){}=_]/.test(s);
@@ -88,7 +98,7 @@ function looksLikeCode(s: string): boolean {
  */
 export function sanitizeLine(raw: unknown, npcName: string): string | null {
   if (typeof raw !== "string") return null;
-  const first = raw
+  const first = stripReasoning(raw)
     .split(/\r?\n/)
     .map((l) => stripToolText(stripControls(l).replace(/\s+/g, " ").trim()))
     .find((l) => /[A-Za-z]{2}/.test(l) && !looksLikeCode(l));

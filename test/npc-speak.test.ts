@@ -90,3 +90,13 @@ describe("sanitizeLine drops tool calls written out as text", () => {
     expect(sanitizeLine("Turnips (the purple kind) sell well today.", "Rue")).toBe("Turnips (the purple kind) sell well today.");
   });
 });
+
+describe("sanitizeLine drops reasoning", () => {
+  it("removes think blocks and reasoning preambles", () => {
+    expect(sanitizeLine("<think>They seem kind. I should be warm.</think>\nWhat a lovely morning!", "Rue")).toBe("What a lovely morning!");
+    expect(sanitizeLine("<think>\nhmm\n</think>Hello there!", "Rue")).toBe("Hello there!");
+    expect(sanitizeLine("<think>still deciding what to", "Rue")).toBeNull();
+    expect(sanitizeLine("Thought: be friendly\nAction: set_mood\nWelcome back!", "Rue")).toBe("Welcome back!");
+    expect(sanitizeLine('setmood(mood="fond")', "Rue")).toBeNull();
+  });
+});

@@ -86,6 +86,8 @@ export {
   type MonsterType,
 } from "./monsters";
 export * from "./combat";
+export { DROP_AHEAD, dropSpot, takeForDrop } from "./drop";
+export { compareStacks, sortBag, SORT_ORDER } from "./sortBag";
 export * from "./spawning";
 export {
   GAME_HOUR_MS,

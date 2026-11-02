@@ -35,6 +35,7 @@ import { statRows, statsVisible } from "./stats-logic";
 import { itemTip } from "./item-tip";
 import { createNameFlash, itemTitle, type NameFlash } from "./item-tip-logic";
 import { gaugeLabel, holdsWater, waterGauge, type WaterLevel } from "./water-gauge";
+import { createSlotMenu, type SlotMenu } from "./slot-menu";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -145,6 +146,15 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   let inv: Inventory | null = null;
   let water: WaterLevel | null = null;
   let selected = 0;
+  const slotMenu: SlotMenu = safe("slot menu", () => createSlotMenu(root, (slot, qty) => game.send({ t: "dropItem", slot, ...(qty !== null ? { qty } : {}) })), {
+    open() {},
+    close() {},
+  });
+  /** Right-click on a filled hotbar or bag slot: Drop 1 / Drop all. */
+  function openSlotMenu(slot: number, x: number, y: number): void {
+    const s = inv?.slots[slot];
+    if (s && !buildMode) slotMenu.open(slot, s, x, y);
+  }
   // Set once the card is built; the hotbar and inventory may update before that.
   let animalCardRef: AnimalCard | null = null;
   let typing = false;
@@ -161,7 +171,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     { id: "hud-status", className: "dm-panel hud-status" },
     el("div", { className: "hud-status-row" }, connEl, zoneEl),
     el("div", { className: "hud-status-row" }, hpEl),
-    el("div", { className: "hud-status-row hud-status-small" }, el("span", { className: "hud-coin-icon", title: "Coins" }), coinsEl, pingEl),
+    el("div", { className: "hud-status-row hud-status-small" }, el("span", { className: "hud-coin-icon dm-coin", title: "Coins" }), coinsEl, pingEl),
   );
   hud.appendChild(status);
 
@@ -278,6 +288,11 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       clickEcho = null;
     });
     safe("item tip", () => itemTip().attach(b, () => inv?.slots[i] ?? null), undefined);
+    b.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openSlotMenu(i, e.clientX, e.clientY);
+    });
     slotEls.push(b);
     hotbar.appendChild(b);
   }
@@ -386,7 +401,13 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   const notices: Notices = safe("notices", () => createNotices(noticesLayer), { notice() {} });
   const inventory = safe(
     "inventory",
-    () => createInventoryPanel(invLayer, { onItem: (slot) => onInventoryItem(slot), drag: drag ?? undefined }),
+    () =>
+      createInventoryPanel(invLayer, {
+        onItem: (slot) => onInventoryItem(slot),
+        drag: drag ?? undefined,
+        onMenu: (slot, x, y) => openSlotMenu(slot, x, y),
+        onSort: () => game.send({ t: "sortBag" }),
+      }),
     noopInventory,
   );
   const chat = safe(

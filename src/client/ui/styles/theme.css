@@ -335,3 +335,16 @@ kbd.dm-kbd,
 .dm-slot .slot-water.is-empty .slot-water-fill {
   display: none;
 }
+
+/* The coin icon next to coin amounts (status panel, bag): a gold coin with a rim and a stamped centre. */
+.dm-coin {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #f7d774 0 3px, #e0b43c 3px 4px, #f2c94c 4px);
+  border: 1px solid #8a6216;
+  box-shadow: inset -1px -2px 0 rgba(138, 98, 22, 0.55), inset 1px 1px 0 rgba(255, 246, 200, 0.7);
+}

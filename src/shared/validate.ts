@@ -104,6 +104,11 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       if (!isSlot(o.from) || !isSlot(o.to) || o.from === o.to) return null;
       if (o.qty !== undefined && !isQty(o.qty)) return null;
       return { t: "moveSlot", from: o.from, to: o.to, ...(o.qty !== undefined ? { qty: o.qty as number } : {}), ...req };
+    case "sortBag":
+      return { t: "sortBag", ...req };
+    case "dropItem":
+      if (!isSlot(o.slot) || (o.qty !== undefined && !isQty(o.qty))) return null;
+      return { t: "dropItem", slot: o.slot, ...(o.qty !== undefined ? { qty: o.qty as number } : {}), ...req };
     case "setLook": {
       const look = validateLook(o.look);
       return look ? { t: "setLook", look } : null;

@@ -41,9 +41,10 @@ export function buildPond(b: MapBuilder): void {
     ["lily_white", 24, 12],
     ["lilypad", 25, 13],
     ["lilypad_small", 22, 11],
-    ["water_reeds", 27, 10],
-    ["water_reeds", 19, 12],
-    ["water_reeds", 26, 14],
+    // Reeds stand in open water, a tile in from the shore (the bank's autotile eats edge tiles).
+    ["water_reeds", 20, 11],
+    ["water_reeds", 26, 12],
+    ["water_reeds", 23, 13],
   ]);
   // On the bank: reed clumps, a mossy rock, and a bench on the north shore looking over the water.
   b.prop("reeds", 18, 12);

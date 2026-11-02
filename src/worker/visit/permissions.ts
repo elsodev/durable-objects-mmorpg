@@ -32,6 +32,8 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   sleep: { deny: "You can't sleep in someone else's bed." },
   unship: { deny: NOT_YOURS },
   moveSlot: { deny: "You can tidy your bag after the visit." },
+  dropItem: { deny: "Drop things in your own home." },
+  sortBag: { deny: "You can tidy your bag after the visit." },
   pose: { deny: "Not in someone else's home." },
   // A visitor's save lives in their own HomeRoom; the client just leaves the visit instead.
   travel: { deny: "Leave the visit first." },

@@ -140,7 +140,15 @@ export interface InventoryPanel {
 /** ui/inventory.ts. onItem: clicked slot (furniture at home -> build mode; others -> select into hotbar). */
 export type CreateInventoryPanel = (
   root: HTMLElement,
-  opts: { onItem(slot: number): void; /** Drag and drop between slots (ui/slot-drag.ts). */ drag?: SlotDrag },
+  opts: {
+    onItem(slot: number): void;
+    /** Drag and drop between slots (ui/slot-drag.ts). */
+    drag?: SlotDrag;
+    /** Right-click (or long-press) a filled slot: the Drop menu at (x, y). */
+    onMenu?(slot: number, x: number, y: number): void;
+    /** "Sort" in the footer: sort the bag by item type. */
+    onSort?(): void;
+  },
 ) => InventoryPanel;
 
 export interface Chat {

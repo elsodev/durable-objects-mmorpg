@@ -73,12 +73,7 @@ export function buildCaves(): MapData {
   b.prop("mine_cart", 14, 23, { id: "mine_cart" });
   b.reserve({ x: 12, y: 22, w: 6, h: 3 });
 
-  // Ladders mark each tunnel mouth (placed beside it so they never block the way).
-  b.decorNear("ladder", 19, 26, { id: "ladder_hall" });
-  b.decorNear("ladder", 29, 17, { id: "ladder_floor1" });
-  b.decorNear("ladder", 47, 14, { id: "ladder_floor1_down" });
-  b.decorNear("ladder", 57, 21, { id: "ladder_floor2_down" });
-  b.decorNear("ladder", 58, 38, { id: "ladder_floor3" });
+  // No decorative ladders: on cave floors a ladder is always a way up or down (see DEEPER).
 
   // ---- monsters ----
   b.monster("slime", 34, 9, 4, 3);

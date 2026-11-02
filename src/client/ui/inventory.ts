@@ -51,11 +51,24 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
   grid.style.setProperty("--inv-cols", String(INVENTORY_COLS));
 
   const footer = el("footer", "inv-footer");
-  const coinIcon = el("span", "inv-coin-icon");
+  // The same coin as the status panel's (theme.css .dm-coin).
+  const coinIcon = el("span", "inv-coin-icon dm-coin");
   coinIcon.setAttribute("aria-hidden", "true");
   const coins = el("span", "inv-coins", "0");
   coins.id = "inventory-coins";
-  add(footer, coinIcon, coins);
+  const wallet = el("span", "inv-wallet");
+  wallet.title = "Coins";
+  add(wallet, coinIcon, coins);
+  const sortBtn = el("button", "dm-btn dm-btn-small inv-sort", "Sort");
+  sortBtn.type = "button";
+  sortBtn.id = "inventory-sort";
+  sortBtn.title = "Sort by item type (the hotbar row stays as it is)";
+  sortBtn.addEventListener("click", () => {
+    uiSound("click");
+    opts.onSort?.();
+  });
+  sortBtn.hidden = !opts.onSort;
+  add(footer, wallet, sortBtn);
 
   const tip = itemTip();
 
@@ -78,12 +91,21 @@ export const createInventoryPanel: CreateInventoryPanel = (root, opts) => {
       if (inv.slots[i]) uiSound("hover");
     });
     tip.attach(btn, () => inv.slots[i] ?? null);
+    btn.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (!inv.slots[i]) return;
+      tip.hide();
+      opts.onMenu?.(i, e.clientX, e.clientY);
+    });
     opts.drag?.attach(btn, i);
     add(grid, btn);
     slotEls.push({ btn, img, qty });
   }
 
-  add(panel, header, grid, footer);
+  // Grid and footer share one width, so Sort lines up with the right edge of the grid.
+  const body = el("div", "inv-body");
+  add(body, grid, footer);
+  add(panel, header, body);
   panel.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       e.stopPropagation();

@@ -73,6 +73,13 @@ export type ClientMsg =
    */
   | { t: "moveSlot"; from: number; to: number; qty?: number; req?: string }
   /**
+   * Drop `qty` (default: the whole stack) from a bag slot onto the ground in front of you. It stays
+   * yours: step away and walk back over it to pick it up, or leave it and it's gone in a few minutes.
+   */
+  | { t: "dropItem"; slot: number; qty?: number; req?: string }
+  /** Sort the bag by item type (the hotbar keeps its order; shared/engine/sortBag.ts). */
+  | { t: "sortBag"; req?: string }
+  /**
    * The hotbar slot you have selected (null: none), sent only when it changes and after each
    * welcome. The server shows the tool in that slot in your hand (EntityState.held).
    */

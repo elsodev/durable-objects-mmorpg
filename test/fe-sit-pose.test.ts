@@ -114,3 +114,12 @@ describe("tabletop things", () => {
     expect(raisedZ(inn.props.find((p) => p.type === "doormat")!, inn.props)).toBeNull();
   });
 });
+
+describe("ladder draw order", () => {
+  it("anyone on the ladder's tile is drawn in front of it", () => {
+    const ladder = { id: "l", type: "ladder", x: 21, y: 36, w: 1, h: 1 } as never;
+    const z = propSortZ(ladder, 37 * TILE);
+    expect(z).toBeLessThan(36.1 * TILE);
+    expect(z).toBeGreaterThan(35.9 * TILE);
+  });
+});

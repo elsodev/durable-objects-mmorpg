@@ -16,9 +16,13 @@ export interface GroundItem {
   owner: string | null;
   /** ms epoch it vanishes; null never (forage). */
   expiresAt: number | null;
+  /** Dropped on purpose: the owner can't pick it up until they've stepped away from it. */
+  wait?: boolean;
 }
 
 const MAX_ITEMS = 300;
+/** How far past pickup reach you must step before something you dropped can be picked up again. */
+const DROP_CLEAR = 0.3;
 
 export class GroundItems {
   private items = new Map<string, GroundItem>();
@@ -33,7 +37,7 @@ export class GroundItems {
       if (!Number.isFinite(g.x) || !Number.isFinite(g.y)) continue;
       const expiresAt = typeof g.expiresAt === "number" ? g.expiresAt : null;
       if (expiresAt !== null && expiresAt <= now) continue;
-      this.items.set(g.id, { id: g.id, item: g.item, qty: Math.floor(Number(g.qty)), x: g.x!, y: g.y!, owner: typeof g.owner === "string" ? g.owner : null, expiresAt });
+      this.items.set(g.id, { id: g.id, item: g.item, qty: Math.floor(Number(g.qty)), x: g.x!, y: g.y!, owner: typeof g.owner === "string" ? g.owner : null, expiresAt, ...(g.wait === true ? { wait: true } : {}) });
       const n = Number(g.id.replace(/^g/, ""));
       if (Number.isFinite(n)) this.seq = Math.max(this.seq, n);
     }
@@ -54,6 +58,11 @@ export class GroundItems {
     return this.add({ item, qty, x: at.x + Math.cos(a) * r, y: at.y + Math.sin(a) * r, owner, expiresAt: now + GROUND_DROP_MS });
   }
 
+  /** Something `owner` put down at `at` on purpose; it waits until they step away (see ownedNear). */
+  discard(owner: string, item: ItemId, qty: number, at: Vec2, now: number): GroundItem | null {
+    return this.add({ item, qty, x: at.x, y: at.y, owner, expiresAt: now + GROUND_DROP_MS, wait: true });
+  }
+
   /** Forage growing at a tile point; nobody owns it and it doesn't expire. */
   forage(item: ItemId, at: Vec2, qty = 1): GroundItem | null {
     return this.add({ item, qty: Math.max(1, Math.floor(qty)), x: at.x, y: at.y, owner: null, expiresAt: null });
@@ -72,10 +81,21 @@ export class GroundItems {
     return g;
   }
 
-  /** `owner`'s own drops within pickup reach of `pos` (walk-over pickup). */
+  /**
+   * `owner`'s own drops within pickup reach of `pos` (walk-over pickup). Something they dropped
+   * on purpose only counts once they have stepped away from it, so it doesn't jump straight back.
+   */
   ownedNear(owner: string, pos: Vec2): GroundItem[] {
     const out: GroundItem[] = [];
-    for (const g of this.items.values()) if (g.owner === owner && dist(g, pos) <= PICKUP_RADIUS) out.push(g);
+    for (const g of this.items.values()) {
+      if (g.owner !== owner) continue;
+      const d = dist(g, pos);
+      if (g.wait) {
+        if (d > PICKUP_RADIUS + DROP_CLEAR) g.wait = false;
+        continue;
+      }
+      if (d <= PICKUP_RADIUS) out.push(g);
+    }
     return out;
   }
 
