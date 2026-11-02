@@ -4608,6 +4608,25 @@
    },
    "walkable": true
   },
+  "ladder_hole": {
+   "file": "props/ladder_hole.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    32
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "walkable": true,
+   "note": "hole in a cave floor with a ladder going down; the tile is an exit (climb_down)"
+  },
   "campfire": {
    "file": "props/fire_camp.png",
    "rect": [

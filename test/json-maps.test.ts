@@ -88,7 +88,7 @@ describe("parseMapSpec", () => {
     ["an unknown item", { drops: { kill: { chance: 0.5, table: [{ item: "unobtainium", weight: 1 }] } } }, /drops\.kill\.table\[0\]\.item is not a known item/],
     ["an empty drop table", { drops: { kill: { chance: 0.5, table: [{ item: "stone", weight: 0 }] } } }, /needs an entry with weight above 0/],
     ["a bad ore", { rocks: [{ room: "a", count: 2, ores: { mithril: 1 } }] }, /rocks\[0\]\.ores key/],
-    ["an exit with no place", { exits: [{ to: "caves" }] }, /needs edge \+ room, or rect/],
+    ["an exit with no place", { exits: [{ to: "caves" }] }, /needs edge \+ room, ladder \+ room\/at, or rect/],
     ["an unknown prop", { props: [{ type: "spaceship", at: [3, 3] }] }, /props\[0\]\.type is not a known prop/],
   ])("rejects %s, naming the field", (_what, patch, msg) => {
     expect(() => parseMapSpec(tiny(patch), "t.json")).toThrow(MapSpecError);
@@ -178,20 +178,28 @@ describe("the shipped cave levels", () => {
     expect(map.drops?.ground?.spots.length).toBeGreaterThan(10);
   });
 
-  it.each(CAVE_DEPTH_ZONES)("%s: passages lead one level down per wing, and one way leads back up", (zone) => {
+  it.each(CAVE_DEPTH_ZONES)("%s: ladders lead one level down per wing, and one climbs back up", (zone) => {
     const map = getMap(zone);
     const { depth, wing } = caveLevelOf(zone)!;
-    const up = map.exits.filter((e) => e.y === map.height - 1);
+    const up = map.exits.filter((e) => e.climb === "up");
     expect(up.length).toBe(1);
     const above = depth === 2 ? "caves" : `caves_${depth - 1}_${wing}`;
     expect(up[0]!.to).toBe(above);
+    // The ladder leans on a wall: the two tiles above it are wall.
+    for (const dy of [1, 2]) expect(BLOCKING_GROUND.has(map.ground[(up[0]!.y - dy) * map.width + up[0]!.x]!)).toBe(true);
+    expect(map.props.some((p) => p.type === "ladder" && p.x === up[0]!.x && p.y === up[0]!.y)).toBe(true);
     if (depth > 2) expect([...up[0]!.back!].sort()).toEqual(CAVE_WINGS.filter((w) => w !== wing).map((w) => `caves_${depth - 1}_${w}`).sort());
-    const down = map.exits.filter((e) => e !== up[0]);
+    const down = map.exits.filter((e) => e.climb === "down");
+    expect(down.length + up.length).toBe(map.exits.length);
     if (depth === CAVE_MAX_DEPTH) expect(down).toEqual([]);
     else {
-      const edgeOf = (e: MapExit) => (e.x === 0 ? "left" : e.x === map.width - 1 ? "right" : e.y === 0 ? "top" : "?");
-      expect(Object.fromEntries(down.map((e) => [edgeOf(e), e.to]))).toEqual(Object.fromEntries(CAVE_WINGS.map((w) => [w, `caves_${depth + 1}_${w}`])));
-      for (const e of down) expect(e.label).toMatch(new RegExp(`Depth ${depth + 1}`));
+      // Each hole sits on the side of the map its wing is named for.
+      const sideOf = (e: MapExit) => (e.x < map.width / 3 ? "left" : e.x > (map.width * 2) / 3 ? "right" : e.y < map.height / 3 ? "top" : "?");
+      expect(Object.fromEntries(down.map((e) => [sideOf(e), e.to]))).toEqual(Object.fromEntries(CAVE_WINGS.map((w) => [w, `caves_${depth + 1}_${w}`])));
+      for (const e of down) {
+        expect(e.label).toMatch(new RegExp(`Depth ${depth + 1}`));
+        expect(map.props.find((p) => p.x === e.x && p.y === e.y)).toMatchObject({ type: "ladder_hole", walkable: true });
+      }
     }
   });
 
@@ -245,11 +253,12 @@ describe("the shipped cave levels", () => {
     }
   });
 
-  it("level 1 has one passage per edge down to the level-2 wings", () => {
+  it("level 1 has a ladder down to each level-2 wing", () => {
     const caves = getMap("caves");
     for (const w of CAVE_WINGS) {
       const e = caves.exits.find((x) => x.to === `caves_2_${w}`)!;
       expect(e, w).toBeDefined();
+      expect(e.climb).toBe("down");
       expect(e.spawn).toBe("from_caves");
       expect(caves.spawns[`from_caves_2_${w}`]).toBeDefined();
     }

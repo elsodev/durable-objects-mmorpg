@@ -1,14 +1,16 @@
 // The /sleep, /meditate and /piss poses (shared/poses.ts), drawn over any character without new
 // body frames: lying down turns the character's own back-view frame on its side under a quilt,
 // meditating uses each look's own cross-legged frame, so every body type and outfit works;
-// peeing is the standing frame plus a stream and a puddle. Geometry and
-// timing are in pose-logic.ts.
-import { Container, Sprite, type Texture } from "pixi.js";
+// peeing is the standing frame plus a stream and a puddle; climbing a ladder plays the look's
+// back-view walk cycle sinking into a hole or rising up the wall. Geometry and timing are in
+// pose-logic.ts.
+import { Container, Graphics, Sprite, type Texture } from "pixi.js";
 import type { Art, CharacterArt, Layers } from "../contracts";
 import { SCALE, TILE } from "../contracts";
 import { PEE_MS } from "../../shared/poses";
+import { CLIMB_ACTS, CLIMB_MS } from "../../shared/climb";
 import type { EntityState } from "../../shared/types";
-import { breathAt, LIE, MEDITATE, MOTE_EVERY_MS, MOTE_LIFE_MS, moteAt, puddleAt, puddleOffset, STREAM_FRAME_MS, STREAM_STRETCH, streamPlacement, ZZZ_EVERY_MS, ZZZ_LIFE_MS, zzzAt } from "./pose-logic";
+import { breathAt, climbAt, LIE, MEDITATE, MOTE_EVERY_MS, MOTE_LIFE_MS, moteAt, puddleAt, puddleOffset, STREAM_FRAME_MS, STREAM_STRETCH, streamPlacement, ZZZ_EVERY_MS, ZZZ_LIFE_MS, zzzAt } from "./pose-logic";
 
 /** What the entity layer needs from one entity's display record. */
 export interface PoseTarget {
@@ -41,6 +43,8 @@ interface Extras {
   puddleSeen: boolean;
   glow: Sprite | null;
   motes: Sprite[];
+  /** Climbing down: the hole's rim cuts the body off. */
+  mask: Graphics | null;
 }
 
 interface Puddle {
@@ -79,7 +83,9 @@ export function createPoseLayer(art: Art, layers: Layers): PoseLayer {
     }
     t.shadow.visible = true;
     if (!e) return;
-    for (const s of [e.quilt, e.pillow, e.stream, e.glow, ...e.zzz, ...e.motes]) s?.destroy();
+    if (e.mask) t.body.mask = null;
+    if (e.key.startsWith("climb_")) t.body.alpha = 1;
+    for (const s of [e.quilt, e.pillow, e.stream, e.glow, e.mask, ...e.zzz, ...e.motes]) s?.destroy();
     extras.delete(t.id);
   };
 
@@ -110,17 +116,36 @@ export function createPoseLayer(art: Art, layers: Layers): PoseLayer {
       const k = act?.k;
       let e = extras.get(t.id);
       const key = act ? `${act.k}:${act.at}` : "";
-      if (!act || (k !== "lie" && k !== "pee" && k !== "meditate") || (k !== "pee" && s.moving)) {
+      const climb = !!k && CLIMB_ACTS.has(k);
+      if (!act || (k !== "lie" && k !== "pee" && k !== "meditate" && !climb) || (k !== "pee" && !climb && s.moving)) {
         clear(t, c, e);
         return { posed: false };
       }
       if (!e || e.key !== key) {
         clear(t, c, e);
-        e = { key, start: now, quilt: null, pillow: null, zzz: [], stream: null, puddleSeen: false, glow: null, motes: [] };
+        e = { key, start: now, quilt: null, pillow: null, zzz: [], stream: null, puddleSeen: false, glow: null, motes: [], mask: null };
         extras.set(t.id, e);
       }
       const age = now - e.start;
       t.body.anchor.set(c.anchor.x, c.anchor.y);
+
+      if (climb) {
+        // The look's own back-view walk cycle, sinking into the hole or rising up the ladder.
+        const frames = c.walk.up?.length ? c.walk.up : [c.idle.up ?? c.idle.down];
+        const st = climbAt(k as "climb_down" | "climb_up", age, CLIMB_MS, frames.length);
+        t.body.texture = frames[st.frame] ?? frames[0]!;
+        t.body.position.set(0, st.dy * SCALE);
+        t.body.alpha = st.alpha;
+        if (st.clipY !== null) {
+          if (!e.mask) {
+            e.mask = new Graphics().rect(-48 * SCALE, -120 * SCALE, 96 * SCALE, (120 + st.clipY) * SCALE).fill(0xffffff);
+            t.root.addChild(e.mask);
+            t.body.mask = e.mask;
+          }
+          t.shadow.visible = st.dy < 10;
+        }
+        return { posed: true, head: st.head * SCALE };
+      }
 
       if (k === "lie") {
         t.body.texture = c.idle.up ?? c.idle.down;
@@ -234,7 +259,7 @@ export function createPoseLayer(art: Art, layers: Layers): PoseLayer {
     release(id) {
       const e = extras.get(id);
       if (!e) return;
-      for (const s of [e.quilt, e.pillow, e.stream, e.glow, ...e.zzz, ...e.motes]) s?.destroy();
+      for (const s of [e.quilt, e.pillow, e.stream, e.glow, e.mask, ...e.zzz, ...e.motes]) s?.destroy();
       extras.delete(id);
     },
 

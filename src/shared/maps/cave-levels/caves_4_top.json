@@ -2,14 +2,14 @@
   "id": "caves_4_top",
   "name": "Crystal Spire · Depth 4",
   "width": 44,
-  "height": 36,
+  "height": 40,
   "seed": 852375,
   "ambient": "cave",
   "depth": 4,
   "fill": "cave_wall",
   "floor": "stone",
   "rooms": [
-    {"id": "landing", "x": 23, "y": 29, "rx": 5, "ry": 3},
+    {"id": "landing", "x": 23, "y": 34, "rx": 5, "ry": 3},
     {"id": "vault", "x": 23, "y": 15, "rx": 14, "ry": 8, "noise": 0.35},
     {"id": "west", "x": 8, "y": 24, "rx": 5, "ry": 4},
     {"id": "east", "x": 35, "y": 24, "rx": 5, "ry": 4}
@@ -20,7 +20,7 @@
     {"from": "landing", "to": "east"}
   ],
   "exits": [
-    {"edge": "bottom", "room": "landing", "to": "caves_3_top", "label": "↓ Way back up", "back": ["caves_3_left", "caves_3_right"]}
+    {"ladder": "up", "room": "landing", "dx": -3, "to": "caves_3_top", "label": "↑ Climb back up", "back": ["caves_3_left", "caves_3_right"]}
   ],
   "spawns": {"default": {"room": "landing"}},
   "monsters": [

@@ -582,6 +582,11 @@ Derived: ElizaWy Wood Bridge A with planks removed.
 - Source: https://github.com/ElizaWy/LPC (Objects/Furniture/); https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles; https://opengameart.org/content/lpc-modified-base-tiles; https://opengameart.org/content/lpc-upholstery; https://opengameart.org/content/lpc-dungeon-elements; https://opengameart.org/content/lpc-interior-castle-tiles
 - Notes: Per-file entries in ElizaWy/LPC Objects/Furniture/**/Credits.txt (Barrel, Chest, Ladder, Lighting: Sharm + Eliza Wyatt; Crate, Swirling Vine rug: Eliza Wyatt; Chair Dining, Single Beds: Sharm + BlueCarrot16 + Eliza Wyatt; Tables Rough Wood: Sharm + Eliza Wyatt; Planter: Sharm).
 
+### props/ladder_hole.png
+- Authors: DurableMMO contributors (drawn by script: `scripts/art/draw-ladder-hole.py`)
+- License: **CC0**
+- Notes: A hole in the cave floor with a ladder going down. Colours taken from props/ladder.png and the castlefloors stone tile so it matches them.
+
 ### props/lighting_outdoors.png
 - Authors: Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**

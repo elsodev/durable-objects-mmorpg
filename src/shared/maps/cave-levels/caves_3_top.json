@@ -2,18 +2,18 @@
   "id": "caves_3_top",
   "name": "Echo Galleries · Depth 3",
   "width": 52,
-  "height": 42,
+  "height": 46,
   "seed": 852275,
   "ambient": "cave",
   "depth": 3,
   "fill": "cave_wall",
   "floor": "stone",
   "rooms": [
-    {"id": "landing", "x": 25, "y": 35, "rx": 5, "ry": 3},
-    {"id": "hub", "x": 25, "y": 22, "rx": 13, "ry": 8, "noise": 0.35},
-    {"id": "west", "x": 8, "y": 18, "rx": 6, "ry": 5},
+    {"id": "landing", "x": 25, "y": 40, "rx": 5, "ry": 3},
+    {"id": "hub", "x": 25, "y": 24, "rx": 13, "ry": 9, "noise": 0.35},
+    {"id": "west", "x": 8, "y": 20, "rx": 6, "ry": 5},
     {"id": "north", "x": 23, "y": 7, "rx": 7, "ry": 4},
-    {"id": "east", "x": 43, "y": 17, "rx": 6, "ry": 5}
+    {"id": "east", "x": 43, "y": 19, "rx": 6, "ry": 5}
   ],
   "tunnels": [
     {"from": "landing", "to": "hub"},
@@ -22,10 +22,10 @@
     {"from": "hub", "to": "east"}
   ],
   "exits": [
-    {"edge": "bottom", "room": "landing", "to": "caves_2_top", "label": "↓ Way back up", "back": ["caves_2_left", "caves_2_right"]},
-    {"edge": "left", "room": "west", "to": "caves_4_left", "label": "← Depth 4: Glowmoss Den"},
-    {"edge": "top", "room": "north", "to": "caves_4_top", "label": "↑ Depth 4: Crystal Spire"},
-    {"edge": "right", "room": "east", "to": "caves_4_right", "label": "→ Depth 4: Gem Vault"}
+    {"ladder": "up", "room": "landing", "dx": -3, "to": "caves_2_top", "label": "↑ Climb back up", "back": ["caves_2_left", "caves_2_right"]},
+    {"ladder": "down", "room": "west", "dx": -3, "to": "caves_4_left", "label": "↓ Depth 4: Glowmoss Den"},
+    {"ladder": "down", "room": "north", "dx": -4, "to": "caves_4_top", "label": "↓ Depth 4: Crystal Spire"},
+    {"ladder": "down", "room": "east", "dx": 3, "to": "caves_4_right", "label": "↓ Depth 4: Gem Vault"}
   ],
   "spawns": {"default": {"room": "landing"}},
   "monsters": [

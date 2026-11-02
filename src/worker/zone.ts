@@ -28,6 +28,7 @@ import {
 } from "../shared/types";
 import { mergeLoot, rollKillDrop } from "../shared/engine/mapDrops";
 import { noteCaveArrival, sanitizeCaveTrail, type CaveTrail } from "../shared/caveLevels";
+import { beginClimb } from "../shared/climb";
 import {
   addItem,
   buildCollision,
@@ -194,6 +195,8 @@ interface ZPlayer {
   bonds: Bonds;
   /** Cave levels: the map above each one this player came down from (a shared way up returns there). */
   caveTrail: CaveTrail;
+  /** On a ladder: the exit it leads through and when the climb has played. */
+  climb?: { exit: MapExit; until: number };
 }
 
 interface World {
@@ -617,11 +620,23 @@ export class ZoneRoom extends DurableObject<Env> {
         this.kick(p, CLOSE_IDLE, "idle");
         continue;
       }
+      if (p.climb) {
+        // On a ladder: stand still until the climb has played, then go.
+        if (now >= p.climb.until && !p.donation) {
+          const exit = p.climb.exit;
+          p.climb = undefined;
+          void this.takeExit(p, exit);
+        }
+        continue;
+      }
       acks.set(p, p.motion.step(p.entity, world.grid, now));
       if (p.motion.takeMoved()) p.dirty = true;
       const exit = exitAt(world.map, p.entity.x, p.entity.y);
       // A donation in flight finishes first (its refund must land in this zone's save).
-      if (exit && !p.donation) void this.takeExit(p, exit);
+      if (exit && !p.donation) {
+        if (exit.climb) this.startClimb(p, exit, now);
+        else void this.takeExit(p, exit);
+      }
     }
     if (this.players.size === 0) return;
 
@@ -883,6 +898,13 @@ export class ZoneRoom extends DurableObject<Env> {
     p.saveSoon.schedule();
   }
 
+  /** Steps onto a ladder: everyone sees the climb (entity act), then takeExit after CLIMB_MS. */
+  private startClimb(p: ZPlayer, exit: MapExit, now: number): void {
+    this.getUp(p);
+    p.motion.stop();
+    p.climb = { exit, until: beginClimb(p.entity, exit, now) };
+  }
+
   private async takeExit(p: ZPlayer, taken: MapExit): Promise<void> {
     if (this.players.get(p.ws) !== p) return;
     const above = p.caveTrail[this.world!.zone];
@@ -907,6 +929,8 @@ export class ZoneRoom extends DurableObject<Env> {
 
   private handle(p: ZPlayer, msg: ClientMsg, now: number): void {
     const world = this.world!;
+    // Halfway down a ladder you can talk, but not walk, swing or trade.
+    if (p.climb && msg.t !== "chat" && msg.t !== "ping" && msg.t !== "hold") return;
     switch (msg.t) {
       case "move":
         if (msg.dx !== 0 || msg.dy !== 0) this.getUp(p);

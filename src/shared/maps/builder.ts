@@ -268,7 +268,7 @@ export class MapBuilder {
     this.reserve({ x: tx - 1, y: ty - 1, w: 3, h: 3 });
   }
 
-  exit(r: Rect, to: MapExit["to"], spawn: string, map?: MapExit["map"], extra: Pick<MapExit, "label" | "back"> = {}): void {
+  exit(r: Rect, to: MapExit["to"], spawn: string, map?: MapExit["map"], extra: Pick<MapExit, "label" | "back" | "climb"> = {}): void {
     this.exits.push({ ...r, to, spawn, ...(map ? { map } : {}), ...extra });
     this.reserve({ x: r.x - 2, y: r.y - 2, w: r.w + 4, h: r.h + 4 });
   }

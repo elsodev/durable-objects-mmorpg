@@ -368,6 +368,17 @@ function ladder(): PixelGrid {
   return g;
 }
 
+/** Fallback for props/ladder_hole.png: a pit in the floor with the ladder's top showing. */
+function ladderHole(): PixelGrid {
+  const g = canvas(1, 1, 0); // 32 x 32
+  g.ellipse(16, 18, 14, 11, 0x666d8c);
+  g.ellipse(16, 19, 11, 8, 0x100e18);
+  for (const x of [9, 19]) g.rect(x, 4, 4, 22, P.wood);
+  for (let y = 7; y < 26; y += 6) g.rect(13, y, 6, 2, P.woodDark);
+  g.outline("self");
+  return g;
+}
+
 /** Rock face with a grass lip, optionally with a dark cave opening in its lower part. */
 function cliff(wTiles: number, mouth: boolean): PixelGrid {
   const g = canvas(wTiles, 4, 0);
@@ -533,6 +544,7 @@ const DRAWERS: Record<OutdoorPropType, Drawer> = {
   lantern_post: lanternPost,
   sign_post: signPost,
   ladder,
+  ladder_hole: ladderHole,
   cave_mouth: () => cliff(3, true),
   cliff_face: () => cliff(2, false),
   cliff_vines: () => cliff(3, false),

@@ -2,14 +2,14 @@
   "id": "caves_4_right",
   "name": "Gem Vault · Depth 4",
   "width": 44,
-  "height": 36,
+  "height": 40,
   "seed": 852382,
   "ambient": "cave",
   "depth": 4,
   "fill": "cave_wall",
   "floor": "stone",
   "rooms": [
-    {"id": "landing", "x": 21, "y": 29, "rx": 5, "ry": 3},
+    {"id": "landing", "x": 21, "y": 34, "rx": 5, "ry": 3},
     {"id": "vault", "x": 21, "y": 14, "rx": 14, "ry": 8, "noise": 0.35},
     {"id": "west", "x": 8, "y": 24, "rx": 5, "ry": 4},
     {"id": "east", "x": 35, "y": 24, "rx": 5, "ry": 4}
@@ -20,7 +20,7 @@
     {"from": "landing", "to": "east"}
   ],
   "exits": [
-    {"edge": "bottom", "room": "landing", "to": "caves_3_right", "label": "↓ Way back up", "back": ["caves_3_left", "caves_3_top"]}
+    {"ladder": "up", "room": "landing", "dx": -3, "to": "caves_3_right", "label": "↑ Climb back up", "back": ["caves_3_left", "caves_3_top"]}
   ],
   "spawns": {"default": {"room": "landing"}},
   "monsters": [

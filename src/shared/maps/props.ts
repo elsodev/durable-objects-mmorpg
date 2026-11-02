@@ -34,6 +34,8 @@ export const PROP_FOOTPRINTS = {
   bridge_broken: { w: 4, h: 3 },
   lantern_post: { w: 1, h: 1 },
   ladder: { w: 1, h: 1 },
+  /** A hole in a cave floor with a ladder going down (the tile is an exit). */
+  ladder_hole: { w: 1, h: 1 },
   /**
    * Quarry cliff, lip to foot (the whole face blocks). Pieces line up side by side into one wall;
    * the cave mouth's bottom row is cut back out of its footprint by the exit into the caves.
@@ -84,4 +86,4 @@ export const PROP_FOOTPRINTS = {
 export type PropType = keyof typeof PROP_FOOTPRINTS;
 
 /** Outdoor props that lie flat on the ground or water: walkable, drawn under everyone, no shadow. */
-export const FLAT_OUTDOOR_PROPS: ReadonlySet<string> = new Set(["lilypad", "lilypad_small", "lily_pink", "lily_white", "water_reeds", "dock"]);
+export const FLAT_OUTDOOR_PROPS: ReadonlySet<string> = new Set(["lilypad", "lilypad_small", "lily_pink", "lily_white", "water_reeds", "dock", "ladder_hole"]);

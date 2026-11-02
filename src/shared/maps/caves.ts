@@ -4,13 +4,12 @@
 //   floor 1 (north)       - copper rocks, slimes
 //   floor 2 (north-east)  - iron rocks, bats
 //   floor 3 (south)       - gem rocks, rock crabs
-// Passages on three edges lead down to level 2 (JSON maps in cave-levels/): west out of the hall,
-// north out of floor 1 and east out of floor 2.
+// Three ladders down into holes in the floor lead to level 2 (JSON maps in cave-levels/): on the
+// west side of the hall, the north side of floor 1 and the east side of floor 2.
 
 import { Ground, type MapData, type ZoneId } from "../types";
 import { MapBuilder, type Rect } from "./builder";
-import { edgePassage } from "./json/build";
-import type { Edge } from "./json/spec";
+import { placeLadder } from "./json/build";
 
 export const CAVES_SIZE = { width: 72, height: 56 } as const;
 
@@ -26,11 +25,11 @@ const FLOOR1: Chamber = { cx: 34, cy: 12, rx: 10, ry: 7 };
 const FLOOR2: Chamber = { cx: 58, cy: 15, rx: 10, ry: 8 };
 const FLOOR3: Chamber = { cx: 46, cy: 44, rx: 16, ry: 8 };
 
-/** The ways down to level 2: a straight passage from `from` out through `edge`. */
-const DEEPER: readonly { edge: Edge; from: { x: number; y: number }; to: ZoneId; label: string; sign: { x: number; y: number } }[] = [
-  { edge: "left", from: { x: 6, y: 24 }, to: "caves_2_left", label: "← Depth 2: West Hollows", sign: { x: 5, y: 22 } },
-  { edge: "top", from: { x: 31, y: 8 }, to: "caves_2_top", label: "↑ Depth 2: Bat Roost", sign: { x: 29, y: 8 } },
-  { edge: "right", from: { x: 64, y: 15 }, to: "caves_2_right", label: "→ Depth 2: Crab Burrows", sign: { x: 65, y: 12 } },
+/** The ladders down to level 2's left, top and right wings: a hole at `at`. */
+const DEEPER: readonly { at: { x: number; y: number }; to: ZoneId; label: string }[] = [
+  { at: { x: 4, y: 25 }, to: "caves_2_left", label: "↓ Depth 2: West Hollows" },
+  { at: { x: 31, y: 8 }, to: "caves_2_top", label: "↓ Depth 2: Bat Roost" },
+  { at: { x: 65, y: 14 }, to: "caves_2_right", label: "↓ Depth 2: Crab Burrows" },
 ];
 
 /** Bounding rect a bit inside the chamber, used for scattering rocks. */
@@ -49,7 +48,7 @@ export function buildCaves(): MapData {
   tunnel([{ x: 42, y: 11 }, { x: 50, y: 11 }]); // floor 1 -> floor 2
   tunnel([{ x: 60, y: 21 }, { x: 60, y: 38 }]); // floor 2 -> floor 3
   b.fill({ x: 9, y: 37, w: 4, h: 4 }, Ground.Stone); // a little landing at the tunnel's end
-  for (const d of DEEPER) tunnel([d.from, edgePassage(d.edge, d.from, CAVES_SIZE.width, CAVES_SIZE.height).end]);
+  const holes = DEEPER.map((d) => placeLadder(b, "down", d.at.x, d.at.y, Ground.Stone, `caves: ladder to ${d.to}`));
   b.sealUnreachable(11, 28, Ground.CaveWall);
 
   // ---- exits & spawns ----
@@ -58,12 +57,12 @@ export function buildCaves(): MapData {
   b.spawn("from_quarry", 10, 38);
   b.spawn("default", 6, 28);
   b.prop("sign_post", 12, 38, { id: "sign_quarry", label: "↓ Quarry" });
-  for (const d of DEEPER) {
-    const pass = edgePassage(d.edge, d.from, CAVES_SIZE.width, CAVES_SIZE.height);
-    b.exit(pass.exit, d.to, "from_caves", undefined, { label: d.label });
-    b.spawn(`from_${d.to}`, pass.spawn.x, pass.spawn.y);
-    b.decorNear("sign_post", d.sign.x, d.sign.y, { id: `sign_${d.to}`, label: d.label });
-  }
+  DEEPER.forEach((d, i) => {
+    const hole = holes[i]!;
+    b.exit(hole.exit, d.to, "from_caves", undefined, { label: d.label, climb: "down" });
+    b.spawn(`from_${d.to}`, hole.spawn.x, hole.spawn.y);
+    b.prop(hole.prop, hole.exit.x, hole.exit.y, { id: `ladder_${d.to}` });
+  });
 
   // ---- miner camp (safe: no monsters in the hall) ----
   b.npc("grumm", 9, 26, 2);

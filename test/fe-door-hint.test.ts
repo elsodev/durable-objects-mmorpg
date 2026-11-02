@@ -34,16 +34,18 @@ describe("door hints", () => {
     expect(doorHintAt(caves, { x: out.x + 1, y: out.y - 0.5 })?.text).toBe("Exit to Quarry");
   });
 
-  it("shows a cave passage's own label, and hangs the plate below a passage off the top edge", () => {
+  it("shows a cave ladder's own label", () => {
     const caves = getMap("caves");
-    const left = caves.exits.find((e) => e.to === "caves_2_left")!;
-    const s = caves.spawns.from_caves_2_left!;
-    expect(doorHintAt(caves, s)).toMatchObject({ text: "← Depth 2: West Hollows", y: left.y });
-    const top = caves.exits.find((e) => e.to === "caves_2_top")!;
-    const hint = doorHintAt(caves, caves.spawns.from_caves_2_top!)!;
-    expect(hint).toMatchObject({ text: "↑ Depth 2: Bat Roost", below: true });
-    expect(hint.y).toBeGreaterThan(top.y + top.h);
+    const hole = caves.exits.find((e) => e.to === "caves_2_left")!;
+    expect(doorHintAt(caves, caves.spawns.from_caves_2_left!)).toMatchObject({ text: "↓ Depth 2: West Hollows", y: hole.y });
     const deep = getMap("caves_3_top");
-    expect(doorHintAt(deep, deep.spawns.from_caves_2_top!)?.text).toBe("↓ Way back up");
+    expect(doorHintAt(deep, deep.spawns.from_caves_2_top!)?.text).toBe("↑ Climb back up");
+  });
+
+  it("hangs the plate below a passage off the top edge of the map", () => {
+    const map = { ...getMap("caves"), exits: [{ x: 10, y: 0, w: 2, h: 1, to: "caves_2_top" as const, spawn: "from_caves", label: "Up there" }] };
+    const hint = doorHintAt(map, { x: 11, y: 2.5 })!;
+    expect(hint).toMatchObject({ text: "Up there", below: true });
+    expect(hint.y).toBeGreaterThan(1);
   });
 });

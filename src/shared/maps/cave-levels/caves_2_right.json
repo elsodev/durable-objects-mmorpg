@@ -2,18 +2,18 @@
   "id": "caves_2_right",
   "name": "Crab Burrows · Depth 2",
   "width": 48,
-  "height": 40,
+  "height": 44,
   "seed": 852182,
   "ambient": "cave",
   "depth": 2,
   "fill": "cave_wall",
   "floor": "stone",
   "rooms": [
-    {"id": "landing", "x": 22, "y": 33, "rx": 5, "ry": 3},
-    {"id": "hub", "x": 22, "y": 19, "rx": 12, "ry": 8, "noise": 0.35},
-    {"id": "west", "x": 8, "y": 15, "rx": 6, "ry": 5},
+    {"id": "landing", "x": 22, "y": 38, "rx": 5, "ry": 3},
+    {"id": "hub", "x": 22, "y": 21, "rx": 12, "ry": 8, "noise": 0.35},
+    {"id": "west", "x": 8, "y": 17, "rx": 6, "ry": 5},
     {"id": "north", "x": 24, "y": 7, "rx": 7, "ry": 4},
-    {"id": "east", "x": 39, "y": 18, "rx": 6, "ry": 5}
+    {"id": "east", "x": 39, "y": 20, "rx": 6, "ry": 5}
   ],
   "tunnels": [
     {"from": "landing", "to": "hub"},
@@ -22,10 +22,10 @@
     {"from": "hub", "to": "east"}
   ],
   "exits": [
-    {"edge": "bottom", "room": "landing", "to": "caves", "label": "↓ Way back up"},
-    {"edge": "left", "room": "west", "to": "caves_3_left", "label": "← Depth 3: Dripstone Grotto"},
-    {"edge": "top", "room": "north", "to": "caves_3_top", "label": "↑ Depth 3: Echo Galleries"},
-    {"edge": "right", "room": "east", "to": "caves_3_right", "label": "→ Depth 3: Iron Seams"}
+    {"ladder": "up", "room": "landing", "dx": -3, "to": "caves", "label": "↑ Climb back up"},
+    {"ladder": "down", "room": "west", "dx": -3, "to": "caves_3_left", "label": "↓ Depth 3: Dripstone Grotto"},
+    {"ladder": "down", "room": "north", "dx": -4, "to": "caves_3_top", "label": "↓ Depth 3: Echo Galleries"},
+    {"ladder": "down", "room": "east", "dx": 3, "to": "caves_3_right", "label": "↓ Depth 3: Iron Seams"}
   ],
   "spawns": {"default": {"room": "landing"}},
   "monsters": [

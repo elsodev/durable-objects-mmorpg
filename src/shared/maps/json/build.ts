@@ -1,7 +1,7 @@
 // Builds a MapData from a checked MapSpec with the seeded MapBuilder: paint the tiles, carve the
 // rooms and passages, seal stray pockets, then place exits, spawns, monsters, rocks and decor the
 // same way the hand-written maps do (so nothing lands in a wall or blocks a passage).
-import { Ground, type MapData, type MapDropEntry, type Vec2 } from "../../types";
+import { BLOCKING_GROUND, Ground, type MapData, type MapDropEntry, type Vec2 } from "../../types";
 import { MapBuilder, type Rect } from "../builder";
 import type { Anchor, BaseOre, Edge, ExitSpec, GroundName, MapSpec, RoomSpec } from "./spec";
 
@@ -51,6 +51,32 @@ export function edgePassage(edge: Edge, room: Pick<RoomSpec, "x" | "y">, width: 
   }
 }
 
+interface LadderPlace {
+  exit: Rect;
+  spawn: Vec2;
+  prop: "ladder_hole" | "ladder";
+}
+
+/**
+ * Makes room for a ladder and returns where it is. "down": a hole at (x, y) with floor around it.
+ * "up": a ladder against the first wall straight north of (x, y), which must be at least two
+ * tiles thick so the ladder has a face to lean on. Arrivals stand two tiles south of either.
+ */
+export function placeLadder(b: MapBuilder, dir: "up" | "down", x: number, y: number, floor: Ground, what: string): LadderPlace {
+  const wall = (tx: number, ty: number) => b.inBounds(tx, ty) && BLOCKING_GROUND.has(b.get(tx, ty));
+  let ly = y;
+  if (dir === "up") {
+    if (wall(x, ly)) throw new Error(`${what}: starts inside a wall at ${x},${y}`);
+    while (ly > 0 && !wall(x, ly - 1)) ly--;
+    if (!wall(x, ly - 1) || !wall(x, ly - 2)) throw new Error(`${what}: no wall two tiles thick north of ${x},${y}`);
+    b.fill({ x: x - 1, y: ly, w: 3, h: 3 }, floor);
+  } else {
+    b.fill({ x: x - 1, y: ly - 1, w: 3, h: 4 }, floor);
+  }
+  b.reserve({ x: x - 1, y: ly - 1, w: 3, h: 4 });
+  return { exit: { x, y: ly, w: 1, h: 1 }, spawn: { x, y: ly + 2 }, prop: dir === "down" ? "ladder_hole" : "ladder" };
+}
+
 /** Where to put the passage's sign: inside the room, toward the edge. */
 function signSpot(edge: Edge, r: RoomSpec): Vec2 {
   const dx = edge === "left" ? -1 : edge === "right" ? 1 : 0;
@@ -93,15 +119,24 @@ export function buildFromSpec(spec: MapSpec): MapData {
     const pass = passages[i];
     if (pass && "room" in e) b.path([{ x: room(e.room).x, y: room(e.room).y }, pass.end], PASSAGE_W, floor, carve);
   });
+  const ladders = spec.exits.map((e) => {
+    if (!("ladder" in e)) return null;
+    const a = tileOf(e.anchor);
+    return placeLadder(b, e.ladder, a.x + e.dx, a.y + e.dy, floor, `${spec.id}: ${e.ladder} ladder to ${e.to}`);
+  });
   const home = tileOf(spec.spawns.default!);
   if (spec.ambient === "cave") b.sealUnreachable(home.x, home.y, fill);
 
   // ---- exits & spawns ----
   spec.exits.forEach((e: ExitSpec, i) => {
-    const pass = passages[i];
+    const pass = passages[i] ?? ladders[i];
     const rect: Rect = pass ? pass.exit : "rect" in e ? { x: e.rect[0], y: e.rect[1], w: e.rect[2], h: e.rect[3] } : { x: 0, y: 0, w: 1, h: 1 };
     const at = pass ? pass.spawn : "spawnAt" in e ? { x: e.spawnAt[0], y: e.spawnAt[1] } : { x: 0, y: 0 };
-    b.exit(rect, e.to, e.arrive ?? `from_${spec.id}`, undefined, { ...(e.label ? { label: e.label } : {}), ...(e.back?.length ? { back: [...e.back] } : {}) });
+    b.exit(rect, e.to, e.arrive ?? `from_${spec.id}`, undefined, {
+      ...(e.label ? { label: e.label } : {}),
+      ...(e.back?.length ? { back: [...e.back] } : {}),
+      ...("ladder" in e ? { climb: e.ladder } : {}),
+    });
     b.spawn(`from_${e.to}`, at.x, at.y);
     for (const z of e.back ?? []) b.spawn(`from_${z}`, at.x, at.y);
   });
@@ -110,7 +145,8 @@ export function buildFromSpec(spec: MapSpec): MapData {
     b.spawn(name, t.x, t.y);
   }
 
-  // ---- placed props, then signs at each passage's mouth ----
+  // ---- ladders, placed props, then signs at each passage's mouth ----
+  ladders.forEach((l, i) => l && b.prop(l.prop, l.exit.x, l.exit.y, { id: `ladder_${i + 1}` }));
   for (const p of spec.props) b.prop(p.type, p.at[0], p.at[1], { ...(p.id ? { id: p.id } : {}), ...(p.label ? { label: p.label } : {}) });
   spec.exits.forEach((e, i) => {
     if (!e.label || !("edge" in e)) return;

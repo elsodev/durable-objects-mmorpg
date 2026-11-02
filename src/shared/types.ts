@@ -187,6 +187,11 @@ export interface MapExit {
   /** What the door plate says near this exit ("Deeper: West Hollows"). */
   label?: string;
   /**
+   * A ladder (cave floors): stepping on it plays a climb ("climb_down" into a hole, "climb_up" a
+   * ladder on the wall) for CLIMB_MS before the zone changes (shared/climb.ts).
+   */
+  climb?: "up" | "down";
+  /**
    * A way back up shared by several maps above: a player who arrived from one of these zones
    * goes back there (to its "from_<this zone>" spawn) instead of to `to`.
    */

@@ -126,3 +126,49 @@ export function moteAt(age: number, index: number): { x: number; y: number; fram
   const alpha = f < 0.15 ? f / 0.15 : f > 0.75 ? (1 - f) / 0.25 : 1;
   return { x, y, frame, alpha };
 }
+
+/**
+ * Climbing a ladder (act "climb_down" / "climb_up", shared/climb.ts) uses the look's own
+ * back-view walk frames, so every body, outfit and villager climbs without new art: hands and
+ * feet alternate as the walk cycle plays, a step every CLIMB.stepMs with a one-pixel bob.
+ * Down: the body sinks into the hole and is cut off at the hole's near rim (`clipY` below the
+ * feet point it started from), then fades. Up: it rises up the ladder on the wall and fades.
+ */
+export const CLIMB = {
+  stepMs: 110,
+  /** Down: how far the body sinks (a standing body is ~50 px tall) and where the rim cuts it. */
+  sink: 48,
+  clipY: 3,
+  /** Up: how far it rises up the ladder. */
+  rise: 30,
+  /** Standing name-tag height (source px above the feet). */
+  head: 50,
+} as const;
+
+export interface ClimbFrame {
+  /** Index into walk.up, skipping the standing frame 0. */
+  frame: number;
+  /** Body offset from the feet point, source px (+ down). */
+  dy: number;
+  alpha: number;
+  /** Down only: hide the body below this line (source px from the feet point). */
+  clipY: number | null;
+  /** Name tag height above the feet point, source px. */
+  head: number;
+}
+
+/** The climb `age` ms in (`ms` long in all) with a walk cycle of `frames` frames. */
+export function climbAt(kind: "climb_down" | "climb_up", age: number, ms: number, frames: number): ClimbFrame {
+  const f = Math.min(1, Math.max(0, age / ms));
+  const steps = Math.max(1, frames - 1);
+  const step = Math.floor(Math.max(0, age) / CLIMB.stepMs);
+  const frame = frames > 1 ? 1 + (step % steps) : 0;
+  const bob = step % 2;
+  if (kind === "climb_down") {
+    // Slow at the top, then down hand over hand.
+    const dy = Math.round(CLIMB.sink * f * f) + bob;
+    return { frame, dy, alpha: f < 0.85 ? 1 : Math.max(0, Math.round((1 - (f - 0.85) / 0.15) * 100) / 100), clipY: CLIMB.clipY, head: Math.max(8, CLIMB.head - dy) };
+  }
+  const dy = -Math.round(CLIMB.rise * f) - bob;
+  return { frame, dy, alpha: f < 0.7 ? 1 : Math.max(0, Math.round((1 - (f - 0.7) / 0.3) * 100) / 100), clipY: null, head: CLIMB.head - dy };
+}

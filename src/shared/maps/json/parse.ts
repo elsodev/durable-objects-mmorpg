@@ -257,7 +257,12 @@ function parseExit(r: Reader, v: unknown, p: string, width: number, height: numb
   if (e.label !== undefined) base.label = r.str(e.label, `${p}.label`, 40);
   if (e.back !== undefined) base.back = r.list(e.back, `${p}.back`).map((z, i) => r.zone(z, `${p}.back[${i}]`));
   if (e.edge !== undefined) return { ...base, edge: r.oneOf<Edge>(e.edge, `${p}.edge`, EDGES), room: roomRef(e.room, `${p}.room`) };
-  if (!Array.isArray(e.rect) || e.rect.length !== 4) r.fail(`${p}`, "needs edge + room, or rect [x, y, w, h] + spawnAt");
+  if (e.ladder !== undefined) {
+    const anchor: Anchor = e.room !== undefined ? { room: roomRef(e.room, `${p}.room`) } : { at: r.tile(e.at, `${p}.at`, width, height) };
+    const shift = (v: unknown, k: string) => r.opt(v, (n) => r.num(n, `${p}.${k}`, -12, 12, true), 0);
+    return { ...base, ladder: r.oneOf(e.ladder, `${p}.ladder`, ["up", "down"] as const), anchor, dx: shift(e.dx, "dx"), dy: shift(e.dy, "dy") };
+  }
+  if (!Array.isArray(e.rect) || e.rect.length !== 4) r.fail(`${p}`, "needs edge + room, ladder + room/at, or rect [x, y, w, h] + spawnAt");
   const [x, y, w, h] = e.rect.map((n, i) => r.num(n, `${p}.rect[${i}]`, i < 2 ? 0 : 1, MAX_SIDE, true)) as [number, number, number, number];
   if (x + w > width || y + h > height) r.fail(`${p}.rect`, "runs off the map");
   return { ...base, rect: [x, y, w, h], spawnAt: r.tile(e.spawnAt, `${p}.spawnAt`, width, height) };

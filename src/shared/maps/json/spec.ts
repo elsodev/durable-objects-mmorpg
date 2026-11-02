@@ -52,6 +52,16 @@ export type ExitSpec = {
       rect: readonly [number, number, number, number];
       spawnAt: TileXY;
     }
+  | {
+      /**
+       * A ladder: "down" is a hole in the floor at the anchor, "up" a ladder against the first
+       * wall north of the anchor. `dx`/`dy` shift a room anchor.
+       */
+      ladder: "up" | "down";
+      anchor: Anchor;
+      dx: number;
+      dy: number;
+    }
 );
 
 export interface MonsterGroupSpec {
