@@ -3,7 +3,7 @@ import { classify, ruleDecision } from "../src/worker/npc/rules";
 import { decideWith, idleLine, estimateUnits, type NpcContext } from "../src/worker/npc/brain";
 import { NPCS, getNpc } from "../src/worker/npc/catalog";
 import { getItem } from "../src/shared/items";
-import type { JevClient } from "../src/worker/npc/jev";
+import { jevClient, type JevClient } from "../src/worker/npc/jev";
 
 function ctx(npcId: string, text: string): NpcContext {
   return {
@@ -64,10 +64,33 @@ describe("classify", () => {
   });
 });
 
+describe("jevClient", () => {
+  const recorder = (out: unknown) => {
+    const calls: unknown[][] = [];
+    const ai = { run: async (...args: unknown[]) => { calls.push(args); return out; } } as unknown as Ai;
+    return { ai, calls };
+  };
+  const req = { state: "hi", questions: {} };
+  it("runs JEV_MODEL on the AI binding through the gateway and returns its answers", async () => {
+    const { ai, calls } = recorder({ model: "jev-1.13.0", answers: { intent: { choice: "greet" } } });
+    const res = await jevClient(ai, "typesafe/jev", "default").systemOne(req);
+    expect(res.answers).toEqual({ intent: { choice: "greet" } });
+    expect(calls[0]?.[0]).toBe("typesafe/jev");
+    expect(calls[0]?.[1]).toBe(req);
+    expect(calls[0]?.[2]).toMatchObject({ gateway: { id: "default" } });
+  });
+  it("skips the gateway when none is set", async () => {
+    const { ai, calls } = recorder({});
+    expect((await jevClient(ai, "typesafe/jev").systemOne(req)).answers).toBeUndefined();
+    expect((calls[0]?.[2] as AiOptions).gateway).toBeUndefined();
+  });
+});
+
 describe("decide", () => {
-  const never: (k: string) => JevClient = () => ({ systemOne: () => new Promise(() => {}) });
+  const never = (): JevClient => ({ systemOne: () => new Promise(() => {}) });
+  const JEV = { AI: {} as Ai, JEV_MODEL: "typesafe/jev" };
   it("shop words open the shop for shopkeepers", async () => {
-    const d = await decideWith(ctx("odette", "show me your seeds for sale"), { NPC_MODEL: "m", TYPESAFE_API_KEY: "k" }, never);
+    const d = await decideWith(ctx("odette", "show me your seeds for sale"), { NPC_MODEL: "m", ...JEV }, never);
     expect(d.source).toBe("rules");
     expect(d.actions).toContainEqual({ kind: "open_shop", playerId: "u1" });
   });
@@ -86,7 +109,7 @@ describe("decide", () => {
         },
       }),
     });
-    const d = await decideWith(ctx("odette", "your garden is lovely"), { NPC_MODEL: "m", TYPESAFE_API_KEY: "k" }, client);
+    const d = await decideWith(ctx("odette", "your garden is lovely"), { NPC_MODEL: "m", ...JEV }, client);
     expect(d.source).toBe("jev");
     expect(d.mood).toBe("happy");
     expect(d.actions).toContainEqual({ kind: "emote", emote: "love" });
@@ -94,16 +117,18 @@ describe("decide", () => {
   });
   it("falls back to rules when Jev errors or answers garbage", async () => {
     const bad = () => ({ systemOne: async () => ({ answers: { intent: { choice: "launch_missiles" } } }) });
-    const d = await decideWith(ctx("bram", "your garden is lovely"), { NPC_MODEL: "m", TYPESAFE_API_KEY: "k" }, bad);
+    const d = await decideWith(ctx("bram", "your garden is lovely"), { NPC_MODEL: "m", ...JEV }, bad);
     expect(d.source).toBe("fallback");
     const boom = () => ({ systemOne: async () => { throw new Error("x"); } });
-    expect((await decideWith(ctx("bram", "lovely day"), { NPC_MODEL: "m", TYPESAFE_API_KEY: "k" }, boom)).source).toBe("fallback");
+    expect((await decideWith(ctx("bram", "lovely day"), { NPC_MODEL: "m", ...JEV }, boom)).source).toBe("fallback");
   });
-  it("skips Jev when AI is off or no key", async () => {
+  it("skips Jev when AI is off, unbound or no JEV_MODEL", async () => {
     let called = false;
     const spy = () => ({ systemOne: async () => { called = true; return { answers: {} }; } });
-    await decideWith(ctx("bram", "lovely day"), { NPC_MODEL: "m", NPC_AI_MODE: "off", TYPESAFE_API_KEY: "k" }, spy);
+    await decideWith(ctx("bram", "lovely day"), { NPC_MODEL: "m", NPC_AI_MODE: "off", ...JEV }, spy);
     await decideWith(ctx("bram", "lovely day"), { NPC_MODEL: "m" }, spy);
+    await decideWith(ctx("bram", "lovely day"), { NPC_MODEL: "m", AI: {} as Ai }, spy);
+    await decideWith(ctx("bram", "lovely day"), { NPC_MODEL: "m", JEV_MODEL: "typesafe/jev" }, spy);
     expect(called).toBe(false);
   });
 });

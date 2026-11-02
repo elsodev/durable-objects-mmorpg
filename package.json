@@ -18,7 +18,8 @@
     "test": "vitest run",
     "e2e": "node scripts/e2e.mjs",
     "e2e:playtest": "node scripts/e2e-playtest.mjs",
-    "dev:local": "npm run build:client && wrangler dev --env local"
+    "dev:local": "npm run build:client && wrangler dev --env local",
+    "deploy:prod": "npm run build:client && node scripts/deploy-prod.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261101.1",

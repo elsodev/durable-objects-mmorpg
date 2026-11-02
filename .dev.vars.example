@@ -4,8 +4,6 @@
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:8787
 
-# Optional: TypeSafe API key for typed NPC decisions (Jev). Without it NPCs use rule-based decisions.
-TYPESAFE_API_KEY=
 
 # Turnstile captcha. Leave both empty locally: `npm run dev:local` turns the captcha off.
 # In production set TURNSTILE_SITE_KEY in wrangler.jsonc vars and `wrangler secret put TURNSTILE_SECRET_KEY`.

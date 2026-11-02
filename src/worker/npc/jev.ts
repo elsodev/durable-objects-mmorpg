@@ -1,6 +1,8 @@
 // TypeSafe Jev: a fast typed decision (choice/score answers only, so the model can't invent actions).
-import { TypeSafeClient, choice, score } from "@typesafe-ai/sdk";
+// It runs on Workers AI (JEV_MODEL, e.g. "typesafe/jev"); the SDK only builds the questions.
+import { choice, score } from "@typesafe-ai/sdk";
 import type { Questions, RequestOptions, SystemOneRequest } from "@typesafe-ai/sdk";
+import { gatewayOptions } from "./gateway";
 import type { ItemId } from "../../shared/types";
 import { getItem } from "../../shared/items";
 import type { Decision, Intent, NpcAction, NpcContext } from "./brain";
@@ -14,20 +16,19 @@ const GIFT_MIN_WARMTH = 3;
 
 export const INTENTS: readonly Intent[] = ["greet", "buy", "sell", "quest", "ask_info", "smalltalk", "rude", "goodbye"];
 
-/** The part of TypeSafeClient we use; tests pass a fake. */
+/** How Jev is called; tests pass a fake. */
 export interface JevClient {
   systemOne(req: SystemOneRequest<Questions>, opts?: RequestOptions): PromiseLike<{ answers: unknown }>;
 }
 
-const clients = new Map<string, TypeSafeClient>();
-
-export function jevClient(apiKey: string): JevClient {
-  let c = clients.get(apiKey);
-  if (!c) {
-    c = new TypeSafeClient({ apiKey, compression: false, timeout: JEV_TIMEOUT_MS, retry: { maxRetries: 0 }, logLevel: "off" });
-    clients.set(apiKey, c);
-  }
-  return c;
+/** Jev on the Workers AI binding, through the AI Gateway when one is set. Same request and answer shape as TypeSafe's API. */
+export function jevClient(ai: Ai, model: string, gatewayId?: string): JevClient {
+  return {
+    systemOne: async (req, opts) => {
+      const out = await ai.run(model, req as unknown as Record<string, unknown>, { gateway: gatewayOptions(gatewayId), signal: opts?.signal });
+      return { answers: out?.answers };
+    },
+  };
 }
 
 export function buildJevRequest(ctx: NpcContext, gifts: ItemId[]): SystemOneRequest<Questions> {
