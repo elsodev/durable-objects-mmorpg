@@ -115,6 +115,11 @@ import { PlayerInterest } from "./game/interest";
 import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, sellTo, shopToday, stallShop, STALL_PREFIX } from "./game/shop";
+import { AnimalHerd } from "./game/animalHerd";
+import { adoptAnimal, feedAnimal, petAnimal, type CareOutcome } from "./game/animalCare";
+import { townhallBuy, townhallSell, townhallShop } from "./game/townhall";
+import { ANIMAL_CARE_REACH, ANIMAL_PREFIX, animalView, bondWith, HEART_PTS, MAX_ANIMAL_HEARTS, sanitizeAnimals, VILLAGE_ANIMALS, villageAnimal, type AnimalSave } from "../shared/animals";
+import { TOWNHALL_DESK, TOWNHALL_SHOP } from "../shared/ranch";
 import { donate, GOAL_DEFS, goalsView, sanitizeProgress, type GoalProgress } from "./game/goals";
 import { regen } from "./game/vitals";
 import { distToRect, inToolReach, NPC_CHAT_RANGE, NPC_TALK_RANGE, PROP_REACH, SHOP_RANGE } from "./game/range";
@@ -201,6 +206,8 @@ interface ZPlayer {
   caveTrail: CaveTrail;
   /** On a ladder: the exit it leads through and when the climb has played. */
   climb?: { exit: MapExit; until: number };
+  /** Affection with the village animals, pets, barn and hens (saved with the player). */
+  animals: AnimalSave;
 }
 
 interface World {
@@ -218,6 +225,8 @@ interface World {
   /** Overflow loot and forage lying around. */
   ground: GroundItems;
   forage: ForageGrower | null;
+  /** The village cats and dogs (village only). */
+  animals: AnimalHerd | null;
 }
 
 /** A knockback velocity as the total slide it makes (tiles), for clients to play at once. */
@@ -335,7 +344,9 @@ export class ZoneRoom extends DurableObject<Env> {
     ground.load(await this.ctx.storage.get("ground"), Date.now());
     const forage = ForageGrower.forZone(zone, map, grid);
     const monsters = new MonsterPool(map, grid, rand, zone, Date.now());
-    this.world = { zone, map, grid, rocks, trees, hits: new HitTracker(), monsters, npcs, seats, chests, ground, forage };
+    const animals = zone === "village" ? new AnimalHerd(() => this.world!.grid, map.exits, rand) : null;
+    this.world = { zone, map, grid, rocks, trees, hits: new HitTracker(), monsters, npcs, seats, chests, ground, forage, animals };
+    animals?.sync(VILLAGE_ANIMALS.map((a) => ({ ...a })), Date.now());
   }
 
   private async loadGoals(): Promise<void> {
@@ -496,6 +507,7 @@ export class ZoneRoom extends DurableObject<Env> {
       lastShop: new Map(),
       bonds: sanitizeBonds(save.bonds),
       caveTrail: sanitizeCaveTrail(save.caveTrail),
+      animals: sanitizeAnimals(save.animals),
     };
     this.players.set(ws, p);
     return p;
@@ -658,6 +670,7 @@ export class ZoneRoom extends DurableObject<Env> {
     }
 
     world.npcs.tick(dt, now);
+    world.animals?.tick(dt, now);
     world.seats.retain(new Set(this.allEntities().map((e) => e.id)));
 
     if (world.chests?.respawnDue(world.grid, now, this.allEntities(), Math.random)) {
@@ -826,7 +839,7 @@ export class ZoneRoom extends DurableObject<Env> {
   private allEntities(): EntityState[] {
     const w = this.world;
     if (!w) return [];
-    return [...this.playerEntities(), ...w.npcs.entities(), ...w.monsters.alive()];
+    return [...this.playerEntities(), ...w.npcs.entities(), ...w.monsters.alive(), ...(w.animals?.entities() ?? [])];
   }
 
   private playerByEntity(id: string): ZPlayer | undefined {
@@ -863,6 +876,7 @@ export class ZoneRoom extends DurableObject<Env> {
       stats: { ...p.stats },
       bonds: p.bonds,
       caveTrail: p.caveTrail,
+      animals: p.animals,
       ...(p.look ? { look: p.look } : {}),
       ...override,
     };
@@ -985,6 +999,10 @@ export class ZoneRoom extends DurableObject<Env> {
       case "ping":
         send(p.ws, { t: "pong", at: msg.at, serverTime: now });
         return;
+      case "petAnimal":
+      case "feedAnimal":
+      case "adoptAnimal":
+        return this.onAnimal(p, msg, now);
     }
   }
 
@@ -1025,6 +1043,13 @@ export class ZoneRoom extends DurableObject<Env> {
     if (heartsCmd && devToolsEnabled(this.env)) return this.devSetHearts(p, Number(heartsCmd[1]));
     const warpCmd = /^\/warp\s+([a-z0-9_]{1,32})(?:\s+([a-z0-9_]{1,32}))?$/.exec(text);
     if (warpCmd && devToolsEnabled(this.env)) return this.devWarp(p, warpCmd[1]!, warpCmd[2]);
+    const loveCmd = /^\/love\s+(\d{1,2})$/.exec(text);
+    if (loveCmd && devToolsEnabled(this.env)) return this.devSetLove(p, Number(loveCmd[1]));
+    const coinsCmd = /^\/coins\s+(\d{1,5})$/.exec(text);
+    if (coinsCmd && devToolsEnabled(this.env)) {
+      p.inv.coins += Number(coinsCmd[1]);
+      return this.inventoryChanged(p, `+${coinsCmd[1]} coins (dev)`);
+    }
     // The client sends /invite, /kick and /uninvite over HTTP; never broadcast one that slips through.
     if (parseHomeCommand(text)) return send(p.ws, { t: "notice", text: HOME_COMMAND_NOTICE, kind: "error" });
     const guard = this.chatGuards.get(p.userId, now);
@@ -1280,12 +1305,14 @@ export class ZoneRoom extends DurableObject<Env> {
       this.bondChanged(p, npc.entity, bondTalk(p.bonds, npc.id, p.inv, now, Math.random, this.rates), true);
       return;
     }
+    if (target.startsWith(ANIMAL_PREFIX)) return this.onAnimal(p, { t: "petAnimal", animal: target }, now, true);
     if (target.startsWith(CHEST_TARGET_PREFIX)) return this.onChest(p, target.slice(CHEST_TARGET_PREFIX.length), now);
     if (target.startsWith(GROUND_TARGET_PREFIX)) return this.onForage(p, target.slice(GROUND_TARGET_PREFIX.length));
     const prop = world.map.props.find((pr) => pr.id === target);
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
     if (SEAT_FACING[prop.type]) return this.onSeat(p, prop.id, now);
     if (prop.type === "market_stall" && stallShop(STALL_PREFIX + prop.id)) return this.sendStallShop(p, prop.id);
+    if (prop.id === TOWNHALL_DESK && world.zone === "int_townhall") return this.sendTownhall(p);
     if (prop.type === "market_stall") {
       const keeper = this.shopkeeperNear(prop);
       if (keeper) this.sendShop(p, keeper);
@@ -1393,6 +1420,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private onBuy(p: ZPlayer, msg: Extract<ClientMsg, { t: "buy" }>): void {
+    if (msg.npc === TOWNHALL_SHOP) return this.onTownhallTrade(p, msg);
     const s = this.shopFor(p, msg.npc);
     if ("error" in s) return this.reject(p, msg, s.error!);
     const r = buyFrom(p.inv, s.shop, msg.item, msg.qty);
@@ -1401,6 +1429,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private onSell(p: ZPlayer, msg: Extract<ClientMsg, { t: "sell" }>): void {
+    if (msg.npc === TOWNHALL_SHOP) return this.onTownhallTrade(p, msg);
     const s = this.shopFor(p, msg.npc);
     if ("error" in s) return this.reject(p, msg, s.error!);
     const r = sellTo(p.inv, s.shop, msg.slot, msg.qty);
@@ -1666,6 +1695,62 @@ export class ZoneRoom extends DurableObject<Env> {
     b.milestones = b.milestones.filter((m) => m < hearts);
     send(p.ws, { t: "bonds", list: bondList(p.bonds, Date.now()) });
     send(p.ws, { t: "notice", text: `${npc.def?.name ?? npc.id}: one point short of ${hearts} hearts.`, kind: "info" });
+  }
+
+  /** Local dev only: "/love N" sets your affection with the nearest village animal to N hearts. */
+  private devSetLove(p: ZPlayer, hearts: number): void {
+    const near = this.world?.animals?.entities().find((e) => dist(e, p.entity) <= 4);
+    const def = near ? villageAnimal(near.id.slice(ANIMAL_PREFIX.length)) : undefined;
+    if (!near || !def || hearts > MAX_ANIMAL_HEARTS) {
+      return send(p.ws, { t: "notice", text: `Stand next to a village cat or dog: /love 0-${MAX_ANIMAL_HEARTS}`, kind: "info" });
+    }
+    Object.assign(bondWith(p.animals, def.id), { pts: hearts * HEART_PTS, petDay: 0, fedDay: 0 });
+    p.saveSoon.schedule();
+    this.onAnimal(p, { t: "petAnimal", animal: near.id }, Date.now(), true, true);
+  }
+
+  // ------------------------------------------------------------------ animals & the town hall
+
+  /**
+   * Pet, feed or adopt a village cat or dog. Everyone here sees the love emote; only this player
+   * gets the card. `open` (a click) shows the card; `quiet` skips the pet itself.
+   */
+  private onAnimal(p: ZPlayer, msg: Extract<ClientMsg, { t: "petAnimal" | "feedAnimal" | "adoptAnimal" }>, now: number, open = false, quiet = false): void {
+    const herd = this.world?.animals;
+    const a = herd?.get(msg.animal);
+    const def = a ? villageAnimal(a.spec.id) : undefined;
+    if (!herd || !a || !def) return this.reject(p, msg, "That animal isn't here.");
+    if (dist(a.entity, p.entity) > ANIMAL_CARE_REACH) return this.reject(p, msg, "Walk a little closer.");
+    let out: CareOutcome;
+    if (msg.t === "feedAnimal") out = feedAnimal(p.animals, p.inv, msg.slot, def, a.entity.id, now);
+    else if (msg.t === "adoptAnimal") out = adoptAnimal(p.animals, def, a.entity.id, now);
+    else if (quiet) out = { ok: true, view: animalView(p.animals, def, a.entity.id, now), delta: 0, text: "" };
+    else out = petAnimal(p.animals, def, a.entity.id, now);
+    if (!out.ok) return this.reject(p, msg, out.reason);
+    if (msg.t === "feedAnimal") this.inventoryChanged(p);
+    if (!quiet) {
+      p.entity.facing = facingToTile(p.entity, Math.floor(a.entity.x), Math.floor(a.entity.y));
+      herd.love(a.entity.id, p.entity, now);
+      this.broadcast({ t: "emote", from: a.entity.id, code: "heart" });
+    }
+    send(p.ws, { t: "animal", view: out.view, delta: out.delta, ...(open || msg.t === "adoptAnimal" ? { open: true } : {}), ...(msg.t === "adoptAnimal" ? { adopted: true } : {}), ...(msg.t === "feedAnimal" ? { fed: true } : {}) });
+    if (out.text) send(p.ws, { t: "notice", text: out.text, kind: msg.t === "adoptAnimal" ? "loot" : "info" });
+    p.saveSoon.schedule();
+  }
+
+  /** The town hall counter (the mayor's desk): the barn, hens and pet treats; it buys eggs. */
+  private sendTownhall(p: ZPlayer): void {
+    send(p.ws, townhallShop(p.animals));
+  }
+
+  private onTownhallTrade(p: ZPlayer, msg: Extract<ClientMsg, { t: "buy" | "sell" }>): void {
+    const desk = this.world?.zone === "int_townhall" ? this.world.map.props.find((pr) => pr.id === TOWNHALL_DESK) : undefined;
+    if (!desk || distToRect(p.entity, desk) > SHOP_RANGE) return this.reject(p, msg, "Ask at the town hall desk.");
+    const r = msg.t === "buy" ? townhallBuy(p.animals, p.inv, msg.item, msg.qty) : townhallSell(p.inv, msg.slot, msg.qty);
+    if (!r.ok) return this.reject(p, msg, r.reason);
+    this.inventoryChanged(p, r.text);
+    // The offers change once the barn is bought or the barn fills up.
+    if (msg.t === "buy") this.sendTownhall(p);
   }
 
   /** RPC (local dev only): shift this zone's NPC routine clock. */

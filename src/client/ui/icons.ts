@@ -13,6 +13,7 @@ const KIND_COLORS: Record<ItemKind | "unknown", string> = {
   material: "#a89a6e",
   fish: "#4f88c6",
   forage: "#6fa86b",
+  produce: "#e8d6a8",
   unknown: "#9a8c98",
 };
 

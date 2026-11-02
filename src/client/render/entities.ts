@@ -1,7 +1,7 @@
 // Players, NPCs and monsters: one pooled Container per entity (ground shadow + body sprite),
 // y-sorted in layers.sorted, animated by facing/moving with manual frame stepping.
 import { ColorMatrixFilter, Container, Graphics, GraphicsContext, Sprite } from "pixi.js";
-import type { Art, CharacterArt, CreateEntityLayer, EntityLayer, HeldArt, Layers } from "../contracts";
+import type { AnimalPose, Art, CharacterArt, CreateEntityLayer, EntityLayer, HeldArt, Layers } from "../contracts";
 import { SCALE, TILE } from "../contracts";
 import type { EntityState, Vec2 } from "../../shared/types";
 import { runActionHook } from "./action-anim";
@@ -11,7 +11,7 @@ import { actionFrame, actionNameFor, impactFrameOf, ITEM_POSE_ACTS, swingFrame }
 import { toolTiming } from "../../shared/engine/toolTiming";
 import { heldFrameIndex, heldToShow } from "./held-logic";
 import { createPoseLayer } from "./poses";
-import { bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFrame, type EntityProfile } from "./entityProfile";
+import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFrame, type EntityProfile } from "./entityProfile";
 
 /**
  * The single place an entity's textures are chosen. Today it is the catalog sprite key; when
@@ -154,6 +154,24 @@ export const createEntityLayer = ((
     return true;
   }
 
+  /** Animals sitting, napping or happy: their pose frames loop in place (same anchor as walking). */
+  function playAnimalPose(rec: Rec, s: EntityState, now: number): boolean {
+    const act = s.act;
+    const frames = s.kind === "animal" && act && !s.moving ? rec.char.poses?.[act.k as AnimalPose] : undefined;
+    if (!act || !frames) return false;
+    const key = `${act.k}:${act.at}`;
+    if (key !== rec.poseKey) {
+      rec.poseKey = key;
+      rec.poseStart = now;
+    }
+    const list = frames[s.facing] ?? frames.down;
+    const i = animalPoseFrame(act.k, now - rec.poseStart, list.length);
+    if (i < 0) return false;
+    const tex = list[i]!;
+    if (rec.body.texture !== tex) rec.body.texture = tex;
+    return true;
+  }
+
   /**
    * The held tool rides the body: same anchor, offset, scale and alpha, with the frame that
    * matches the body's walk frame, so it bobs with each step. Its sheets load on first use.
@@ -276,7 +294,7 @@ export const createEntityLayer = ((
         if (rec.body.texture !== t) rec.body.texture = t;
       }
     } else {
-      acting = playAction(rec, s, now) || runActionHook(rec.body, s, now);
+      acting = playAction(rec, s, now) || runActionHook(rec.body, s, now) || playAnimalPose(rec, s, now);
       if (!acting && rec.body.texture !== tex) rec.body.texture = tex;
     }
 

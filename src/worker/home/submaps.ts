@@ -52,9 +52,12 @@ export class SubMaps {
     this.grids.home_in = buildCollision(HOME_IN, { objects: objects.home_in });
   }
 
-  /** What changed on one map since its last tick (everyone on that map gets the same diff). */
-  diff(id: HomeMapId, people: readonly Present[]): { upd: EntityState[]; del: string[] } {
-    return this.differs[id].diff(onMap(people, id).map((p) => p.entity));
+  /**
+   * What changed on one map since its last tick (everyone on that map gets the same diff).
+   * `others`: entities that aren't people (the yard's animals).
+   */
+  diff(id: HomeMapId, people: readonly Present[], others: readonly EntityState[] = []): { upd: EntityState[]; del: string[] } {
+    return this.differs[id].diff([...onMap(people, id).map((p) => p.entity), ...others]);
   }
 }
 

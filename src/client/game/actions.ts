@@ -45,6 +45,21 @@ export function nearestNpc(you: Vec2, entities: readonly EntityState[], range = 
   return best;
 }
 
+/** The closest cat, dog or hen within `range` tiles (pet, feed), or null. */
+export function nearestAnimal(you: Vec2, entities: readonly EntityState[], range: number): string | null {
+  let best: string | null = null;
+  let bestD = range;
+  for (const e of entities) {
+    if (e.kind !== "animal") continue;
+    const d = Math.hypot(e.x - you.x, e.y - you.y);
+    if (d <= bestD) {
+      bestD = d;
+      best = e.id;
+    }
+  }
+  return best;
+}
+
 export function withinInteract(you: Vec2, target: Vec2): boolean {
   return Math.hypot(target.x - you.x, target.y - you.y) <= INTERACT_RANGE;
 }

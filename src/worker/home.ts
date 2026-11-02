@@ -110,6 +110,12 @@ import { Motion } from "./game/motion";
 import { applyHeld } from "./game/held";
 import { bondList } from "./game/bonds";
 import { sanitizeBonds, type Bonds } from "../shared/hearts";
+import { ANIMAL_CARE_REACH, ANIMAL_PREFIX, emptyAnimals, sanitizeAnimals, villageAnimal, type AnimalSave } from "../shared/animals";
+import { BARN_ID, BARN_ITEM, BARN_CAPACITY, chickenById, collectEgg, layEggs } from "../shared/ranch";
+import { AnimalHerd } from "./game/animalHerd";
+import { feedAnimal, petAnimal, petHen, type CareOutcome } from "./game/animalCare";
+import { eggSpots, eggViews, ensureBarn, yardAnimals } from "./home/ranch";
+import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../shared/spawns";
 import { canChangeLook, savedLook, shownLook } from "./game/look";
 import { RockField } from "./game/rockField";
 import { rockDrops } from "./game/rocks";
@@ -196,6 +202,8 @@ export interface PlayerSave {
   bonds?: Bonds;
   /** Cave levels: the map above each one the player last came down from (shared/caveLevels.ts). */
   caveTrail?: CaveTrail;
+  /** Animal affection, adopted pets, the barn, hens and eggs (shared/animals.ts). Absent = none. */
+  animals?: AnimalSave;
   /**
    * savePlayer: the exit just taken (recorded so the next join may use that spawn).
    * loadPlayer: the pending transfer, if any (consumed by the call).
@@ -307,6 +315,8 @@ export class HomeRoom extends DurableObject<Env> {
   private hostName: string | null = null;
   private tally = new HarvestTally();
   private chatGuards = new ChatGuards();
+  /** Adopted pets and hens wandering the yard (rebuilt from the save; not persisted). */
+  private herd = new AnimalHerd(() => this.maps.grids.home, HOME_MAP.exits, Math.random);
 
   /** Drop-rate multipliers from env (DROP_RATE*), read once per instance. */
   private readonly rates: DropRates;
@@ -405,6 +415,8 @@ export class HomeRoom extends DurableObject<Env> {
     const unbroken = this.rocks.load(got.get("rocks") as Record<string, number> | undefined, got.get("rockSpawns"));
     this.trees.load(got.get("trees"));
     this.maps.rebuild(this.objects, unbroken, this.trees);
+    // After a wake the yard's pets and hens start again from their spots.
+    if (this.save) this.settleAnimals(Date.now());
     await this.scheduleRockAlarm();
   }
 
@@ -607,6 +619,8 @@ export class HomeRoom extends DurableObject<Env> {
     if (save.stats !== undefined) this.save.stats = mergeStats(this.save.stats, save.stats);
     if (save.bonds !== undefined) this.save.bonds = sanitizeBonds(save.bonds);
     if (save.caveTrail !== undefined) this.save.caveTrail = sanitizeCaveTrail(save.caveTrail);
+    // Zones adopt pets and buy the barn and hens; the home lays and collects the eggs.
+    if (save.animals !== undefined) this.save.animals = sanitizeAnimals(save.animals);
     if (isZoneId(save.zone) && Number.isFinite(save.x) && Number.isFinite(save.y)) {
       this.save.zone = save.zone;
       this.save.x = save.x;
@@ -651,6 +665,7 @@ export class HomeRoom extends DurableObject<Env> {
     const look = savedLook(src.look);
     if (look) this.save.look = look;
     if (src.bonds !== undefined) this.save.bonds = sanitizeBonds(src.bonds);
+    if (src.animals !== undefined) this.save.animals = sanitizeAnimals(src.animals);
     this.farm = sanitizeFarm(data?.farm).filter((t) => isFarmable(HOME_MAP, t.x, t.y));
     // Exports from before the house have one list in the old layout: migrate those.
     const moved = Array.isArray(data?.objectsIn)
@@ -904,6 +919,8 @@ export class HomeRoom extends DurableObject<Env> {
       return new Response("Forbidden", { status: 403 });
     }
     const save = this.ensureSave(id.userId, id.name);
+    // A barn bought in town is built before anyone stands on its lot; hens settle and lay.
+    this.settleAnimals(Date.now());
     // Home takes the session over from whatever zone held it.
     await this.newLease();
     // A second tab of the owner replaces the first; visitors stay.
@@ -1043,10 +1060,11 @@ export class HomeRoom extends DurableObject<Env> {
       zone: "home",
       homeMap: who.map,
       you: who.entity.id,
-      entities: this.entities(who.map),
+      entities: yard ? [...this.entities(who.map), ...this.herd.entities()] : this.entities(who.map),
       inventory: isVisitor ? VISITOR_INVENTORY : this.save!.inventory,
       farm: yard ? this.farm : [],
       objects: this.objects[who.map],
+      ground: yard ? eggViews(this.animals(), !isVisitor) : [],
       brokenRocks: yard ? this.rocks.brokenIds() : [],
       trees: yard ? this.trees.stages() : [],
       ...(visit ? { visit: { ownerId: this.owner!, ownerName: this.save!.name, returnTo: visit.returnTo } } : {}),
@@ -1285,6 +1303,7 @@ export class HomeRoom extends DurableObject<Env> {
     const p = this.player;
     if (!p) return this.stopTick();
     const now = Date.now();
+    const dt = Math.min(250, Math.max(0, now - this.lastTick));
     this.lastTick = now;
 
     if (this.sleepAt !== null && now >= this.sleepAt) this.endDay("sleep", now);
@@ -1311,8 +1330,11 @@ export class HomeRoom extends DurableObject<Env> {
     // Each home map has its own entity list: people only see (and get ticks for) their own map.
     let changed = false;
     const people = this.present();
+    // The animals only wander while someone is out in the yard to see them.
+    const watched = onMap(people, "home").length > 0 && this.herd.size > 0;
+    if (watched) this.herd.tick(dt, now);
     for (const map of HOME_MAPS) {
-      const { upd, del } = this.maps.diff(map, people);
+      const { upd, del } = this.maps.diff(map, people, map === "home" ? this.herd.entities() : []);
       const mapChanged = upd.length > 0 || del.length > 0;
       changed ||= mapChanged;
       for (const who of onMap(people, map)) {
@@ -1332,6 +1354,7 @@ export class HomeRoom extends DurableObject<Env> {
     const still = (m: Motion, e: EntityState) => m.idle && !e.moving;
     if (
       !changed &&
+      !watched &&
       still(p.motion, p.entity) &&
       this.visitors.all().every((v) => still(v.motion, v.entity)) &&
       this.sleepAt === null &&
@@ -1477,6 +1500,10 @@ export class HomeRoom extends DurableObject<Env> {
       case "storeClose":
         if (p.openStore === msg.id) this.closeStore(p);
         return;
+      case "petAnimal":
+      case "feedAnimal":
+      case "adoptAnimal":
+        return this.onAnimal(p, msg, now);
       case "moveSlot":
         if (!moveSlot(this.save!.inventory, msg.from, msg.to, msg.qty)) {
           this.reject(p, msg, "Can't move that there.");
@@ -1550,6 +1577,8 @@ export class HomeRoom extends DurableObject<Env> {
         return this.visitorHarvest(v, msg, now);
       case "hold":
         return; // a visitor's bag isn't loaded here: nothing to show in their hand
+      case "petAnimal":
+        return this.visitorPet(v, msg, now);
       default:
         return this.reject(v, msg, "Only the owner can do that here.");
     }
@@ -1601,18 +1630,18 @@ export class HomeRoom extends DurableObject<Env> {
       this.endDay("sleep", now);
       return true;
     }
-    const coins = /^\/coins (\d{1,5})$/.exec(text);
-    if (coins) {
-      this.save!.inventory.coins += Number(coins[1]);
-      this.inventoryChanged(p);
-      return true;
-    }
     const give = /^\/give ([a-z_]{1,32})(?: (\d{1,2}))?$/.exec(text);
     if (give) {
       const item = give[1]!;
       if (!getItem(item) || !addItem(this.save!.inventory, item, Number(give[2] ?? 1))) {
         send(p.ws, { t: "notice", text: "Usage: /give item_id [qty] (with room in the bag)", kind: "error" });
       } else this.inventoryChanged(p);
+      return true;
+    }
+    const coins = /^\/coins (\d{1,5})$/.exec(text);
+    if (coins) {
+      this.save!.inventory.coins += Number(coins[1]);
+      this.inventoryChanged(p, `+${coins[1]} coins (dev)`);
       return true;
     }
     const m = /^\/time (\d{1,2})(?::(\d{2}))?$/.exec(text);
@@ -1709,6 +1738,8 @@ export class HomeRoom extends DurableObject<Env> {
     const p = this.player;
     if (p && kind !== "away") this.wakeByBed(p, now);
     this.persist({ save: true, farm: true, day: true });
+    // A new morning: the hens lay.
+    if (this.settleAnimals(now)) this.sendEggs();
     if (p) this.sendMorning(p, res.summary);
     void this.scheduleRockAlarm(now);
   }
@@ -2038,6 +2069,9 @@ export class HomeRoom extends DurableObject<Env> {
    * (opens it) or "mailbox:take" (parcels into the bag).
    */
   private onInteract(p: HPlayer, target: string): void {
+    if (target.startsWith(ANIMAL_PREFIX)) return this.onAnimal(p, { t: "petAnimal", animal: target }, Date.now(), true);
+    if (target.startsWith(GROUND_TARGET_PREFIX)) return this.onEgg(p, target.slice(GROUND_TARGET_PREFIX.length));
+    if (target === BARN_ID) return this.onBarn(p);
     const [propId, slotStr] = target.split(":");
     const prop = homeMap(p.map).props.find((pr) => pr.id === propId);
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
@@ -2081,6 +2115,7 @@ export class HomeRoom extends DurableObject<Env> {
     const inv = this.save!.inventory;
     const slot = inv.slots[msg.slot];
     if (!slot) return this.reject(p, msg, "Nothing in that slot.");
+    if (slot.item === BARN_ITEM) return this.reject(p, msg, "The town hall builds barns.");
     if (!this.inPlaceReach(p, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
     if (getItem(slot.item)?.kind === "furniture" && mapForItem(slot.item) !== p.map) {
       return this.reject(p, msg, p.map === "home" ? "This goes indoors." : "This goes outdoors.");
@@ -2108,6 +2143,7 @@ export class HomeRoom extends DurableObject<Env> {
     // Furniture moves within the map it is on.
     const obj = this.objects[p.map].find((o) => o.id === msg.id);
     if (!obj) return this.reject(p, msg, "That isn't here any more.");
+    if (obj.id === BARN_ID) return this.reject(p, msg, "The barn stays where it was built.");
     if (!this.inPlaceReach(p, msg.x, msg.y)) return this.reject(p, msg, "Too far away.");
     const ok = this.canPlaceHere(p, obj.item, msg.x, msg.y, msg.rotation, obj.id);
     if (!ok.ok) return this.reject(p, msg, ok.reason);
@@ -2122,6 +2158,7 @@ export class HomeRoom extends DurableObject<Env> {
     const obj = list[i];
     if (obj.id === BED_ID) return this.reject(p, msg, "Your bed stays. You can move it instead.");
     if (!containerEmpty(this.containers, obj.id)) return this.reject(p, msg, `Empty the ${getItem(obj.item)?.name.toLowerCase() ?? "storage"} first.`);
+    if (obj.id === BARN_ID) return this.reject(p, msg, "The barn stays where it was built.");
     if (!this.inPlaceReach(p, obj.x, obj.y)) return this.reject(p, msg, "Too far away.");
     const inv = this.save!.inventory;
     if (!addItem(inv, obj.item, 1)) return this.reject(p, msg, "Your bag is full.");
@@ -2169,5 +2206,124 @@ export class HomeRoom extends DurableObject<Env> {
     if (!id) return;
     p.openStore = null;
     this.toMap(p.map, { t: "lid", id, open: false });
+  }
+
+  // ------------------------------------------------------------------ animals
+
+  private animals(): AnimalSave {
+    return (this.save!.animals ??= emptyAnimals());
+  }
+
+  /**
+   * Builds a newly bought barn (clearing its lot), settles new hens, lays the day's eggs and
+   * syncs the yard's herd with the save. True when eggs were laid.
+   */
+  private settleAnimals(now: number): boolean {
+    if (!this.save) return false;
+    const a = this.animals();
+    const built = ensureBarn(a, this.objects, this.farm);
+    if (built) {
+      this.farm = built.farm;
+      this.rebuildGrid();
+      this.giveBack(built.returned, now, "The town hall built your barn just south of the road. Your hens will live there.");
+      this.persist({ objects: true, farm: true, mail: true });
+    }
+    const barn = this.objects.home.some((o) => o.id === BARN_ID);
+    const settling = a.chickens.some((c) => c.day === 0);
+    const laid = barn ? layEggs(a, this.clock.day, eggSpots(this.maps.grids.home)) : [];
+    if (built || settling || laid.length > 0) this.persist({ save: true });
+    this.herd.sync(yardAnimals(a, barn), now);
+    return laid.length > 0;
+  }
+
+  /** Everyone in the yard gets the eggs lying there (the owner may pick them). */
+  private sendEggs(): void {
+    const a = this.animals();
+    for (const who of onMap(this.present(), "home")) send(who.ws, { t: "ground", upd: eggViews(a, who === this.player), del: [] });
+  }
+
+  /** Pet or feed one of your pets or hens (adopting happens in the village). */
+  private onAnimal(p: HPlayer, msg: Extract<ClientMsg, { t: "petAnimal" | "feedAnimal" | "adoptAnimal" }>, now: number, open = false): void {
+    const a = p.map === "home" ? this.herd.get(msg.animal) : undefined;
+    if (!a) return this.reject(p, msg, "That animal isn't here.");
+    if (dist(a.entity, p.entity) > ANIMAL_CARE_REACH) return this.reject(p, msg, "Walk a little closer.");
+    if (msg.t === "adoptAnimal") return this.reject(p, msg, "They already live with you.");
+    const animals = this.animals();
+    let out: CareOutcome;
+    if (a.spec.species === "chicken") {
+      const hen = chickenById(animals, a.spec.id);
+      if (!hen) return this.reject(p, msg, "That hen isn't here.");
+      if (msg.t === "feedAnimal") return this.reject(p, msg, "Hens find their own food in the grass.");
+      out = petHen(hen, a.entity.id, now);
+    } else {
+      const def = villageAnimal(a.spec.id.replace(/^pet_/, ""));
+      if (!def) return this.reject(p, msg, "That animal isn't here.");
+      out =
+        msg.t === "feedAnimal"
+          ? feedAnimal(animals, this.save!.inventory, msg.slot, def, a.entity.id, now, true)
+          : petAnimal(animals, def, a.entity.id, now, true);
+    }
+    if (!out.ok) return this.reject(p, msg, out.reason);
+    p.entity.facing = facingToTile(p.entity, Math.floor(a.entity.x), Math.floor(a.entity.y));
+    this.herd.love(a.entity.id, p.entity, now);
+    this.toMap("home", { t: "emote", from: a.entity.id, code: "heart" });
+    send(p.ws, { t: "animal", view: out.view, delta: out.delta, ...(open ? { open: true } : {}), ...(msg.t === "feedAnimal" ? { fed: true } : {}) });
+    send(p.ws, { t: "notice", text: out.text, kind: "info" });
+    if (msg.t === "feedAnimal") this.inventoryChanged(p);
+    else this.persist({ save: true });
+    this.startTick();
+  }
+
+  /** A visitor may pet the animals: they show their love, but no affection is kept for anyone. */
+  private visitorPet(v: Visitor, msg: Extract<ClientMsg, { t: "petAnimal" }>, now: number): void {
+    const a = v.map === "home" ? this.herd.get(msg.animal) : undefined;
+    if (!a || dist(a.entity, v.entity) > ANIMAL_CARE_REACH) return this.reject(v, msg, "Walk a little closer.");
+    if (now - v.lastEmote < EMOTE_MIN_INTERVAL_MS) return;
+    v.lastEmote = now;
+    this.herd.love(a.entity.id, v.entity, now);
+    this.toMap("home", { t: "emote", from: a.entity.id, code: "heart" });
+    send(v.ws, { t: "notice", text: `${a.spec.name || "The hen"} enjoys the fuss.`, kind: "info" });
+    this.startTick();
+  }
+
+  /** Picks up an egg lying in the yard. */
+  private onEgg(p: HPlayer, id: string): void {
+    const a = this.animals();
+    const egg = a.eggs.find((e) => e.id === id);
+    if (!egg || p.map !== "home") return;
+    if (dist(p.entity, egg) > FORAGE_REACH) return send(p.ws, { t: "notice", text: "Walk a little closer.", kind: "info" });
+    this.takeEggs(p, [egg]);
+  }
+
+  /** The barn: how the hens are doing, and every egg lying in the yard gathered up. */
+  private onBarn(p: HPlayer): void {
+    const barn = this.objects.home.find((o) => o.id === BARN_ID);
+    if (!barn || p.map !== "home" || distToRect(p.entity, objectRect(barn.item, barn.x, barn.y, barn.rotation)) > PROP_REACH) return;
+    const a = this.animals();
+    const hens = `${a.chickens.length}/${BARN_CAPACITY} hens`;
+    if (a.eggs.length === 0) {
+      const tip = a.chickens.length === 0 ? " Buy hens at the town hall." : " Hens lay an egg every morning.";
+      return send(p.ws, { t: "notice", text: `Your barn: ${hens}. No eggs right now.${tip}`, kind: "info" });
+    }
+    this.takeEggs(p, [...a.eggs]);
+  }
+
+  private takeEggs(p: HPlayer, eggs: { id: string; x: number; y: number }[]): void {
+    const a = this.animals();
+    const inv = this.save!.inventory;
+    const got: string[] = [];
+    for (const e of eggs) {
+      const r = collectEgg(a, inv, e.id);
+      if (r === "full") {
+        send(p.ws, { t: "notice", text: "Your bag is full.", kind: "error" });
+        break;
+      }
+      if (r === "ok") got.push(e.id);
+    }
+    if (got.length === 0) return;
+    this.toMap("home", { t: "ground", upd: [], del: got });
+    const first = eggs[0]!;
+    send(p.ws, { t: "loot", at: { x: first.x, y: first.y }, items: got.map(() => "egg") });
+    this.inventoryChanged(p, `+${got.length} Egg${got.length > 1 ? "s" : ""}`);
   }
 }

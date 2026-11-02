@@ -21,7 +21,7 @@ Suggested in-game credit block:
 ```
 Music: Memoraphile, Komiku, Juhani Junkala, Écrivain, RandomMind, Beatscribe (CC0)
 Sound effects: Kenney (kenney.nl, CC0); artisticdude, rubberduck, EZduzziteh, MedicineStorm, Spring Spring,
-  AntumDeluge/polymorpheva, toefur, Darsycho (CC0); "Oculus Audio Pack 01" by Oculus VR, LLC (CC BY 4.0);
+  AntumDeluge/polymorpheva, toefur, Darsycho, nfrae, moffet, Belhene, videog, Rudmer_Rotteveel (CC0); "Oculus Audio Pack 01" by Oculus VR, LLC (CC BY 4.0);
   columbia23 and suonho via Freesound (CC BY 3.0)
 ```
 
@@ -179,3 +179,18 @@ Added 2026-11-01. Same common processing as above (mono 44.1 kHz Ogg Vorbis q3, 
 | `sfx/rock_crab_hurt_2.ogg` | creature hurt | Darsycho (Freesound) | CC0 1.0 | `mobs_mc_spider_hurt.3.ogg` | https://freesound.org/people/Darsycho/sounds/505185/ — via https://github.com/VoxeLibre/VoxeLibre (mods/ENTITIES/mobs_mc/sounds/, licence per file in mods/ENTITIES/mobs_mc/LICENSE-media.md) | first 0.45 s, fade-out |
 | `sfx/rock_crab_die_0.ogg` | spider sounds | columbia23 (Freesound) | CC BY 3.0 | `mobs_mc_spider_death.ogg` | https://freesound.org/people/columbia23/sounds/395395/ — via https://github.com/VoxeLibre/VoxeLibre (mods/ENTITIES/mobs_mc/sounds/, licence per file in mods/ENTITIES/mobs_mc/LICENSE-media.md) | none |
 | `sfx/rock_crab_die_1.ogg` | 80 CC0 creature SFX | rubberduck | CC0 1.0 | `audio/monster/insect-chitter-2.mp3` (from `bug_02.ogg`) | https://opengameart.org/content/80-cc0-creature-sfx — via https://github.com/bodangren/advantage-forge (audio/, per-file author/licence/source in audio/manifest/*.tsv; already cut, levelled and MP3-encoded there) | pitched 0.75x |
+
+### Animal sounds
+
+Added 2026-11-02 for the village cats and dogs and the farm hens. Same common processing as above (mono 44.1 kHz Ogg Vorbis q3, 3 ms fade-in, peak -1 dBFS). Licences were read from the Stendhal project's per-file audio source list (`doc/sources/audio-sfx.txt`), which records author, licence and Freesound page for every file; Freesound itself could not be opened from the build machine. All are CC0.
+
+| File | Title | Author | Licence | Original file | Source | Changes beyond the common processing |
+|---|---|---|---|---|---|---|
+| `sfx/dog_bark_0.ogg` | small dog bark | nfrae (Freesound) | CC0 1.0 | `dog-small-bark-1.ogg` | https://freesound.org/people/nfrae/sounds/100032/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | none |
+| `sfx/dog_bark_1.ogg` | small dog bark | nfrae (Freesound) | CC0 1.0 | `dog-small-bark-2.ogg` | https://freesound.org/people/nfrae/sounds/100032/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | none |
+| `sfx/dog_bark_2.ogg` | puppy bark | moffet (Freesound) | CC0 1.0 | `puppy-bark-1.ogg` | https://freesound.org/people/moffet/sounds/72579/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | 0.1 s fade-out |
+| `sfx/cat_purr_0.ogg` | cat purr | Belhene (Freesound) | CC0 1.0 | `cat-purr-1.ogg` | https://freesound.org/people/Belhene/sounds/157837/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | first 1.8 s, 0.4 s fade-out |
+| `sfx/cat_purr_1.ogg` | cat purr | Belhene (Freesound) | CC0 1.0 | `kitten-purr-1.ogg` | https://freesound.org/people/Belhene/sounds/157837/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | first 1.8 s, 0.4 s fade-out |
+| `sfx/cat_meow_0.ogg` | kitten meow | videog (Freesound) | CC0 1.0 | `kitten-meow-1.ogg` | https://freesound.org/people/videog/sounds/149191/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | none |
+| `sfx/cat_meow_1.ogg` | kitten meow | videog (Freesound) | CC0 1.0 | `kitten-meow-2.ogg` | https://freesound.org/people/videog/sounds/149191/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | none |
+| `sfx/hen_cluck_0.ogg` | chicken | Rudmer_Rotteveel (Freesound) | CC0 1.0 | `chicken-03.ogg` | https://freesound.org/people/Rudmer_Rotteveel/sounds/316921/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | 0.1 s fade-out |

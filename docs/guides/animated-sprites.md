@@ -191,6 +191,58 @@ Check a climb in the browser on two body types, in both directions, and on the f
 - **Flying monsters:** they set `flying: true` and a `hover` height, so the shadow stays on the ground while the body floats above it.
 - **Hit flash and knockback:** they're done in code. Don't bake them into the art.
 
+## Animals (cats, dogs and hens)
+
+Village cats and dogs, adopted pets and farm hens live in `catalog.json` `animals`. They are drawn by script in the LPC style (light from the top left, tinted outlines) and are credited in `src/client/public/assets/lpc/CREDITS.md`.
+
+### Size and anchors
+
+| Animal | Frame | Anchor (feet) | Feel against a 64 px person |
+|---|---|---|---|
+| Cat | 32x32 | (16, 29) | about knee high |
+| Hen | 32x32 | (16, 29) | a little lower than a cat |
+| Dog | 48x48 | (24, 44) | a medium dog, up to mid thigh |
+
+The paws rest on the anchor row in every frame, standing, sitting and lying, so an animal never floats or sinks when it changes pose. Only the walk cycle bobs (one pixel on the passing frames).
+
+### Sheet layout
+
+Every animal sheet has four columns. Rows:
+
+| Rows | Pose | Frames | Directions |
+|---|---|---|---|
+| 0-3 | `walk` | 4 (frame 0 standing, also `idle`) | up, left, down, right |
+| 4-7 | `rest`: sit with a tail flick (cats), sit with a sweeping tail (dogs), peck (hens) | 4 | up, left, down, right |
+| 8 | `nap`, curled up and breathing | 2 | facing left (used for up and left) |
+| 9-12 | `love`: eyes closed, tail up or wagging, wings flapping | 2 | up, left, down, right |
+| 13 | `nap` | 2 | facing right (used for down and right) |
+| 14-15 | cats: `scratch` (hind paw behind the ear); dogs: `sniff` (nose in the grass) | 4 | left, right |
+| 16-17 | cats: `play` (batting a ball of yarn, which is part of the frame) | 4 | left, right |
+
+Side-only poses (`nap`, `scratch`, `play`, `sniff`) map up to the left row and down to the right row in the catalog. Hens stop at row 13.
+
+### States and timing
+
+The server picks the state (`shared/engine/animals.ts`) and sends it as the entity's `act` (`rest`, `nap`, `love`, `scratch`, `play`, `sniff`). It is never `sit`, which seats people on chairs. With no `act` the animal is standing or walking. Between walks, an animal picks a pose by chance and holds it for a set time, so everyone sees the same thing:
+
+| State | Who | Held for | Frame time (`ANIMAL_POSE_MS`) |
+|---|---|---|---|
+| walk | all | until it arrives | 8 fps cat, 9 fps dog, 7 fps hen (matched to their speed so paws don't slide) |
+| rest | all | 5-12 s | 550 ms |
+| nap | cats, dogs | 12-30 s | 900 ms |
+| scratch | cats | 1.6-3.2 s | 110 ms |
+| play | cats | 3-6 s | 230 ms |
+| sniff | dogs | 2-4.5 s | 260 ms |
+| love (petted or fed) | all | 2.5 s, facing the player | 220 ms |
+
+### Adding an animal
+
+1. Draw the sheet in the layout above. Keep the feet on the anchor row in every frame and leave at least a 1 px clear border.
+2. Add a `catalog.json` `animals` entry with `file`, `frameW`, `frameH`, `anchor`, `shadow` and `animations` for each pose row it has.
+3. Add an `entityProfile.ts` profile (walk fps, click box, head height for the name tag and emote, shadow scale).
+4. For a new species, add its speed, pauses and pose chances in `shared/engine/animals.ts` and its love sound in `audio/audio-logic.ts` (`animalLoveSfx`).
+5. Credit the file, then check it with a scaled contact sheet and a screen recording of it wandering in game.
+
 ## Looping and state props
 
 - **Looping props:** list the frames as an array in `frames` (for example the campfire, fireplace, forge, candles and wall torches). They loop at a steady rate, with each prop offset by its tile position so neighbours don't flicker in sync.

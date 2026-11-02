@@ -186,3 +186,14 @@ export function parseSettings(raw: string | null | undefined): AudioSettings {
 export function assetUrl(base: string, file: string): string {
   return base.replace(/\/+$/, "") + "/" + file.replace(/^\/+/, "");
 }
+
+/** Animals are heard this many tiles away (their love sounds are quiet, homely noises). */
+export const ANIMAL_HEAR_RANGE = 10;
+
+/** The happy sound an animal makes when petted or fed: dogs bark, cats purr, hens cluck. */
+export function animalLoveSfx(sprite: string): string | null {
+  if (sprite.startsWith("dog_")) return "dog_bark";
+  if (sprite.startsWith("cat_")) return "cat_purr";
+  if (sprite.startsWith("chicken_")) return "hen_cluck";
+  return null;
+}

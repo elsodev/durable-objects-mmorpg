@@ -22,6 +22,7 @@ export const TAG_COLORS = {
   player: 0xffffff,
   npc: 0xa8f08a,
   monster: 0xff9a8a,
+  animal: 0xffd0e4,
 } as const;
 
 // ---------------------------------------------------------------- pure helpers (tested)

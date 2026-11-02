@@ -4,7 +4,7 @@ import { HOME_GOODS, type StorageSpec } from "./furnitureItems";
 
 export type Rotation = 0 | 1 | 2 | 3;
 
-export type ItemKind = "seed" | "crop" | "ore" | "gem" | "tool" | "furniture" | "material" | "fish" | "forage";
+export type ItemKind = "seed" | "crop" | "ore" | "gem" | "tool" | "furniture" | "material" | "fish" | "forage" | "produce";
 export type ToolKind = "hoe" | "water" | "pickaxe" | "axe" | "sword";
 
 export interface ItemDef {
@@ -324,6 +324,13 @@ const ALL: ItemDef[] = [
   def("herb_mint", "Mint", "forage", 15),
   def("mushroom", "Mushroom", "forage", 20),
   def("fish_trout", "Trout", "fish", 30),
+
+  // Animals (shared/animals.ts, shared/ranch.ts). "barn" and "chicken" are what the town hall
+  // sells: they never go in the bag (the barn is built in the yard, hens live in it).
+  def("egg", "Egg", "produce", 35, { eat: 12, desc: "Fresh from your hens. Sells well, and cats and dogs like them too." }),
+  def("pet_treat", "Pet Treat", "material", 5, { desc: "A crunchy treat. Dogs love them; cats are polite about it." }),
+  def("chicken", "Hen", "material", 0, { desc: "A laying hen. Needs a barn at home; lays an egg every morning." }),
+  furniture("barn", "Barn", 4, 2, "outdoor", 0, { buy: undefined, sell: 0, stack: 1, desc: "A red barn for your hens. Built in your yard by the town hall." }),
 
   // Furniture (footprint at rotation 0)
   furniture("chair_wood", "Wooden Chair", 1, 1, "floor", 40, { rotations: ALL_TURNS }),

@@ -189,14 +189,17 @@ describe("visitor permission matrix", () => {
     storePut: { t: "storePut", id: "o1", slot: 0 },
     storeTake: { t: "storeTake", id: "o1", index: 0 },
     storeClose: { t: "storeClose", id: "o1" },
+    petAnimal: { t: "petAnimal", animal: "a:pet_mochi" },
+    feedAnimal: { t: "feedAnimal", animal: "a:pet_mochi", slot: 0 },
+    adoptAnimal: { t: "adoptAnimal", animal: "a:mochi" },
   };
 
-  it("allows only walking, chat, ping and harvest-use", () => {
+  it("allows only walking, chat, ping, petting and harvest-use", () => {
     const allowed = Object.entries(VISITOR_RULES)
       .filter(([, v]) => "allow" in v)
       .map(([k]) => k)
       .sort();
-    expect(allowed).toEqual(["chat", "emote", "hold", "move", "moveTo", "ping", "use"]);
+    expect(allowed).toEqual(["chat", "emote", "hold", "move", "moveTo", "petAnimal", "ping", "use"]);
     for (const m of Object.values(samples)) expect(visitorVerdict(m as ClientMsg)).toBe(VISITOR_RULES[m.t]);
   });
 
@@ -206,7 +209,7 @@ describe("visitor permission matrix", () => {
     const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
     const denied = Object.values(samples).filter((m) => "deny" in VISITOR_RULES[m.t]);
     expect(denied.map((m) => m.t).sort()).toEqual(
-      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "pickup", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose"].sort(),
+      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "pickup", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "feedAnimal", "adoptAnimal"].sort(),
     );
     for (const m of denied) {
       const msg = m.t === "setLook" ? { t: "setLook", look: { body: "x" } } : m;

@@ -56,11 +56,16 @@ export interface CharacterArt {
    * while it loads (it loads on the first ask).
    */
   held?(item: string): HeldArt | null;
+  /** Animals: looping poses by act name (AnimalPose), same frame size and anchor as walk. */
+  poses?: Partial<Record<AnimalPose, Record<Facing, Texture[]>>>;
   /** Floats above the ground (bats): keep the shadow at the anchor. */
   flying?: boolean;
   /** Flying: draw the sprite this many screen px (already x SCALE) above the anchor/shadow. */
   hover?: number;
 }
+
+/** Animal poses an entity's act key can name (shared/engine/animals.ts ANIMAL_ACTS). */
+export type AnimalPose = "rest" | "nap" | "love" | "scratch" | "play" | "sniff";
 
 /** One action animation (CharacterArt.action). Frames can be larger than walk frames (tools swing wide). */
 export interface ActionArt {

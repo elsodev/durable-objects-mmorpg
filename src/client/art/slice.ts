@@ -127,6 +127,7 @@ export function collectFiles(cat: Catalog): string[] {
   const sections = [
     cat.characters,
     cat.monsters,
+    cat.animals,
     cat.terrain,
     cat.props,
     cat.buildings,

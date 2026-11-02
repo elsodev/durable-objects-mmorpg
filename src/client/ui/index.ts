@@ -8,6 +8,7 @@
 //   ui/dialogs.ts   -> createShop, createGoals, createNotices, createAccountPrompt
 //   ui/styles/*.css -> one file per module; ui/styles/theme.css holds CSS variables
 import type { BondView } from "../../shared/hearts";
+import type { AnimalView } from "../../shared/animals";
 import type { ClientMsg, ServerMsg, ShopOffer, VillageGoal } from "../../shared/protocol";
 import type { SlashContext } from "./slash-commands";
 import type { TravelId } from "./map-pane-logic";
@@ -112,6 +113,8 @@ export interface Hud {
   /** Friendship (ui/bonds.ts, ui/convo.ts): every villager met, one villager's change, and their lines. */
   setBonds?(list: BondView[]): void;
   bond?(view: BondView, delta: number, talk: boolean, entityId?: string, gifts?: ItemId[]): void;
+  /** A cat, dog or hen's card (ui/animals.ts): fresh hearts and care; `open` shows the card. */
+  animal?(view: AnimalView, open: boolean): void;
   /** A villager's line answering you (the conversation window shows it). */
   npcSaid?(entityId: string, text: string): void;
   /** The server refused a conversation-window reply. */

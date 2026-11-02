@@ -14,6 +14,8 @@ import { createMuteStore, type MuteStore } from "./mutes";
 import { parseMuteCommand } from "../../shared/players";
 import { createBondsUi, type BondsUi } from "./bonds";
 import { createConvo, type ConvoUi } from "./convo";
+import { createAnimalCard, type AnimalCard } from "./animals";
+import { foodTaste } from "../../shared/animals";
 import { badgeText, whisperPrefill } from "./friends-logic";
 import { FRIEND_NAME_HINT, parseFriendCommand } from "../../shared/friends";
 import { parseHomeCommand } from "../../shared/visits";
@@ -143,6 +145,8 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   let inv: Inventory | null = null;
   let water: WaterLevel | null = null;
   let selected = 0;
+  // Set once the card is built; the hotbar and inventory may update before that.
+  let animalCardRef: AnimalCard | null = null;
   let typing = false;
   let buildMode = false;
 
@@ -337,9 +341,10 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   const friendsLayer = layer("friends");
   const bondsLayer = layer("bonds");
   const convoLayer = layer("convo");
+  const animalLayer = layer("animals");
   const noticesLayer = layer("notices");
   const accountLayer = layer("account");
-  for (const l of [invLayer, goalsLayer, friendsLayer, bondsLayer, chatLayer, convoLayer, shopLayer, noticesLayer, accountLayer]) hud.appendChild(l);
+  for (const l of [invLayer, goalsLayer, friendsLayer, bondsLayer, chatLayer, convoLayer, animalLayer, shopLayer, noticesLayer, accountLayer]) hud.appendChild(l);
 
   const bonds: BondsUi = safe("bonds", () => createBondsUi(bondsLayer), {
     setList() {},
@@ -362,6 +367,22 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       }),
     { bond() {}, said() {}, failed() {}, close() {}, isOpen: () => false },
   );
+  const animalCard: AnimalCard = safe(
+    "animal card",
+    () =>
+      createAnimalCard(animalLayer, {
+        pet: (animal) => game.send({ t: "petAnimal", animal }),
+        feed: (animal) => game.send({ t: "feedAnimal", animal, slot: selected }),
+        adopt: (animal) => game.send({ t: "adoptAnimal", animal }),
+        feedItem: (species) => {
+          const s = inv?.slots[selected];
+          return s && species !== "chicken" && foodTaste(species, s.item) ? itemName(s.item) : null;
+        },
+        distance: (id) => (game.playerDistance ? game.playerDistance(id) : 0),
+      }),
+    { show() {}, close() {}, isOpen: () => false, refresh() {} },
+  );
+  animalCardRef = animalCard;
   const notices: Notices = safe("notices", () => createNotices(noticesLayer), { notice() {} });
   const inventory = safe(
     "inventory",
@@ -531,6 +552,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   // --- behaviour
   function applyInventory(next: Inventory): void {
     inv = next;
+    animalCardRef?.refresh();
     coinsEl.textContent = next.coins.toLocaleString();
     coinsEl.title = `${next.coins.toLocaleString()} coins`;
     renderHotbar();
@@ -582,6 +604,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       nameFlash.flash(s && !buildMode ? itemName(s.item) : null);
     }
     selected = slot;
+    animalCardRef?.refresh();
     slotEls.forEach((b, i) => {
       b.classList.toggle("selected", i === slot);
       b.setAttribute("aria-pressed", String(i === slot));
@@ -773,6 +796,9 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     bond(view, delta, talk, entityId, gifts) {
       bonds.bond(view);
       convo.bond(view, delta, talk, entityId, gifts);
+    },
+    animal(view, open) {
+      animalCard.show(view, open);
     },
     npcSaid(entityId, text) {
       convo.said(entityId, text);

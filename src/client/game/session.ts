@@ -39,6 +39,7 @@ import {
   floorTile,
   inUseRange,
   isFurnitureSlot,
+  nearestAnimal,
   nearestNpc,
   sfxForUse,
   propTarget,
@@ -91,6 +92,9 @@ import { isSwingTool, toolKeyOf, type ToolEffect, type ToolOutcome, type ToolTar
 import { createSocialConnection } from "../net/social";
 import { emitSocial, onSocial as onSocialEvent } from "../social-events";
 import { parseChatInput, type ChatTab, type SocialServerMsg } from "../../shared/social";
+import { ANIMAL_PREFIX, ANIMAL_REACH } from "../../shared/animals";
+import { BARN_ID, BARN_SIZE, BARN_SPOT } from "../../shared/ranch";
+import { ANIMAL_HEAR_RANGE, animalLoveSfx } from "../audio/audio-logic";
 import type { EmoteCode } from "../../shared/emotes";
 import { emoteLine } from "../ui/chat";
 import { playerHit, tileDistance } from "./player-hit";
@@ -139,6 +143,8 @@ export async function startSession(
 
   let world: World | null = null;
   let selectedSlot = 0;
+  /** An animal you clicked from afar: pet it once you're in reach. */
+  let pendingAnimal: string | null = null;
   let pendingZone: ZoneId | null = null;
   let promptOpen = false;
   let destroyed = false;
@@ -549,6 +555,43 @@ export async function startSession(
     if (delta > 0) world.effects.burst({ x: npc.x, y: npc.y - 1.6 }, "sparkle");
   }
 
+  /** A petted or fed animal barks, purrs or clucks for everyone close enough to hear. */
+  function animalSound(entity: string): void {
+    const a = store.latest(entity);
+    const me = you();
+    const key = a ? animalLoveSfx(a.sprite) : null;
+    if (key && me && Math.hypot(a!.x - me.x, a!.y - me.y) <= ANIMAL_HEAR_RANGE) playSfx(key);
+  }
+
+  /** Clicking a cat, dog or hen: pet it (the server opens its card) in reach, else walk up and then pet it. */
+  function animalClick(me: EntityState, at: Vec2): boolean {
+    const id = world?.entities.entityAt(at);
+    const st = id ? store.latest(id) : null;
+    if (!st || st.kind !== "animal") return false;
+    if (Math.hypot(st.x - me.x, st.y - me.y) <= ANIMAL_REACH) {
+      pendingAnimal = null;
+      interact(st.id);
+    } else {
+      pendingAnimal = st.id;
+      moveTo(st.x, st.y + 0.8);
+    }
+    return true;
+  }
+
+  /** Walking up to a clicked animal: pet it once in reach (it may have wandered on meanwhile). */
+  function approachAnimal(me: EntityState | null, states: readonly EntityState[]): void {
+    if (!pendingAnimal || !me) return;
+    const st = states.find((e) => e.id === pendingAnimal);
+    if (!st) {
+      pendingAnimal = null;
+      return;
+    }
+    if (Math.hypot(st.x - me.x, st.y - me.y) <= ANIMAL_REACH) {
+      pendingAnimal = null;
+      interact(st.id);
+    } else if (!me.moving) pendingAnimal = null;
+  }
+
   /** Picks forage on a tile when it is in reach, else walks up to it. */
   function forageInteract(me: EntityState, tile: Vec2): boolean {
     const g = world?.groundItems.forageAt(tile);
@@ -848,6 +891,11 @@ export async function startSession(
       case "emote": {
         if (mutedEntity(msg.from)) break;
         world?.overlays.emote?.(msg.from, msg.code);
+        // An animal's love heart is only a bubble and its happy noise, not a chat line.
+        if (msg.from.startsWith(ANIMAL_PREFIX)) {
+          animalSound(msg.from);
+          break;
+        }
         const who = store.latest(msg.from)?.name ?? (msg.from === store.youId ? "You" : "Someone");
         hud.addChat("", emoteLine(who, msg.code), "system", { channel: "zone" });
         break;
@@ -858,6 +906,11 @@ export async function startSession(
         break;
       case "bonds":
         hud.setBonds?.(msg.list);
+        break;
+      case "animal":
+        hud.animal?.(msg.view, !!msg.open || !!msg.adopted);
+        if (msg.delta) onBondGain(msg.view.entity, msg.delta);
+        if (msg.fed && msg.view.species === "cat") playSfx("cat_meow");
         break;
       case "chests":
         world?.chests.set(msg.chests);
@@ -1298,7 +1351,10 @@ export async function startSession(
       case "interact": {
         const npc = nearestNpc(me, store.sample(performance.now()));
         if (npc) return interact(npc);
+        const pet = nearestAnimal(me, store.sample(performance.now()), ANIMAL_REACH);
+        if (pet) return interact(pet);
         const ahead = useTarget(me, me.facing);
+        if (store.zone === "home" && world.farm.objectAt(ahead) === BARN_ID) return interact(BARN_ID);
         if (store.zone === "home" && !visiting && (isBed(world.farm.objectAt(ahead)) || isBed(world.farm.objectAt(floorTile(me))))) {
           void askSleep();
           break;
@@ -1319,6 +1375,13 @@ export async function startSession(
         // Q eats at home (onEatKey); it only gives gifts in the shared zones.
         if (store.zone === "home") break;
         const npc = nearestNpc(me, store.sample(performance.now()));
+        const pet = npc ? null : nearestAnimal(me, store.sample(performance.now()), ANIMAL_REACH);
+        if (pet) {
+          if (!store.inventory.slots[selectedSlot]) return notice("Pick some food in your hotbar first.", "error");
+          send({ t: "feedAnimal", animal: pet, slot: selectedSlot });
+          playSfx("interact");
+          break;
+        }
         if (!npc) return notice("Stand next to a villager to give a gift.", "info");
         if (!store.inventory.slots[selectedSlot]) return notice("Pick an item in your hotbar first.", "error");
         send({ t: "giftNpc", npc, slot: selectedSlot });
@@ -1363,6 +1426,8 @@ export async function startSession(
       return;
     }
 
+    if (p.button !== 2 && animalClick(me, p.tile)) return;
+
     if (visiting) {
       // A visitor's click helps harvest a crop in reach, or walks.
       if (p.button === 2) return;
@@ -1371,6 +1436,12 @@ export async function startSession(
     }
     if (store.zone === "home") {
       const obj = world.farm.objectAt(tile);
+      if (obj === BARN_ID) {
+        if (p.button === 2) return;
+        if (withinInteract(me, { x: tile.x + 0.5, y: tile.y + 0.5 })) interact(BARN_ID);
+        else moveTo(BARN_SPOT.x + BARN_SIZE.w / 2, BARN_SPOT.y + BARN_SIZE.h + 0.5);
+        return;
+      }
       const objItem = obj ? store.objects.get(obj)?.item : undefined;
       if (obj && objItem && getItem(objItem)?.storage && p.button !== 2) {
         if (storeTarget([store.objects.get(obj)!], me, me)) send({ t: "storeOpen", id: obj });
@@ -1528,6 +1599,7 @@ export async function startSession(
     world.overlays.sync(states, (id) => world!.entities.headOf(id), store.youId);
     world.itemPoses.sync(states, (id) => world!.entities.headOf(id), performance.now(), dt);
     const me = states.find((e) => e.id === store.youId) ?? null;
+    approachAnimal(me, states);
     if (me) camera.follow(me.x, me.y);
     // The audio module rate-limits steps itself, so calling every moving frame is fine.
     if (me?.moving) footstep(groundNameAt(me.x, me.y));

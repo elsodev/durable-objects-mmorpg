@@ -74,11 +74,12 @@ export interface Vec2 {
   y: number;
 }
 
-export type EntityKind = "player" | "npc" | "monster";
+/** "animal": a friendly cat, dog or hen (shared/animals.ts); never hostile, never blocks anyone. */
+export type EntityKind = "player" | "npc" | "monster" | "animal";
 
 /** What the server broadcasts about anything that moves. */
 export interface EntityState {
-  id: string; // "p:<userId>", "n:<npcId>", "m:<n>"
+  id: string; // "p:<userId>", "n:<npcId>", "m:<n>", "a:<animalId>"
   kind: EntityKind;
   name: string;
   sprite: string; // key into the client sprite catalog, e.g. "ninja_blue", "slime"

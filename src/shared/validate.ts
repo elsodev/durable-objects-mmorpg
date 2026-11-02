@@ -118,6 +118,12 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       return isPose(o.pose) ? { t: "pose", pose: o.pose } : null;
     case "travel":
       return isTravelZone(o.to) ? { t: "travel", to: o.to } : null;
+    case "petAnimal":
+      return isId(o.animal) ? { t: "petAnimal", animal: o.animal } : null;
+    case "feedAnimal":
+      return isId(o.animal) && isSlot(o.slot) ? { t: "feedAnimal", animal: o.animal, slot: o.slot, ...req } : null;
+    case "adoptAnimal":
+      return isId(o.animal) ? { t: "adoptAnimal", animal: o.animal, ...req } : null;
     default:
       return validateHomeClientMsg(o);
   }

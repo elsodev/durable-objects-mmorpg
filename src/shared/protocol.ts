@@ -21,6 +21,7 @@ import type { VisitInfo, VisitServerMsg } from "./visits";
 import type { EmoteCode } from "./emotes";
 import type { BondView } from "./hearts";
 import type { ChestView } from "./chests";
+import type { AnimalView } from "./animals";
 
 // ---------------- Client -> Server ----------------
 // Optional `seq` (move/moveTo): client input sequence number, acked in `tick.ack` so the client
@@ -76,6 +77,13 @@ export type ClientMsg =
    * welcome. The server shows the tool in that slot in your hand (EntityState.held).
    */
   | { t: "hold"; slot: number | null }
+  /**
+   * Friendly animals (shared/animals.ts), by entity id: pet one (love emote; counts once a day),
+   * feed it the item in `slot`, or adopt a village cat or dog once its affection is full.
+   */
+  | { t: "petAnimal"; animal: string }
+  | { t: "feedAnimal"; animal: string; slot: number; req?: string }
+  | { t: "adoptAnimal"; animal: string; req?: string }
   | HomeClientMsg;
 
 // ---------------- Server -> Client ----------------
@@ -229,6 +237,11 @@ export type ServerMsg =
   | { t: "loot"; at: { x: number; y: number }; items: ItemId[] }
   /** Ground items you can see came or went. */
   | { t: "ground"; upd: GroundItemView[]; del: string[] }
+  /**
+   * A friendly animal's card: after you pet or feed it (`delta` affection gained), or when you
+   * click it (`open`: show the card). `adopted`: you just adopted it.
+   */
+  | { t: "animal"; view: AnimalView; delta?: number; open?: boolean; adopted?: boolean; /** You just fed it (cats meow). */ fed?: boolean }
   /** Zones: your stamina changed (mining and chopping cost it like at home). */
   | { t: "stamina"; stamina: number; max: number; /** Water in your can, so the slot gauge shows away from home too. */ water?: number; maxWater?: number }
   | HomeServerMsg

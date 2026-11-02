@@ -22,7 +22,7 @@ All music is CC0 1.0. It's credited here anyway, with thanks.
 - **Kenney** (kenney.nl), CC0: Interface Sounds, RPG Audio and Impact Sounds.
 - **"Oculus Audio Pack 01" by Oculus VR, LLC**, CC BY 4.0: https://developers.meta.com/vr/downloads/package/oculus-audio-pack-1/
 - **columbia23** (spider) and **suonho** (bat) on Freesound, CC BY 3.0.
-- These CC0 creators: **artisticdude** (RPG Sound Pack), **MedicineStorm** (Medieval weapon sounds), **AntumDeluge** and **polymorpheva** (bat screeches), **toefur**, **Darsycho**, **rubberduck**, **EZduzziteh** and **Spring Spring**.
+- These CC0 creators: **artisticdude** (RPG Sound Pack), **MedicineStorm** (Medieval weapon sounds), **AntumDeluge** and **polymorpheva** (bat screeches), **toefur**, **Darsycho**, **rubberduck**, **EZduzziteh** and **Spring Spring**; for the animals, **nfrae** and **moffet** (dog barks), **Belhene** (cat purr), **videog** (kitten meow) and **Rudmer_Rotteveel** (hen cluck), all from Freesound.
 
 ## Art
 
@@ -57,7 +57,7 @@ Ore rocks and icons (stone, copper, iron, silver, gold, and the gem and diamond 
 
 The village houses are Eliza Wyatt's LPC Brick House A/B and Paneled House A (OGA-BY 3.0), recoloured by script with colours from her Roofing and Walls sheets, some mirrored or widened, with her Brick Chimney A and flower boxes from her flowers sheet. The animated water uses her Water Reflections loops over the summer terrain's water and banks. The pond's lily pads and reeds come from her plants_summer sheet, and the benches from the decorations-medieval sheet. The quarry's cliff and cave mouth are cut from her cliff_summer sheet (with Lanea Zimmerman's grass), and the signpost from the decorations-medieval sheet with its painted shadow removed.
 
-Some art is our own drawing, released as CC0: the emotes, the log walls, the doormat, the mine cart, the light glows, the flower-box planters, and a few icons.
+Some art is our own drawing, released as CC0: the emotes, the log walls, the doormat, the mine cart, the light glows, the flower-box planters, the cats, dogs and hens, the barn, and a few icons.
 
 ## Asset source repositories
 
@@ -83,6 +83,7 @@ We took art and audio from these repositories. Each file's exact source is in th
 | https://github.com/bodangren/advantage-forge | MedicineStorm's weapon swings |
 | https://github.com/ARKOUDAKII/EternalRain | Bat screeches |
 | https://github.com/VoxeLibre/VoxeLibre | Spider and bat sounds |
+| https://github.com/arianne/stendhal | Dog, cat and hen sounds |
 
 ## Open-source software
 

@@ -29,6 +29,14 @@ export interface CharacterEntry {
     idle?: DirRows;
     slash?: DirRows;
     attack?: DirRows;
+    /** Animals: poses held in place (rest = sit or peck, nap = curled up, love = happy). */
+    rest?: DirRows;
+    nap?: DirRows;
+    love?: DirRows;
+    /** Cats: scratching behind an ear, batting a ball of yarn. Dogs: sniffing the grass. */
+    scratch?: DirRows;
+    play?: DirRows;
+    sniff?: DirRows;
   };
 }
 
@@ -97,6 +105,8 @@ export interface ShadowsEntry {
 export interface Catalog {
   characters?: Record<string, CharacterEntry>;
   monsters?: Record<string, CharacterEntry>;
+  /** Village pets and farm animals: walk rows plus pose rows (see docs/guides/animated-sprites.md). */
+  animals?: Record<string, CharacterEntry>;
   terrain?: Record<string, TerrainEntry>;
   props?: Record<string, SpriteEntry>;
   buildings?: Record<string, SpriteEntry>;

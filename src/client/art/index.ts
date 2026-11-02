@@ -193,6 +193,12 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
     const art: CharacterArt = { walk, idle, anchor: normAnchor(e.anchor, fw, fh, [0.5, 0.94]) };
     const attack = rows(e.animations?.slash) ?? rows(e.animations?.attack);
     if (attack) art.attack = attack;
+    const poses: NonNullable<CharacterArt["poses"]> = {};
+    for (const k of ["rest", "nap", "love", "scratch", "play", "sniff"] as const) {
+      const p = rows(e.animations?.[k]);
+      if (p) poses[k] = p;
+    }
+    if (Object.keys(poses).length) art.poses = poses;
     if (typeof e.shadow === "string" && e.shadow in SHADOW_SIZE) art.shadow = e.shadow as ShadowSize;
     if (e.flying) art.flying = true;
     if (typeof e.hover === "number" && Number.isFinite(e.hover) && e.hover > 0) art.hover = e.hover * SCALE;
@@ -201,7 +207,7 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
   const character = (key: string): CharacterArt => {
     let art = charCache.get(key);
     if (!art) {
-      const e = cat.characters?.[key] ?? cat.monsters?.[key];
+      const e = cat.characters?.[key] ?? cat.monsters?.[key] ?? cat.animals?.[key];
       art = (e && buildCharacter(e)) || fb().character(key);
       charCache.set(key, art);
     }

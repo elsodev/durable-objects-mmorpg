@@ -39,7 +39,27 @@ const PROFILES: Record<string, EntityProfile> = {
   slime: { ...HUMANOID, fps: 8, bobAmp: 3, bobHz: 2.2, squash: 0.08, shadow: 0.8, hitW: 0.8, hitH: 0.75, head: 24 },
   bat: { ...HUMANOID, fps: 10, animateIdle: true, hover: 22, bobAmp: 3, bobHz: 1.6, shadow: 0.55, hitW: 0.8, hitH: 1.4, head: 22 },
   rock_crab: { ...HUMANOID, fps: 8, bobAmp: 1, bobHz: 4, shadow: 1, hitW: 0.95, hitH: 0.75, head: 24 },
+  // Animals: the walk fps matches their speed so paws don't slide (cat 1.5, dog 1.9, hen 1 tile/s).
+  cat_ginger: { ...HUMANOID, fps: 8, shadow: 0.6, hitW: 0.9, hitH: 0.75, head: 18 },
+  cat_grey: { ...HUMANOID, fps: 8, shadow: 0.6, hitW: 0.9, hitH: 0.75, head: 18 },
+  dog_golden: { ...HUMANOID, fps: 9, shadow: 0.85, hitW: 1.1, hitH: 1.05, head: 30 },
+  dog_patch: { ...HUMANOID, fps: 9, shadow: 0.85, hitW: 1.1, hitH: 1.05, head: 30 },
+  chicken_white: { ...HUMANOID, fps: 7, shadow: 0.5, hitW: 0.8, hitH: 0.75, head: 18 },
+  chicken_brown: { ...HUMANOID, fps: 7, shadow: 0.5, hitW: 0.8, hitH: 0.75, head: 18 },
 };
+
+/**
+ * Milliseconds per frame of each animal pose: a lazy tail flick sitting, slow breathing asleep,
+ * quick wiggles in love, a fast scratch, a playful pounce rhythm, an unhurried sniff.
+ */
+export const ANIMAL_POSE_MS: Readonly<Record<string, number>> = { rest: 550, nap: 900, love: 220, scratch: 110, play: 230, sniff: 260 };
+
+/** Frame index of a looping animal pose `ageMs` after it started; -1 when `k` is not a pose. */
+export function animalPoseFrame(k: string, ageMs: number, frames: number): number {
+  const ms = ANIMAL_POSE_MS[k];
+  if (!ms || frames <= 0) return -1;
+  return Math.floor(Math.max(0, ageMs) / ms) % frames;
+}
 
 export function profileFor(sprite: string): EntityProfile {
   return PROFILES[sprite] ?? HUMANOID;

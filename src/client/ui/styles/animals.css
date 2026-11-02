@@ -1,0 +1,65 @@
+/* Animal card: a small panel above the hotbar while you look after a cat, dog or hen. */
+
+#animal-card {
+  pointer-events: auto;
+}
+#animal-card[hidden] {
+  display: none;
+}
+
+.animal-card {
+  position: absolute;
+  left: 50%;
+  bottom: 108px;
+  transform: translateX(-50%);
+  width: min(340px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  z-index: 31;
+}
+
+.dm-hud:has(#shop-dialog:not([hidden])) .animal-card,
+.dm-hud:has(#game-menu:not([hidden])) .animal-card {
+  display: none;
+}
+
+.animal-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.animal-card-name {
+  margin: 0;
+  font-size: 18px;
+}
+.animal-card-kind {
+  flex: 1;
+  font-size: 13px;
+}
+.animal-card-hearts {
+  display: flex;
+  gap: 4px;
+}
+.animal-card-hearts .bond-heart {
+  width: 20px;
+  height: 20px;
+}
+.animal-card-blurb,
+.animal-card-status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.animal-card-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.animal-card-buttons button[hidden] {
+  display: none;
+}
+.animal-card-adopt {
+  flex-basis: 100%;
+}

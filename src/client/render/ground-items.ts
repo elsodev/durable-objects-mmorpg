@@ -43,7 +43,8 @@ export function createGroundItems(art: Art, layers: Layers): GroundItemsLayer {
       root.addChild(glint);
     }
     root.position.set(g.x * TILE, g.y * TILE);
-    root.zIndex = g.y * TILE;
+    // Lying on the ground: anyone standing on the same tile is drawn over it.
+    root.zIndex = (g.y - 0.45) * TILE;
     layers.sorted.addChild(root);
     return { item: g, root, icon, glint, phase: (g.x * 7.3 + g.y * 3.1) % 6.28 };
   };

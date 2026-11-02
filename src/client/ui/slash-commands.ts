@@ -51,6 +51,8 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "hour", aliases: [], args: "hour", description: "Dev: run village routines as if at this UTC hour", available: (c) => c.devTools && !c.atHome },
   { name: "hearts", aliases: [], args: "n", description: "Dev: put the nearest villager one point short of n hearts", available: (c) => c.devTools && !c.atHome },
   { name: "warp", aliases: [], args: "zone [spawn]", description: "Dev: walk straight into another zone, e.g. /warp caves_3_top", available: (c) => c.devTools && !c.atHome },
+  { name: "love", aliases: [], args: "n", description: "Dev: set your hearts with the nearest village cat or dog", available: (c) => c.devTools && !c.atHome },
+  { name: "coins", aliases: [], args: "n", description: "Dev: add coins", available: (c) => c.devTools },
 ];
 
 export interface SlashSuggestion {

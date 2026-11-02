@@ -711,7 +711,8 @@ export class NpcRunner {
     if (!npc.def) return null;
     const nearby = [...this.host.players(), ...this.host.others()]
       .filter((e) => e.id !== npc.entity.id)
-      .map((e) => ({ id: e.id, name: e.name, kind: e.kind, dist: Math.round(dist(e, npc.entity) * 10) / 10 }))
+      // Villagers talk about people and monsters; the village cats and dogs aren't in their prompt.
+      .flatMap((e) => (e.kind === "animal" ? [] : [{ id: e.id, name: e.name, kind: e.kind, dist: Math.round(dist(e, npc.entity) * 10) / 10 }]))
       .filter((e) => e.dist <= NEARBY_RANGE)
       .slice(0, 8);
     return {

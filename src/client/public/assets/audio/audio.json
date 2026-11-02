@@ -460,6 +460,34 @@
         "sfx/eat_1.ogg"
       ],
       "volume": 0.5
+    },
+    "dog_bark": {
+      "files": [
+        "sfx/dog_bark_0.ogg",
+        "sfx/dog_bark_1.ogg",
+        "sfx/dog_bark_2.ogg"
+      ],
+      "volume": 0.4
+    },
+    "cat_purr": {
+      "files": [
+        "sfx/cat_purr_0.ogg",
+        "sfx/cat_purr_1.ogg"
+      ],
+      "volume": 0.45
+    },
+    "cat_meow": {
+      "files": [
+        "sfx/cat_meow_0.ogg",
+        "sfx/cat_meow_1.ogg"
+      ],
+      "volume": 0.35
+    },
+    "hen_cluck": {
+      "files": [
+        "sfx/hen_cluck_0.ogg"
+      ],
+      "volume": 0.3
     }
   },
   "missing": []

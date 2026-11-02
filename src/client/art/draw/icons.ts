@@ -211,6 +211,38 @@ function slimeGel(g: PixelGrid): void {
   g.hline(10, 27, 12, shade(c, -0.3));
 }
 
+function egg(g: PixelGrid): void {
+  const c = 0xefdcb8;
+  g.ellipse(16, 18, 8, 10, shade(c, -0.35));
+  g.ellipse(16, 18, 7, 9, c);
+  g.ellipse(18, 21, 4, 5, shade(c, -0.12));
+  g.px(13, 12, 0xffffff);
+  g.px(12, 14, 0xffffff);
+}
+
+function petTreat(g: PixelGrid): void {
+  const c = 0xc88444;
+  g.line(10, 21, 22, 11, c);
+  g.line(10, 22, 22, 12, c);
+  g.line(11, 22, 23, 12, shade(c, -0.25));
+  for (const [x, y] of [[8, 21], [10, 24], [21, 8], [24, 10]] as const) g.ellipse(x, y, 3, 3, c);
+  g.px(20, 8, shade(c, 0.3));
+  g.px(7, 20, shade(c, 0.3));
+}
+
+function hen(g: PixelGrid): void {
+  const body = 0xf2ede2;
+  g.ellipse(17, 20, 8, 6, shade(body, -0.25));
+  g.ellipse(17, 19, 7, 5, body);
+  g.poly([[22, 18], [27, 10], [28, 16], [25, 22]], shade(body, -0.1));
+  g.ellipse(11, 12, 4, 4, body);
+  g.ellipse(11, 8, 2, 1, 0xe0443a);
+  g.poly([[7, 12], [4, 13], [7, 14]], 0xf0b830);
+  g.px(10, 11, 0x1d1a22);
+  g.ellipse(18, 19, 4, 3, shade(body, -0.12));
+  for (const x of [15, 19]) g.line(x, 25, x, 29, 0xe8a828);
+}
+
 function batWing(g: PixelGrid): void {
   const c = 0x5a3e7a;
   g.poly([[4, 8], [28, 12], [26, 18], [21, 16], [18, 22], [13, 18], [8, 24], [6, 16]], c);
@@ -303,6 +335,9 @@ const ICONS: Record<string, (g: PixelGrid) => void> = {
   gem_diamond: diamond,
   wood,
   slime_gel: slimeGel,
+  egg,
+  pet_treat: petTreat,
+  chicken: hen,
   bat_wing: batWing,
   crab_shell: crabShell,
   herb_mint: mint,

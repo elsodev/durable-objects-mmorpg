@@ -7734,6 +7734,24 @@
      12
     ]
    ]
+  },
+  "barn": {
+   "file": "buildings/barn.png",
+   "rect": [
+    0,
+    0,
+    144,
+    168
+   ],
+   "anchor": [
+    72,
+    166
+   ],
+   "footprintTiles": {
+    "w": 4,
+    "h": 2
+   },
+   "doorHint": "double doors on the front (bottom) face"
   }
  },
  "ores": {
@@ -8108,6 +8126,752 @@
    },
    "substitute": "No LPC crab exists; Redshrike grey spider (stone-coloured carapace) stands in for rock_crab.",
    "shadow": "medium"
+  }
+ },
+ "animals": {
+  "cat_ginger": {
+   "file": "animals/cat_ginger.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    16,
+    29
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "frames": 4
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    },
+    "rest": {
+     "up": {
+      "row": 4,
+      "frames": 4
+     },
+     "left": {
+      "row": 5,
+      "frames": 4
+     },
+     "down": {
+      "row": 6,
+      "frames": 4
+     },
+     "right": {
+      "row": 7,
+      "frames": 4
+     }
+    },
+    "nap": {
+     "up": {
+      "row": 8,
+      "frames": 2
+     },
+     "left": {
+      "row": 8,
+      "frames": 2
+     },
+     "down": {
+      "row": 13,
+      "frames": 2
+     },
+     "right": {
+      "row": 13,
+      "frames": 2
+     }
+    },
+    "love": {
+     "up": {
+      "row": 9,
+      "frames": 2
+     },
+     "left": {
+      "row": 10,
+      "frames": 2
+     },
+     "down": {
+      "row": 11,
+      "frames": 2
+     },
+     "right": {
+      "row": 12,
+      "frames": 2
+     }
+    },
+    "scratch": {
+     "up": {
+      "row": 14,
+      "frames": 4
+     },
+     "left": {
+      "row": 14,
+      "frames": 4
+     },
+     "down": {
+      "row": 15,
+      "frames": 4
+     },
+     "right": {
+      "row": 15,
+      "frames": 4
+     }
+    },
+    "play": {
+     "up": {
+      "row": 16,
+      "frames": 4
+     },
+     "left": {
+      "row": 16,
+      "frames": 4
+     },
+     "down": {
+      "row": 17,
+      "frames": 4
+     },
+     "right": {
+      "row": 17,
+      "frames": 4
+     }
+    }
+   },
+   "shadow": "small"
+  },
+  "cat_grey": {
+   "file": "animals/cat_grey.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    16,
+    29
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "frames": 4
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    },
+    "rest": {
+     "up": {
+      "row": 4,
+      "frames": 4
+     },
+     "left": {
+      "row": 5,
+      "frames": 4
+     },
+     "down": {
+      "row": 6,
+      "frames": 4
+     },
+     "right": {
+      "row": 7,
+      "frames": 4
+     }
+    },
+    "nap": {
+     "up": {
+      "row": 8,
+      "frames": 2
+     },
+     "left": {
+      "row": 8,
+      "frames": 2
+     },
+     "down": {
+      "row": 13,
+      "frames": 2
+     },
+     "right": {
+      "row": 13,
+      "frames": 2
+     }
+    },
+    "love": {
+     "up": {
+      "row": 9,
+      "frames": 2
+     },
+     "left": {
+      "row": 10,
+      "frames": 2
+     },
+     "down": {
+      "row": 11,
+      "frames": 2
+     },
+     "right": {
+      "row": 12,
+      "frames": 2
+     }
+    },
+    "scratch": {
+     "up": {
+      "row": 14,
+      "frames": 4
+     },
+     "left": {
+      "row": 14,
+      "frames": 4
+     },
+     "down": {
+      "row": 15,
+      "frames": 4
+     },
+     "right": {
+      "row": 15,
+      "frames": 4
+     }
+    },
+    "play": {
+     "up": {
+      "row": 16,
+      "frames": 4
+     },
+     "left": {
+      "row": 16,
+      "frames": 4
+     },
+     "down": {
+      "row": 17,
+      "frames": 4
+     },
+     "right": {
+      "row": 17,
+      "frames": 4
+     }
+    }
+   },
+   "shadow": "small"
+  },
+  "dog_golden": {
+   "file": "animals/dog_golden.png",
+   "frameW": 48,
+   "frameH": 48,
+   "anchor": [
+    24,
+    44
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "frames": 4
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    },
+    "rest": {
+     "up": {
+      "row": 4,
+      "frames": 4
+     },
+     "left": {
+      "row": 5,
+      "frames": 4
+     },
+     "down": {
+      "row": 6,
+      "frames": 4
+     },
+     "right": {
+      "row": 7,
+      "frames": 4
+     }
+    },
+    "nap": {
+     "up": {
+      "row": 8,
+      "frames": 2
+     },
+     "left": {
+      "row": 8,
+      "frames": 2
+     },
+     "down": {
+      "row": 13,
+      "frames": 2
+     },
+     "right": {
+      "row": 13,
+      "frames": 2
+     }
+    },
+    "love": {
+     "up": {
+      "row": 9,
+      "frames": 2
+     },
+     "left": {
+      "row": 10,
+      "frames": 2
+     },
+     "down": {
+      "row": 11,
+      "frames": 2
+     },
+     "right": {
+      "row": 12,
+      "frames": 2
+     }
+    },
+    "sniff": {
+     "up": {
+      "row": 14,
+      "frames": 4
+     },
+     "left": {
+      "row": 14,
+      "frames": 4
+     },
+     "down": {
+      "row": 15,
+      "frames": 4
+     },
+     "right": {
+      "row": 15,
+      "frames": 4
+     }
+    }
+   },
+   "shadow": "character"
+  },
+  "dog_patch": {
+   "file": "animals/dog_patch.png",
+   "frameW": 48,
+   "frameH": 48,
+   "anchor": [
+    24,
+    44
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "frames": 4
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    },
+    "rest": {
+     "up": {
+      "row": 4,
+      "frames": 4
+     },
+     "left": {
+      "row": 5,
+      "frames": 4
+     },
+     "down": {
+      "row": 6,
+      "frames": 4
+     },
+     "right": {
+      "row": 7,
+      "frames": 4
+     }
+    },
+    "nap": {
+     "up": {
+      "row": 8,
+      "frames": 2
+     },
+     "left": {
+      "row": 8,
+      "frames": 2
+     },
+     "down": {
+      "row": 13,
+      "frames": 2
+     },
+     "right": {
+      "row": 13,
+      "frames": 2
+     }
+    },
+    "love": {
+     "up": {
+      "row": 9,
+      "frames": 2
+     },
+     "left": {
+      "row": 10,
+      "frames": 2
+     },
+     "down": {
+      "row": 11,
+      "frames": 2
+     },
+     "right": {
+      "row": 12,
+      "frames": 2
+     }
+    },
+    "sniff": {
+     "up": {
+      "row": 14,
+      "frames": 4
+     },
+     "left": {
+      "row": 14,
+      "frames": 4
+     },
+     "down": {
+      "row": 15,
+      "frames": 4
+     },
+     "right": {
+      "row": 15,
+      "frames": 4
+     }
+    }
+   },
+   "shadow": "character"
+  },
+  "chicken_white": {
+   "file": "animals/chicken_white.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    16,
+    29
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "frames": 4
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    },
+    "rest": {
+     "up": {
+      "row": 4,
+      "frames": 4
+     },
+     "left": {
+      "row": 5,
+      "frames": 4
+     },
+     "down": {
+      "row": 6,
+      "frames": 4
+     },
+     "right": {
+      "row": 7,
+      "frames": 4
+     }
+    },
+    "nap": {
+     "up": {
+      "row": 8,
+      "frames": 2
+     },
+     "left": {
+      "row": 8,
+      "frames": 2
+     },
+     "down": {
+      "row": 13,
+      "frames": 2
+     },
+     "right": {
+      "row": 13,
+      "frames": 2
+     }
+    },
+    "love": {
+     "up": {
+      "row": 9,
+      "frames": 2
+     },
+     "left": {
+      "row": 10,
+      "frames": 2
+     },
+     "down": {
+      "row": 11,
+      "frames": 2
+     },
+     "right": {
+      "row": 12,
+      "frames": 2
+     }
+    }
+   },
+   "shadow": "small"
+  },
+  "chicken_brown": {
+   "file": "animals/chicken_brown.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    16,
+    29
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "frames": 4
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    },
+    "rest": {
+     "up": {
+      "row": 4,
+      "frames": 4
+     },
+     "left": {
+      "row": 5,
+      "frames": 4
+     },
+     "down": {
+      "row": 6,
+      "frames": 4
+     },
+     "right": {
+      "row": 7,
+      "frames": 4
+     }
+    },
+    "nap": {
+     "up": {
+      "row": 8,
+      "frames": 2
+     },
+     "left": {
+      "row": 8,
+      "frames": 2
+     },
+     "down": {
+      "row": 13,
+      "frames": 2
+     },
+     "right": {
+      "row": 13,
+      "frames": 2
+     }
+    },
+    "love": {
+     "up": {
+      "row": 9,
+      "frames": 2
+     },
+     "left": {
+      "row": 10,
+      "frames": 2
+     },
+     "down": {
+      "row": 11,
+      "frames": 2
+     },
+     "right": {
+      "row": 12,
+      "frames": 2
+     }
+    }
+   },
+   "shadow": "small"
   }
  },
  "furniture": {
@@ -9594,6 +10358,33 @@
    "rect": [
     32,
     64,
+    32,
+    32
+   ]
+  },
+  "egg": {
+   "file": "icons/animal_icons.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ]
+  },
+  "pet_treat": {
+   "file": "icons/animal_icons.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ]
+  },
+  "chicken": {
+   "file": "icons/animal_icons.png",
+   "rect": [
+    64,
+    0,
     32,
     32
    ]

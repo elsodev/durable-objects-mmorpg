@@ -80,7 +80,13 @@ const PACKED_NEIGHBOURS: Record<string, string> = {
 };
 
 /** Legacy pieces whose art is a little wider than their footprint (changing it would move saved objects). */
-const LEGACY_OVERHANG_PX: Record<string, number> = { table_wood: 8, bed_simple: 10, bellows: 6 };
+const LEGACY_OVERHANG_PX: Record<string, number> = {
+  table_wood: 8,
+  bed_simple: 10,
+  bellows: 6,
+  // The barn's roof eaves reach 8px past each wall; its walls match the footprint, and it's built on a fixed lot.
+  barn: 8,
+};
 
 /** Drawn from `pieces` per neighbour (posts and rails), not from the single rect. */
 const PIECEWISE = new Set(["fence"]);
