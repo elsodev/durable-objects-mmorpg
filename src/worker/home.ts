@@ -190,6 +190,9 @@ import {
   CLOSE_REPLACED,
   isWebSocketUpgrade,
   send,
+  IDLE_TIMEOUT_MS,
+  CLOSE_IDLE,
+  isPing,
 } from "./game/net";
 
 export interface PlayerSave {
@@ -256,6 +259,7 @@ const PLACE_REACH = 10;
 const BUILD_COOLDOWN_MS = 200;
 /** A broken rock the player is standing on retries its respawn this much later. */
 const ROCK_RETRY_MS = 5000;
+const IDLE_NOTICE = "You were idle for a while, so you were disconnected.";
 const GUEST_REASON = "Create a free account to visit Mossbrook village.";
 /** Pieces one mailGift call may post. */
 const MAX_MAILED_GIFTS = 5;
@@ -342,6 +346,8 @@ export class HomeRoom extends DurableObject<Env> {
   /** The owner's dash time under one stamina point (not saved: it is less than half a second). */
   private dashCarry = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Last real input per socket (pings don't count): a forgotten tab must not keep the home ticking. */
+  private lastInput = new Map<WebSocket, number>();
   private lastTick = 0;
   private clock: HomeClock = { day: 1, startAt: 0 };
   private bin: BinEntry[] = [];
@@ -1383,6 +1389,7 @@ export class HomeRoom extends DurableObject<Env> {
   // ------------------------------------------------------------------ socket events
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    if (typeof message === "string" && !isPing(message)) this.lastInput.set(ws, Date.now());
     const v = this.visitors.get(ws);
     if (v) return this.onVisitorMessage(v, message);
     const p = this.player;
@@ -1447,6 +1454,7 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
+    this.lastInput.delete(ws);
     this.closed(ws);
   }
 
@@ -1479,6 +1487,34 @@ export class HomeRoom extends DurableObject<Env> {
 
   // ------------------------------------------------------------------ tick
 
+  /**
+   * Ends sockets with no input for IDLE_TIMEOUT_MS. A yard with animals ticks while anyone is
+   * in it, so without this an open, forgotten tab would keep the home awake (and billed) forever.
+   * True when the owner was removed (the tick stops).
+   */
+  private kickIdle(p: HPlayer, now: number): boolean {
+    const idle = (ws: WebSocket): boolean => {
+      const last = this.lastInput.get(ws);
+      if (last === undefined) this.lastInput.set(ws, now);
+      return last !== undefined && now - last > IDLE_TIMEOUT_MS;
+    };
+    for (const v of this.visitors.all()) {
+      if (!idle(v.ws)) continue;
+      this.visitors.remove(v);
+      markLeft(this.invites, v.userId, now, false);
+      this.persist({ invites: true });
+      send(v.ws, { t: "notice", text: IDLE_NOTICE, kind: "error" });
+      closeQuietly(v.ws, CLOSE_IDLE, "idle");
+      this.lastInput.delete(v.ws);
+      this.sendVisitorList();
+    }
+    if (!idle(p.ws)) return false;
+    this.lastInput.delete(p.ws);
+    this.kick(p, CLOSE_IDLE, IDLE_NOTICE);
+    this.stopTick();
+    return true;
+  }
+
   private startTick(): void {
     if (this.timer || !this.player) return;
     this.lastTick = Date.now();
@@ -1496,6 +1532,7 @@ export class HomeRoom extends DurableObject<Env> {
     const now = Date.now();
     const dt = Math.min(250, Math.max(0, now - this.lastTick));
     this.lastTick = now;
+    if (this.kickIdle(p, now)) return;
 
     if (this.sleepAt !== null && now >= this.sleepAt) this.endDay("sleep", now);
     const acks = new Map<HPlayer | Visitor, number | undefined>();

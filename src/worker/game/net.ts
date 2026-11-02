@@ -37,3 +37,8 @@ export const CLOSE_LEASE_LOST = 4409;
 /** No input for IDLE_TIMEOUT_MS: the client shows "You were idle" and does not auto-reconnect. */
 export const CLOSE_IDLE = 4408;
 export const IDLE_TIMEOUT_MS = 20 * 60_000;
+
+/** A keep-alive ping frame, which doesn't count as player input. */
+export function isPing(message: string): boolean {
+  return message.length < 80 && /"t"\s*:\s*"ping"/.test(message);
+}
