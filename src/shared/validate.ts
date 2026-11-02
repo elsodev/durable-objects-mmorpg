@@ -8,6 +8,7 @@ import { validateLook } from "./look";
 import { validateHomeClientMsg } from "./home";
 import { isEmote } from "./emotes";
 import { HOTBAR_SIZE } from "./held";
+import { cleanNoticeText, isNoticeId, isNoticePress } from "./notices";
 
 /** Frames larger than this are dropped without parsing. */
 export const MAX_FRAME_BYTES = 2048;
@@ -129,6 +130,14 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       return isId(o.animal) && isSlot(o.slot) ? { t: "feedAnimal", animal: o.animal, slot: o.slot, ...req } : null;
     case "adoptAnimal":
       return isId(o.animal) ? { t: "adoptAnimal", animal: o.animal, ...req } : null;
+    case "noticePost": {
+      const text = cleanNoticeText(o.text);
+      return text ? { t: "noticePost", text, ...req } : null;
+    }
+    case "noticeVote":
+      return isNoticeId(o.id) && isNoticePress(o.press) ? { t: "noticeVote", id: o.id, press: o.press } : null;
+    case "noticeDelete":
+      return isNoticeId(o.id) ? { t: "noticeDelete", id: o.id } : null;
     default:
       return validateHomeClientMsg(o);
   }

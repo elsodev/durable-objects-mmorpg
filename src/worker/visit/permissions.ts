@@ -46,6 +46,10 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   petAnimal: { allow: "pet" },
   feedAnimal: { deny: "Only the owner feeds their animals." },
   adoptAnimal: { deny: NOT_YOURS },
+  // The notice board stands in the village; nothing here reaches it.
+  noticePost: { deny: "Visit the village for that." },
+  noticeVote: { deny: "Visit the village for that." },
+  noticeDelete: { deny: "Visit the village for that." },
 };
 
 export function visitorVerdict(msg: ClientMsg): VisitorVerdict {

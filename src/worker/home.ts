@@ -1517,6 +1517,9 @@ export class HomeRoom extends DurableObject<Env> {
       case "sell":
       case "donate":
       case "npcSay":
+      case "noticePost":
+      case "noticeVote":
+      case "noticeDelete":
         return this.reject(p, msg, "Visit the village for that.");
       case "setLook":
         return this.onSetLook(p, msg, now);

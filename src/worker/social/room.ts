@@ -3,7 +3,8 @@
 // in which zone), server-wide "today" stats, and delivery of payloads from other Durable Objects.
 // Guests may connect and read world chat but not send world chat or whispers.
 //
-// RPC for other Durable Objects: presence(), recordStat(), notify(), presenceOf(), closeSession().
+// RPC for other Durable Objects: presence(), recordStat(), notify(), presenceOf(), closeSession(),
+// and the village notice board (noticeList/Post/Vote/Delete; see noticeDesk.ts for why it lives here).
 // Subclass hook: onPresenceChange() fires when a user comes online, goes offline or changes zone.
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "../env";
@@ -28,6 +29,8 @@ import { DailyStats } from "./stats";
 import { friendIds } from "../friends/store";
 import { mutedIds } from "../mutes/store";
 import { MUTES_NOTICE } from "../../shared/players";
+import { isNoticeId, isNoticePress, type NoticePress } from "../../shared/notices";
+import { NoticeDesk, type BoardAnswer, type DeskHost } from "./noticeDesk";
 
 /** Friend lists are cached briefly so a burst of zone changes costs one D1 query. */
 const FRIEND_CACHE_MS = 60_000;
@@ -47,6 +50,8 @@ interface SocialAttachment {
   zone: ZoneId | null;
   /** Zone the client claimed (fallback only). */
   czone: ZoneId | null;
+  /** Notice board open until (ms): live board updates go to this socket. */
+  board?: number;
 }
 
 interface Conn {
@@ -85,6 +90,7 @@ export class SocialRoom extends DurableObject<Env> {
   private muteCache = new Map<string, { at: number; ids: Set<string> }>();
   /** Name of each online user, kept until their offline push has gone out. */
   private lastNames = new Map<string, string>();
+  private desk!: NoticeDesk;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -98,6 +104,7 @@ export class SocialRoom extends DurableObject<Env> {
       ]);
       this.history = Array.isArray(history) ? history.slice(-HISTORY_MAX) : [];
       this.stats = DailyStats.from(stats, Date.now());
+      this.desk = await NoticeDesk.load(this.deskHost());
       const now = Date.now();
       for (const [k, until] of mutes) {
         if (typeof until === "number" && until > now) this.guards.get(k.slice(5), now).muteUntil(until);
@@ -414,6 +421,56 @@ export class SocialRoom extends DurableObject<Env> {
       });
   }
 
+  // ------------------------------------------------------------------ notice board
+
+  private deskHost(): DeskHost {
+    return {
+      storage: this.ctx.storage,
+      mutedBy: (userId) => this.mutedBy(userId),
+      watch: (userId, until) => {
+        for (const connId of this.presenceState.connsOf(userId)) {
+          const c = this.conns.get(connId);
+          if (!c) continue;
+          c.att.board = until;
+          try {
+            c.ws.serializeAttachment(c.att);
+          } catch {
+            // closing
+          }
+        }
+      },
+      watchers: (now) => [...new Set([...this.conns.values()].filter((c) => (c.att.board ?? 0) > now).map((c) => c.att.userId))],
+      push: (userId, payload) => void this.sendUser(userId, { t: "social", payload }),
+      isGuest: (userId) => [...this.presenceState.connsOf(userId)].some((id) => this.conns.get(id)?.att.guest === true),
+      chatMuted: (userId, now) => this.guards.get(userId, now).mutedFor(now) > 0,
+    };
+  }
+
+  /** RPC (ZoneRoom): the board as `userId` sees it; they get live updates for a while. */
+  async noticeList(userId: string): Promise<BoardAnswer> {
+    if (!validUser(userId)) return { ok: false, posts: [] };
+    return this.desk.list(userId, Date.now());
+  }
+
+  /** RPC (ZoneRoom, after taking the coins): pin a notice. `req` makes a retry idempotent. */
+  async noticePost(userId: string, name: string, text: string, req: string): Promise<BoardAnswer> {
+    if (!validUser(userId) || typeof text !== "string" || typeof req !== "string") return { ok: false, posts: [] };
+    const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    return this.desk.post(userId, cleanName(String(name)), text, id, req.slice(0, 64), Date.now());
+  }
+
+  /** RPC (ZoneRoom): like or dislike (again: take it back). */
+  async noticeVote(userId: string, id: string, press: NoticePress): Promise<BoardAnswer> {
+    if (!validUser(userId) || !isNoticeId(id) || !isNoticePress(press)) return { ok: false, posts: [] };
+    return this.desk.vote(userId, id, press, Date.now());
+  }
+
+  /** RPC (ZoneRoom): the author takes their notice down. */
+  async noticeDelete(userId: string, id: string): Promise<BoardAnswer> {
+    if (!validUser(userId) || !isNoticeId(id)) return { ok: false, posts: [] };
+    return this.desk.remove(userId, id, Date.now());
+  }
+
   /** RPC (sign-out hook): close this session's social sockets. */
   async closeSession(userId: string, sessionId: string): Promise<void> {
     if (!sessionId) return;
@@ -421,4 +478,8 @@ export class SocialRoom extends DurableObject<Env> {
       if (c.att.userId === userId && c.att.sid === sessionId) this.kick(c, CLOSE_SESSION_ENDED, "You signed out.");
     }
   }
+}
+
+function validUser(userId: unknown): userId is string {
+  return typeof userId === "string" && userId.length > 0 && userId.length <= 128;
 }

@@ -18,6 +18,7 @@ import { createStoragePanel } from "../ui/storage";
 import { STORE_WALK_AWAY, storeTarget, wardrobeTarget } from "./storage-target";
 import { createVisitsUi } from "../ui/visits";
 import { createMailboxUi } from "../ui/mailbox";
+import { createNoticeBoardUi } from "../ui/notice-board";
 import { createDoorFade } from "../ui/door-fade";
 import { exitAt } from "../../shared/engine/geometry";
 import { MAILBOX_TAKE } from "../../shared/mail";
@@ -411,8 +412,18 @@ export async function startSession(
     now: () => serverNow(),
     isGuest: () => isGuest,
   });
+  const noticeBoardUi = createNoticeBoardUi(mount.ui, {
+    post: (text) => send({ t: "noticePost", text }),
+    vote: (id, press) => send({ t: "noticeVote", id, press }),
+    remove: (id) => send({ t: "noticeDelete", id }),
+    coins: () => store.inventory.coins,
+    now: () => serverNow(),
+    isGuest: () => isGuest,
+  });
   const doorFade = createDoorFade(mount.ui);
   const socialUnsubs = [
+    onSocialEvent("notices", (p) => noticeBoardUi.social(p)),
+    onSocialEvent("noticeVotes", (p) => noticeBoardUi.social(p)),
     onSocialEvent("invite", (p) => visitsUi.addInvites([p])),
     onSocialEvent("inviteRevoked", (p) => {
       if (typeof p.fromId === "string") visitsUi.removeInvite(p.fromId);
@@ -787,6 +798,7 @@ export async function startSession(
       case "inventory":
         hud.setInventory(store.inventory);
         storageUi.setInventory(store.inventory);
+        noticeBoardUi.refresh();
         refreshEdible();
         world?.effects.setFlashlight?.(hasFlashlight(store.inventory));
         break;
@@ -829,6 +841,9 @@ export async function startSession(
         break;
       case "mail":
         mailboxUi.set(msg);
+        break;
+      case "notices":
+        noticeBoardUi.set(msg);
         break;
       case "daySummary":
         playSfx("goal_complete");
@@ -1032,6 +1047,7 @@ export async function startSession(
     impacts.clear();
     shownHits.clear();
     world.mailboxFlag?.set(mailFlag);
+    noticeBoardUi.close();
     if (nextHomeMap !== "home" || visiting) mailboxUi.close();
     else void mailboxUi.refreshRequests();
     if (throughDoor) {
@@ -1684,6 +1700,7 @@ export async function startSession(
       storageUi.destroy();
       visitsUi.destroy();
       mailboxUi.destroy();
+      noticeBoardUi.destroy();
       doorFade.destroy();
       for (const u of socialUnsubs) u();
       for (const u of unsubs) u();

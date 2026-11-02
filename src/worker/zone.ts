@@ -65,7 +65,10 @@ import { entityIdFor, readAttachment, readIdentity, type SocketAttachment } from
 import { cloneInventory, clampHp, isZoneId, sanitizeInventory } from "./game/sanitize";
 import { ChatGuards } from "./game/chat";
 import { HOME_COMMAND_NOTICE, parseHomeCommand } from "../shared/visits";
-import { reportPresence } from "./social/hooks";
+import { reportPresence, socialRoom } from "./social/hooks";
+import { boardInReach, chargeNotice, isNoticeBoard, refundNotice } from "./game/notices";
+import { cleanNoticeText, NOTICE_COST } from "../shared/notices";
+import type { BoardAnswer } from "./social/noticeDesk";
 import { Throttle } from "./throttle";
 import { EMOTE_MIN_INTERVAL_MS } from "../shared/emotes";
 import { Motion } from "./game/motion";
@@ -141,6 +144,7 @@ import {
 const SAVE_EVERY_MS = 5000;
 const BAG_FULL_NOTICE_MS = 30_000;
 const USE_COOLDOWN_MS = 250;
+const NOTICE_EDIT_MS = 300;
 const SHOP_DEDUP_MS = 1500;
 /** One gift per NPC per player this often (the item is gone either way; this stops spam). */
 const GIFT_NPC_COOLDOWN_MS = 5000;
@@ -180,7 +184,10 @@ interface ZPlayer {
   lastInput: number;
   sid: string | null;
   authCheckedAt: number;
-  /** Set while a cross-zone donation is in flight: exits wait and the final save waits for it. */
+  /**
+   * Set while a cross-zone donation or a notice post is in flight (items or coins taken, the other
+   * Durable Object not yet answered): exits wait and the final save waits for it.
+   */
   donation: Promise<void> | null;
   dirty: boolean;
   lastUse: number;
@@ -260,6 +267,8 @@ export class ZoneRoom extends DurableObject<Env> {
   private donationIds = new Map<string, number>();
   private chatGuards = new ChatGuards();
   private emotes = new Throttle(EMOTE_MIN_INTERVAL_MS);
+  /** Notice board votes and take-downs: each is a SocialRoom call, so a few a second at most. */
+  private noticeEdits = new Throttle(NOTICE_EDIT_MS);
   /** The "bag full, loot on the ground" notice once in a while, not on every kill. */
   private bagFullNotes = new Throttle(BAG_FULL_NOTICE_MS);
 
@@ -609,6 +618,7 @@ export class ZoneRoom extends DurableObject<Env> {
   /** Tells SocialRoom (presence) and forgets per-player throttles. */
   private left(p: ZPlayer): void {
     this.emotes.drop(p.userId);
+    this.noticeEdits.drop(p.userId);
     this.bagFullNotes.drop(p.userId);
     if (this.world) reportPresence(this.env, p.userId, this.world.zone, false);
   }
@@ -1011,6 +1021,11 @@ export class ZoneRoom extends DurableObject<Env> {
       case "feedAnimal":
       case "adoptAnimal":
         return this.onAnimal(p, msg, now);
+      case "noticePost":
+        return this.onNoticePost(p, msg, now);
+      case "noticeVote":
+      case "noticeDelete":
+        return this.onNoticeEdit(p, msg, now);
     }
   }
 
@@ -1348,6 +1363,7 @@ export class ZoneRoom extends DurableObject<Env> {
       else send(p.ws, { t: "notice", text: "Nobody is minding this stall.", kind: "info" });
       return;
     }
+    if (isNoticeBoard(prop)) void this.openNotices(p);
     if (prop.type === "notice_board" || prop.type === "shrine" || prop.type === "bridge_broken") {
       void this.villageGoals().then((goals) => send(p.ws, { t: "goals", goals }));
     }
@@ -1576,6 +1592,71 @@ export class ZoneRoom extends DurableObject<Env> {
   private worldFacts(): string[] {
     const goals = this.holdsGoals() ? goalsView(this.goals) : (this.goalsCache?.goals ?? []);
     return goals.map((g) => (g.done ? `The village finished: ${g.name}.` : `The village is still working on: ${g.name}.`));
+  }
+
+  // ------------------------------------------------------------------ notice board
+
+  /** Sends the board (answer from SocialRoom) to the player, or says why it refused. */
+  private sendNotices(p: ZPlayer, msg: ClientMsg | null, a: BoardAnswer, extra: { open?: boolean; posted?: boolean } = {}): void {
+    if (!a.ok && a.reason && msg) this.reject(p, msg, a.reason);
+    send(p.ws, { t: "notices", posts: a.posts, ...(a.nextPostAt ? { nextPostAt: a.nextPostAt } : {}), ...extra });
+  }
+
+  private async openNotices(p: ZPlayer): Promise<void> {
+    try {
+      this.sendNotices(p, null, await socialRoom(this.env).noticeList(p.userId), { open: true });
+    } catch {
+      send(p.ws, { t: "notice", text: "The notice board is hard to read right now. Try again.", kind: "error" });
+    }
+  }
+
+  /** Pinning costs coins: taken now (sync), saved, then pinned; a refusal or failure refunds them. */
+  private onNoticePost(p: ZPlayer, msg: Extract<ClientMsg, { t: "noticePost" }>, now: number): void {
+    if (!boardInReach(this.world!.map, p.entity)) return this.reject(p, msg, "Walk up to the notice board.");
+    if (p.donation) return this.reject(p, msg, "One thing at a time.");
+    if (this.chatGuards.get(p.userId, now).mutedFor(now) > 0) return this.reject(p, msg, "You're muted for spamming. Try again later.");
+    const text = cleanNoticeText(stripControls(msg.text));
+    if (!text) return this.reject(p, msg, "Write something first.");
+    if (!chargeNotice(p.inv)) return this.reject(p, msg, `A notice costs ${NOTICE_COST} coins.`);
+    p.donation = this.postNotice(p, msg, text).finally(() => {
+      p.donation = null;
+    });
+  }
+
+  private async postNotice(p: ZPlayer, msg: Extract<ClientMsg, { t: "noticePost" }>, text: string): Promise<void> {
+    send(p.ws, { t: "inventory", inventory: p.inv });
+    const saved = await this.save(p);
+    let answer: BoardAnswer | null = null;
+    if (saved === "saved") {
+      // One request id across the retry, so a post whose answer was lost isn't pinned twice.
+      const reqId = crypto.randomUUID();
+      for (let attempt = 0; attempt < 2 && !answer; attempt++) {
+        try {
+          answer = await socialRoom(this.env).noticePost(p.userId, p.name, text, reqId);
+        } catch {
+          answer = null;
+        }
+      }
+    }
+    if (!answer?.ok) {
+      refundNotice(p.inv);
+      if (answer) this.sendNotices(p, msg, answer);
+      else if (saved !== "stale") this.reject(p, msg, "Couldn't reach the notice board. Try again.");
+      return this.inventoryChanged(p);
+    }
+    this.sendNotices(p, msg, answer, { posted: true });
+    this.inventoryChanged(p, `Pinned your notice (-${NOTICE_COST} coins).`);
+  }
+
+  private onNoticeEdit(p: ZPlayer, msg: Extract<ClientMsg, { t: "noticeVote" | "noticeDelete" }>, now: number): void {
+    if (!boardInReach(this.world!.map, p.entity)) return this.reject(p, msg, "Walk up to the notice board.");
+    if (!this.noticeEdits.allow(p.userId, now)) return this.reject(p, msg, "Slow down a little.");
+    const room = socialRoom(this.env);
+    const call = msg.t === "noticeVote" ? room.noticeVote(p.userId, msg.id, msg.press) : room.noticeDelete(p.userId, msg.id);
+    void call.then(
+      (a) => this.sendNotices(p, msg, a),
+      () => this.reject(p, msg, "Couldn't reach the notice board. Try again."),
+    );
   }
 
   // ------------------------------------------------------------------ village goals

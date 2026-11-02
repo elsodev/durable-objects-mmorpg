@@ -22,6 +22,7 @@ import type { EmoteCode } from "./emotes";
 import type { BondView } from "./hearts";
 import type { ChestView } from "./chests";
 import type { AnimalView } from "./animals";
+import type { NoticePress, NoticeView } from "./notices";
 
 // ---------------- Client -> Server ----------------
 // Optional `seq` (move/moveTo): client input sequence number, acked in `tick.ack` so the client
@@ -91,6 +92,14 @@ export type ClientMsg =
   | { t: "petAnimal"; animal: string }
   | { t: "feedAnimal"; animal: string; slot: number; req?: string }
   | { t: "adoptAnimal"; animal: string; req?: string }
+  /**
+   * Village notice board (shared/notices.ts), near a notice board: pin a notice for NOTICE_COST
+   * coins, like or dislike one (the same press again takes it back), or take down your own.
+   * Each is answered with `notices` (or `reject`).
+   */
+  | { t: "noticePost"; text: string; req?: string }
+  | { t: "noticeVote"; id: string; press: NoticePress }
+  | { t: "noticeDelete"; id: string }
   | HomeClientMsg;
 
 // ---------------- Server -> Client ----------------
@@ -251,6 +260,12 @@ export type ServerMsg =
   | { t: "animal"; view: AnimalView; delta?: number; open?: boolean; adopted?: boolean; /** You just fed it (cats meow). */ fed?: boolean }
   /** Zones: your stamina changed (mining and chopping cost it like at home). */
   | { t: "stamina"; stamina: number; max: number; /** Water in your can, so the slot gauge shows away from home too. */ water?: number; maxWater?: number }
+  /**
+   * The notice board as you see it, newest first. `open`: you just walked up to it (show the
+   * panel). `nextPostAt`: when you may pin again. `posted`: your notice just went up. Live changes
+   * made elsewhere arrive on the social socket as payloads "notices" and "noticeVotes".
+   */
+  | { t: "notices"; posts: NoticeView[]; open?: boolean; nextPostAt?: number; posted?: boolean }
   | HomeServerMsg
   | VisitServerMsg;
 
