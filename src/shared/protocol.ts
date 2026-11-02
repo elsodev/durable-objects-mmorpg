@@ -2,6 +2,7 @@
 // All messages are JSON text frames. Client sends INTENTS, server is authoritative.
 
 import type { PoseCode } from "./poses";
+import type { TravelZone } from "./travel";
 import type {
   EntityState,
   Facing,
@@ -63,6 +64,8 @@ export type ClientMsg =
   | { t: "emote"; code: EmoteCode }
   /** Strike a pose: lie down on the ground, or pee on the spot (shared/poses.ts). */
   | { t: "pose"; pose: PoseCode }
+  /** Fast travel (Map tab): the room saves you with the destination, then answers with `zone`. */
+  | { t: "travel"; to: TravelZone }
   /**
    * Rearrange the bag: move the stack in `from` onto `to`. Empty target: move (or split off `qty`);
    * same item: merge up to the stack limit; otherwise swap. Answered with `inventory` or `reject`.

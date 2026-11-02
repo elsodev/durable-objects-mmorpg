@@ -1,5 +1,6 @@
 // The home's two maps (yard + house): sub-map rules, the furniture save migration, and door
 // transitions on a real HomeRoom (owner, visitor and guest).
+import { getMap } from "../src/shared/maps";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { connectOwner, createRooms, FakeCtx, installWorkersGlobals, sendMsg, wsRequest, type FakeWs, type Rooms } from "./do-harness";
 import { HomeRoom } from "../src/worker/home";
@@ -352,6 +353,21 @@ describe("HomeRoom door transitions", () => {
     await ctx.ready;
     expect(woken.player.ws).toBe(ws);
     expect(woken.player.map).toBe("home_in");
+  });
+
+  it("fast travel saves the destination and the hand-off before sending the zone switch", async () => {
+    const ws = await connectOwner(r, "alice", "Alice");
+    const room = (active = r.room("alice") as any);
+    await sendMsg(r, "alice", ws, { t: "travel", to: "home" });
+    expect(ws.last("notice").text).toMatch(/already here/);
+    expect(ws.closed).toBeNull();
+    await sendMsg(r, "alice", ws, { t: "travel", to: "caves" });
+    expect(ws.last("zone")).toEqual({ t: "zone", to: "caves", spawn: "default" });
+    const saved = r.ctx("alice").storage.data.get("save") as { zone: string; x: number; y: number };
+    expect(saved.zone).toBe("caves");
+    expect([saved.x, saved.y]).toEqual([getMap("caves").spawns.default!.x, getMap("caves").spawns.default!.y]);
+    expect(r.ctx("alice").storage.data.get("transfer")).toMatchObject({ to: "caves", spawn: "default" });
+    expect(room.player).toBeNull();
   });
 });
 

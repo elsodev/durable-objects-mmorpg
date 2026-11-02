@@ -2,6 +2,7 @@
 // decodeClient() runs this before any Durable Object handler sees the message, so handlers
 // can rely on the ClientMsg types actually holding (finite integers, bounded strings, ...).
 import { isPose } from "./poses";
+import { isTravelZone } from "./travel";
 import type { ClientMsg } from "./protocol";
 import { validateLook } from "./look";
 import { validateHomeClientMsg } from "./home";
@@ -115,6 +116,8 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       return isEmote(o.code) ? { t: "emote", code: o.code } : null;
     case "pose":
       return isPose(o.pose) ? { t: "pose", pose: o.pose } : null;
+    case "travel":
+      return isTravelZone(o.to) ? { t: "travel", to: o.to } : null;
     default:
       return validateHomeClientMsg(o);
   }

@@ -102,6 +102,7 @@ import {
   type WeaponStats,
 } from "../shared/engine/toolRules";
 import { endPose, POSE_ACT, POSE_MIN_INTERVAL_MS, poseRefusal, witnesses, type PoseCode } from "../shared/poses";
+import { TRAVEL_SPAWN, travelBlock, type TravelZone } from "../shared/travel";
 import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, sellTo, shopToday } from "./game/shop";
@@ -165,6 +166,7 @@ interface ZPlayer {
   lastUse: number;
   /** Last /sleep or /piss (ms), to throttle them. */
   lastPose?: number;
+  lastTravel?: number;
   /** Wrong-tool hits in a row (axe on a rock...): each one tires you more. */
   wrongTool?: WrongToolStreak;
   lastHurt: number;
@@ -875,6 +877,8 @@ export class ZoneRoom extends DurableObject<Env> {
         return;
       case "pose":
         return this.onPose(p, msg.pose, now);
+      case "travel":
+        return this.onTravel(p, msg.to, now);
       case "emote":
         // Everyone here sees it; spam just gets dropped.
         if (this.emotes.allow(p.userId, now)) this.broadcast({ t: "emote", from: p.entity.id, code: msg.code });
@@ -1207,6 +1211,20 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   /** Stands a seated player up beside the chair (where they came from when that's still free). */
+  /**
+   * Fast travel: the same handoff as walking through an exit. takeExit saves the player to their
+   * HomeRoom with the destination and default spawn and waits for it, and only then sends
+   * {t:"zone"}; the client opens the next zone's socket after that, so the next Durable Object
+   * always loads the saved state and no late save from here can be refused as stale.
+   */
+  private onTravel(p: ZPlayer, to: TravelZone, now: number): void {
+    const why = travelBlock(to, this.world!.zone, now, p.lastTravel ?? 0);
+    if (why) return send(p.ws, { t: "notice", text: why, kind: "error" });
+    p.lastTravel = now;
+    this.getUp(p);
+    void this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to, spawn: TRAVEL_SPAWN });
+  }
+
   private getUp(p: ZPlayer): void {
     // Moving or swinging ends a pose (lying on the ground, peeing).
     endPose(p.entity);

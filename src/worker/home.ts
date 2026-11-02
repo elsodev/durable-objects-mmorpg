@@ -20,6 +20,7 @@
 // here. A visitor socket never takes a lease or touches the visitor's own save (their own HomeRoom
 // keeps both); it can walk, chat and help harvest ready crops for the owner, nothing else.
 import { DurableObject } from "cloudflare:workers";
+import { TRAVEL_SPAWN, travelBlock } from "../shared/travel";
 import { devToolsEnabled, H_VISIT_LOOK, H_VISIT_OWNER, H_VISIT_RETURN, H_VISIT_SPRITE, type Env } from "./env";
 import type { HomeMapId, Inventory, Look, ZoneId } from "../shared/types";
 import { TICK_MS, type EntityState, type FarmTile, type MapExit, type PlacedObject, type RockOre, type Vec2 } from "../shared/types";
@@ -236,6 +237,7 @@ interface HPlayer {
   ws: WebSocket;
   /** Last /sleep or /piss (ms), to throttle them. */
   lastPose?: number;
+  lastTravel?: number;
   /** The home map the owner stands on. */
   map: HomeMapId;
   guest: boolean;
@@ -1418,6 +1420,13 @@ export class HomeRoom extends DurableObject<Env> {
         p.lastEmote = now;
         this.toAll({ t: "emote", from: p.entity.id, code: msg.code });
         return;
+      case "travel": {
+        // Home owns the save, so takeExit writes it before sending {t:"zone"} (as with the road).
+        const why = travelBlock(msg.to, "home", now, p.lastTravel ?? 0);
+        if (why) return send(p.ws, { t: "notice", text: why, kind: "error" });
+        p.lastTravel = now;
+        return this.takeExit(p, { x: 0, y: 0, w: 0, h: 0, to: msg.to, spawn: TRAVEL_SPAWN }, now);
+      }
       case "pose": {
         // At home nobody is watching: no villagers live in the yard.
         if (now - (p.lastPose ?? 0) < POSE_MIN_INTERVAL_MS) return;

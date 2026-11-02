@@ -33,6 +33,8 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   unship: { deny: NOT_YOURS },
   moveSlot: { deny: "You can tidy your bag after the visit." },
   pose: { deny: "Not in someone else's home." },
+  // A visitor's save lives in their own HomeRoom; the client just leaves the visit instead.
+  travel: { deny: "Leave the visit first." },
 };
 
 export function visitorVerdict(msg: ClientMsg): VisitorVerdict {
