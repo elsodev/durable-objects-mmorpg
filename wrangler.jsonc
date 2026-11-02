@@ -51,9 +51,10 @@
     // NpcAgent (Project Think) turns call tools, so they use a function-calling model.
     "NPC_AGENT_MODEL": "@cf/meta/llama-4-scout-17b-16e-instruct",
     "NPC_AI_MODE": "on",
-    // TypeSafe Jev on Workers AI for typed NPC decisions (billed via Unified Billing credits).
+    // System One decision model for typed NPC decisions: Cloudflare's Clef on Workers AI
+    // ("@cf/cloudflare/clef" or "@cf/cloudflare/clef-flash"), or "typesafe/jev" (Unified Billing).
     // Set to "" to use rule-based decisions only.
-    "JEV_MODEL": "typesafe/jev",
+    "JEV_MODEL": "@cf/cloudflare/clef-flash",
     // AI Gateway for every NPC model call (lines, Think agent turns, Jev). "" = call Workers AI directly.
     "AI_GATEWAY_ID": "durable-mmo",
     "AI_DAILY_NEURONS": "9000",

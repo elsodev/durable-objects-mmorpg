@@ -76,8 +76,16 @@ describe("jevClient", () => {
     const res = await jevClient(ai, "typesafe/jev", "default").systemOne(req);
     expect(res.answers).toEqual({ intent: { choice: "greet" } });
     expect(calls[0]?.[0]).toBe("typesafe/jev");
-    expect(calls[0]?.[1]).toBe(req);
+    expect(calls[0]?.[1]).toEqual(req);
     expect(calls[0]?.[2]).toMatchObject({ gateway: { id: "default" } });
+  });
+  it("adds Clef's model selector to the body", async () => {
+    const { ai, calls } = recorder({ answers: {} });
+    await jevClient(ai, "@cf/cloudflare/clef").systemOne(req);
+    await jevClient(ai, "@cf/cloudflare/clef-flash").systemOne(req);
+    expect(calls[0]?.[0]).toBe("@cf/cloudflare/clef");
+    expect(calls[0]?.[1]).toEqual({ ...req, model: "clef" });
+    expect(calls[1]?.[1]).toEqual({ ...req, model: "clef-flash" });
   });
   it("skips the gateway when none is set", async () => {
     const { ai, calls } = recorder({});
