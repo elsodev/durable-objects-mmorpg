@@ -22,6 +22,8 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   place: { deny: "Only the owner can arrange furniture." },
   moveObject: { deny: "Only the owner can arrange furniture." },
   pickup: { deny: "Only the owner can arrange furniture." },
+  moveObjects: { deny: "Only the owner can arrange furniture." },
+  pickupObjects: { deny: "Only the owner can arrange furniture." },
   buy: { deny: "Visit the village for that." },
   sell: { deny: "Visit the village for that." },
   donate: { deny: "Visit the village for that." },

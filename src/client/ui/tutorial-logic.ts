@@ -52,6 +52,7 @@ export const CONTROL_GROUPS: readonly ControlGroup[] = [
     rows: [
       { keys: ["F"], text: "At your bed: sleep and start a new day (or click the bed)" },
       { keys: ["B"], text: "Build mode for furniture; R rotates" },
+      { keys: ["T"], text: "Edit your house: drag furniture, Shift-click or drag a box for several, R turns, Del picks up" },
       { keys: ["/emote", "wave"], text: "Emote, or pick one from the smiley button by the chat box" },
       { keys: ["/w", "name"], text: "Whisper to a player" },
     ],

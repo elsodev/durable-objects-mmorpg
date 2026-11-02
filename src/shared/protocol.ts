@@ -23,6 +23,7 @@ import type { BondView } from "./hearts";
 import type { ChestView } from "./chests";
 import type { AnimalView } from "./animals";
 import type { NoticePress, NoticeView } from "./notices";
+import type { ArrangeMove } from "./engine/arrange";
 
 // ---------------- Client -> Server ----------------
 // Optional `seq` (move/moveTo): client input sequence number, acked in `tick.ack` so the client
@@ -54,6 +55,13 @@ export type ClientMsg =
   | { t: "moveObject"; id: string; x: number; y: number; rotation: 0 | 1 | 2 | 3; req?: string }
   /** Home only: pick an object back into inventory. */
   | { t: "pickup"; id: string; req?: string }
+  /**
+   * Home only (edit mode): move or turn several placed pieces at once, all or nothing. At most
+   * MAX_ARRANGE (shared/engine/arrange.ts) moves, each id once.
+   */
+  | { t: "moveObjects"; moves: ArrangeMove[]; req?: string }
+  /** Home only (edit mode): pick several pieces back into the bag, all or nothing. */
+  | { t: "pickupObjects"; ids: string[]; req?: string }
   /** Shop: buy from an NPC shop. */
   | { t: "buy"; npc: string; item: ItemId; qty: number; req?: string }
   /** Shop: sell from inventory slot to an NPC. */

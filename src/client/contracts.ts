@@ -393,6 +393,8 @@ export interface FarmLayer {
   objectAt(tile: Vec2): string | null;
   /** Opens or shuts a placed storage piece's door (fridge lid frames); no-op without lid art. */
   setLid?(id: string, open: boolean): void;
+  /** Edit mode: draw these placed pieces faded (they are being dragged); the rest at full alpha. */
+  setDimmed?(ids: ReadonlySet<string>): void;
   /** The sprite drawing a rock, for hit effects. */
   rockSprite?(id: string): Sprite | null;
   /** Night glows of placed lamps, candles and fireplaces, centred on their lit part (tile coords). */

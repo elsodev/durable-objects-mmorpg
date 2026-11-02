@@ -170,6 +170,8 @@ describe("visitor permission matrix", () => {
     place: { t: "place", slot: 0, x: 1, y: 1, rotation: 0 },
     moveObject: { t: "moveObject", id: "bed", x: 1, y: 1, rotation: 0 },
     pickup: { t: "pickup", id: "bed" },
+    moveObjects: { t: "moveObjects", moves: [{ id: "bed", x: 1, y: 1, rotation: 0 }] },
+    pickupObjects: { t: "pickupObjects", ids: ["bed"] },
     buy: { t: "buy", npc: "n", item: "seed_turnip", qty: 1 },
     sell: { t: "sell", npc: "n", slot: 0, qty: 1 },
     donate: { t: "donate", goal: "bridge", slot: 0, qty: 1 },
@@ -215,7 +217,7 @@ describe("visitor permission matrix", () => {
     const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
     const denied = Object.values(samples).filter((m) => "deny" in VISITOR_RULES[m.t]);
     expect(denied.map((m) => m.t).sort()).toEqual(
-      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "pickup", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete"].sort(),
+      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "moveObjects", "pickup", "pickupObjects", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete"].sort(),
     );
     for (const m of denied) {
       const msg = m.t === "setLook" ? { t: "setLook", look: { body: "x" } } : m;

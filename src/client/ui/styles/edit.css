@@ -1,0 +1,243 @@
+/* House edit mode (ui/edit-ui.ts): Edit button, banner, floating toolbar and the bag tray. */
+.edit-layer {
+  z-index: var(--dm-z-hud);
+}
+.edit-icon {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+/* ---- Edit button: bottom-right, level with the hotbar */
+.edit-open {
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px 0 10px;
+  font-size: var(--dm-fs);
+}
+.edit-open[hidden] {
+  display: none;
+}
+.edit-open .edit-key {
+  min-width: 15px;
+  height: 15px;
+  box-sizing: border-box;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 13px;
+  text-align: center;
+  color: var(--dm-ink-soft);
+  background: var(--dm-panel-light);
+  border: 1px solid var(--dm-border-soft);
+  border-radius: 3px;
+}
+.edit-open.is-on {
+  display: none;
+}
+
+/* ---- banner: top-centre while editing */
+.edit-banner {
+  position: absolute;
+  top: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  border-color: var(--dm-moss-dark);
+  box-shadow: inset 0 0 0 2px var(--dm-moss-light), var(--dm-shadow);
+}
+.edit-banner[hidden] {
+  display: none;
+}
+.edit-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.edit-banner .dm-title {
+  margin: 0;
+  color: var(--dm-moss-dark);
+}
+.edit-banner-hint {
+  font-size: var(--dm-fs-sm);
+}
+.edit-banner-row {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+.edit-multi.is-on {
+  color: var(--dm-cream);
+  background: var(--dm-sky);
+  border-color: #3f6f8e;
+  box-shadow: 0 2px 0 #3f6f8e;
+}
+
+/* ---- toolbar: floats by the selection (placed in px by the game) */
+.edit-toolbar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  white-space: nowrap;
+}
+.edit-toolbar[hidden],
+.edit-tool[hidden] {
+  display: none;
+}
+/* Holding a piece from the bag: docked just above the tray. */
+.edit-toolbar.is-docked {
+  left: 50%;
+  transform: translateX(-50%);
+  top: auto;
+  bottom: calc(var(--dm-slot-size, 48px) + 36px);
+}
+.edit-count {
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs-sm);
+  color: var(--dm-wood-dark);
+  padding: 0 4px;
+}
+.edit-count[hidden] {
+  display: none;
+}
+.edit-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 40px;
+  height: 40px;
+  justify-content: center;
+}
+
+/* ---- tray: the furniture in your bag, where the hotbar was */
+.edit-tray {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  max-width: min(760px, calc(100vw - 24px));
+  box-sizing: border-box;
+}
+.edit-tray[hidden] {
+  display: none;
+}
+.edit-tray-label {
+  font-family: var(--dm-font-pixel);
+  font-size: var(--dm-fs-sm);
+  color: var(--dm-wood-dark);
+  flex: none;
+}
+.edit-tray-slots {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  min-width: 0;
+}
+.edit-tray-slot {
+  flex: none;
+}
+.edit-tray-slot.is-held {
+  outline: 3px solid var(--dm-gold);
+  outline-offset: -1px;
+  background: #fff3c4;
+}
+.edit-tray-icon {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.edit-tray-qty {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-family: var(--dm-font-pixel);
+  font-size: 12px;
+  color: var(--dm-cream);
+  text-shadow: 1px 1px 0 var(--dm-ink), -1px -1px 0 var(--dm-ink), 1px -1px 0 var(--dm-ink), -1px 1px 0 var(--dm-ink);
+  pointer-events: none;
+}
+.edit-tray-empty {
+  font-size: var(--dm-fs-sm);
+  padding: 4px 6px;
+  white-space: normal;
+}
+
+/* While editing, the tray takes the hotbar's place and the hand-held item name stays away. */
+.dm-editing .hud-hotbar,
+.dm-editing .hud-item-flash {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .edit-open {
+    /* Top-right, beside the status panel: the bottom of a phone is the menu, chat and hotbar. */
+    top: 14px;
+    bottom: auto;
+    right: 12px;
+    height: 38px;
+  }
+  .edit-open .edit-key {
+    display: none;
+  }
+  .edit-banner {
+    top: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 10px;
+    width: calc(100vw - 24px);
+  }
+  .edit-banner-hint {
+    display: none;
+  }
+  .edit-tool-label {
+    display: none;
+  }
+  .edit-tool {
+    min-width: 44px;
+    height: 44px;
+  }
+  .edit-tray {
+    left: 12px;
+    right: 12px;
+    transform: none;
+    max-width: none;
+  }
+  /* Edit mode on a phone: only the room, the banner, the toolbar and the tray. */
+  .dm-editing .hud-menu,
+  .dm-editing .hud-layer-chat,
+  .dm-editing .hud-status {
+    display: none;
+  }
+}
+
+/* Notices drop below the banner while editing, so "Overlaps other furniture." is seen. */
+.dm-editing .dlg-notices {
+  top: 140px;
+}
+@media (max-width: 760px) {
+  .dm-editing .dlg-notices {
+    top: 104px;
+  }
+}

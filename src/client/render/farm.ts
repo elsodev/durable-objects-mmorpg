@@ -245,6 +245,9 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
   let objMap: MapData | null = null;
   /** Placed storage pieces whose door is open now (kept across a rebuild of the piece). */
   const openLids = new Set<string>();
+  /** Pieces edit mode is dragging: drawn faded where they stand until the move lands. */
+  let dimmed: ReadonlySet<string> = new Set();
+  const DIM_ALPHA = 0.35;
 
   // ---- sparkle animation runs only while some crop is ready
   let t = 0;
@@ -430,8 +433,15 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       for (const o of [...d.changed, ...d.added]) {
         const old = objViews.get(o.id);
         if (old) destroyView(old);
-        objViews.set(o.id, buildObject(o));
+        const v = buildObject(o);
+        if (dimmed.has(o.id)) v.sprite.alpha = DIM_ALPHA;
+        objViews.set(o.id, v);
       }
+    },
+
+    setDimmed(ids) {
+      dimmed = new Set(ids);
+      for (const [id, v] of objViews) v.sprite.alpha = dimmed.has(id) ? DIM_ALPHA : 1;
     },
 
     objectAt(tile) {

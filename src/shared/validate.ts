@@ -9,6 +9,7 @@ import { validateHomeClientMsg } from "./home";
 import { isEmote } from "./emotes";
 import { HOTBAR_SIZE } from "./held";
 import { cleanNoticeText, isNoticeId, isNoticePress } from "./notices";
+import { MAX_ARRANGE, type ArrangeMove } from "./engine/arrange";
 
 /** Frames larger than this are dropped without parsing. */
 export const MAX_FRAME_BYTES = 2048;
@@ -41,6 +42,26 @@ function optSeq(m: Obj): { seq?: number } | null {
 function optReq(m: Obj): { req?: string } | null {
   if (m.req === undefined) return {};
   return isId(m.req) ? { req: m.req } : null;
+}
+
+/** 1..MAX_ARRANGE distinct ids. */
+function idList(v: unknown): string[] | null {
+  if (!Array.isArray(v) || v.length === 0 || v.length > MAX_ARRANGE) return null;
+  if (!v.every(isId) || new Set(v).size !== v.length) return null;
+  return [...v];
+}
+
+/** 1..MAX_ARRANGE moves, each a distinct id with a whole tile and a rotation; only known fields kept. */
+function arrangeMoves(v: unknown): ArrangeMove[] | null {
+  if (!Array.isArray(v) || v.length === 0 || v.length > MAX_ARRANGE) return null;
+  const out: ArrangeMove[] = [];
+  for (const m of v) {
+    if (!m || typeof m !== "object") return null;
+    const e = m as Obj;
+    if (!isId(e.id) || !isCoord(e.x) || !isCoord(e.y) || !isRot(e.rotation)) return null;
+    out.push({ id: e.id, x: e.x, y: e.y, rotation: e.rotation });
+  }
+  return new Set(out.map((m) => m.id)).size === out.length ? out : null;
 }
 
 /** Trims, strips control characters and caps chat text. Returns null if nothing is left. */
@@ -94,6 +115,14 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
         : null;
     case "pickup":
       return isId(o.id) ? { t: "pickup", id: o.id, ...req } : null;
+    case "moveObjects": {
+      const moves = arrangeMoves(o.moves);
+      return moves ? { t: "moveObjects", moves, ...req } : null;
+    }
+    case "pickupObjects": {
+      const ids = idList(o.ids);
+      return ids ? { t: "pickupObjects", ids, ...req } : null;
+    }
     case "buy":
       return isId(o.npc) && isId(o.item) && isQty(o.qty) ? { t: "buy", npc: o.npc, item: o.item, qty: o.qty, ...req } : null;
     case "sell":

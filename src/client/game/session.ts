@@ -104,6 +104,8 @@ import { emoteLine } from "../ui/chat";
 import { playerHit, tileDistance } from "./player-hit";
 import { CLIMB_ACTS } from "../../shared/climb";
 import { createEnergy } from "./energy";
+import { createEditMode } from "./edit-mode";
+import { createEditUi } from "../ui/edit-ui";
 
 const HOTBAR_SLOTS = 8;
 /** Stats panel refresh while in a shared zone. */
@@ -295,6 +297,8 @@ export async function startSession(
 
   function setBuildItem(slot: number | null): void {
     if (!world) return;
+    // Edit mode places pieces itself: a furniture slot picked in the bag is held there.
+    if (editMode.active()) return editMode.hold(slot);
     if (slot === null) {
       world.build.exit();
     } else if (store.zone !== "home") {
@@ -344,7 +348,7 @@ export async function startSession(
       send({ t: "travel", to });
     },
     playerAt(clientX, clientY) {
-      if (!world) return null;
+      if (!world || editMode.active()) return null;
       const r = game.app.canvas.getBoundingClientRect();
       return playerUnder(camera.screenToTile(clientX - r.left, clientY - r.top));
     },
@@ -400,6 +404,47 @@ export async function startSession(
   });
   homeUi.setAtHome(false);
   // The fridge (any storage furniture): its shelves beside your bag while the door is open.
+  // House edit mode (game/edit-mode.ts): the owner rearranges furniture without walking about.
+  const editMode = createEditMode({
+    canvas: game.app.canvas,
+    art,
+    layers: game.layers,
+    ui: createEditUi(mount.ui, {
+      toggle: () => editMode.toggle(),
+      rotate: () => editMode.action("rotate"),
+      pickUp: () => editMode.pickUp(),
+      deselect: () => editMode.action("cancel"),
+      setMulti: (on) => editMode.setMulti(on),
+      hold: (slot) => editMode.hold(slot),
+    }),
+    screenToTile: (sx, sy) => camera.screenToTile(sx, sy),
+    tileToScreen: (x, y) => camera.tileToScreen(x, y),
+    viewport: () => ({ w: game.width(), h: game.height() }),
+    map,
+    objects: () => [...store.objects.values()],
+    farm: () => [...store.farm.values()],
+    occupied: () => visibleEntities().map((e) => floorTile(e)),
+    inventory: () => store.inventory,
+    you,
+    available: () => store.zone === "home" && homeMapNow === "home_in" && !visiting,
+    send,
+    notice: (text, kind = "info") => notice(text, kind),
+    sfx: playSfx,
+    dim: (ids) => world?.farm.setDimmed?.(ids),
+    changed(on) {
+      // Editing: stand still, and the wheel turns pieces instead of stepping the hotbar.
+      const stop = predictor.setDir(0, 0, performance.now());
+      if (stop) send(stop);
+      world?.build.exit();
+      syncBuildBanner();
+      input.setWheelRotates?.(on);
+      // The fridge and bin panels sit over the room: editing starts with a clear view.
+      if (on) {
+        storageUi.close();
+        homeUi.closeBin();
+      }
+    },
+  });
   const storageUi = createStoragePanel(mount.ui, {
     put: (id, slot, qty) => send({ t: "storePut", id, slot, qty }),
     take: (id, index, qty) => send({ t: "storeTake", id, index, qty }),
@@ -875,6 +920,7 @@ export async function startSession(
         onTick(msg);
         break;
       case "inventory":
+        editMode.refresh();
         hud.setInventory(store.inventory);
         storageUi.setInventory(store.inventory);
         noticeBoardUi.refresh();
@@ -931,6 +977,7 @@ export async function startSession(
         break;
       case "objects":
         world?.farm.setObjects(store.objects.values(), map());
+        editMode.refresh();
         break;
       case "rock": {
         const m = map();
@@ -1084,6 +1131,7 @@ export async function startSession(
         else tutorial.openFirstTime();
       }
     });
+    editMode.exit();
     world?.destroy();
     world = null;
     lastHp.clear();
@@ -1153,6 +1201,7 @@ export async function startSession(
     hud.setGoals(store.goals);
     if (me?.hp !== undefined) hud.setHp(me.hp, me.maxHp ?? me.hp);
     syncBuildBanner();
+    editMode.refresh();
     setMusicZone(msg.zone);
     social.send({ t: "here", zone: msg.zone });
     if (msg.zone === "home") hud.setStats(null);
@@ -1200,6 +1249,7 @@ export async function startSession(
   function onReject(msg: Extract<ServerMsg, { t: "reject" }>): void {
     const kind = msg.req ? pendingReqs.get(msg.req) : undefined;
     farmFx.rejected(msg.req);
+    editMode.rejected(msg.req);
     if (msg.req) pendingReqs.delete(msg.req);
     if (msg.action === "move" || msg.action === "moveTo") {
       const latest = store.youId ? store.latest(store.youId) : undefined;
@@ -1456,6 +1506,7 @@ export async function startSession(
   }
 
   function onAction(a: Parameters<Parameters<Input["onAction"]>[0]>[0]): void {
+    if (editMode.active()) return editMode.action(a);
     const me = you();
     if (!world || !me) return;
     switch (a) {
@@ -1534,6 +1585,8 @@ export async function startSession(
   }
 
   function onClick(p: Parameters<Parameters<Input["onClick"]>[0]>[0]): void {
+    // Edit mode reads the canvas pointer itself: no walking, tools or pickups.
+    if (editMode.active()) return;
     const me = you();
     if (!world || !me) return;
     const tile = floorTile(p.tile);
@@ -1644,6 +1697,7 @@ export async function startSession(
     input.onSlot(selectSlot),
     input.onClick(onClick),
     input.onPointerMove((p) => {
+      if (editMode.active()) return;
       if (world?.build.active()) world.build.pointer(floorTile(p.tile));
       else cursorHint(p.tile);
     }),
@@ -1713,8 +1767,8 @@ export async function startSession(
       land?.();
     }
     applyDueImpacts(nowMs);
-    // Movement pauses while a swing plays out.
-    const locked = swingLocked(swing, nowMs);
+    // Movement pauses while a swing plays out, and while editing the house (keys pan the view).
+    const locked = swingLocked(swing, nowMs) || editMode.active();
     const { dx, dy, dash } = locked ? { dx: 0, dy: 0, dash: false } : input.dir();
     const step = predictor.step(dx, dy, dt, performance.now(), dash);
     refreshPreload(dt);
@@ -1726,7 +1780,10 @@ export async function startSession(
     world.itemPoses.sync(states, (id) => world!.entities.headOf(id), performance.now(), dt);
     const me = states.find((e) => e.id === store.youId) ?? null;
     approachAnimal(me, states);
-    if (me) camera.follow(me.x, me.y);
+    // Edit mode moves the view itself (keys, a finger, or dragging to the edge).
+    editMode.update(dt);
+    const focus = editMode.focus() ?? me;
+    if (focus) camera.follow(focus.x, focus.y);
     // The audio module rate-limits steps itself, so calling every moving frame is fine.
     if (me?.moving) footstep(groundNameAt(me.x, me.y));
     combatSfx.frame(states, me, performance.now());
@@ -1742,13 +1799,14 @@ export async function startSession(
   // Key presses go out at once (not on the next frame), stamped with the event time.
   const stopDir = input.onDir((d, at) => {
     if (!world || pendingZone) return;
+    if (editMode.active()) return editMode.pan(d);
     const msg = predictor.setDir(d.dx, d.dy, Math.min(at, performance.now()), d.dash);
     if (msg?.t === "move" && d.dash) energy.dashPressed(performance.now());
     if (msg) send(msg);
   });
 
   const onEatKey = (e: KeyboardEvent) => {
-    if (e.code !== "KeyQ" || typing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (e.code !== "KeyQ" || typing || editMode.active() || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     eatSelected();
@@ -1788,6 +1846,7 @@ export async function startSession(
       if (napTimer !== null) clearTimeout(napTimer);
       document.removeEventListener("visibilitychange", onAfkVisibility);
       window.removeEventListener("keydown", onEatKey);
+      editMode.destroy();
       homeUi.destroy();
       storageUi.destroy();
       visitsUi.destroy();

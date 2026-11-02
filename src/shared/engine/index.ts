@@ -12,6 +12,7 @@
 //   inventory.ts  stacking add/remove/count
 //   farming.ts    day index, crop growth, tile mutations
 //   placement.ts  canPlace for home furniture
+//   arrange.ts    moving several placed pieces at once (all or nothing)
 //   storage.ts    fridge (storage furniture) slots: put in / take out
 //   monsters.ts   monster stats + AI tick
 
@@ -77,6 +78,7 @@ export {
   type GrowthStage,
 } from "./farming";
 export { canPlace, isRug, wallFaceRow, MAX_WALL_DROP, type PlaceResult } from "./placement";
+export { checkArrange, turnInPlace, MAX_ARRANGE, type ArrangeMove, type ArrangeResult } from "./arrange";
 export {
   emptyStorage,
   isStorageEmpty,

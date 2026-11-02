@@ -53,6 +53,8 @@ import {
   type HomeObjects,
 } from "./home/submaps";
 import { HOME_FAINT_SPAWN } from "../shared/maps/home";
+import { addAllOrNothing, moveRefusal, pickupRefusal } from "./home/arrange";
+import { checkArrange } from "../shared/engine";
 import { BED_ID, BED_ITEM, ensureBed, HOME_LAYOUT, mapForItem, migrateObjects, validateObjects } from "./home/migrate";
 import { addNote, addParcel, emptyMail, mailMsg, sanitizeMail, takeParcels, type MailState } from "./home/mailbox";
 import { MAILBOX_ID, MAILBOX_TAKE } from "../shared/mail";
@@ -1523,10 +1525,14 @@ export class HomeRoom extends DurableObject<Env> {
       case "place":
       case "moveObject":
       case "pickup":
+      case "moveObjects":
+      case "pickupObjects":
         if (now - p.lastBuild < BUILD_COOLDOWN_MS) return this.reject(p, msg, "Too fast.");
         p.lastBuild = now;
         if (msg.t === "place") return this.onPlace(p, msg);
         if (msg.t === "moveObject") return this.onMoveObject(p, msg);
+        if (msg.t === "moveObjects") return this.onMoveObjects(p, msg);
+        if (msg.t === "pickupObjects") return this.onPickupObjects(p, msg);
         return this.onPickup(p, msg);
       case "buy":
       case "sell":
@@ -2287,10 +2293,8 @@ export class HomeRoom extends DurableObject<Env> {
     const i = list.findIndex((o) => o.id === msg.id);
     if (i < 0) return this.reject(p, msg, "That isn't here any more.");
     const obj = list[i];
-    if (obj.id === BED_ID) return this.reject(p, msg, "Your bed stays. You can move it instead.");
-    if (obj.id === WARDROBE_ID) return this.reject(p, msg, "Your wardrobe stays. You can move it instead.");
-    if (!containerEmpty(this.containers, obj.id)) return this.reject(p, msg, `Empty the ${getItem(obj.item)?.name.toLowerCase() ?? "storage"} first.`);
-    if (obj.id === BARN_ID) return this.reject(p, msg, "The barn stays where it was built.");
+    const refusal = pickupRefusal(obj, this.containers);
+    if (refusal) return this.reject(p, msg, refusal);
     if (!this.inPlaceReach(p, obj.x, obj.y)) return this.reject(p, msg, "Too far away.");
     const inv = this.save!.inventory;
     if (!addItem(inv, obj.item, 1)) return this.reject(p, msg, "Your bag is full.");
@@ -2301,6 +2305,52 @@ export class HomeRoom extends DurableObject<Env> {
     }
     if (p.openStore === obj.id) this.closeStore(p);
     this.objectsChanged(p, [], [obj.id]);
+    this.inventoryChanged(p);
+  }
+
+  /** Edit mode: several pieces move (or turn) at once, or none do. */
+  private onMoveObjects(p: HPlayer, msg: Extract<ClientMsg, { t: "moveObjects" }>): void {
+    const list = this.objects[p.map];
+    if (msg.moves.some((m) => !this.inPlaceReach(p, m.x, m.y))) return this.reject(p, msg, "Too far away.");
+    const farm = p.map === "home" ? this.farm : [];
+    const ok = checkArrange(homeMap(p.map), list, farm, msg.moves, { occupied: this.entities(p.map), fixed: moveRefusal });
+    if (!ok.ok) return this.reject(p, msg, ok.reason);
+    const moved: PlacedObject[] = [];
+    for (const m of msg.moves) {
+      const obj = list.find((o) => o.id === m.id)!;
+      Object.assign(obj, { x: m.x, y: m.y, rotation: m.rotation });
+      moved.push(obj);
+    }
+    this.objectsChanged(p, moved, []);
+  }
+
+  /** Edit mode: several pieces back into the bag, or none (one that must stay, or a full bag). */
+  private onPickupObjects(p: HPlayer, msg: Extract<ClientMsg, { t: "pickupObjects" }>): void {
+    const list = this.objects[p.map];
+    const picked: PlacedObject[] = [];
+    for (const id of msg.ids) {
+      const obj = list.find((o) => o.id === id);
+      if (!obj) return this.reject(p, msg, "That isn't here any more.");
+      const refusal = pickupRefusal(obj, this.containers);
+      if (refusal) return this.reject(p, msg, refusal);
+      if (!this.inPlaceReach(p, obj.x, obj.y)) return this.reject(p, msg, "Too far away.");
+      picked.push(obj);
+    }
+    const bag = addAllOrNothing(this.save!.inventory, picked.map((o) => o.item));
+    if (!bag) return this.reject(p, msg, "Your bag is full.");
+    this.save!.inventory = bag;
+    const gone = new Set(picked.map((o) => o.id));
+    for (let i = list.length - 1; i >= 0; i--) if (gone.has(list[i].id)) list.splice(i, 1);
+    let emptied = false;
+    for (const id of gone) {
+      if (Object.hasOwn(this.containers, id)) {
+        delete this.containers[id];
+        emptied = true;
+      }
+      if (p.openStore === id) this.closeStore(p);
+    }
+    if (emptied) this.persist({ containers: true });
+    this.objectsChanged(p, [], [...gone]);
     this.inventoryChanged(p);
   }
 

@@ -60,6 +60,9 @@ describe("tutorial matches the real key bindings", () => {
     expect(actionForCode("KeyB")).toBe("build");
     expect(actionForCode("KeyR")).toBe("rotate");
     expect(shown("B").join()).toMatch(/R rotates/);
+    // T is edit mode (game/edit-mode.ts reads it itself), so it must not be a game action.
+    expect(actionForCode("KeyT")).toBeNull();
+    expect(shown("T").join()).toMatch(/Edit your house/);
     expect(actionForCode("Enter")).toBe("chat");
     expect(shown("Enter")).toEqual(["Chat"]);
     expect(actionForCode("Escape")).toBe("cancel");
