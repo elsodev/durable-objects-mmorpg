@@ -846,20 +846,21 @@
    "frameSize": 64,
    "frames": [
     "thrust,2",
+    "thrust,3",
+    "thrust,3",
+    "thrust,3",
     "thrust,2",
     "thrust,3",
     "thrust,3",
     "thrust,3",
-    "thrust,7",
+    "thrust,2",
     "thrust,3",
-    "thrust,7",
     "thrust,3",
-    "thrust,7",
     "thrust,3",
-    "thrust,7"
+    "thrust,2"
    ],
-   "ms": 150,
-   "source": "generator thrust frames 2, 3 and 7 (hand raised to the mouth, then chewing)"
+   "ms": 100,
+   "source": "generator thrust frames 2 and 3: the hand comes up, the fist folds under the chin for each bite, then lowers a little between bites (render/eat-logic.ts)"
   },
   "hold_up": {
    "frameSize": 64,

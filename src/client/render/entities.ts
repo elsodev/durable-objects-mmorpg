@@ -12,6 +12,7 @@ import { toolTiming } from "../../shared/engine/toolTiming";
 import { heldFrameIndex, heldToShow } from "./held-logic";
 import { createPoseLayer } from "./poses";
 import { createDashFx } from "./dash-fx";
+import { createFoodHand } from "./food-in-hand";
 import { strideFrame, strideRate } from "./dash-logic";
 import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFps, type EntityProfile } from "./entityProfile";
 
@@ -40,6 +41,8 @@ interface Rec {
   /** The held tool's layers (EntityState.held): behind and in front of the body. */
   heldBg: Sprite;
   heldFg: Sprite;
+  /** The food in the hand during an eat act (food-in-hand.ts). */
+  food: Sprite;
   char: CharacterArt;
   spriteKey: string;
   look: unknown;
@@ -104,6 +107,9 @@ export const createEntityLayer = ((
   const pool: Rec[] = [];
   const poses = createPoseLayer(art, layers);
   const dash = createDashFx(art, layers);
+  const foodHand = createFoodHand(art);
+  /** Reused for foodOf(). */
+  const foodAt: Vec2 = { x: 0, y: 0 };
   let gen = 0;
 
   function applyCharacter(rec: Rec, s: EntityState): void {
@@ -138,11 +144,14 @@ export const createEntityLayer = ((
     const name = actionNameFor(act);
     const art = name ? rec.char.action(name) : null;
     if (!art) return done();
-    const facing = ITEM_POSE_ACTS.has(act.k) ? "down" : s.facing;
+    // A hold-up faces the viewer; eating plays in the direction you face.
+    const facing = ITEM_POSE_ACTS.has(act.k) && act.k !== "eat" ? "down" : s.facing;
     const frames = art.frames[facing] ?? art.frames.down;
     // Walking cancels a held pose; a swing still plays out.
     // Tool swings follow the shared timing, so the tool lands when the effect does.
     const timing = toolTiming(act.k, s.facing);
+    // Walking off mid-meal ends it for good: it doesn't pick up again when you stop.
+    if (s.moving && act.k === "eat") rec.actStart = -Infinity;
     const age = now - rec.actStart;
     const i = s.moving && art.hold
       ? -1
@@ -214,8 +223,9 @@ export const createEntityLayer = ((
       body.scale.set(SCALE);
       const heldBg = new Sprite();
       const heldFg = new Sprite();
-      heldBg.visible = heldFg.visible = false;
-      root.addChild(shadow, heldBg, body, heldFg);
+      const food = new Sprite();
+      heldBg.visible = heldFg.visible = food.visible = false;
+      root.addChild(shadow, heldBg, body, heldFg, food);
       rec = {
         id: s.id,
         root,
@@ -223,6 +233,7 @@ export const createEntityLayer = ((
         body,
         heldBg,
         heldFg,
+        food,
         char: undefined as unknown as CharacterArt,
         spriteKey: "",
         look: undefined,
@@ -278,7 +289,7 @@ export const createEntityLayer = ((
     dash.release(rec.id);
     rec.body.skew.x = 0;
     rec.heldBg.skew.x = rec.heldFg.skew.x = 0;
-    rec.heldBg.visible = rec.heldFg.visible = false;
+    rec.heldBg.visible = rec.heldFg.visible = rec.food.visible = false;
     rec.root.removeFromParent();
     rec.body.filters = null;
     if (pool.length < POOL_MAX) pool.push(rec);
@@ -346,6 +357,8 @@ export const createEntityLayer = ((
     // A dash leans and bobs the walking body; the held tool copies it just below.
     dash.apply(rec, acting || posed.posed || seated ? { ...s, moving: false } : s, walkIndex, frames.length, now);
     drawHeld(rec, s, heldToShow(s, { acting: acting || posed.posed, seated, dying: rec.deathT >= 0 }), walkIndex);
+    const eating = acting && !seated && s.act?.k === "eat" && rec.actKey === `${s.act.k}:${s.act.at}`;
+    foodHand.draw(rec.food, rec.body, s, eating ? now - rec.actStart : null);
 
     // Higher off the ground = smaller, fainter shadow.
     const height = lift / (TILE * 0.75);
@@ -424,6 +437,14 @@ export const createEntityLayer = ((
       return rec && !rec.removing ? rec.head : null;
     },
 
+    foodOf(id) {
+      const rec = live.get(id);
+      if (!rec || rec.removing || !rec.food.visible) return null;
+      foodAt.x = rec.root.position.x + rec.food.position.x;
+      foodAt.y = rec.root.position.y + rec.food.position.y;
+      return foodAt;
+    },
+
     flash(id) {
       const rec = live.get(id);
       if (!rec || rec.removing) return;
@@ -460,6 +481,7 @@ export const createEntityLayer = ((
       shadowCtx.destroy();
       poses.destroy();
       dash.destroy();
+      foodHand.destroy();
     },
   };
 }) satisfies CreateEntityLayer;

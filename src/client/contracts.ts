@@ -362,6 +362,8 @@ export interface EntityLayer {
   entityAt(tile: Vec2): string | null; // for click-to-interact
   /** Screen-space (camera) head position for overlays. */
   headOf(id: string): Vec2 | null;
+  /** Where the food in the hand is while eating (world px), else null. For crumbs. */
+  foodOf?(id: string): Vec2 | null;
   flash(id: string): void;
   /** Plays a knockback slide (tiles, total) at once, ahead of the server's next positions. */
   nudge?(id: string, slide: Vec2): void;

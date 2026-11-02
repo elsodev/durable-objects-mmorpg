@@ -2,6 +2,7 @@
 import { getItem, ITEMS } from "../../../shared/items";
 import { hashStr, P, shade, type Rgb } from "../palette";
 import { crystal, leaf } from "./farm";
+import { drawFood } from "./food";
 import { drawFurniture } from "./furniture";
 import { PixelGrid } from "./grid";
 
@@ -367,7 +368,7 @@ export function drawIcon(item: string): PixelGrid {
   if (Object.hasOwn(ICONS, item)) ICONS[item](g);
   else if (item.startsWith("seed_")) seedPacket(g, item.slice(5));
   else if (def?.kind === "furniture") return furnitureIcon(item);
-  else sack(g, hashStr(item));
+  else if (!drawFood(g, item)) sack(g, hashStr(item));
   g.outline("self");
   return g;
 }
@@ -391,6 +392,7 @@ export function iconCoverage(): { item: string; custom: boolean }[] {
       Object.hasOwn(ICONS, item) ||
       item.startsWith("seed_") ||
       getItem(item)?.kind === "furniture" ||
+      getItem(item)?.kind === "food" ||
       Object.hasOwn(ICONS, getItem(item)?.base ?? ""),
   }));
 }

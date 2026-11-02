@@ -6,6 +6,7 @@ import { addItem, canAdd, removeFromSlot } from "../../shared/engine";
 import { seedSeasons, STORE_SEEDS } from "../../shared/seeds";
 import { worldDate } from "../../shared/calendar";
 import { FURNITURE_SHOP } from "../../shared/furnitureItems";
+import { BAKERY_MENU } from "../../shared/foods";
 
 export interface Shop {
   sells: ShopOffer[];
@@ -25,11 +26,16 @@ export const STALL_PREFIX = "stall:";
 
 /**
  * Self-serve stalls on the village square: no keeper, an honour box for the coins. Keyed by the
- * stall prop's id; Fenwick's workshop stocks the furniture stall.
+ * stall prop's id; Fenwick's workshop stocks the furniture stall and the inn's kitchen bakes for
+ * the bakery stall.
  */
 export const STALL_SHOPS: Readonly<Record<string, { name: string; shop: Shop }>> = {
   stall_goods: { name: "Furniture Stall", shop: { sells: offersFor(FURNITURE_SHOP), buys: [] } },
+  stall_bakery: { name: "Bakery Stall", shop: { sells: offersFor(BAKERY_MENU), buys: [] } },
 };
+
+/** Who serves across a room's bar counter (interact with the counter to open their shop). */
+export const COUNTER_KEEPERS: Readonly<Partial<Record<string, string>>> = { int_inn: "rue" };
 
 /** The stall shop behind a "stall:<id>" shop id, if any. */
 export function stallShop(shopId: string): { propId: string; name: string; shop: Shop } | null {

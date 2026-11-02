@@ -21,7 +21,7 @@ Suggested in-game credit block:
 ```
 Music: Memoraphile, Komiku, Juhani Junkala, Écrivain, RandomMind, Beatscribe (CC0)
 Sound effects: Kenney (kenney.nl, CC0); artisticdude, rubberduck, EZduzziteh, MedicineStorm, Spring Spring,
-  AntumDeluge/polymorpheva, toefur, Darsycho, nfrae, moffet, Belhene, videog, Rudmer_Rotteveel (CC0); "Oculus Audio Pack 01" by Oculus VR, LLC (CC BY 4.0);
+  AntumDeluge/polymorpheva, toefur, Darsycho, nfrae, moffet, Belhene, videog, Rudmer_Rotteveel, Joseph SARDIN, UnderASpell (CC0); "Oculus Audio Pack 01" by Oculus VR, LLC (CC BY 4.0);
   columbia23 and suonho via Freesound (CC BY 3.0)
 ```
 
@@ -58,8 +58,12 @@ Common processing for every SFX: re-encoded mono 44.1 kHz Ogg Vorbis q3, 3 ms fa
 | `sfx/chat_0.ogg` | Interface Sounds | Kenney (kenney.nl) | CC0 1.0 | `glass_001.wav` | https://kenney.nl/assets/interface-sounds — via https://github.com/Calinou/kenney-interface-sounds @4596a49 (LICENSE.txt: Kenney's CC0 licence note) | none |
 | `sfx/coins_0.ogg` | RPG Audio | Kenney (kenney.nl) | CC0 1.0 | `handleCoins.ogg (handle_coins.ogg)` | https://kenney.nl/assets/rpg-audio — via https://github.com/Boyquotes/kenney-rpg-audio-for-godot @22eb79b (repo LICENSE: CC0 1.0) | none |
 | `sfx/coins_1.ogg` | RPG Audio | Kenney (kenney.nl) | CC0 1.0 | `handleCoins2.ogg (handle_coins_2.ogg)` | https://kenney.nl/assets/rpg-audio — via https://github.com/Boyquotes/kenney-rpg-audio-for-godot @22eb79b (repo LICENSE: CC0 1.0) | none |
-| `sfx/eat_0.ogg` | DurableMMO | DurableMMO contributors | CC0 1.0 | original | synthesized for this project (three band-passed pink-noise bursts) | none |
-| `sfx/eat_1.ogg` | DurableMMO | DurableMMO contributors | CC0 1.0 | original | synthesized for this project (three band-passed pink-noise bursts) | none |
+| `sfx/eat_0.ogg` | Eating potato chips 2 | Joseph SARDIN (BigSoundBank) | CC0 1.0 | `munch.ogg` | https://bigsoundbank.com/eating-potato-chips-2-s1432.html — via https://github.com/vivekg7/talekit @d303717, sounds/sfx/munch.ogg (sounds/CREDITS.md: CC0 1.0, licence checked on the file's own page) | 0.00-0.32 s (first bite), 40 ms fade-out |
+| `sfx/eat_1.ogg` | Eating potato chips 2 | Joseph SARDIN (BigSoundBank) | CC0 1.0 | `munch.ogg` | https://bigsoundbank.com/eating-potato-chips-2-s1432.html — via https://github.com/vivekg7/talekit @d303717, sounds/sfx/munch.ogg (sounds/CREDITS.md: CC0 1.0, licence checked on the file's own page) | 0.66-0.94 s (second crunch), 40 ms fade-out |
+| `sfx/eat_2.ogg` | Eating potato chips 2 | Joseph SARDIN (BigSoundBank) | CC0 1.0 | `munch.ogg` | https://bigsoundbank.com/eating-potato-chips-2-s1432.html — via https://github.com/vivekg7/talekit @d303717, sounds/sfx/munch.ogg (sounds/CREDITS.md: CC0 1.0, licence checked on the file's own page) | 1.24-1.52 s (chew), 40 ms fade-out |
+| `sfx/drink_0.ogg` | Swallowing Liquid 4 | UnderASpell (Freesound) | CC0 1.0 | `drinking_gulps.mp3` | https://freesound.org/people/UnderASpell/sounds/693251/ — via https://github.com/Daio7771/EveryTunnelMod @c152cb8, tools/sounds/cc0/drinking_gulps.mp3 (tools/sounds/cc0/SOURCES.md: CC0, kept exactly as downloaded) | 0.12-0.62 s (first gulp), 40 ms fade-out |
+| `sfx/drink_1.ogg` | Swallowing Liquid 4 | UnderASpell (Freesound) | CC0 1.0 | `drinking_gulps.mp3` | https://freesound.org/people/UnderASpell/sounds/693251/ — via https://github.com/Daio7771/EveryTunnelMod @c152cb8, tools/sounds/cc0/drinking_gulps.mp3 (tools/sounds/cc0/SOURCES.md: CC0, kept exactly as downloaded) | 1.62-1.95 s (second gulp), 40 ms fade-out |
+| `sfx/drink_2.ogg` | Swallowing Liquid 4 | UnderASpell (Freesound) | CC0 1.0 | `drinking_gulps.mp3` | https://freesound.org/people/UnderASpell/sounds/693251/ — via https://github.com/Daio7771/EveryTunnelMod @c152cb8, tools/sounds/cc0/drinking_gulps.mp3 (tools/sounds/cc0/SOURCES.md: CC0, kept exactly as downloaded) | 4.78-5.18 s (fourth gulp), 40 ms fade-out |
 | `sfx/error_0.ogg` | Interface Sounds | Kenney (kenney.nl) | CC0 1.0 | `error_004.wav` | https://kenney.nl/assets/interface-sounds — via https://github.com/Calinou/kenney-interface-sounds @4596a49 (LICENSE.txt: Kenney's CC0 licence note) | none |
 | `sfx/goal_complete_0.ogg` | Oculus Audio Pack 01 | Oculus VR, LLC | CC BY 4.0 | `MUSCStngr_VictoryMallet_OS_01` | https://developers.meta.com/vr/downloads/package/oculus-audio-pack-1/ — via https://github.com/facebookincubator/Meta-open-sound @251c0be, corpora/oculus-audio-pack/ogg/ | 0.5 s fade-out at the end |
 | `sfx/harvest_0.ogg` | Interface Sounds | Kenney (kenney.nl) | CC0 1.0 | `pluck_001.wav` | https://kenney.nl/assets/interface-sounds — via https://github.com/Calinou/kenney-interface-sounds @4596a49 (LICENSE.txt: Kenney's CC0 licence note) | none |

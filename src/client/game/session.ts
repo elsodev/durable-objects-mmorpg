@@ -63,12 +63,14 @@ import { FORAGE_REACH, GROUND_TARGET_PREFIX } from "../../shared/spawns";
 import { createInput } from "./input";
 import { every, startLoop } from "./loop";
 import { chestFor } from "../render/chests";
+import { isDrink } from "../render/food-in-hand";
 import { CHEST_REACH, CHEST_TARGET_PREFIX } from "../../shared/chests";
 import { gainText } from "../ui/bonds-logic";
 import { npcPortrait } from "./npc-portrait";
 import { createPredictor } from "./prediction";
 import { createFarmFx } from "./farm-fx";
 import { isWaterSource } from "../../shared/engine";
+import { EAT_COOLDOWN_MS } from "../../shared/engine/eating";
 import { createWorld, type World } from "./world";
 import {
   clearedTreeTiles,
@@ -1206,6 +1208,7 @@ export async function startSession(
     homeUi.setAtHome(msg.zone === "home");
     homeUi.setVisiting?.(!!visiting);
     energy.setVisiting(!!visiting);
+    refreshEdible();
     visitsUi.setVisiting(visiting?.ownerName ?? null);
     visitsUi.setAtHome(msg.zone === "home" && !visiting);
     // Each room starts with empty hands: say what is selected so others see it.
@@ -1344,6 +1347,8 @@ export async function startSession(
       return;
     }
     const item = visiting ? null : (inv.slots[selectedSlot]?.item ?? null);
+    // Using prepared food eats it, unless you're putting it in the shipping bin.
+    if (item && getItem(item)?.kind === "food" && !isBinAt(tile)) return eatSelected();
     const atHome = store.zone === "home" && !visiting;
     const outcome = item ? predictAt(tile) : null;
     // Worn out: no farm work until the day resets (the server refuses it too).
@@ -1376,6 +1381,11 @@ export async function startSession(
     // Seeds and other non-swings land at once; a swing lands at its impact frame (see frame()).
     if (s) onImpact = land;
     else land();
+  }
+
+  function isBinAt(tile: Vec2): boolean {
+    const id = world?.props.propAt(tile);
+    return !!id && map()?.props.find((p) => p.id === id)?.type === "shipping_bin";
   }
 
   /** What your own swing shows the moment it lands, before the server's answer. */
@@ -1496,9 +1506,9 @@ export async function startSession(
     if (characterFor(art, me).action?.(item)) preloaded = key;
   }
 
-  /** Edible item in the selected slot (home only), for the Eat button / Q key. */
+  /** Edible item in the selected slot (not while visiting someone's home), for the Eat button / Q key. */
   function edibleSelected(): string | null {
-    if (store.zone !== "home" || visiting) return null;
+    if (visiting) return null;
     const s = store.inventory.slots[selectedSlot];
     return s && getItem(s.item)?.eat ? s.item : null;
   }
@@ -1507,17 +1517,23 @@ export async function startSession(
     homeUi.setEdible(edibleSelected());
   }
 
+  /** When you last asked to eat: the server refuses a bite inside EAT_COOLDOWN_MS anyway. */
+  let lastEatSent = -Infinity;
+
   function eatSelected(): void {
     if (!edibleSelected()) return;
+    const now = performance.now();
+    if (now - lastEatSent < EAT_COOLDOWN_MS) return;
+    lastEatSent = now;
     sendTagged({ t: "eat", slot: selectedSlot }, "use");
   }
 
-  /** A bite (crunch) or a hold-up (fanfare and sparkles), heard when it's you or near you. */
-  function itemPoseBeat(id: string, kind: "eat" | "hold"): void {
+  /** A bite (crunch), a sip (gulp) or a hold-up (fanfare and sparkles), heard when it's you or near you. */
+  function itemPoseBeat(id: string, kind: "eat" | "hold", item?: string): void {
     const me = you();
     const e = id === store.youId ? me : store.latest(id);
     if (!me || !e || Math.hypot(e.x - me.x, e.y - me.y) > 10) return;
-    if (kind === "eat") return playSfx("eat");
+    if (kind === "eat") return playSfx(isDrink(item) ? "drink" : "eat");
     playSfx("goal");
     world?.effects.burst({ x: e.x, y: e.y - 1.8 }, "sparkle");
   }
@@ -1590,10 +1606,12 @@ export async function startSession(
         break;
       }
       case "gift": {
-        // Q eats at home (onEatKey); it only gives gifts in the shared zones.
+        // Q eats at home (onEatKey). In the shared zones it gives the item to a villager or an
+        // animal next to you, and eats food when nobody is there to give it to.
         if (store.zone === "home") break;
         const npc = nearestNpc(me, store.sample(performance.now()));
         const pet = npc ? null : nearestAnimal(me, store.sample(performance.now()), ANIMAL_REACH);
+        if (!npc && !pet && edibleSelected()) return eatSelected();
         if (pet) {
           if (!store.inventory.slots[selectedSlot]) return notice("Pick some food in your hotbar first.", "error");
           send({ t: "feedAnimal", animal: pet, slot: selectedSlot });
@@ -1827,7 +1845,7 @@ export async function startSession(
     const states = visibleEntities();
     world.entities.sync(states, dt);
     world.overlays.sync(states, (id) => world!.entities.headOf(id), store.youId);
-    world.itemPoses.sync(states, (id) => world!.entities.headOf(id), performance.now(), dt);
+    world.itemPoses.sync(states, (id) => world!.entities.headOf(id), performance.now(), dt, (id) => world!.entities.foodOf?.(id) ?? null);
     const me = states.find((e) => e.id === store.youId) ?? null;
     approachAnimal(me, states);
     // Edit mode moves the view itself (keys, a finger, or dragging to the edge).
@@ -1856,6 +1874,8 @@ export async function startSession(
   });
 
   const onEatKey = (e: KeyboardEvent) => {
+    // Away from home Q goes through the "gift" action, which eats when nobody is near.
+    if (store.zone !== "home") return;
     if (e.code !== "KeyQ" || typing || editMode.active() || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;

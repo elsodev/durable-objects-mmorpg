@@ -48,6 +48,7 @@ describe("furniture stall", () => {
 
   it("resolves only known stall ids", () => {
     expect(stallShop("stall:stall_goods")?.name).toBe("Furniture Stall");
+    expect(stallShop("stall:stall_produce")).toBeNull(); // Odette's stall has a keeper
     expect(stallShop("stall:stall_seeds")).toBeNull();
     expect(stallShop("stall:__proto__")).toBeNull();
     expect(stallShop("n:fenwick")).toBeNull();

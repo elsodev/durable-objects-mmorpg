@@ -884,3 +884,9 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - License: **CC0**
 - Source: drawn by script for this game
 - Notes: Egg, pet treat and hen icons (32x32 cells, in that order).
+
+### icons/food_icons.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game in the LPC style (top-left light, tinted outlines)
+- Notes: Prepared food and drink icons (32x32 cells, 10 per row): bread roll, oat cookie, apple pie slice, berry muffin, cheese wedge, Mossy Mug stew, roast dinner, fish pie, shepherd's pie, pancake stack; herb omelette, veggie curry, pumpkin soup, mushroom risotto, mint tea, coffee, hot cocoa, apple juice, glass of milk, sweet cider. The same icon is drawn small in the hand while eating.

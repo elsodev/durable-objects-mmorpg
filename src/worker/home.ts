@@ -70,7 +70,6 @@ import {
   clockAtMinutes,
   dayEndsAt,
   dayOver,
-  eatGain,
   facingFor,
   facingToTile,
   farmNow,
@@ -103,6 +102,7 @@ import {
   waterTile,
 } from "../shared/engine";
 import { dropSpot, sortBag, takeForDrop } from "../shared/engine";
+import { eatFrom, eatNotice } from "../shared/engine/eating";
 import { viewOf } from "./game/groundItems";
 import { HomeDrops } from "./home/drops";
 import {
@@ -274,6 +274,8 @@ interface HPlayer {
   motion: Motion;
   lastAck: number | undefined;
   lastUse: number;
+  /** Last time the owner ate (EAT_COOLDOWN_MS between bites). */
+  lastEat?: number;
   /** Last hotbar slot used, so a plain "shipping_bin" interact knows which stack to sell. */
   lastSlot: number | null;
   lastLook: number;
@@ -1964,19 +1966,14 @@ export class HomeRoom extends DurableObject<Env> {
   }
 
   private onEat(p: HPlayer, msg: Extract<ClientMsg, { t: "eat" }>, now: number): void {
-    if (now - p.lastUse < USE_COOLDOWN_MS) return this.reject(p, msg, "Too fast.");
-    p.lastUse = now;
-    const inv = this.save!.inventory;
-    const slot = inv.slots[msg.slot];
-    const def = slot ? getItem(slot.item) : undefined;
-    if (!slot || !def?.eat) return this.reject(p, msg, "You can't eat that.");
-    const gain = eatGain(def.id, this.stamina());
-    if (gain <= 0) return this.reject(p, msg, "You're not hungry.");
-    if (!removeFromSlot(inv, msg.slot, 1)) return this.reject(p, msg, "Nothing in that slot.");
-    this.save!.stamina = this.stamina() + gain;
-    this.act(p, "eat", now, def.id);
+    endPose(p.entity);
+    const r = eatFrom(this.save!.inventory, msg.slot, this.stamina(), now, p.lastEat ?? -Infinity);
+    if (!r.ok) return this.reject(p, msg, r.reason);
+    p.lastEat = now;
+    this.save!.stamina = r.stamina;
+    this.act(p, "eat", now, r.item);
     this.sendHomeState(p);
-    this.inventoryChanged(p, `Ate ${def.name} (+${gain} stamina)`);
+    this.inventoryChanged(p, eatNotice(r));
     // Food tops stamina up for mining and chopping, but being worn out lasts until the day resets.
     if (this.exhausted()) send(p.ws, { t: "notice", text: RESTED_EATING_NOTICE, kind: "info" });
   }

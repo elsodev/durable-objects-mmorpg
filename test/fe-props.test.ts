@@ -55,7 +55,7 @@ describe("fe-props geometry", () => {
   it("marks the special map props interactable", () => {
     const village = getMap("village").props;
     const ids = village.filter((p) => INTERACTABLE_TYPES.has(p.type)).map((p) => p.id);
-    expect(ids).toEqual(expect.arrayContaining(["stall_seeds", "stall_produce", "stall_goods", "notice_board", "fountain", "well"]));
+    expect(ids).toEqual(expect.arrayContaining(["stall_bakery", "stall_produce", "stall_goods", "notice_board", "fountain", "well"]));
     expect(village.some((p) => p.type === "tree" && INTERACTABLE_TYPES.has(p.type))).toBe(false);
     expect(getMap("home").props.some((p) => p.id === "shipping_bin" && INTERACTABLE_TYPES.has(p.type))).toBe(true);
   });

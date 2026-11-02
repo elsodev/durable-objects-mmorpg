@@ -219,6 +219,45 @@ Check a dash in the browser on a male, a female and a slim body, facing all four
 - **Forgetting the name tag:** a lower or rotated body needs a `head` value, or the tag floats over empty space.
 - **Shadows:** a lying body hides the standing shadow. Seated and standing poses keep it.
 
+## Eating
+
+Any edible item can be eaten anywhere: the prepared food sold at the inn and the bakery stall (`src/shared/foods.ts`), raw crops, eggs. Every food plays the same animation and the same sounds; only the small picture in the hand changes.
+
+### What you see
+
+| Part | How it's made |
+|---|---|
+| Body | The look's own `eat` action in `custom.json`: generator thrust frame 2 (the hand coming up) and frame 3 (the forearm folded, the fist under the chin), in the order `EAT_FRAMES` gives, at 100 ms a frame. It plays in the facing you stand in, for every body type, outfit and catalog character, because every act sheet has the thrust rows. |
+| Food | The item's own 32 px icon, drawn at screen scale 1 (half the character's pixel size) on a sprite that rides the body (`food-in-hand.ts`). Faint pixels (the icon's drop shadow) are dropped so nothing floats under the hand. |
+| Bites | Three bites over 1.3 s (`EAT_BITES`). On each one the food is pushed 1 px into the mouth, crumbs of its own sprite fall from the hand, and the sound plays. Food you hold (bread, pie, a tomato) loses a round bite with a dark rim each time (`biteMask`). Bowls and plates tip a little toward the mouth, and cups tip further on each sip. |
+| Sound | `eat` (three crunches from one CC0 recording) for food, `drink` (three gulps) for drinks. Credits are in `assets/audio/CREDITS.md`. |
+
+### Where the food sits
+
+Grip points are in `GRIP` in `src/client/render/eat-logic.ts`, in source px of the 64 px frame. The male, male_slim and female sheets put the fist on the same pixels in thrust frames 2 and 3, so one table fits them all.
+
+| Facing | Frame 2 (reaching) | Frame 3 (at the mouth) | Notes |
+|---|---|---|---|
+| Down | (28, 40) | (28, 37) | just left of the chin, over the fist |
+| Left | (22, 42) | (25, 37) | held out in front of the face |
+| Right | (42, 42) | (39, 37) | the mirror of left |
+| Up | hidden | hidden | the head hides the hand, as with peeing |
+
+The chin is at about y 34 and the fist at y 41 to 46. With the icon's middle at y 37, its top touches the mouth and its bottom sits in the fist.
+
+### How it flows
+
+1. **Intent:** the client sends `{ t: "eat", slot }`. Q eats at home. In the shared zones, Q gives the item to a villager or animal next to you, and eats it when nobody is there. Using (Space or a click) a prepared food eats it too, unless you're putting it in the shipping bin. The Eat (or Drink) button shows under the energy bar.
+2. **Server:** `eatFrom` in `src/shared/engine/eating.ts` is shared by `HomeRoom` and `ZoneRoom`. It checks the slot and that the item is edible, and refuses within `EAT_COOLDOWN_MS` of the last bite (as long as the animation) or when energy is full. It takes one from the stack synchronously and returns the new energy, capped at `MAX_STAMINA`. Then the room sets `entity.act = { k: "eat", at, item }`, which everyone in the room sees.
+3. **Energy in zones:** the zone raises its copy (`p.stamina`) and sends `{ t: "stamina" }`. The home save stays the source of truth: the next `savePlayer` carries the new value, and `HomeRoom.savePlayer` clamps it.
+4. **Client:** `entities.ts` plays the body action and asks `food-in-hand.ts` to draw the food. `item-poses.ts` drops the crumbs and plays the bite sounds. Walking cancels the meal for good, so it doesn't pick up again when you stop. A tool swing replaces the act. The food is used up either way.
+
+### Adding a food
+
+1. Add it to `FOODS` with a type (`snack`, `meal` or `drink`) and energy inside `FOOD_ENERGY` for that type. Put it on a menu (`INN_MENU`, `BAKERY_MENU`).
+2. Draw its 32 px icon in the LPC style (top-left light, tinted outlines), add it to `icons/food_icons.png` and to `catalog.json` `icons`, and credit it.
+3. Check it in the browser: eat it facing down, left and right on two body types, and look at the bites and the grip at the mouth.
+
 ## Monsters
 
 - **Catalog entry:** monsters are listed in `catalog.json` `monsters` with `frameW` and `frameH`, an `anchor`, and `animations.walk` rows per direction. Optional `attack` rows can be added the same way.

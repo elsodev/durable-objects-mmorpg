@@ -81,7 +81,7 @@ function icon(item: ItemId, qty = 1): HTMLElement {
 }
 
 const QUALITY = ["", "Silver", "Gold"];
-const STAMINA_TITLE = "Stamina: tools and dashing (Shift) tire you; eat crops or sleep to recover";
+const STAMINA_TITLE = "Stamina: tools and dashing (Shift) tire you; eat food or crops, or sleep, to recover";
 const EXHAUSTED_TITLE = "Worn out: you walk slowly and can't farm or dash until you sleep or the day ends";
 
 /** The bag's coin, so every coin amount in the game looks the same. */
@@ -266,8 +266,10 @@ export function createHomeUi(root: HTMLElement, opts: HomeUiOpts): HomeUi {
       setBar(stamina, maxStamina, exhausted);
     },
     setEdible(item) {
+      const drink = !!item && getItem(item)?.food === "drink";
       eatBtn.hidden = !item;
-      eatBtn.title = item ? `Eat ${getItem(item)?.name ?? item}` : "";
+      eatBtn.textContent = drink ? "Drink (Q)" : "Eat (Q)";
+      eatBtn.title = item ? `${drink ? "Drink" : "Eat"} ${getItem(item)?.name ?? item}` : "";
     },
     setBin(items, total, open) {
       binList.replaceChildren();

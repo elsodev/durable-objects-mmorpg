@@ -38,6 +38,7 @@ import {
   clampWater,
   dist,
   EXHAUSTED_NOTICE,
+  RESTED_EATING_NOTICE,
   exitAt,
   facingToTile,
   hurtAmount,
@@ -126,7 +127,8 @@ import { TradeDesk } from "./game/trades";
 import type { TradeOffer } from "../shared/trade";
 import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
-import { buyFrom, sellTo, shopToday, stallShop, STALL_PREFIX } from "./game/shop";
+import { buyFrom, COUNTER_KEEPERS, sellTo, shopToday, stallShop, STALL_PREFIX } from "./game/shop";
+import { eatFrom, eatNotice } from "../shared/engine/eating";
 import { AnimalHerd } from "./game/animalHerd";
 import { syncZoneHerd } from "./game/zoneHerd";
 import { zoneHasAnimals } from "../shared/roam";
@@ -214,6 +216,8 @@ interface ZPlayer {
   exhausted: boolean;
   /** Dash time under one stamina point, carried between ticks. */
   dashCarry: number;
+  /** Last time this player ate (EAT_COOLDOWN_MS between bites). */
+  lastEat?: number;
   /** Water left in the can (from the home save); zones only show it. */
   water: number;
   /** While seated: where the player stood before sitting (they get up there). */
@@ -806,6 +810,24 @@ export class ZoneRoom extends DurableObject<Env> {
     this.sendStamina(p);
   }
 
+  /**
+   * Eating away from home: the zone's copy of the stamina goes up now and reaches the home save
+   * with the next savePlayer (snapshot carries it). Everyone here sees the eat act.
+   */
+  private onEat(p: ZPlayer, msg: Extract<ClientMsg, { t: "eat" }>, now: number): void {
+    const r = eatFrom(p.inv, msg.slot, p.stamina, now, p.lastEat ?? -Infinity);
+    if (!r.ok) return this.reject(p, msg, r.reason);
+    this.getUp(p);
+    p.lastEat = now;
+    p.stamina = r.stamina;
+    p.entity.act = { k: "eat", at: now, item: r.item };
+    p.dirty = true;
+    this.sendStamina(p);
+    this.inventoryChanged(p, eatNotice(r));
+    // Food never lifts being worn out; only the home's day end does.
+    if (p.exhausted) send(p.ws, { t: "notice", text: RESTED_EATING_NOTICE, kind: "info" });
+  }
+
   /** Mining and chopping cost stamina like at home; false (and a reject) when too tired. */
   private spendStamina(p: ZPlayer, msg: ClientMsg, tool: Parameters<typeof staminaCost>[0]): boolean {
     const cost = staminaCost(tool);
@@ -1090,6 +1112,8 @@ export class ZoneRoom extends DurableObject<Env> {
       case "tradeConfirm":
       case "tradeCancel":
         return this.onTrade(p, msg, now);
+      case "eat":
+        return this.onEat(p, msg, now);
     }
   }
 
@@ -1475,6 +1499,7 @@ export class ZoneRoom extends DurableObject<Env> {
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
     if (SEAT_FACING[prop.type]) return this.onSeat(p, prop.id, now);
     if (prop.type === "market_stall" && stallShop(STALL_PREFIX + prop.id)) return this.sendStallShop(p, prop.id);
+    if (prop.type === "bar_counter") return this.onCounter(p, world.zone);
     if (prop.id === TOWNHALL_DESK && world.zone === "int_townhall") return this.sendTownhall(p);
     if (prop.type === "market_stall") {
       const keeper = this.shopkeeperNear(prop);
@@ -1530,6 +1555,14 @@ export class ZoneRoom extends DurableObject<Env> {
     standUp(p.entity, spot);
     p.standBack = undefined;
     p.dirty = true;
+  }
+
+  /** The bar: whoever keeps it serves you across the counter, if they're in. */
+  private onCounter(p: ZPlayer, zone: string): void {
+    const keeper = Object.hasOwn(COUNTER_KEEPERS, zone) ? COUNTER_KEEPERS[zone] : undefined;
+    const n = keeper ? this.world!.npcs.present().find((x) => x.id === keeper) : undefined;
+    if (!n?.def?.shop) return send(p.ws, { t: "notice", text: "Nobody is behind the bar right now.", kind: "info" });
+    this.sendShop(p, n.entity.id);
   }
 
   /** The shop NPC closest to a stall (stalls have no owner field in map data); only one who is here. */

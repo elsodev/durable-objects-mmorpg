@@ -5,7 +5,7 @@ import { getItem, MAX_SLOTS, type ItemKind } from "../items";
 import type { Inventory, InventorySlot } from "../types";
 
 /** Type order in a sorted bag: tools first, then things you plant, eat, sell and place. */
-export const SORT_ORDER: readonly ItemKind[] = ["tool", "seed", "crop", "produce", "forage", "fish", "ore", "gem", "material", "furniture"];
+export const SORT_ORDER: readonly ItemKind[] = ["tool", "seed", "crop", "produce", "food", "forage", "fish", "ore", "gem", "material", "furniture"];
 
 function rank(s: InventorySlot): number {
   const kind = getItem(s.item)?.kind;

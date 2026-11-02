@@ -10663,6 +10663,186 @@
     32,
     32
    ]
+  },
+  "bread_roll": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ]
+  },
+  "oat_cookie": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    32,
+    0,
+    32,
+    32
+   ]
+  },
+  "apple_pie": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    64,
+    0,
+    32,
+    32
+   ]
+  },
+  "berry_muffin": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    96,
+    0,
+    32,
+    32
+   ]
+  },
+  "cheese_wedge": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    128,
+    0,
+    32,
+    32
+   ]
+  },
+  "inn_stew": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    160,
+    0,
+    32,
+    32
+   ]
+  },
+  "roast_dinner": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    192,
+    0,
+    32,
+    32
+   ]
+  },
+  "fish_pie": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    224,
+    0,
+    32,
+    32
+   ]
+  },
+  "shepherds_pie": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    256,
+    0,
+    32,
+    32
+   ]
+  },
+  "pancakes": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    288,
+    0,
+    32,
+    32
+   ]
+  },
+  "omelette": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    0,
+    32,
+    32,
+    32
+   ]
+  },
+  "veggie_curry": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    32,
+    32,
+    32,
+    32
+   ]
+  },
+  "pumpkin_soup": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    64,
+    32,
+    32,
+    32
+   ]
+  },
+  "mushroom_risotto": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    96,
+    32,
+    32,
+    32
+   ]
+  },
+  "mint_tea": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    128,
+    32,
+    32,
+    32
+   ]
+  },
+  "coffee": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    160,
+    32,
+    32,
+    32
+   ]
+  },
+  "hot_cocoa": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    192,
+    32,
+    32,
+    32
+   ]
+  },
+  "apple_juice": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    224,
+    32,
+    32,
+    32
+   ]
+  },
+  "milk": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    256,
+    32,
+    32,
+    32
+   ]
+  },
+  "cider": {
+   "file": "icons/food_icons.png",
+   "rect": [
+    288,
+    32,
+    32,
+    32
+   ]
   }
  },
  "shadows": {

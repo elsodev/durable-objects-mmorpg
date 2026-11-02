@@ -3,6 +3,7 @@ import type { ItemId } from "../../shared/types";
 import type { ShopOffer } from "../../shared/protocol";
 import { getItem } from "../../shared/items";
 import { allCrops, STORE_SEEDS } from "../../shared/seeds";
+import { INN_MENU } from "../../shared/foods";
 import type { NpcDef } from "./brain";
 
 /** Shop offers priced from items.ts so prices never drift from the item table. */
@@ -258,7 +259,15 @@ export const NPCS: Record<string, NpcDef> = {
     role: "Innkeeper and village storyteller",
     personality:
       "A warm, wry innkeeper who hears every rumour first, hums old ballads, and treats every traveller like family who just got back.",
-    knowledge: [LORE.lantern, LORE.bridge, LORE.fair, "The inn's stew recipe is older than the bridge and twice as sturdy."],
+    knowledge: [
+      LORE.lantern,
+      LORE.bridge,
+      LORE.fair,
+      "The inn's stew recipe is older than the bridge and twice as sturdy.",
+      "Rue serves hot meals and drinks at the Mossy Mug Inn: stew, roast dinner, fish pie, shepherd's pie, curry, soups, bread, cheese, cider, tea, coffee and milk. Talk to her or step up to the bar to order. A good meal gives back a lot of energy; a drink a little.",
+      "The bakery stall on the square sells bread, cookies, muffins, pie, pancakes, omelettes and hot drinks. You pay into the honour box.",
+    ],
+    shop: { sells: offers([...INN_MENU]), buys: [] },
     lines: {
       greet: [
         "Well, look who wandered in! Hello, {name}.",
@@ -266,13 +275,13 @@ export const NPCS: Record<string, NpcDef> = {
         "Welcome back, traveller. The porch is always yours.",
       ],
       buy: [
-        "The inn's not selling today, love. Odette and Fenwick have what you need.",
-        "I trade in stories, not goods. Try the market stalls!",
-        "Odette for seeds, Fenwick for steel. Tell them Rue says hi.",
+        "Hungry, {name}? The stew's hot and the cider's cold.",
+        "Sit, eat, tell me a story. What'll it be?",
+        "A roast dinner will put the day back in your arms, love.",
       ],
       sell: [
         "Crops go to Odette, ore to Fenwick, fish to Marlo by the river.",
-        "I'd buy you a drink, {name}, but not your goods.",
+        "I'll sell you a drink, {name}, but I won't buy your goods.",
         "Iris by the river pays for herbs and mushrooms, if you've been foraging.",
       ],
       quest: [

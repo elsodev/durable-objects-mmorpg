@@ -1,10 +1,11 @@
 // Item catalog. Signatures are the contract; fill in the data.
 import type { Inventory, ItemId } from "./types";
 import { HOME_GOODS, type StorageSpec } from "./furnitureItems";
+import { FOOD_SELL_SHARE, FOODS, type FoodType } from "./foods";
 
 export type Rotation = 0 | 1 | 2 | 3;
 
-export type ItemKind = "seed" | "crop" | "ore" | "gem" | "tool" | "furniture" | "material" | "fish" | "forage" | "produce";
+export type ItemKind = "seed" | "crop" | "ore" | "gem" | "tool" | "furniture" | "material" | "fish" | "forage" | "produce" | "food";
 export type ToolKind = "hoe" | "water" | "pickaxe" | "axe" | "sword";
 
 export interface ItemDef {
@@ -30,6 +31,8 @@ export interface ItemDef {
   base?: ItemId;
   /** Edible items: stamina restored by eating one. */
   eat?: number;
+  /** Prepared food (shared/foods.ts): snack, meal or drink. Drinks sound different when you have one. */
+  food?: FoodType;
   /**
    * Furniture: footprint in tiles at rotation 0, and where it may go. "wall" items hang on the
    * face of a wall (wall tiles just above the floor), never on the floor.
@@ -349,6 +352,9 @@ const ALL: ItemDef[] = [
 
   // The furniture stall's stock and the rare pieces (shared/furnitureItems.ts).
   ...HOME_GOODS,
+
+  // Prepared food and drink: the inn and the bakery stall (shared/foods.ts).
+  ...FOODS.map((f) => def(f.id, f.name, "food", Math.max(1, Math.round(f.price * FOOD_SELL_SHARE)), { buy: f.price, eat: f.energy, food: f.type, desc: f.desc })),
 ];
 
 export const ITEMS: Record<ItemId, ItemDef> = Object.fromEntries(ALL.map((d) => [d.id, d]));

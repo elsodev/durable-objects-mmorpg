@@ -15,7 +15,7 @@ const BY_KIND: Record<string, string> = {
   holdUp: "hold_up",
 };
 
-/** Acts whose `item` is what is eaten or held up, not the tool to swing; they always face the viewer. */
+/** Acts whose `item` is what is eaten or held up, not the tool to swing (a hold-up faces the viewer). */
 export const ITEM_POSE_ACTS: ReadonlySet<string> = new Set(["eat", "holdUp"]);
 
 /** The action art name (an item id or an action name) for `act`, or null when there is none. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beatsBetween, bitesAt, EAT_BITES, EAT_MS, eatPose, HOLD_MS, holdPose, poseKindOf } from "../src/client/render/item-pose-logic";
+import { beatsBetween, bitesAt, EAT_BITES, EAT_MS, HOLD_MS, holdPose, poseAt, poseKindOf } from "../src/client/render/item-pose-logic";
 import { actionNameFor, ITEM_POSE_ACTS } from "../src/client/render/tool-actions";
 
 describe("item poses", () => {
@@ -17,15 +17,10 @@ describe("item poses", () => {
     expect(ITEM_POSE_ACTS.has("eat")).toBe(true);
   });
 
-  it("the eaten item rises to the mouth, shrinks with each bite, and is gone at the end", () => {
-    const start = eatPose(0)!;
-    const mouth = eatPose(400)!;
-    expect(start.dy).toBeGreaterThan(mouth.dy);
+  it("eating draws nothing over the head (the food is in the hand) and counts its bites", () => {
+    expect(poseAt("eat", 400)).toBeNull();
     expect(bitesAt(EAT_BITES[0]! - 1)).toBe(0);
     expect(bitesAt(EAT_MS - 1)).toBe(EAT_BITES.length);
-    expect(eatPose(EAT_BITES[1]! + 200)!.scale).toBeLessThan(eatPose(EAT_BITES[0]! + 200)!.scale);
-    expect(eatPose(EAT_MS)).toBeNull();
-    expect(eatPose(-1)).toBeNull();
   });
 
   it("the held item sits above the head and drifts up, fading in and out", () => {

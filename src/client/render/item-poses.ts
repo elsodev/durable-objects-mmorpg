@@ -1,11 +1,13 @@
-// The item in an eat or hold-up act (EntityState.act { k: "eat" | "holdUp", item }): drawn at the
-// mouth with chewing and crumbs of the item's own sprite, or held over the head. The body frames
-// come from the character's "eat" / "hold_up" actions (entities.ts); this layer only adds the item,
-// crumbs and the sound cues. Timing lives in item-pose-logic.ts.
+// The extras of an eat or hold-up act (EntityState.act { k: "eat" | "holdUp", item }): crumbs of
+// the item's own sprite falling from the hand on each bite (the food itself is drawn in the hand
+// by entities.ts), or the item held over the head. The body frames come from the character's
+// "eat" / "hold_up" actions (entities.ts); this layer adds the item, crumbs and the sound cues.
+// Timing lives in item-pose-logic.ts and eat-logic.ts.
 import { Container, Rectangle, Sprite, Texture } from "pixi.js";
 import type { Art, Layers } from "../contracts";
 import type { EntityState, ItemId, Vec2 } from "../../shared/types";
 import { beatsBetween, poseAt, poseKindOf, poseLength, type PoseKind } from "./item-pose-logic";
+import { isDrink } from "./food-in-hand";
 
 /** On-screen size (px) of the item at scale 1. */
 const ITEM_PX = 30;
@@ -31,8 +33,11 @@ interface Crumb {
 }
 
 export interface ItemPoses {
-  /** Call every frame after entities.sync. `beat` fires on bites and the hold-up fanfare. */
-  sync(states: EntityState[], headOf: (id: string) => Vec2 | null, nowMs: number, dtMs: number): void;
+  /**
+   * Call every frame after entities.sync. `beat` fires on bites and the hold-up fanfare; `foodOf`
+   * is where the food in the hand is (crumbs fall from there).
+   */
+  sync(states: EntityState[], headOf: (id: string) => Vec2 | null, nowMs: number, dtMs: number, foodOf?: (id: string) => Vec2 | null): void;
   destroy(): void;
 }
 
@@ -111,7 +116,8 @@ export function createItemPoses(art: Art, layers: Layers, opts: ItemPoseOpts = {
 
   function start(s: EntityState, kind: PoseKind, key: string, now: number): void {
     stop(s.id);
-    const tex = iconOf(s.act!.item!);
+    // Eating has no sprite of its own here (it's in the hand); an empty one keeps the bookkeeping.
+    const tex = kind === "eat" ? Texture.EMPTY : iconOf(s.act!.item!);
     if (!tex) return;
     const sprite = new Sprite(tex);
     sprite.anchor.set(0.5);
@@ -121,7 +127,7 @@ export function createItemPoses(art: Art, layers: Layers, opts: ItemPoseOpts = {
   }
 
   return {
-    sync(states, headOf, now, dtMs) {
+    sync(states, headOf, now, dtMs, foodOf) {
       if (!ensureRoot()) return;
       const here = new Set<string>();
       for (const s of states) {
@@ -140,8 +146,22 @@ export function createItemPoses(art: Art, layers: Layers, opts: ItemPoseOpts = {
         const p = playing.get(s.id);
         if (!p) continue;
         const age = now - p.start;
+        // Walking off ends a meal: no more bites, crumbs or chewing sounds.
+        if (p.kind === "eat") {
+          if (s.moving || age >= poseLength("eat")) {
+            stop(s.id);
+            continue;
+          }
+          const hand = foodOf?.(s.id) ?? null;
+          for (const _ of beatsBetween("eat", p.lastAge, age)) {
+            if (hand && !isDrink(p.item)) spawnCrumbs(p.item, { x: hand.x, y: hand.y + 6 });
+            opts.beat?.(s.id, "eat", p.item);
+          }
+          p.lastAge = age;
+          continue;
+        }
         const head = headOf(s.id);
-        // Walking off cancels a hold-up; eating plays out.
+        // Walking off cancels a hold-up.
         const pose = head && !(p.kind === "hold" && s.moving) ? poseAt(p.kind, age) : null;
         if (!pose || !head) {
           if (age >= poseLength(p.kind) || (p.kind === "hold" && s.moving)) stop(s.id);
@@ -154,10 +174,7 @@ export function createItemPoses(art: Art, layers: Layers, opts: ItemPoseOpts = {
         p.sprite.position.set(head.x + pose.dx, head.y + pose.dy);
         p.sprite.scale.set(base * pose.scale);
         p.sprite.alpha = pose.alpha;
-        for (const _ of beatsBetween(p.kind, p.lastAge, age)) {
-          if (p.kind === "eat") spawnCrumbs(p.item, { x: p.sprite.x, y: p.sprite.y + 4 });
-          opts.beat?.(s.id, p.kind, p.item);
-        }
+        for (const _ of beatsBetween(p.kind, p.lastAge, age)) opts.beat?.(s.id, p.kind, p.item);
         p.lastAge = age;
       }
       for (const id of [...playing.keys()]) if (!here.has(id)) stop(id);

@@ -457,7 +457,8 @@
     "eat": {
       "files": [
         "sfx/eat_0.ogg",
-        "sfx/eat_1.ogg"
+        "sfx/eat_1.ogg",
+        "sfx/eat_2.ogg"
       ],
       "volume": 0.5
     },
@@ -501,6 +502,14 @@
         "sfx/hen_cluck_0.ogg"
       ],
       "volume": 0.3
+    },
+    "drink": {
+      "files": [
+        "sfx/drink_0.ogg",
+        "sfx/drink_1.ogg",
+        "sfx/drink_2.ogg"
+      ],
+      "volume": 0.55
     }
   },
   "missing": []
