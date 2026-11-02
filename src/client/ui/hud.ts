@@ -24,6 +24,7 @@ import { createSlotDrag, type SlotDrag } from "./slot-drag";
 import { planMove } from "./slot-drag-logic";
 import { openCredits } from "./credits";
 import { mountAudioControls } from "../audio/player";
+import { menuIcon, type MenuIconName } from "./menu-icons";
 import { HOTBAR_SIZE, heartStates, hotbarSlots, pingLevel, shortcutFor } from "./hud-logic";
 import type { SocialStats } from "../../shared/social";
 import { statRows, statsVisible } from "./stats-logic";
@@ -60,12 +61,29 @@ function button(text: string, className: string, id: string | undefined, onClick
 }
 
 /**
- * Adds the shortcut key after a button's label, as " (G)". The key is set in the body font: in
- * the pixel font G, B and O read as 6, 8 and 0.
+ * A top-menu button: pixel icon, label and shortcut-key badge. The key is set in the body font: in
+ * the pixel font G, B and O read as 6, 8 and 0. The label and badge hide on narrow screens, so the
+ * button names itself with aria-label and shows the key in its tooltip.
  */
-function keyed(b: HTMLButtonElement, key: string): HTMLButtonElement {
-  b.appendChild(el("span", { className: "dm-btn-key", text: ` (${key})` }));
+function menuButton(label: string, icon: MenuIconName, id: string, key: string | null, onClick: () => void): HTMLButtonElement {
+  const b = button("", "dm-btn dm-btn-small hud-menu-btn", id, onClick);
+  b.appendChild(menuIcon(icon));
+  b.appendChild(el("span", { className: "dm-btn-label", text: label }));
+  if (key) {
+    b.appendChild(el("span", { className: "dm-btn-key", text: key }));
+    b.setAttribute("aria-keyshortcuts", key);
+  }
+  b.setAttribute("aria-label", label);
+  b.title = key ? `${label} (${key})` : label;
   return b;
+}
+
+/** Changes a menu button's visible label and accessible name together. */
+function setMenuLabel(b: HTMLButtonElement, label: string): void {
+  const span = b.querySelector(".dm-btn-label");
+  if (span) span.textContent = label;
+  else b.textContent = label;
+  b.setAttribute("aria-label", label);
 }
 
 function clear(node: Node): void {
@@ -138,13 +156,13 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   hud.appendChild(status);
 
   // --- menu (top-right)
-  const inventoryBtn = keyed(button("Bag", "dm-btn dm-btn-small", "hud-btn-inventory", () => toggleInventory()), "I");
-  const goalsBtn = keyed(button("Goals", "dm-btn dm-btn-small", "hud-btn-goals", () => toggleGoals()), "G");
-  const friendsBtn = keyed(button("Friends", "dm-btn dm-btn-small", "hud-btn-friends", () => menu.toggle("friends")), "O");
-  const bondsBtn = keyed(button("Hearts", "dm-btn dm-btn-small", "hud-btn-bonds", () => menu.toggle("hearts")), "H");
-  const mapBtn = keyed(button("Map", "dm-btn dm-btn-small", "hud-btn-map", () => menu.toggle("map")), "M");
-  const optionsBtn = button("Options", "dm-btn dm-btn-small", "hud-btn-options", () => menu.toggle("options"));
-  bondsBtn.title = "Relationships with villagers";
+  const inventoryBtn = menuButton("Bag", "bag", "hud-btn-inventory", "I", () => toggleInventory());
+  const goalsBtn = menuButton("Goals", "goals", "hud-btn-goals", "G", () => toggleGoals());
+  const friendsBtn = menuButton("Friends", "friends", "hud-btn-friends", "O", () => menu.toggle("friends"));
+  const bondsBtn = menuButton("Hearts", "hearts", "hud-btn-bonds", "H", () => menu.toggle("hearts"));
+  const mapBtn = menuButton("Map", "map", "hud-btn-map", "M", () => menu.toggle("map"));
+  const optionsBtn = menuButton("Options", "options", "hud-btn-options", null, () => menu.toggle("options"));
+  bondsBtn.title = "Hearts (H): relationships with villagers";
   const wardrobeBtn = game.openWardrobe
     ? button("Wardrobe", "dm-btn dm-btn-small", "hud-btn-wardrobe", () => game.openWardrobe?.())
     : null;
@@ -155,7 +173,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     uiSound("click");
     openCredits();
   });
-  const signOutBtn = button("Sign out", "dm-btn dm-btn-small", "hud-signout", () => void onSignOut());
+  const signOutBtn = menuButton("Sign out", "signout", "hud-signout", null, () => void onSignOut());
   const guestBadge = el(
     "div",
     { id: "hud-guest", className: "hud-guest" },
@@ -340,7 +358,8 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
           const text = badgeText(n);
           if (text) friendsBtn.dataset.badge = text;
           else delete friendsBtn.dataset.badge;
-          friendsBtn.title = n > 0 ? `${n} friend request${n === 1 ? "" : "s"}` : "";
+          friendsBtn.title = n > 0 ? `Friends (O): ${n} friend request${n === 1 ? "" : "s"}` : "Friends (O)";
+          friendsBtn.setAttribute("aria-label", n > 0 ? `Friends, ${n} request${n === 1 ? "" : "s"}` : "Friends");
         },
       }),
     noopFriends,
@@ -535,7 +554,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   async function onSignOut(): Promise<void> {
     if (!signOutArmed) {
       uiSound("click");
-      signOutBtn.textContent = safe("isGuest", () => game.isGuest(), false) ? "Lose guest farm?" : "Sure?";
+      setMenuLabel(signOutBtn, safe("isGuest", () => game.isGuest(), false) ? "Lose guest farm?" : "Sure?");
       signOutBtn.classList.add("dm-btn-accent");
       signOutArmed = setTimeout(disarmSignOut, 3000);
       return;
@@ -556,7 +575,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   function disarmSignOut(): void {
     if (signOutArmed) clearTimeout(signOutArmed);
     signOutArmed = null;
-    signOutBtn.textContent = "Sign out";
+    setMenuLabel(signOutBtn, "Sign out");
     signOutBtn.classList.remove("dm-btn-accent");
   }
 

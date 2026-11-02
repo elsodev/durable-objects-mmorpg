@@ -147,6 +147,92 @@
   justify-content: flex-end;
   max-width: calc(100vw - 200px);
 }
+/* Icon, label, key badge. The icons are 16 px pixel art, kept at whole-pixel sizes so they stay sharp. */
+.hud-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 7px 0 6px;
+  white-space: nowrap;
+}
+.dm-btn-icon {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.hud-menu-btn .dm-btn-label {
+  line-height: 16px;
+}
+.hud-menu-btn .dm-btn-key {
+  min-width: 15px;
+  height: 15px;
+  box-sizing: border-box;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 13px;
+  text-align: center;
+  color: var(--dm-ink-soft);
+  background: var(--dm-panel-light);
+  border: 1px solid var(--dm-border-soft);
+  border-radius: 3px;
+}
+.hud-menu-btn.dm-btn-accent .dm-btn-key {
+  display: none;
+}
+/* The sound toggle matches the menu buttons; the sliders get the same 28 px row. */
+.hud-menu .dm-audio {
+  gap: 8px;
+  height: 28px;
+  padding-left: 2px;
+}
+.hud-menu .dm-audio button {
+  height: 28px;
+  min-width: 32px;
+  padding: 0 7px;
+  box-sizing: border-box;
+  border: 2px solid var(--dm-wood-dark);
+  border-radius: 4px;
+  background: var(--dm-cream-2);
+  box-shadow: 0 2px 0 var(--dm-wood-dark);
+}
+/* Muted reads as pressed in: sunk by the shadow, still light enough for the red cross to show. */
+.hud-menu .dm-audio button[aria-pressed="true"] {
+  background: var(--dm-parchment);
+  box-shadow: inset 0 2px 0 rgba(90, 57, 32, 0.35);
+  transform: translateY(2px);
+}
+.hud-menu .dm-audio label {
+  gap: 4px;
+}
+.hud-menu .dm-audio input[type="range"] {
+  margin: 0;
+}
+
+/* Mid widths: the key badges move into the tooltips and the sliders shrink, so the bar stays one
+   row clear of the status panel. */
+@media (min-width: 761px) and (max-width: 1200px) {
+  .hud-menu {
+    gap: 4px;
+  }
+  .hud-menu .dm-btn-key {
+    display: none;
+  }
+  .hud-menu-btn {
+    gap: 4px;
+    padding: 0 6px 0 5px;
+  }
+  .hud-menu .dm-audio {
+    gap: 6px;
+  }
+  .hud-menu .dm-audio input[type="range"] {
+    width: 44px;
+  }
+}
 .hud-guest {
   display: flex;
   align-items: center;
@@ -247,9 +333,24 @@
   .hud-menu > * {
     flex: none;
   }
-  /* No keyboard on a phone. */
-  .hud-menu .dm-btn-key {
+  /* Icons only on a phone (no keyboard either); each button keeps its name in aria-label. */
+  .hud-menu .dm-btn-key,
+  .hud-menu .dm-btn-label {
     display: none;
+  }
+  .hud-menu-btn {
+    height: 32px;
+    min-width: 36px;
+    justify-content: center;
+    padding: 0 8px;
+  }
+  .hud-menu .dm-audio,
+  .hud-menu .dm-audio button {
+    height: 32px;
+  }
+  /* The armed "Sure?" needs its words. */
+  .hud-menu .hud-menu-btn.dm-btn-accent .dm-btn-label {
+    display: inline;
   }
   .hud-build-banner {
     top: auto;

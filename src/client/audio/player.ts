@@ -3,6 +3,7 @@
 import type { ZoneId } from "../../shared/types";
 import { setAudioHooks } from "../game/audio";
 import { setUiSoundPlayer } from "../ui/sound";
+import { menuIcon } from "../ui/menu-icons";
 import {
   FOOTSTEP_INTERVAL_MS,
   Throttle,
@@ -360,6 +361,8 @@ const CSS = `
 .dm-audio button:focus-visible,.dm-audio input:focus-visible{outline:2px solid var(--dm-accent,#c0395a);outline-offset:2px}
 .dm-audio button[aria-pressed="true"]{background:var(--dm-panel-inner,#b07a48);color:var(--dm-text-on-dark,#f6eed8)}
 .dm-audio label{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.dm-audio button{display:inline-flex;align-items:center;justify-content:center}
+.dm-audio-icon{width:16px;height:16px;flex:none;image-rendering:pixelated}
 .dm-audio input[type=range]{width:72px;accent-color:var(--dm-moss,#5d8a3c)}
 .dm-audio input:disabled{opacity:.5}
 `;
@@ -386,9 +389,7 @@ export function mountAudioControls(container: HTMLElement): HTMLElement {
   const slider = (id: string, label: string, channel: AudioChannel) => {
     const wrap = document.createElement("label");
     wrap.title = label;
-    const text = document.createElement("span");
-    text.textContent = channel === "music" ? "♪" : "✦";
-    text.setAttribute("aria-hidden", "true");
+    const text = menuIcon(channel === "music" ? "music" : "sfx", "dm-audio-icon");
     const input = document.createElement("input");
     input.type = "range";
     input.id = id;
@@ -407,7 +408,7 @@ export function mountAudioControls(container: HTMLElement): HTMLElement {
 
   const sync = () => {
     const muted = audio.isMuted();
-    toggle.textContent = muted ? "🔇" : "🔊";
+    toggle.replaceChildren(menuIcon(muted ? "muted" : "sound", "dm-audio-icon"));
     toggle.setAttribute("aria-pressed", String(muted));
     toggle.setAttribute("aria-label", muted ? "Unmute sound" : "Mute sound");
     toggle.title = toggle.getAttribute("aria-label")!;
