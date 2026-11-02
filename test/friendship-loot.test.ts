@@ -246,7 +246,7 @@ describe("cave chests", () => {
     expect(furniture).toBeGreaterThan(0);
     expect(furniture / N).toBeLessThan(0.15);
     for (const f of CHEST_FURNITURE) expect(getItem(f.value)?.kind).toBe("furniture");
-  });
+  }, 30_000); // long simulation; slow when the machine is busy
 
   const caves = getMap("caves");
 

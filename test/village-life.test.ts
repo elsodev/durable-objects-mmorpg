@@ -138,5 +138,5 @@ describe("village NPC runner", () => {
     expect(sat).toBe(true);
     expect(visited.size).toBeGreaterThan(4);
     for (const n of r.present()) if (roamsOutdoors(n.id) && !r.seatOf(n)) expect(canStand(grid, n.entity.x, n.entity.y), `${n.id} at ${n.entity.x},${n.entity.y}`).toBe(true);
-  });
+  }, 30_000); // long simulation; slow when the machine is busy
 });

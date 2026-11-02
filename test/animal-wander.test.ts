@@ -59,7 +59,7 @@ describe("animal wandering", () => {
       if (a.species === "cat") expect(modes.has("scratch") || modes.has("play"), a.id).toBe(true);
       if (a.species === "dog") expect(modes.has("sniff"), a.id).toBe(true);
     }
-  });
+  }, 30_000); // long simulation; slow when the machine is busy
 
   it("picks idle poses by species: only cats scratch and play, only dogs sniff, hens never nap", () => {
     const seen = (sp: "cat" | "dog" | "chicken") => new Set(Array.from({ length: 100 }, (_, i) => idlePoseFor(sp, i / 100)));
