@@ -160,6 +160,24 @@ All humanoid sheets are 64 × 64 with the feet point at (32, 60). Measure offset
    - mid-animation and after it ends;
    - that moving ends it cleanly, with no props left behind.
 
+### Climbing ladders
+
+Cave floors connect by ladders (see [json-maps.md](json-maps.md#the-cave-levels)). Stepping onto a ladder exit plays a short climb before the loading bar. It isn't a chat pose, but it is drawn the same way and works for every look, because it reuses frames every sheet already has.
+
+| Act kind | Body frame used | What happens | Ends |
+|---|---|---|---|
+| `climb_down` | `walk.up` cycle (back to the camera) | the body steps in place, sinks into the hole and is cut off at the hole's near rim by a mask, then fades over the last 15% | after `CLIMB_MS` (800 ms), then the exit is taken |
+| `climb_up` | `walk.up` cycle | the body rises up the ladder on the wall, then fades over the last 30% | after `CLIMB_MS`, then the exit is taken |
+
+How it flows:
+
+1. **Server:** in the tick, a player who steps onto an exit with `climb` set goes to `ZoneRoom.startClimb`. That stands them up, stops their motion and calls `beginClimb` (`src/shared/climb.ts`). `beginClimb` snaps the entity to `climbPoint(exit)` (the hole's centre, or the tile in front of the ladder), faces it up, and sets `entity.act` to `climb_down` or `climb_up`, so every player in the zone sees the climb. While `p.climb` is set, the player ignores every intent except chat, ping and hold. When `until` passes, the tick calls `takeExit`.
+2. **Client:** `poses.ts` draws climb acts with the look's `walk.up` frames. `climbAt(kind, age, ms, frames)` in `pose-logic.ts` gives the frame, the vertical offset, the alpha, the rim clip line and the name tag height. The `climb_down` clip is a `Graphics` mask kept in the pose extras, and it is destroyed in `clear` and `release`, like every other pose prop. While your own player has a climb act, `session.ts` pins the predictor to the server's position (as it does for sitting), so you see the climb at the same spot everyone else does.
+3. **Numbers:** `CLIMB` in `pose-logic.ts` sets the step time, sink depth, rim line and rise height. `CLIMB_MS` is shared, so the server and the client agree on the length.
+4. **Tests:** `test/climb.test.ts` covers `beginClimb`, `climbPoint` and `climbAt` (frames cycle, the body sinks or rises steadily, alpha ends at 0, the tag follows the head).
+
+Check a climb in the browser on two body types, in both directions, and on the frames around the fade.
+
 ### Common mistakes
 
 - **Effects starting from the wrong body part:** measure from the feet point using the table above, not by eye from the hands. The stream once started at chest height (−26) and read as coming from the mouth.

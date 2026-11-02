@@ -92,6 +92,7 @@ import { parseChatInput, type ChatTab, type SocialServerMsg } from "../../shared
 import type { EmoteCode } from "../../shared/emotes";
 import { emoteLine } from "../ui/chat";
 import { playerHit, tileDistance } from "./player-hit";
+import { CLIMB_ACTS } from "../../shared/climb";
 
 const HOTBAR_SLOTS = 8;
 /** Stats panel refresh while in a shared zone. */
@@ -989,8 +990,9 @@ export async function startSession(
     combatSfx.onTick(msg.upd, msg.del, store.youId, performance.now());
     farmFx.tick();
     const mine = store.youId ? msg.upd.find((e) => e.id === store.youId) : undefined;
-    if (mine?.act?.k === "sit") {
-      // On a chair: follow the server exactly, so standing up starts from the seat.
+    if (mine?.act && (mine.act.k === "sit" || CLIMB_ACTS.has(mine.act.k))) {
+      // On a chair or a ladder: follow the server exactly, so standing up starts from the seat
+      // and a climb plays where everyone else sees it (not on the tile the walk was heading to).
       predictor.reset({ x: mine.x, y: mine.y }, mine.facing);
       if (mine.hp !== undefined) hud.setHp(mine.hp, mine.maxHp ?? mine.hp);
     } else if (mine) {

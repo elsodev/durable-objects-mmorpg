@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CAVE_DEPTH_ZONES } from "../src/shared/types";
 import { MENU_TABS, menuStep, restoreTab, type MenuState } from "../src/client/ui/game-menu-logic";
 import { shortcutFor } from "../src/client/ui/hud-logic";
 import { buildingName, isTravelId, ISLAND, mapRows, TRAVEL_COOLDOWN_MS, travelRefusal } from "../src/client/ui/map-pane-logic";
@@ -104,5 +105,21 @@ describe("relationship row markers", () => {
     expect(today[2]!.on).toBe(true);
     expect(today[0]!.on).toBe(false);
     expect(rowMarkers(v({})).length).toBe(2);
+  });
+});
+
+describe("map tab in the deeper caves", () => {
+  it("pins every cave level on the caves, naming the depth", () => {
+    for (const z of CAVE_DEPTH_ZONES) {
+      const here = mapRows(z).filter((r) => r.here);
+      expect(here.map((r) => r.id)).toEqual(["caves"]);
+      expect(here[0]!.inside).toBe(`depth ${z.split("_")[1]}`);
+    }
+  });
+
+  it("fast travel only goes to the cave entrance, never a deeper floor", () => {
+    for (const z of CAVE_DEPTH_ZONES) expect(isTravelId(z)).toBe(false);
+    // From a deep floor, travelling to the caves is allowed (it takes you to the entrance).
+    expect(travelRefusal("caves", "caves_4_top", 10_000, 0)).toBeNull();
   });
 });

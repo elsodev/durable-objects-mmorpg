@@ -40,7 +40,7 @@
   ],
   "chests": 2,
   "drops": {
-    "kill": {"chance": 0.4, "table": [{"item": "ore_silver", "weight": 4, "min": 1, "max": 3}, {"item": "ore_gold", "weight": 3, "min": 1, "max": 2}, {"item": "gem_crystal", "weight": 3, "min": 1, "max": 2}, {"item": "gem_diamond", "weight": 0.3, "min": 1, "max": 1}]},
+    "kill": {"chance": 0.4, "table": [{"item": "ore_silver", "weight": 4, "min": 1, "max": 3}, {"item": "ore_gold", "weight": 3, "min": 1, "max": 2}, {"item": "gem_crystal", "weight": 3, "min": 1, "max": 2}, {"item": "gem_diamond", "weight": 0.3, "min": 1, "max": 1}, {"item": "flashlight", "weight": 0.2, "min": 1, "max": 1}]},
     "ground": {"rooms": ["vault", "west", "east"], "base": 3, "perPlayer": 0.5, "max": 7, "refillSec": 300, "table": [{"item": "ore_silver", "weight": 3, "min": 1, "max": 2}, {"item": "ore_gold", "weight": 1, "min": 1, "max": 1}, {"item": "gem_crystal", "weight": 1, "min": 1, "max": 1}]}
   }
 }
