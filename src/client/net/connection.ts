@@ -52,6 +52,8 @@ export function createConnectionWith(opts: Opts, deps: ConnectionDeps): Connecti
   let spawn: string | undefined;
   /** Owner id while connecting to someone else's home (/ws/visit/<id>). */
   let visit: string | undefined;
+  /** Copy of a busy zone the last welcome named (shared/zoneCopies.ts); kept across reconnects. */
+  let copy: number | undefined;
   let attempt = 0;
   let stopped = true;
   let queue: string[] = [];
@@ -130,7 +132,11 @@ export function createConnectionWith(opts: Opts, deps: ConnectionDeps): Connecti
 
   const handle = (msg: ServerMsg) => {
     if (msg.t === "pong") clock.pong(msg.at, msg.serverTime, deps.now());
-    else if (msg.t === "welcome") clock.hint(msg.serverTime, deps.now());
+    else if (msg.t === "welcome") {
+      clock.hint(msg.serverTime, deps.now());
+      // A dropped socket reconnects to the same copy of a busy zone, so you stay with who you were with.
+      copy = msg.copy;
+    }
     opts.onMessage(msg);
   };
 
@@ -142,7 +148,7 @@ export function createConnectionWith(opts: Opts, deps: ConnectionDeps): Connecti
     setState("connecting");
     let sock: WsLike;
     try {
-      sock = new deps.WebSocket(wsUrl(deps.location, z, spawn, visit));
+      sock = new deps.WebSocket(wsUrl(deps.location, z, spawn, visit, copy));
     } catch {
       scheduleRetry(my);
       return;
@@ -193,6 +199,7 @@ export function createConnectionWith(opts: Opts, deps: ConnectionDeps): Connecti
   return {
     connect(z, s, v) {
       teardown();
+      if (z !== zone) copy = undefined;
       zone = z;
       spawn = s;
       visit = v;

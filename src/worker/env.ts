@@ -69,6 +69,8 @@ export const H_USER_NAME = "x-dmmo-user-name";
 /** Must be sanitized with safeSpawnName(map.spawns, ...) from shared/validate.ts before use. */
 export const H_SPAWN = "x-dmmo-spawn";
 export const H_ZONE = "x-dmmo-zone";
+/** Which copy of the zone (shared/zoneCopies.ts) this join went to; "1" for the original. */
+export const H_COPY = "x-dmmo-copy";
 /** "1" when the session is a Better Auth anonymous (guest) user. Guests may only connect to their home. */
 export const H_GUEST = "x-dmmo-guest";
 /** Better Auth session id behind the socket, so the DO can re-check it (game/session.ts). */

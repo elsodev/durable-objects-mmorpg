@@ -1,4 +1,5 @@
 // Better Auth on D1: email/password, anonymous guests, optional Turnstile captcha.
+import { copyName } from "../shared/zoneCopies";
 import { betterAuth } from "better-auth";
 import { anonymous } from "better-auth/plugins/anonymous";
 import { captcha } from "better-auth/plugins/captcha";
@@ -43,11 +44,21 @@ export async function transferGuestHome(env: Env, anonId: string, newId: string,
   }
 }
 
+/** Every copy of a busy zone (shared/zoneCopies.ts): the original knows how many have run. */
+async function closeInCopies(env: Env, zone: string, userId: string, sessionId: string): Promise<void> {
+  const original = env.ZONE.get(env.ZONE.idFromName(zone));
+  await original.closeSession(userId, sessionId);
+  const n = await original.copies();
+  await Promise.allSettled(
+    Array.from({ length: n - 1 }, (_, i) => env.ZONE.get(env.ZONE.idFromName(copyName(zone, i + 2))).closeSession(userId, sessionId)),
+  );
+}
+
 /** Sign-out / revocation: close that session's sockets now instead of at the next re-check. */
 export async function closeSessionSockets(env: Env, userId: string, sessionId: string): Promise<void> {
   await Promise.allSettled([
     env.HOME.get(env.HOME.idFromName(userId)).closeSession(userId, sessionId),
-    ...SHARED_ZONES.map((z) => env.ZONE.get(env.ZONE.idFromName(z)).closeSession(userId, sessionId)),
+    ...SHARED_ZONES.map((z) => closeInCopies(env, z, userId, sessionId)),
     socialRoom(env).closeSession(userId, sessionId),
   ]);
 }

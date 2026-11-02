@@ -6,7 +6,7 @@
 // are applied synchronously and saved right away; position/hp are saved every 5 s when dirty
 // and on leave. Guests (H_GUEST=1) are refused with close code 4401.
 import { DurableObject } from "cloudflare:workers";
-import { devToolsEnabled, H_ZONE, type Env } from "./env";
+import { devToolsEnabled, H_COPY, H_ZONE, type Env } from "./env";
 import type { PlayerSave } from "./home";
 import { bumpStat, cleanStats, type PlayerStats } from "../shared/players";
 import { decodeClient, type ClientMsg, type ImpactStamp, type ServerMsg, type VillageGoal } from "../shared/protocol";
@@ -103,6 +103,8 @@ import {
 } from "../shared/engine/toolRules";
 import { endPose, POSE_ACT, POSE_MIN_INTERVAL_MS, poseRefusal, witnesses, type PoseCode } from "../shared/poses";
 import { TRAVEL_SPAWN, travelBlock, type TravelZone } from "../shared/travel";
+import { capFromEnv, copyName, FULL_HEADER, FULL_STATUS, hasRoom, isCopyNumber, parseCopy } from "../shared/zoneCopies";
+import { PlayerInterest } from "./game/interest";
 import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, sellTo, shopToday } from "./game/shop";
@@ -178,6 +180,8 @@ interface ZPlayer {
   /** While seated: where the player stood before sitting (they get up there). */
   standBack?: { x: number; y: number };
   lastAck: number | undefined;
+  /** Near changes every tick, far ones batched (game/interest.ts). */
+  interest: PlayerInterest;
   lastShop: Map<string, number>;
   /** Friendship with each villager (saved with the player). */
   bonds: Bonds;
@@ -210,6 +214,13 @@ const isSharedZone = (z: unknown): z is SharedZoneId => (SHARED_ZONES as unknown
 
 export class ZoneRoom extends DurableObject<Env> {
   private world: World | null = null;
+  /** Which copy of the zone this object runs (shared/zoneCopies.ts); 1 is the original. */
+  private copy = 1;
+  /** Joins still loading their save: they count against ZONE_CAP too. */
+  private joining = 0;
+  /** Ticks since the loop started, and the next player's far-flush phase. */
+  private tickNo = 0;
+  private nextPhase = 0;
   private players = new Map<WebSocket, ZPlayer>();
   private differ = new EntityDiffer();
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -232,6 +243,8 @@ export class ZoneRoom extends DurableObject<Env> {
     this.rates = parseDropRates(env as unknown as Record<string, unknown>);
     ctx.blockConcurrencyWhile(async () => {
       const zone = await ctx.storage.get<string>("zone");
+      const copy = await ctx.storage.get<number>("copy");
+      if (isCopyNumber(copy)) this.copy = copy;
       if (isSharedZone(zone)) await this.initWorld(zone);
       await this.loadGoals();
       // Woken from hibernation (or evicted): rebuild players from the sockets that survived,
@@ -330,17 +343,29 @@ export class ZoneRoom extends DurableObject<Env> {
     const zone = request.headers.get(H_ZONE);
     if (!this.world) {
       if (!isSharedZone(zone)) return new Response("Unknown zone", { status: 404 });
-      await this.ctx.storage.put("zone", zone);
+      const copy = parseCopy(request.headers.get(H_COPY)) ?? 1;
+      this.copy = copy;
+      await this.ctx.storage.put({ zone, copy });
       await this.initWorld(zone);
+      // The original keeps a count of its copies so sign-out can reach every one.
+      if (copy > 1) void this.original(zone).noteCopy(copy).catch(() => {});
     } else if (zone !== null && zone !== this.world.zone) {
       return new Response("Wrong zone", { status: 400 });
     }
+    // Full: the Worker tries the next copy. Someone already here (a second tab) may still replace themselves.
+    const here = [...this.players.values()].some((p) => p.userId === id.userId);
+    if (!here && !hasRoom(this.players.size, this.joining, capFromEnv((this.env as unknown as Record<string, unknown>).ZONE_CAP))) {
+      return new Response("Zone full", { status: FULL_STATUS, headers: { [FULL_HEADER]: "1" } });
+    }
 
     let save: PlayerSave;
+    this.joining++;
     try {
       save = await this.home(id.userId).loadPlayer(id.userId, id.name);
     } catch {
       return new Response("Could not load player", { status: 503 });
+    } finally {
+      this.joining--;
     }
     // A second tab replaces the first; the new lease already invalidated the old one.
     for (const p of [...this.players.values()]) {
@@ -370,6 +395,7 @@ export class ZoneRoom extends DurableObject<Env> {
     reportPresence(this.env, p.userId, world.zone, true);
     send(server, {
       t: "welcome",
+      ...(this.copy > 1 ? { copy: this.copy } : {}),
       zone: world.zone,
       you: p.entity.id,
       entities: this.allEntities(),
@@ -443,6 +469,7 @@ export class ZoneRoom extends DurableObject<Env> {
       iframeUntil: 0,
       stamina: clampStamina(save.stamina),
       lastAck: undefined,
+      interest: new PlayerInterest(this.nextPhase++),
       lastShop: new Map(),
       bonds: sanitizeBonds(save.bonds),
     };
@@ -477,6 +504,28 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   /** RPC (sign-out hook): close this session's socket, if it is in this zone. */
+  /** RPC (on the original): a copy of this zone exists; remembers the highest copy number. */
+  async noteCopy(n: number): Promise<void> {
+    if (!isCopyNumber(n)) return;
+    const known = (await this.ctx.storage.get<number>("copies")) ?? 1;
+    if (n > known) await this.ctx.storage.put("copies", n);
+  }
+
+  /** RPC (on the original): how many copies of this zone have ever run (at least 1). */
+  async copies(): Promise<number> {
+    const n = await this.ctx.storage.get<number>("copies");
+    return isCopyNumber(n) ? n : 1;
+  }
+
+  private original(zone: string) {
+    return this.env.ZONE.get(this.env.ZONE.idFromName(copyName(zone, 1)));
+  }
+
+  /** Village goals live in the original village only; copies read and donate through it. */
+  private holdsGoals(): boolean {
+    return this.world?.zone === "village" && this.copy === 1;
+  }
+
   async closeSession(userId: string, sessionId: string): Promise<void> {
     if (!sessionId) return;
     for (const p of [...this.players.values()]) {
@@ -594,9 +643,11 @@ export class ZoneRoom extends DurableObject<Env> {
       void this.ctx.storage.put("trees", world.trees.record());
     }
 
-    const { upd, del } = this.differ.diff(this.allEntities());
+    const all = this.differ.diff(this.allEntities());
+    const tickNo = this.tickNo++;
     for (const p of this.players.values()) {
       const ack = acks.get(p);
+      const { upd, del } = p.interest.filter(all.upd, all.del, p.entity, tickNo);
       if (upd.length === 0 && del.length === 0 && ack === p.lastAck) continue;
       p.lastAck = ack;
       const msg: ServerMsg = { t: "tick", at: now, upd, del };
@@ -1396,7 +1447,7 @@ export class ZoneRoom extends DurableObject<Env> {
 
   /** Generic village news for NPC memory: goal status only, never anything about players. */
   private worldFacts(): string[] {
-    const goals = this.world?.zone === "village" ? goalsView(this.goals) : (this.goalsCache?.goals ?? []);
+    const goals = this.holdsGoals() ? goalsView(this.goals) : (this.goalsCache?.goals ?? []);
     return goals.map((g) => (g.done ? `The village finished: ${g.name}.` : `The village is still working on: ${g.name}.`));
   }
 
@@ -1409,7 +1460,7 @@ export class ZoneRoom extends DurableObject<Env> {
     if (!slot || slot.qty < msg.qty) return this.reject(p, msg, "You don't have that many.");
     const item = slot.item;
 
-    if (this.world!.zone === "village") {
+    if (this.holdsGoals()) {
       const accepted = donate(this.goals, msg.goal, item, msg.qty);
       if (accepted === 0) return this.reject(p, msg, "That goal doesn't need this.");
       removeFromSlot(p.inv, msg.slot, accepted);
@@ -1465,7 +1516,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private async villageGoals(): Promise<VillageGoal[]> {
-    if (this.world?.zone === "village") return goalsView(this.goals);
+    if (this.holdsGoals()) return goalsView(this.goals);
     const now = Date.now();
     if (this.goalsCache && now - this.goalsCache.at < GOALS_CACHE_MS) return this.goalsCache.goals;
     try {

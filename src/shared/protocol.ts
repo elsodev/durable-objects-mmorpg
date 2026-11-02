@@ -118,6 +118,8 @@ export type ServerMsg =
   | {
       t: "welcome";
       zone: ZoneId;
+      /** Which copy of a busy zone you joined (shared/zoneCopies.ts); absent for the original. */
+      copy?: number;
       you: string; // your entity id
       entities: EntityState[];
       inventory: Inventory;

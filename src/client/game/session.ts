@@ -1,5 +1,6 @@
 // Session orchestrator: wires app, art, store, connection, prediction, input, camera, per-zone
 // renderers and the HUD, runs the frame loop and zone switching. See ../contracts.ts.
+import { copyTitle } from "../../shared/zoneCopies";
 import { hasFlashlight } from "../../shared/flashlight";
 import { loadArt } from "../art";
 import { createLookCompositor } from "../art/compositor";
@@ -961,7 +962,7 @@ export async function startSession(
 
     // A shop belongs to an NPC in the zone we just left.
     hud.closeShop();
-    hud.setZone(msg.zone, visiting ? `${visiting.ownerName}'s ${nextHomeMap === "home_in" ? "house" : "home"}` : m.name);
+    hud.setZone(msg.zone, visiting ? `${visiting.ownerName}'s ${nextHomeMap === "home_in" ? "house" : "home"}` : copyTitle(m.name, msg.copy));
     hud.setInventory(store.inventory);
     hud.setGoals(store.goals);
     if (me?.hp !== undefined) hud.setHp(me.hp, me.maxHp ?? me.hp);
