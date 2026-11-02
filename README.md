@@ -182,7 +182,7 @@ Bans live in `SocialRoom` storage (`ban:<userId>`, plus `banip:<ip>` for the add
 Optional services:
 
 - **Workers AI** is on by default in production (`NPC_AI_MODE=on`, model in `NPC_MODEL`). `AI_DAILY_NEURONS` caps daily spend. When the budget runs out NPCs fall back to scripted lines.
-- **AI Gateway**: `AI_GATEWAY_ID` (default `default`) routes every NPC model call through that gateway, for logs, caching and Unified Billing. Set it to `""` to call Workers AI directly.
+- **AI Gateway**: `AI_GATEWAY_ID` (default `durable-mmo`) routes every NPC model call through that gateway, for logs, caching and Unified Billing. Create a gateway with that name in the dashboard (AI → AI Gateway) or change the var to yours. Set it to `""` to call Workers AI directly.
 - **TypeSafe Jev** for typed NPC decisions runs on Workers AI as `JEV_MODEL` (default `typesafe/jev`). It is a third-party model billed through Cloudflare Unified Billing, so load credits on the account first; no TypeSafe key is needed. Set `JEV_MODEL` to `""` for rule-based decisions only. Failed or slow Jev calls (1.5 s) fall back to rules.
 - **Turnstile** captcha on sign-up and sign-in: the site key and secret above. Without a secret, production sign-up and sign-in answer 503. Set `CAPTCHA_DISABLED=1` to run without a captcha on purpose.
 
