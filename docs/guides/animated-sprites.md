@@ -56,14 +56,27 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
 - **What it is:** while a tool or weapon is the selected hotbar item, the character holds it standing and walking. Two PixiJS sprites sit on the entity container, one behind the body and one in front, and copy the body's anchor, position, scale and alpha every frame (`drawHeld` in `src/client/render/entities.ts`). Nothing is baked into the character sheets.
 - **Art:** `custom/tools/<tool>.held.bg.png` (behind) and `.held.fg.png` (in front), laid out exactly like the walk rows: 4 rows (up, left, down, right) by 9 frames of 64×64, same feet point. Frame *i* is drawn on walk frame *i*, so the tool moves with the hand on every step; standing uses frame 0. There is no offset table: the hand position is in the art.
 - **Where it comes from:** the generator's walk layers for the same tool, recoloured to the palette of the tool's action sheets so the held and swinging tool match. Tools without a walk layer get one derived by script from a similar tool (the fishing rod is cut from the hoe's).
+- **One object, three views:** the inventory icon, the held tool and the swing must be the same tool: same head shape and colour, same handle colour. A test (`test/fe-held-art.test.ts`) fails when the held colours stray from the swing sheets, or when the icon and the held tool don't share their colours both ways.
+  - The pickaxe, axe and hoe use their `items1.png` icons' colours: grey steel heads and a dark wood handle. Their swing and held sheets are recoloured to those colours together.
+  - The iron pickaxe has a blued-iron head and a walnut handle. Its icon is the pickaxe icon in those colours (`icons/tool_icons.png`).
+  - The swords keep their art's wood and copper colours, and their icons are the `items1` short sword recoloured to match.
+  - The watering can icon is drawn from the held can (staves, rim, side handle, spout), not the bucket.
+  - When you change a tool's colours, change all three views and rerun the test.
+- **Which hand:** every tool is in the character's **right** hand.
+  - Facing down, that is the viewer's left.
+  - Facing up (seen from behind), it is the viewer's right, and the tool sits mostly in `bg`, behind the body.
+  - The left and right rows follow LPC: they are mirror images, with the tool in the near hand, out in front.
+  - The test checks that the up row's pixels sit right of centre on every frame and body type, and that the side rows mirror each other.
+  - The generator's arming sword is in the left hand facing up and down. Its held rows are moved across: the walk is symmetric (mirrored frame *i* is frame `[0,5,6,7,8,1,2,3,4][i]`), so frame *i* takes that frame's sword unflipped and shifts it so the grip lands on the mirrored hand. The blade still points out to the character's right.
+- **Readability:** a tool must read as itself at game scale. The watering can is shown side-on (spout out) when facing up or down, because end-on it reads as a sack.
 - **Body types:** `custom.json` `tools.<item>.held` lists `bg` and `fg`; `bodies.<body>` replaces them for a body type the generator draws differently (the axe and pickaxes have `.held.thin.fg.png` for `male_slim` and `female`).
 - **When it shows:** players only (`EntityState.held`), and never while an action plays (the swing's own tool layers take over), while seated, or while fading out after death (`heldToShow` in `held-logic.ts`). Seeds, crops, furniture and materials are not held.
 - **Multiplayer:** the client sends `{ t: "hold", slot }` when the selected slot changes and after each welcome. The server reads the item from its own copy of the inventory (`heldItemAt` in `src/shared/held.ts`) and refreshes it after every inventory change, so the item can't be faked. Your own character shows it at once from the local inventory.
 - **Adding held art for a new tool:**
-  1. Take the tool's walk layer from the generator (or derive one by script), recolour it to the tool's action-sheet palette and lay it out as 4 × 9 cells of 64 px.
+  1. Take the tool's walk layer from the generator (or derive one by script), recolour it to the tool's action-sheet palette and lay it out as 4 × 9 cells of 64 px. Make sure the icon shows the same tool in the same colours.
   2. Split it into `bg` and `fg` the generator's way, and add per-body sheets if the slim builds need them.
   3. Add `held` to the tool's entry in `custom.json` `tools`, and credit the files.
-  4. Check it in the browser: all four facings standing and mid-walk, the hand on the handle, nothing cut off, and the layer gone during a swing.
+  4. Check it in the browser: all four facings standing and mid-walk, the hand on the handle, nothing cut off, and the layer gone during a swing. Put the hotbar icon next to it and confirm they are the same tool, in the right hand.
 
 ### Wrong-tool rebounds
 

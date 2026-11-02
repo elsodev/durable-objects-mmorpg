@@ -9675,14 +9675,14 @@
    ]
   },
   "watering_can": {
-   "file": "icons/buckets.png",
+   "file": "icons/tool_icons.png",
    "rect": [
-    0,
+    96,
     0,
     32,
     32
    ],
-   "substitute": "No LPC watering can; wooden bucket used."
+   "note": "drawn by script in the held watering can palette and shape (staves, rim, side handle, spout)"
   },
   "pickaxe": {
    "file": "icons/items1.png",
@@ -9694,34 +9694,34 @@
    ]
   },
   "pickaxe_iron": {
-   "file": "icons/items1.png",
+   "file": "icons/tool_icons.png",
    "rect": [
-    96,
+    0,
     0,
     32,
     32
    ],
-   "note": "same sprite as pickaxe (only one LPC pickaxe icon); tint in client if needed"
+   "note": "items1 pickaxe recoloured to the iron pickaxe held/swing ramp"
   },
   "sword_wood": {
-   "file": "icons/items1.png",
+   "file": "icons/tool_icons.png",
    "rect": [
-    0,
+    32,
     0,
     32,
     32
    ],
-   "note": "plain short sword"
+   "note": "items1 short sword recoloured to the wooden sword held/swing ramp"
   },
   "sword_copper": {
-   "file": "icons/items1.png",
+   "file": "icons/tool_icons.png",
    "rect": [
-    480,
-    160,
+    64,
+    0,
     32,
     32
    ],
-   "note": "gold/bronze-hilted sword"
+   "note": "items1 short sword recoloured to the copper sword held/swing ramp"
   },
   "seed_turnip": {
    "file": "icons/grains_grasses.png",

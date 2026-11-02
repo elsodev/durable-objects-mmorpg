@@ -787,7 +787,7 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - Authors: Tuomo Untinen (Reemax), Johannes Sjölund (wulax), Jetrel, Gwes, Daniel Eddeland, Lanea Zimmerman (Sharm), Nila122, pennomi, laetissima, makrohn
 - License: **CC-BY-SA 3.0 / GPL 3.0**
 - Source: https://github.com/LiberatedPixelCup/RPG_Maker_MZ_LPC_Starter_Kit (Final Attributions/Individual Assets/Tuomo Untinen/items1.png); https://github.com/DrJamgo/love2d-lpc-tiles (Attributions/Items&Effects credits.txt)
-- Notes: Item icon sheet; swords, pick-axe, hoes by Tuomo Untinen.
+- Notes: Item icon sheet; swords, pick-axe, hoes by Tuomo Untinen. The pickaxe, axe and hoe icons are the reference colours for those tools' held and swing art (custom/tools/), which is recoloured to match.
 
 ### icons/lumber.png
 - Authors: Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling)
@@ -818,6 +818,12 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - License: **CC0** (gel, stars, cells 0 and 64-96) / **CC-BY-SA 3.0 / GPL 3.0** (bat wing, cell 32: share-alike, same as monsters/bat.png)
 - Source: https://github.com/OpenGameArt/LiberatedPixelCup (sprite/original/CharlesGabriel/PNG/bat.png) for the wing
 - Notes: The gel uses colours sampled from monsters/slime.png.
+
+### icons/tool_icons.png
+- Authors: Tuomo Untinen (Reemax) (pickaxe and short sword from icons/items1.png); bluecarrot16 (the LPC watering can whose design and palette the can icon copies); recolours and the can icon by the DurableMMO project
+- License: **CC-BY-SA 3.0 / GPL 3.0** (cells 0-64: share-alike, same as icons/items1.png) / **OGA-BY 3.0+ / CC-BY 4.0+ / GPL 2.0+** (watering can, cell 96: same as the generator watering can it is drawn after; our pixels also CC0)
+- Source: https://github.com/LiberatedPixelCup/RPG_Maker_MZ_LPC_Starter_Kit (items1.png); https://opengameart.org/content/lpc-hand-tools (watering can)
+- Notes: Derivatives, made by script so each icon is the same object as the tool in the hand and in the swing. Cell 0: iron pickaxe, the items1 pickaxe recoloured to the iron pickaxe's blued-iron head and walnut handle. Cell 32: wooden sword, the items1 short sword recoloured to the wooden sword's oak palette. Cell 64: copper sword, the same sword in the copper sword's palette. Cell 96: watering can, redrawn at 32 px from the held can (staves, rim, side handle, spout) in its own six colours.
 
 ### fx/rebound_pickaxe.png, fx/rebound_axe.png, fx/rebound_hoe.png, fx/rebound_sword.png
 - Authors: DurableMMO project

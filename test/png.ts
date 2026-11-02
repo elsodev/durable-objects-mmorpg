@@ -9,7 +9,7 @@ export interface Png {
   h: number;
   /** Alpha at (x, y); 0 outside the image. */
   alpha(x: number, y: number): number;
-  /** [r, g, b, a] at (x, y) for 8-bit RGB(A) and palette images; transparent black outside. */
+  /** [r, g, b, a] at (x, y); all 0 outside the image. */
   rgba(x: number, y: number): [number, number, number, number];
 }
 
@@ -65,33 +65,30 @@ export function readPng(path: string): Png {
       out[y * stride + i] = (x + pred) & 0xff;
     }
   }
-  const alpha = (x: number, y: number): number => {
-    if (x < 0 || y < 0 || x >= w || y >= h) return 0;
+  // Only 8-bit samples for colour types other than palette, which is all the art pack uses.
+  const rgba = (x: number, y: number): [number, number, number, number] => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return [0, 0, 0, 0];
     const row = y * stride;
-    if (type === 6) return out[row + x * 4 + 3]!;
-    if (type === 4) return out[row + x * 2 + 1]!;
-    if (type === 2) return 255;
+    if (type === 6) {
+      const i = row + x * 4;
+      return [out[i]!, out[i + 1]!, out[i + 2]!, out[i + 3]!];
+    }
+    if (type === 2) {
+      const i = row + x * 3;
+      return [out[i]!, out[i + 1]!, out[i + 2]!, 255];
+    }
+    if (type === 4) return [out[row + x * 2]!, out[row + x * 2]!, out[row + x * 2]!, out[row + x * 2 + 1]!];
     if (type === 3) {
       const perByte = 8 / depth;
       const byte = out[row + Math.floor(x / perByte)]!;
       const shift = 8 - depth * ((x % perByte) + 1);
       const idx = (byte >> shift) & ((1 << depth) - 1);
-      return trns && idx < trns.length ? trns[idx]! : 255;
+      const a = trns && idx < trns.length ? trns[idx]! : 255;
+      return plte ? [plte[idx * 3]!, plte[idx * 3 + 1]!, plte[idx * 3 + 2]!, a] : [0, 0, 0, a];
     }
-    return 255;
+    const g = out[row + x]!;
+    return [g, g, g, 255];
   };
-  const rgba = (x: number, y: number): [number, number, number, number] => {
-    if (x < 0 || y < 0 || x >= w || y >= h) return [0, 0, 0, 0];
-    const row = y * stride;
-    if (type === 6) return [out[row + x * 4]!, out[row + x * 4 + 1]!, out[row + x * 4 + 2]!, out[row + x * 4 + 3]!];
-    if (type === 2) return [out[row + x * 3]!, out[row + x * 3 + 1]!, out[row + x * 3 + 2]!, 255];
-    if (type === 3 && plte) {
-      const perByte = 8 / depth;
-      const byte = out[row + Math.floor(x / perByte)]!;
-      const idx = (byte >> (8 - depth * ((x % perByte) + 1))) & ((1 << depth) - 1);
-      return [plte[idx * 3]!, plte[idx * 3 + 1]!, plte[idx * 3 + 2]!, alpha(x, y)];
-    }
-    throw new Error(`${path}: rgba() needs an 8-bit RGB(A) or palette image`);
-  };
+  const alpha = (x: number, y: number): number => rgba(x, y)[3];
   return { w, h, alpha, rgba };
 }
