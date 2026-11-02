@@ -7,7 +7,6 @@ import {
   phaseOf,
   pickProp,
   propFeet,
-  shadowSize,
   type HitEntry,
   lidBump,
 } from "../src/client/render/props-geom";
@@ -51,16 +50,6 @@ describe("fe-props geometry", () => {
     expect(phaseOf(3, 4)).toBe(phaseOf(3, 4));
     expect(phaseOf(3, 4)).toBeGreaterThanOrEqual(0);
     expect(phaseOf(3, 4)).toBeLessThan(Math.PI * 2);
-  });
-
-  it("gives every prop a positive shadow", () => {
-    for (const z of ["home", "village", "riverside", "caves"] as const)
-      for (const p of getMap(z).props) {
-        const s = shadowSize(p, { up: 2, halfW: p.w / 2 + 0.3 });
-        expect(s.w).toBeGreaterThan(0);
-        expect(s.h).toBeGreaterThan(0);
-      }
-    expect(shadowSize(bin).w).toBeGreaterThanOrEqual(2);
   });
 
   it("marks the special map props interactable", () => {

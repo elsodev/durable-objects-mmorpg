@@ -28,11 +28,6 @@ export const INTERACTABLE_TYPES: ReadonlySet<string> = new Set([
   "bench_right",
 ]);
 
-/** Walls seen from inside stand flush on the floor edge: a blob shadow under them reads as a hole. */
-export function castsShadow(p: MapProp): boolean {
-  return !p.walkable && !p.type.startsWith("iwall_") && p.type !== "stairs_up";
-}
-
 export const SWAY_TYPES: ReadonlySet<string> = new Set(["tree", "bush"]);
 
 export interface Rect {
@@ -106,19 +101,6 @@ export function pickProp(entries: readonly HitEntry[], tile: Vec2): string | nul
 export function phaseOf(x: number, y: number): number {
   const h = Math.imul(x * 73856093 ^ y * 19349663, 2654435761) >>> 0;
   return (h % 1000) / 1000 * Math.PI * 2;
-}
-
-/** Soft shadow size in tiles for a prop, from its footprint and art width. */
-export function shadowSize(p: MapProp, art?: ArtExtent): { w: number; h: number } {
-  const artW = art ? art.halfW * 2 : p.w;
-  // Fence tiles join up: a wide blob under each one reads as a row of holes along the fence.
-  if (p.type === "fence_deco") return { w: 0.9, h: 0.2 };
-  if (SWAY_TYPES.has(p.type) || p.w * p.h === 1) {
-    const w = Math.min(Math.max(p.w, artW * 0.7), 2.2);
-    return { w, h: w * 0.38 };
-  }
-  const w = Math.max(p.w, artW * 0.85) * 1.04;
-  return { w, h: Math.min(Math.max(p.h * 0.35, 0.45), 1) };
 }
 
 /**

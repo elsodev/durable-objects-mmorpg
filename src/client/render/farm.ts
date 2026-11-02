@@ -127,29 +127,6 @@ const ROCK_BASE = 0.92;
 /** A ripe crop sways gently (stretch at its base) so it reads as harvestable at a glance. */
 const READY_BOB = 0.035;
 
-/** Soft shadow: stacked translucent ellipses, unit radius, scaled per object. Shared geometry. */
-let shadowCtx: GraphicsContext | null = null;
-function shadowContext(): GraphicsContext {
-  if (!shadowCtx) {
-    shadowCtx = new GraphicsContext();
-    for (const [r, a] of [
-      [1, 0.07],
-      [0.82, 0.08],
-      [0.62, 0.09],
-    ] as const) {
-      shadowCtx.ellipse(0, 0, r, r * 0.42).fill({ color: 0x1a1210, alpha: a });
-    }
-  }
-  return shadowCtx;
-}
-
-function makeShadow(cx: number, cy: number, radiusPx: number): Graphics {
-  const g = new Graphics(shadowContext());
-  g.position.set(cx, cy);
-  g.scale.set(radiusPx);
-  return g;
-}
-
 /** Four-point star, drawn once and shared by all sparkles. */
 let sparkleCtx: GraphicsContext | null = null;
 function sparkleContext(): GraphicsContext {
@@ -176,7 +153,6 @@ function makeSprite(a: SpriteArt, x: number, y: number): Sprite {
 interface FarmView {
   soil: Container;
   crop?: Sprite;
-  shadow?: Graphics;
   sparkle?: Graphics;
   /** Per-tile phase so ready crops don't twinkle in lockstep. */
   phase: number;
@@ -184,16 +160,14 @@ interface FarmView {
 
 interface PlacedView {
   sprite: Sprite;
-  shadow?: Graphics;
 }
 
-function destroyView(v: { sprite?: Sprite; soil?: Container; crop?: Sprite; shadow?: Graphics; sparkle?: Graphics }): void {
+function destroyView(v: { sprite?: Sprite; soil?: Container; crop?: Sprite; sparkle?: Graphics }): void {
   // Soil quadrants use the art's (and BlobTextures') cached textures: free only the nodes.
   v.soil?.destroy({ children: true });
   v.crop?.destroy();
   v.sprite?.destroy();
   // Graphics built from a shared context: destroy the node, keep the context.
-  v.shadow?.destroy({ context: false });
   v.sparkle?.destroy({ context: false });
 }
 
@@ -201,8 +175,7 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
   // Own containers inside the shared layers, so destroy() cleans exactly what we added.
   const soilRoot = new Container();
   const floorRoot = new Container();
-  const shadowRoot = new Container();
-  layers.groundOverlay.addChild(soilRoot, floorRoot, shadowRoot);
+  layers.groundOverlay.addChild(soilRoot, floorRoot);
   // Sorted things must be direct children of layers.sorted to y-sort against entities.
   const sparkleRoot = new Container();
   layers.overlay.addChild(sparkleRoot);
@@ -288,9 +261,6 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
     if (tile.crop) {
       const cx = px + TILE / 2;
       const by = py + TILE * CROP_BASE;
-      // The dead plant is drawn from the small stage, so its shadow matches that.
-      view.shadow = makeShadow(cx, by, TILE * (0.18 + (v.dead ? 1 : v.stage) * 0.06));
-      shadowRoot.addChild(view.shadow);
       const j = cropJitter(tile.x, tile.y);
       view.crop = makeSprite(art.crop(tile.crop, v.stage, cropLook(v)), cx + j.dx * SCALE, by + j.dy * SCALE);
       if (j.flip) view.crop.scale.x = -SCALE;
@@ -308,11 +278,9 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
   function buildRock(r: NonNullable<MapData["rocks"]>[number]): PlacedView {
     const cx = (r.x + 0.5) * TILE;
     const by = (r.y + ROCK_BASE) * TILE;
-    const shadow = makeShadow(cx, by, TILE * 0.42);
-    shadowRoot.addChild(shadow);
     const sprite = makeSprite(art.rock(r.ore), cx, by);
     layers.sorted.addChild(sprite);
-    return { sprite, shadow };
+    return { sprite };
   }
 
   function buildObject(o: PlacedObject): PlacedView {
@@ -429,7 +397,6 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       objects.clear();
       soilRoot.destroy({ children: true });
       floorRoot.destroy({ children: true });
-      shadowRoot.destroy({ children: true, context: false });
       sparkleRoot.destroy({ children: true, context: false });
     },
   };

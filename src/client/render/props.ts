@@ -18,40 +18,9 @@ import {
   phaseOf,
   pickProp,
   propFeet,
-  shadowSize,
-  castsShadow,
   type ArtExtent,
   type HitEntry,
 } from "./props-geom";
-
-let shadowTex: Texture | null = null;
-
-/** One soft radial ellipse shared by every prop shadow (scaled per prop). */
-function shadowTexture(): Texture {
-  if (shadowTex && !shadowTex.destroyed) return shadowTex;
-  if (typeof document === "undefined") return Texture.WHITE;
-  const W = 64;
-  const H = 32;
-  const c = document.createElement("canvas");
-  c.width = W;
-  c.height = H;
-  const g = c.getContext("2d");
-  if (!g) return Texture.WHITE;
-  g.save();
-  g.scale(1, H / W);
-  const r = W / 2;
-  const grad = g.createRadialGradient(r, r, 0, r, r, r);
-  grad.addColorStop(0, "rgba(20,16,30,0.55)");
-  grad.addColorStop(0.55, "rgba(20,16,30,0.32)");
-  grad.addColorStop(1, "rgba(20,16,30,0)");
-  g.fillStyle = grad;
-  g.fillRect(0, 0, W, W);
-  g.restore();
-  const tex = Texture.from(c);
-  tex.source.scaleMode = "linear";
-  shadowTex = tex;
-  return tex;
-}
 
 function extentOf(art: SpriteArt): ArtExtent {
   const { width, height } = art.texture.frame;
@@ -240,7 +209,6 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
   /** Sprites of props that change at runtime (choppable trees), by prop id. */
   const views = new Map<string, { body: Sprite; shadow: Sprite | null }>();
   const lids = new Map<string, Lid>();
-  const shadow = shadowTexture();
 
   const fences = fenceMasks(map.props.filter((p) => p.type === "fence_deco"));
   for (const p of map.props) {
@@ -279,7 +247,7 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       body = lid.box.children[0] as Sprite;
     } else body = makeSprite(sa, fx, fy, z);
     if (p.walkable) {
-      // Rugs and mats lie on the floor: under everyone, no shadow, nothing to click.
+      // Rugs and mats lie on the floor: under everyone, nothing to click.
       layers.groundOverlay.addChild(body);
       owned.push(body);
       continue;
@@ -303,19 +271,6 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
     }
 
     if (p.type === "tree") views.set(p.id, { body, shadow: null });
-    if (!castsShadow(p)) continue;
-    const sz = shadowSize(p, ext);
-    const sh = new Sprite(shadow);
-    sh.anchor.set(0.5);
-    sh.width = sz.w * TILE;
-    sh.height = sz.h * TILE;
-    sh.position.set(fx, fy - sz.h * TILE * 0.3);
-    if (p.type === "fishing_spot") sh.alpha = 0.25;
-    sh.cullable = true;
-    layers.groundOverlay.addChild(sh);
-    owned.push(sh);
-    const v = views.get(p.id);
-    if (v) v.shadow = sh;
 
     const a = animFor(p, body);
     if (a) anims.push(a);
@@ -342,7 +297,7 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       ticker.remove(onTick);
       for (const l of lids.values()) l.destroy();
       lids.clear();
-      // Textures belong to the art module (and the shadow texture is shared), so keep them.
+      // Textures belong to the art module, so keep them.
       for (const s of owned) if (!s.destroyed) s.destroy({ children: true, texture: false, textureSource: false });
       owned.length = 0;
       hits.length = 0;
