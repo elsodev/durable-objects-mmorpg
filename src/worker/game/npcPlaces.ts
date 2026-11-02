@@ -13,6 +13,8 @@ export const PLACE_PROPS: Partial<Record<PlaceId, string>> = {
   shrine: "shrine",
   smithy_yard: "blacksmith",
   inn_porch: "inn",
+  pond: "bench_pond_1",
+  gardens: "house_nw1",
   fountain: "fountain",
   notice_board: "notice_board",
   well: "well",

@@ -3545,7 +3545,7 @@
    ],
    "anchor": [
     13,
-    14
+    24
    ],
    "footprintTiles": {
     "w": 1,
@@ -3799,18 +3799,18 @@
    "rect": [
     0,
     0,
-    184,
+    248,
     160
    ],
    "anchor": [
-    92,
+    136,
     158
    ],
    "footprintTiles": {
-    "w": 5,
-    "h": 3
+    "w": 8,
+    "h": 5
    },
-   "note": "derived: Paneled House A + hanging INN sign",
+   "note": "derived: Paneled House A widened, peach boards, hanging INN sign",
    "doorHint": "door is on the front (bottom) face"
   },
   "blacksmith": {
@@ -3897,6 +3897,158 @@
     "w": 8,
     "h": 3
    },
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_iris": {
+   "file": "buildings/house_iris.png",
+   "rect": [
+    23,
+    0,
+    144,
+    192
+   ],
+   "anchor": [
+    73,
+    190
+   ],
+   "footprintTiles": {
+    "w": 4,
+    "h": 3
+   },
+   "note": "Iris's cottage: pale stone, mossy green roof, window box",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_fenwick": {
+   "file": "buildings/house_fenwick.png",
+   "rect": [
+    23,
+    0,
+    144,
+    192
+   ],
+   "anchor": [
+    73,
+    190
+   ],
+   "footprintTiles": {
+    "w": 4,
+    "h": 3
+   },
+   "note": "Fenwick's cottage: grey stone, slate roof",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_tess": {
+   "file": "buildings/house_tess.png",
+   "rect": [
+    0,
+    0,
+    160,
+    176
+   ],
+   "anchor": [
+    80,
+    174
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 4
+   },
+   "note": "Tess's house: dark timber boards, slate roof, porch on the left",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_odette": {
+   "file": "buildings/house_odette.png",
+   "rect": [
+    0,
+    0,
+    160,
+    160
+   ],
+   "anchor": [
+    80,
+    158
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 4
+   },
+   "note": "Odette's house: sage boards, red-brown roof, window box",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_marlo": {
+   "file": "buildings/house_marlo.png",
+   "rect": [
+    0,
+    0,
+    160,
+    176
+   ],
+   "anchor": [
+    80,
+    174
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 4
+   },
+   "note": "Marlo's house: weathered blue boards, pale grey roof, chimney",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_pip": {
+   "file": "buildings/house_pip.png",
+   "rect": [
+    0,
+    0,
+    224,
+    160
+   ],
+   "anchor": [
+    112,
+    158
+   ],
+   "footprintTiles": {
+    "w": 8,
+    "h": 4
+   },
+   "note": "Pip's family house: long, butter yellow, blue roof",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_bram": {
+   "file": "buildings/house_bram.png",
+   "rect": [
+    24,
+    0,
+    208,
+    201
+   ],
+   "anchor": [
+    104,
+    199
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 4
+   },
+   "note": "Bram's house: pale stone two-storey, red tile roof",
+   "doorHint": "door is on the front (bottom) face"
+  },
+  "house_grumm": {
+   "file": "buildings/house_grumm.png",
+   "rect": [
+    24,
+    0,
+    208,
+    201
+   ],
+   "anchor": [
+    104,
+    199
+   ],
+   "footprintTiles": {
+    "w": 6,
+    "h": 4
+   },
+   "note": "Grumm's house: blue-grey stone, brown roof",
    "doorHint": "door is on the front (bottom) face"
   }
  },
@@ -4040,18 +4192,18 @@
    "rect": [
     0,
     0,
-    184,
+    248,
     160
    ],
    "anchor": [
-    92,
+    136,
     158
    ],
    "footprintTiles": {
-    "w": 5,
-    "h": 3
+    "w": 8,
+    "h": 5
    },
-   "note": "derived: Paneled House A + hanging INN sign",
+   "note": "derived: Paneled House A widened, peach boards, hanging INN sign",
    "doorHint": "door is on the front (bottom) face",
    "alias": "buildings.inn"
   },
@@ -6821,6 +6973,207 @@
    },
    "shadow": "small",
    "note": "cave treasure chest: closed, lid opening, open (frames)"
+  },
+  "bench_left": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    191,
+    1091,
+    32,
+    28
+   ],
+   "anchor": [
+    16,
+    27
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "left half of a garden bench with a backrest, seen from the front (seat faces south)"
+  },
+  "bench_right": {
+   "file": "props/decorations_medieval.png",
+   "rect": [
+    223,
+    1091,
+    34,
+    28
+   ],
+   "anchor": [
+    16,
+    27
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "right half of the same bench (includes its drop shadow)"
+  },
+  "lilypad_small": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    391,
+    107,
+    17,
+    13
+   ],
+   "anchor": [
+    8,
+    22
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   }
+  },
+  "lily_pink": {
+   "file": "props/pond_lilies.png",
+   "rect": [
+    3,
+    10,
+    25,
+    17
+   ],
+   "anchor": [
+    12,
+    24
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "derived: lily pad with a pink water lily (plants_summer)"
+  },
+  "lily_white": {
+   "file": "props/pond_lilies.png",
+   "rect": [
+    35,
+    10,
+    26,
+    16
+   ],
+   "anchor": [
+    13,
+    24
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "derived: lily pad with a white water lily (plants_summer)"
+  },
+  "water_reeds": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    456,
+    69,
+    13,
+    18
+   ],
+   "anchor": [
+    6,
+    23
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "reeds standing in shallow water, with ripples"
+  },
+  "reeds": {
+   "file": "plants/plants_summer.png",
+   "rect": [
+    263,
+    23,
+    22,
+    41
+   ],
+   "anchor": [
+    10,
+    39
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "note": "reed clump for pond banks"
+  },
+  "garden_cabbage": {
+   "file": "crops/crop_stages.png",
+   "rect": [
+    96,
+    832,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small",
+   "note": "ripe crop as a garden decoration"
+  },
+  "garden_pumpkin": {
+   "file": "crops/crop_stages.png",
+   "rect": [
+    96,
+    192,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small",
+   "note": "ripe crop as a garden decoration"
+  },
+  "garden_carrot": {
+   "file": "crops/crop_stages.png",
+   "rect": [
+    96,
+    64,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small",
+   "note": "ripe crop as a garden decoration"
+  },
+  "garden_lettuce": {
+   "file": "crops/crop_stages.png",
+   "rect": [
+    96,
+    448,
+    32,
+    64
+   ],
+   "anchor": [
+    16,
+    60
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "shadow": "small",
+   "note": "ripe crop as a garden decoration"
   }
  },
  "ores": {

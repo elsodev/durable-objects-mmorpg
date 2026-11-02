@@ -133,6 +133,22 @@ export interface Seat {
   facing: Facing;
 }
 
+/** Kinds of outdoor spots where villagers spend their day (see shared/npcHangouts.ts). */
+export const HANGOUT_KINDS = ["fountain", "pond", "dock", "garden", "market", "notice", "well", "porch", "yard"] as const;
+export type HangoutKind = (typeof HANGOUT_KINDS)[number];
+
+/** An outdoor spot a villager walks to and lingers at, facing `face` (the fountain, the water...). */
+export interface Hangout {
+  id: string;
+  kind: HangoutKind;
+  /** Tile (the villager stands at its centre). */
+  x: number;
+  y: number;
+  face: Facing;
+  /** Only this villager uses the spot (their own garden or yard). */
+  owner?: string;
+}
+
 export interface MapExit {
   /** Tile rectangle that triggers the exit when a player steps in. */
   x: number;
@@ -190,8 +206,10 @@ export interface MapData {
   floorArea?: { x: number; y: number; w: number; h: number }[];
   /** Mining nodes that can be broken (caves). */
   rocks?: { id: string; x: number; y: number; ore: RockOre }[];
-  /** Interiors: chairs and stools anyone may sit on (derived from the seat props). */
+  /** Chairs, stools and benches anyone may sit on (derived from the seat props). */
   seats?: Seat[];
+  /** Outdoor spots villagers walk between during the day (village). */
+  hangouts?: Hangout[];
   /** Interiors: wall style (side/south wall art) and floor art key (catalog `interior` floors). */
   interior?: { wall: string; floor?: string };
   /** Visual tint for the client (caves are darker). */

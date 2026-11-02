@@ -9,8 +9,17 @@ export const PROP_FOOTPRINTS = {
   rock_deco: { w: 1, h: 1 },
   house_small: { w: 4, h: 3 },
   house_large: { w: 6, h: 4 },
+  // Each villager's house has its own exterior (walls, roof, porch side, size); see village.ts.
+  house_iris: { w: 4, h: 3 },
+  house_fenwick: { w: 4, h: 3 },
+  house_tess: { w: 6, h: 4 },
+  house_odette: { w: 6, h: 4 },
+  house_marlo: { w: 6, h: 4 },
+  house_bram: { w: 6, h: 4 },
+  house_grumm: { w: 6, h: 4 },
+  house_pip: { w: 8, h: 4 },
   town_hall: { w: 8, h: 5 },
-  inn: { w: 7, h: 5 },
+  inn: { w: 8, h: 5 },
   blacksmith: { w: 6, h: 4 },
   market_stall: { w: 3, h: 2 },
   fountain: { w: 3, h: 3 },
@@ -39,7 +48,33 @@ export const PROP_FOOTPRINTS = {
   herb_patch: { w: 1, h: 1 },
   /** Rippling fishing spot, always placed on water (already blocked ground). */
   fishing_spot: { w: 1, h: 1 },
+  /** Garden bench, seen from the front; two halves side by side make one bench. Seats face south. */
+  bench_left: { w: 1, h: 1 },
+  bench_right: { w: 1, h: 1 },
+  /** Pond plants, always placed on water (flat, never block or cast a shadow). */
+  lilypad: { w: 1, h: 1 },
+  lilypad_small: { w: 1, h: 1 },
+  lily_pink: { w: 1, h: 1 },
+  lily_white: { w: 1, h: 1 },
+  water_reeds: { w: 1, h: 1 },
+  /** Reed clumps on the bank. */
+  reeds: { w: 1, h: 1 },
+  tall_grass: { w: 1, h: 1 },
+  /** Garden beds and yard clutter around the cottages. */
+  flower_bush_pink: { w: 1, h: 1 },
+  flower_bush_red: { w: 1, h: 1 },
+  flower_bush_yellow: { w: 1, h: 1 },
+  garden_cabbage: { w: 1, h: 1 },
+  garden_pumpkin: { w: 1, h: 1 },
+  garden_carrot: { w: 1, h: 1 },
+  garden_lettuce: { w: 1, h: 1 },
+  woodpile: { w: 1, h: 1 },
+  hay_bale: { w: 2, h: 1 },
+  wheelbarrow: { w: 2, h: 1 },
   ...INTERIOR_PROP_FOOTPRINTS,
 } as const satisfies Record<string, { w: number; h: number }>;
 
 export type PropType = keyof typeof PROP_FOOTPRINTS;
+
+/** Outdoor props that lie flat on the ground or water: walkable, drawn under everyone, no shadow. */
+export const FLAT_OUTDOOR_PROPS: ReadonlySet<string> = new Set(["lilypad", "lilypad_small", "lily_pink", "lily_white", "water_reeds"]);

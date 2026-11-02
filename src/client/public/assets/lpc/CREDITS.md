@@ -435,8 +435,51 @@ Derived: ElizaWy Brick House B, hue-shifted.
 
 - Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/)
 
+### buildings/house_iris.png
+Derived by a recolour script from ElizaWy LPC Brick House B, recoloured: beige brick, mossy green roof (hue shift), flower box. Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+- Flower boxes: flowers from plants/flowers.png (Sharm, Hyptosis, Eliza Wyatt, BlueCarrot16 — **OGA-BY 3.0**) in a wooden box drawn by us (**CC0**).
+
+### buildings/house_fenwick.png
+Derived by a recolour script from ElizaWy LPC Brick House B, recoloured: grey brick, dark slate roof. Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+
+### buildings/house_tess.png
+Derived by a recolour script from ElizaWy LPC Paneled House A, mirrored and recoloured: blue-grey siding, slate roof, added brick chimney (Brick Chimney A). Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+
+### buildings/house_odette.png
+Derived by a recolour script from ElizaWy LPC Paneled House A, recoloured: green siding, brown roof, flower box. Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+- Flower boxes: flowers from plants/flowers.png (Sharm, Hyptosis, Eliza Wyatt, BlueCarrot16 — **OGA-BY 3.0**) in a wooden box drawn by us (**CC0**).
+
+### buildings/house_marlo.png
+Derived by a recolour script from ElizaWy LPC Paneled House A, recoloured: blue siding, light grey roof, added brick chimney (Brick Chimney A). Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+
+### buildings/house_pip.png
+Derived by a recolour script from ElizaWy LPC Paneled House A, widened (middle columns repeated), mirrored and recoloured: yellow siding, blue roof (hue shift), two flower boxes. Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+- Flower boxes: flowers from plants/flowers.png (Sharm, Hyptosis, Eliza Wyatt, BlueCarrot16 — **OGA-BY 3.0**) in a wooden box drawn by us (**CC0**).
+
+### buildings/house_bram.png
+Derived by a recolour script from ElizaWy LPC Brick House A, mirrored and recoloured: red brick, red hipped roof. Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+
+### buildings/house_grumm.png
+Derived by a recolour script from ElizaWy LPC Brick House A, recoloured: blue-grey stone brick, brown hipped roof. Colours taken from the Roofing and Walls variant sheets.
+
+- Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/, Structure/Roofing/, Structure/Walls/, Structure/Chimneys/)
+
 ### buildings/inn.png
-Derived: ElizaWy Paneled House A + hanging "INN" sign and bracket (Reemax hanging signs, via decorations-medieval).
+Derived: ElizaWy Paneled House A, widened and recoloured (peach siding, red roof) with a flower box, plus hanging "INN" sign and bracket (Reemax hanging signs, via decorations-medieval). Flower box: flowers from plants/flowers.png (OGA-BY 3.0) in a wooden box drawn by us (CC0).
 
 - Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/)
 - Reemax (Tuomo Untinen), Lanea Zimmerman (Sharm), Xenodora, Johann C, Johannes Sjölund (wulax), Casper Nilsson, Daniel Cook, Rayane Félix (RayaneFLX), Wolthera van Hövell tot Westerflier (TheraHedwig), Hyptosis, mold, Zachariah Husiar (Zabin), Clint Bellanger, Guido Bos, Nemisys, Jetrel, Curt, William.Thompsonj, Daneeklu, Redshrike, Bertram, HughSpectrum, wulax — **CC-BY-SA 3.0 / GPL 3.0 (individual parts also CC0 / CC-BY 3.0 / OGA-BY 3.0)** — https://github.com/DrJamgo/love2d-lpc-tiles (decorations-medieval.png, see CREDITS-decorations-medieval.txt); https://opengameart.org/content/lpc-signposts-graves-line-cloths-and-scare-crow; https://opengameart.org/content/lpc-hanging-signs; https://opengameart.org/content/lpc-city-outside; https://opengameart.org/content/statues-fountains-collection; https://opengameart.org/content/lpc-style-well; https://opengameart.org/content/lpc-guido-bos-entries-cut-up; https://opengameart.org/content/rpg-tiles-cobble-stone-paths-town-objects
@@ -466,6 +509,13 @@ Derived: ElizaWy Brick House A + red banners from decorations-medieval.
 - License: **OGA-BY 3.0**
 - Source: https://github.com/ElizaWy/LPC (Objects/Furniture/); https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles; https://opengameart.org/content/lpc-modified-base-tiles; https://opengameart.org/content/lpc-upholstery; https://opengameart.org/content/lpc-dungeon-elements; https://opengameart.org/content/lpc-interior-castle-tiles
 - Notes: Per-file entries in ElizaWy/LPC Objects/Furniture/**/Credits.txt (Barrel, Chest, Ladder, Lighting: Sharm + Eliza Wyatt; Crate, Swirling Vine rug: Eliza Wyatt; Chair Dining, Single Beds: Sharm + BlueCarrot16 + Eliza Wyatt; Tables Rough Wood: Sharm + Eliza Wyatt; Planter: Sharm).
+
+### props/pond_lilies.png
+Lily pads with pink and white blossoms, cut and edited from plants/plants_summer.png (village pond).
+
+- Authors: Lanea Zimmerman (Sharm), Hyptosis, Eliza Wyatt (DeathsDarling)
+- License: **OGA-BY 3.0**
+- Source: https://github.com/ElizaWy/LPC (Terrain/plants_summer.png)
 
 ### props/bridge_broken.png
 Derived: ElizaWy Wood Bridge A with planks removed.

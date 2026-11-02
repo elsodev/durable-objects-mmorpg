@@ -24,6 +24,8 @@ export const INTERACTABLE_TYPES: ReadonlySet<string> = new Set([
   "chair_left",
   "chair_right",
   "bar_stool",
+  "bench_left",
+  "bench_right",
 ]);
 
 /** Walls seen from inside stand flush on the floor edge: a blob shadow under them reads as a hole. */

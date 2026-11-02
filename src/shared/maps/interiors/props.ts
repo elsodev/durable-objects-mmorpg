@@ -156,6 +156,8 @@ export const SEAT_FACING: Readonly<Record<string, Facing | "counter">> = {
   chair_left: "left",
   chair_right: "right",
   bar_stool: "counter",
+  bench_left: "down",
+  bench_right: "down",
 };
 
 /** Things you sit at: every seat must face one of these, on the next tile. */

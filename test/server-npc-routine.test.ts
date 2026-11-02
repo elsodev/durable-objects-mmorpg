@@ -25,7 +25,8 @@ describe("NPC routines in zone rooms", () => {
     const inn = runner("int_inn");
     const smithy = runner("int_smithy");
     expect(ids(village)).toEqual([]);
-    expect(ids(inn)).toEqual(["n:bram", "n:grumm", "n:iris", "n:marlo", "n:odette", "n:pip", "n:rue"]);
+    // Odette goes home early to her window boxes.
+    expect(ids(inn)).toEqual(["n:bram", "n:grumm", "n:iris", "n:marlo", "n:pip", "n:rue"]);
     expect(ids(smithy)).toEqual(["n:fenwick"]);
     expect(village.byEntityId("n:odette")).toBeUndefined();
     expect(village.present()).toHaveLength(0);

@@ -1,7 +1,9 @@
 // NPCs of one shared zone: wandering, reacting to chat/interact, and the AI spend limits.
 // Conversations run async next to the tick; the tick never awaits them.
-import { isInteriorZone, type EntityState, type Facing, type MapData, type NpcSpawn, type SharedZoneId, type Vec2 } from "../../shared/types";
-import { npcPresent, scheduleHour } from "../../shared/npcSchedule";
+import { isInteriorZone, type EntityState, type Facing, type MapData, type NpcSpawn, type Seat, type SharedZoneId, type Vec2 } from "../../shared/types";
+import { msToNextHour, npcNextZone, npcPresent, npcPrevZone, scheduleHour } from "../../shared/npcSchedule";
+import { pickStop, roamsOutdoors } from "../../shared/npcHangouts";
+import { BUILDING_DOORS } from "../../shared/maps/interiors/doors";
 import { bumps, canStand, dist, facingFor, findPath, isBlocked, NPC_SPEED, stepToward, withPeople, type CollisionGrid } from "../../shared/engine";
 import { isSitting, SeatBook, sitDown, standSpots, standUp, talkSpots } from "./seats";
 import { cleanChat } from "../../shared/validate";
@@ -39,6 +41,13 @@ const LINGER_MIN_MS = 5_000;
 const LINGER_MAX_MS = 15_000;
 /** Someone in the way: wait this long for them to move, then find another way (or give up). */
 const BLOCKED_WAIT_MS = 1200;
+/** Outdoors: how long a villager stays at a spot (the fountain, the pond, their garden). */
+export const OUT_LINGER_MIN_MS = 15_000;
+export const OUT_LINGER_MAX_MS = 40_000;
+/** Outdoors: someone this close at the next spot is chatted with (both turn to face each other). */
+const CHAT_RANGE = 2.6;
+/** Outdoors: a villager due indoors next hour walks to that door this long before the hour turns. */
+export const HEAD_HOME_MS = 4 * 60_000;
 
 /** A place worth walking to indoors, and which way to face once there. */
 interface Poi {
@@ -50,7 +59,7 @@ interface Poi {
 /** Who works the room and stays at their post (behind the bar) instead of sitting about. */
 const INDOOR_KEEPERS: Partial<Record<string, string>> = { int_inn: "rue" };
 
-type Goal = { kind: "seat"; seatId: string } | { kind: "poi"; face: Facing } | { kind: "wander" };
+type Goal = { kind: "seat"; seatId: string } | { kind: "poi"; face: Facing; spot?: string } | { kind: "wander" };
 /** NpcAgent RPC budget (its own model turn stops at 5 s). */
 export const MIND_TIMEOUT_MS = 6000;
 const GIFT_TIMEOUT_MS = 3000;
@@ -137,6 +146,8 @@ export class NpcRunner {
   private hourOffset = 0;
   /** Indoors NPCs walk A* paths between seats, the fire, the bar and open floor. */
   private readonly indoor: boolean;
+  /** Outdoors: the map has spots villagers walk between (the village). */
+  private readonly hangouts: NonNullable<MapData["hangouts"]>;
   private readonly pois: Poi[];
   private readonly floorTiles: Vec2[];
   private readonly lastGiftIn = new Map<string, number>();
@@ -156,6 +167,7 @@ export class NpcRunner {
   ) {
     this.zone = map.zone as SharedZoneId;
     this.indoor = isInteriorZone(this.zone);
+    this.hangouts = this.indoor ? [] : (map.hangouts ?? []);
     this.pois = this.indoor ? interiorPois(map, grid) : [];
     this.floorTiles = this.indoor ? openTiles(map, grid) : [];
     const hour = scheduleHour(Date.now());
@@ -265,12 +277,37 @@ export class NpcRunner {
       n.entity.moving = false;
       delete n.entity.status;
       if (here) {
-        n.entity.x = n.spawn.x + 0.5;
-        n.entity.y = n.spawn.y + 0.5;
+        const from = this.arrivalSpot(n, hour);
+        n.entity.x = from.x;
+        n.entity.y = from.y;
         n.entity.facing = "down";
         n.idleUntil = now + 2000;
       }
     }
+  }
+
+  /**
+   * Where an NPC appears when its routine brings it here: on the doorstep of the building it just
+   * left when that building is on this map (villagers come out of their houses in the morning),
+   * else its spot.
+   */
+  private arrivalSpot(n: NpcState, hour: number): Vec2 {
+    const prev = this.indoor ? null : npcPrevZone(n.id, hour);
+    const p = prev ? this.wayTo(prev) : null;
+    return p && canStand(this.grid, p.x, p.y) ? p : { x: n.spawn.x + 0.5, y: n.spawn.y + 0.5 };
+  }
+
+  /** Outdoors: where you stand to go to `zone` (the doorstep of its building, or the map exit). */
+  private wayTo(zone: SharedZoneId): Vec2 | null {
+    const door = BUILDING_DOORS.find((d) => d.zone === zone);
+    if (door && this.map.exits.some((e) => e.to === door.zone)) return { x: door.door.x + 0.5, y: door.door.y + 1.5 };
+    const spawn = this.map.spawns[`from_${zone}`];
+    return spawn && this.map.exits.some((e) => e.to === zone) ? { x: spawn.x, y: spawn.y } : null;
+  }
+
+  /** Outdoors: walks between spots (benches, the fountain, the pond...) instead of a short wander. */
+  private roams(n: NpcState): boolean {
+    return !this.indoor && this.hangouts.length > 0 && n.spawn.wander > 0 && roamsOutdoors(n.id);
   }
 
   nearest(p: Vec2, range: number): NpcState | null {
@@ -329,7 +366,7 @@ export class NpcRunner {
         return;
       }
     }
-    if (this.indoor && !n.target) return this.moveIndoors(n, dtMs, now);
+    if ((this.indoor || this.roams(n)) && !n.target) return this.moveIndoors(n, dtMs, now);
     if (!n.target) {
       n.entity.moving = false;
       if (now < n.idleUntil) return;
@@ -356,7 +393,7 @@ export class NpcRunner {
   }
 
   /**
-   * Indoor routine: sit a while at a free seat (often, in the inn of an evening), warm up at the
+   * Indoor routine (and outdoors for villagers who roam the village): sit a while at a free seat (often, in the inn of an evening), warm up at the
    * fire, lean on the bar, or stroll to some open floor. Every walk is an A* path on the room's
    * collision grid, so nobody cuts through furniture.
    */
@@ -385,6 +422,7 @@ export class NpcRunner {
 
   private plan(n: NpcState, now: number): void {
     n.idleUntil = now + 2000 + this.rand() * 4000;
+    if (!this.indoor) return this.planOutdoors(n, now);
     const keeper = INDOOR_KEEPERS[this.zone] === n.id;
     const evening = this.hour(now) >= 18 || this.hour(now) < 2;
     const sitChance = keeper ? 0 : this.zone === "int_inn" && evening ? 0.75 : 0.35;
@@ -403,8 +441,44 @@ export class NpcRunner {
     this.walk(n, to, { kind: "wander" });
   }
 
-  private walkToSeat(n: NpcState): boolean {
-    const free = this.seats.free();
+  /**
+   * Outdoor routine: near the end of the hour, a villager due indoors walks to that door; otherwise
+   * it picks its next stop (a spot it likes, a free bench, or back to its post).
+   */
+  private planOutdoors(n: NpcState, now: number): void {
+    const hour = this.hour(now);
+    const next = npcNextZone(n.id, hour);
+    const way = next && msToNextHour(now) <= HEAD_HOME_MS ? this.wayTo(next) : null;
+    if (way) {
+      if (dist(n.entity, way) > 0.3) this.walk(n, way, { kind: "poi", face: isInteriorZone(next!) ? "up" : "down" });
+      return;
+    }
+    const busy = new Set<string>();
+    for (const o of this.npcs) if (o !== n && o.here && o.goal?.kind === "poi" && o.goal.spot) busy.add(o.goal.spot);
+    for (const o of this.npcs) {
+      if (o === n || !o.here) continue;
+      const at = this.hangouts.find((h) => Math.floor(o.entity.x) === h.x && Math.floor(o.entity.y) === h.y);
+      if (at) busy.add(at.id);
+    }
+    const stop = pickStop(n.id, this.hangouts, this.seats.free(), this.rand, busy);
+    if (stop?.kind === "seat") {
+      if (this.walkToSeat(n, [stop.seat])) return;
+    } else if (stop?.kind === "hangout") {
+      const h = stop.hangout;
+      if (this.walk(n, { x: h.x + 0.5, y: h.y + 0.5 }, { kind: "poi", face: h.face, spot: h.id })) return;
+    }
+    // Back to (somewhere near) their own spot.
+    const home = { x: n.spawn.x + 0.5, y: n.spawn.y + 0.5 };
+    for (let i = 0; i < 6; i++) {
+      const a = this.rand() * Math.PI * 2;
+      const r = this.rand() * n.spawn.wander;
+      const p = { x: home.x + Math.cos(a) * r, y: home.y + Math.sin(a) * r };
+      if (canStand(this.grid, p.x, p.y) && this.walk(n, p, { kind: "poi", face: "down" })) return;
+    }
+  }
+
+  private walkToSeat(n: NpcState, among?: Seat[]): boolean {
+    const free = among ? among.filter((s) => this.seats.isFree(s.id)) : this.seats.free();
     for (let i = 0; i < 4 && free.length > 0; i++) {
       const seat = free.splice(Math.floor(this.rand() * free.length), 1)[0]!;
       const spot = standSpots(this.grid, seat, n.entity)[0];
@@ -460,8 +534,30 @@ export class NpcRunner {
       n.sitUntil = now + SIT_MIN_MS + this.rand() * (SIT_MAX_MS - SIT_MIN_MS);
     } else if (goal?.kind === "poi") {
       n.entity.facing = goal.face;
-      n.idleUntil = now + LINGER_MIN_MS + this.rand() * (LINGER_MAX_MS - LINGER_MIN_MS);
+      if (this.indoor) n.idleUntil = now + LINGER_MIN_MS + this.rand() * (LINGER_MAX_MS - LINGER_MIN_MS);
+      else {
+        n.idleUntil = now + OUT_LINGER_MIN_MS + this.rand() * (OUT_LINGER_MAX_MS - OUT_LINGER_MIN_MS);
+        this.chatWithNeighbour(n);
+      }
     }
+  }
+
+  /** Outdoors: someone standing about close by? Turn to each other for a chat. */
+  private chatWithNeighbour(n: NpcState): void {
+    let best: NpcState | null = null;
+    let bd = CHAT_RANGE;
+    for (const o of this.npcs) {
+      if (o === n || !o.here || o.path || o.entity.moving || isSitting(o.entity) || o.follow) continue;
+      const d = dist(o.entity, n.entity);
+      if (d < bd) {
+        bd = d;
+        best = o;
+      }
+    }
+    if (!best) return;
+    n.entity.facing = facingFor(best.entity.x - n.entity.x, best.entity.y - n.entity.y, n.entity.facing);
+    best.entity.facing = facingFor(n.entity.x - best.entity.x, n.entity.y - best.entity.y, best.entity.facing);
+    best.idleUntil = Math.max(best.idleUntil, n.idleUntil - 5000);
   }
 
   private abandon(n: NpcState, now: number): void {

@@ -2,9 +2,9 @@
 // scatter decoration deterministically. It tracks which tiles are blocked by props/rocks and
 // which tiles are "reserved" (paths, doorways, spawns) so random scatter never blocks them.
 
-import { BLOCKING_GROUND, Ground, type MapData, type MapExit, type MonsterSpawn, type NpcSpawn, type Vec2 } from "../types";
+import { BLOCKING_GROUND, Ground, type Facing, type Hangout, type MapData, type MapExit, type MonsterSpawn, type NpcSpawn, type Vec2 } from "../types";
 import { WALKABLE_PROPS } from "./interiors/props";
-import { PROP_FOOTPRINTS, type PropType } from "./props";
+import { FLAT_OUTDOOR_PROPS, PROP_FOOTPRINTS, type PropType } from "./props";
 import { Rng } from "./rng";
 
 export interface Rect {
@@ -31,6 +31,7 @@ export class MapBuilder {
   private npcs: NpcSpawn[] = [];
   private monsters: MonsterSpawn[] = [];
   private rocks: NonNullable<MapData["rocks"]> = [];
+  private hangouts: Hangout[] = [];
   private propCounters = new Map<string, number>();
 
   constructor(width: number, height: number, fill: Ground, seed: number) {
@@ -154,8 +155,8 @@ export class MapBuilder {
   prop(type: PropType, x: number, y: number, opts: { id?: string; w?: number; h?: number; label?: string } = {}): string {
     const w = opts.w ?? PROP_FOOTPRINTS[type].w;
     const h = opts.h ?? PROP_FOOTPRINTS[type].h;
-    if (WALKABLE_PROPS.has(type)) {
-      // Flat floor decoration (rugs): may lie under furniture and never blocks.
+    if (WALKABLE_PROPS.has(type) || FLAT_OUTDOOR_PROPS.has(type)) {
+      // Flat decoration (rugs, lily pads): may lie under other props and never blocks.
       const id = opts.id ?? this.nextId(type);
       this.props.push({ id, type, x, y, w, h, walkable: true });
       return id;
@@ -167,6 +168,10 @@ export class MapBuilder {
     this.props.push(opts.label ? { id, type, x, y, w, h, label: opts.label } : { id, type, x, y, w, h });
     this.markBlocked({ x, y, w, h });
     return id;
+  }
+
+  propById(id: string): MapData["props"][number] | undefined {
+    return this.props.find((p) => p.id === id);
   }
 
   /** Place a prop only if its footprint is free; returns false otherwise. */
@@ -273,6 +278,13 @@ export class MapBuilder {
     this.reserve({ x: tx - 1, y: ty - 1, w: 3, h: 3 });
   }
 
+  /** Outdoor spot villagers walk to and linger at; the tile is kept clear of scatter. */
+  hangout(kind: Hangout["kind"], tx: number, ty: number, face: Facing, owner?: string): void {
+    const id = `${kind}_${this.hangouts.filter((h) => h.kind === kind).length + 1}`;
+    this.hangouts.push(owner ? { id, kind, x: tx, y: ty, face, owner } : { id, kind, x: tx, y: ty, face });
+    this.reserve({ x: tx, y: ty, w: 1, h: 1 });
+  }
+
   monster(type: MonsterSpawn["type"], tx: number, ty: number, radius: number, count: number): void {
     this.monsters.push({ type, x: tx + 0.5, y: ty + 0.5, radius, count });
     this.reserve({ x: tx - 1, y: ty - 1, w: 3, h: 3 });
@@ -316,6 +328,7 @@ export class MapBuilder {
       monsters: this.monsters,
     };
     if (this.rocks.length) map.rocks = this.rocks;
+    if (this.hangouts.length) map.hangouts = this.hangouts;
     return map;
   }
 }

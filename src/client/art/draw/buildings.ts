@@ -206,6 +206,16 @@ export function houseLarge(): PixelGrid {
   return g;
 }
 
+/** A long single-storey house (8 tiles), for the wide village houses. */
+export function houseWide(): PixelGrid {
+  const W = 8 * T;
+  const H = 4 * T + 64;
+  const { g, wallTop } = gableHouse({ W, H, wallH: 74, wall: 0xd8b860, wallStyle: "plank", roof: 0x3f6a9a });
+  for (const x of [24, 64, W - 88, W - 48]) window(g, x, wallTop + 20);
+  door(g, 30, H - 4, 18, 32);
+  return g;
+}
+
 export function townHall(): PixelGrid {
   const W = 8 * T;
   const H = 5 * T + 80;
@@ -250,7 +260,7 @@ export function townHall(): PixelGrid {
 }
 
 export function inn(): PixelGrid {
-  const W = 7 * T;
+  const W = 8 * T;
   const H = 5 * T + 64;
   const { g, wallTop } = gableHouse({ W, H, wallH: 100, wall: 0x3f4a66, wallStyle: "plank", roof: P.roofRed, band: 60 });
   chimney(g, 44, 40, gableRoofY(W, wallTop, 44) + 4 - 40, P.brickDark, true);

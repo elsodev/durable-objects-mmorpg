@@ -4,7 +4,7 @@ import { PROP_FOOTPRINTS } from "../../../shared/maps/props";
 import type { InteriorPropType } from "../../../shared/maps/interiors/props";
 import { drawInteriorProp } from "./interior";
 import { hashStr, P, rng, shade, type Rgb } from "../palette";
-import { blacksmith, cottage, houseLarge, houseSmall, inn, townHall } from "./buildings";
+import { blacksmith, cottage, houseLarge, houseSmall, houseWide, inn, townHall } from "./buildings";
 import { PixelGrid } from "./grid";
 
 const T = 32;
@@ -458,6 +458,39 @@ function crate(seed: number): PixelGrid {
   return g;
 }
 
+/** Two-tile wooden load: a hay bale or a barrow, told apart by tone. */
+function wideLoad(tone: Rgb, wheel: boolean): PixelGrid {
+  const g = canvas(2, 1, 6);
+  g.box(4, 10, 56, 20, tone);
+  g.rect(5, 11, 54, 3, shade(tone, 0.25));
+  g.rect(4, 20, 56, 2, shade(tone, -0.3));
+  if (wheel) g.ball(52, 30, 4, 4, P.woodDark, P.woodDark, P.wood);
+  g.outline("self");
+  return g;
+}
+
+function benchHalf(left: boolean): PixelGrid {
+  const g = canvas(1, 1, 4);
+  const x = left ? 2 : 0;
+  g.box(x, 10, 30, 8, P.wood);
+  g.box(x, 19, 30, 6, P.woodLight);
+  g.rect(left ? 5 : 25, 25, 3, 7, P.woodDark);
+  return g;
+}
+
+function lilyPad(r: number, bloom?: Rgb): PixelGrid {
+  const g = canvas(1, 1, 0);
+  g.ball(16, 22, r, r * 0.6, 0x4f9a3a, 0x2f6a2a, 0x7cc05a);
+  if (bloom !== undefined) g.ball(17, 20, 3, 2, bloom, shade(bloom, -0.3), shade(bloom, 0.3));
+  return g;
+}
+
+function reedClump(): PixelGrid {
+  const g = canvas(1, 1, 18);
+  for (const x of [10, 13, 16, 19, 22]) g.vline(x, 14 + (x % 3) * 3, 34 - (x % 3) * 3, 0x7a9a3a);
+  return g;
+}
+
 type Drawer = () => PixelGrid;
 
 type OutdoorPropType = Exclude<keyof typeof PROP_FOOTPRINTS, InteriorPropType>;
@@ -490,6 +523,33 @@ const DRAWERS: Record<OutdoorPropType, Drawer> = {
   mailbox,
   herb_patch: herbPatch,
   fishing_spot: fishingSpot,
+  house_iris: () => withOutline(houseSmall()),
+  house_fenwick: () => withOutline(houseSmall()),
+  house_tess: () => withOutline(houseLarge()),
+  house_odette: () => withOutline(houseLarge()),
+  house_marlo: () => withOutline(houseLarge()),
+  house_bram: () => withOutline(houseLarge()),
+  house_grumm: () => withOutline(houseLarge()),
+  house_pip: () => withOutline(houseWide()),
+  bench_left: () => benchHalf(true),
+  bench_right: () => benchHalf(false),
+  lilypad: () => lilyPad(9),
+  lilypad_small: () => lilyPad(6),
+  lily_pink: () => lilyPad(8, 0xf27a9a),
+  lily_white: () => lilyPad(8, 0xf4f0e0),
+  water_reeds: reedClump,
+  reeds: reedClump,
+  tall_grass: reedClump,
+  flower_bush_pink: () => bush(5),
+  flower_bush_red: () => bush(7),
+  flower_bush_yellow: () => bush(11),
+  garden_cabbage: () => bush(13),
+  garden_pumpkin: () => bush(17),
+  garden_carrot: () => bush(19),
+  garden_lettuce: () => bush(23),
+  woodpile: () => crate(29),
+  hay_bale: () => wideLoad(0xd8b452, false),
+  wheelbarrow: () => wideLoad(P.wood, true),
 };
 
 function withOutline(g: PixelGrid): PixelGrid {

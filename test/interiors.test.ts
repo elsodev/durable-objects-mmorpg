@@ -17,7 +17,7 @@ import { parseWsZone, zoneAllowed } from "../src/worker/http/zone-route";
 import { NPCS } from "../src/worker/npc/catalog";
 import { musicKeyForZone } from "../src/client/audio/audio-logic";
 
-const BUILDING_TYPES = new Set(["town_hall", "inn", "blacksmith", "house_small", "house_large"]);
+const BUILDING_TYPES = new Set(["town_hall", "inn", "blacksmith", ...HOUSE_OWNERS.map((o) => `house_${o}`)]);
 const village = getMap("village");
 
 describe("village doors", () => {
