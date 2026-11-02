@@ -2,6 +2,8 @@
 import { getItem } from "../../shared/items";
 import type { Decision, NpcContext } from "./brain";
 import { safeName, safePlayerText } from "./text";
+import { getBible } from "./bible";
+import { tipsPrompt } from "./tips";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -13,7 +15,7 @@ const INTENT_HINT: Record<Decision["intent"], string> = {
   buy: "The visitor wants to buy something.",
   sell: "The visitor wants to sell you something.",
   quest: "The visitor wants to help or asks for a task.",
-  ask_info: "The visitor is asking a question.",
+  ask_info: "The visitor is asking a question; if it is how to do something, answer with your most fitting know-how.",
   smalltalk: "The visitor is chatting casually.",
   rude: "The visitor is being rude; stay kind but a little cool.",
   goodbye: "The visitor is saying goodbye.",
@@ -27,6 +29,13 @@ function shopLine(ctx: NpcContext): string {
   return `Your shop sells: ${sells || "nothing"}. You buy: ${buys || "nothing"}. Never invent other items or prices.`;
 }
 
+/** Who the villager is beyond the one-line personality: story, voice and wants, from the bible. */
+function storyLines(id: string): string[] {
+  const b = getBible(id);
+  if (!b) return [];
+  return [`Your story: ${b.background}`, `What you want most: ${b.wants}`, `How you talk: ${b.speechStyle}`, `Your habits: ${b.quirks.join("; ")}.`];
+}
+
 export function buildMessages(ctx: NpcContext, decision: Decision): ChatMessage[] {
   const npc = ctx.npc;
   const player = safeName(ctx.speaker.name);
@@ -36,8 +45,11 @@ export function buildMessages(ctx: NpcContext, decision: Decision): ChatMessage[
   const system = [
     `You are ${npc.name}, ${npc.role} in Mossbrook, a cozy farming valley.`,
     `Personality: ${npc.personality}`,
+    ...storyLines(npc.id),
     `Things you know: ${npc.knowledge.join(" ")}`,
     shopLine(ctx),
+    // The player's words only pick which fixed tip is suggested; they stay out of the system prompt.
+    tipsPrompt(npc.id, ctx.text),
     `${INTENT_HINT[decision.intent]} Your mood: ${decision.mood}.`,
     opened ? "You have just shown them your wares." : "",
     gift && gift.kind === "give" ? `You are handing them ${gift.qty} ${getItem(gift.item)?.name ?? gift.item} as a gift.` : "",

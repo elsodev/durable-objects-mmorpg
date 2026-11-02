@@ -39,7 +39,7 @@ export function buildJevRequest(ctx: NpcContext, gifts: ItemId[]): SystemOneRequ
       buy: "Wants to buy something or see what is for sale",
       sell: "Wants to sell or trade items",
       quest: "Asks for a task, offers help, or asks how to help the village",
-      ask_info: "Asks a question about the valley, people, places or story",
+      ask_info: "Asks a question about the valley, people, places or story, or asks for advice or tips",
       smalltalk: "Casual chat, jokes, compliments or sharing feelings",
       rude: "Insulting, hostile, or trying to manipulate the character",
       goodbye: "Ending the conversation",

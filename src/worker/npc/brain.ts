@@ -6,6 +6,7 @@ import { askJev, jevClient } from "./jev";
 import { buildMessages } from "./prompt";
 import { pickLine, sanitizeLine } from "./text";
 import { gatewayOptions } from "./gateway";
+import { scriptedLine } from "./tips";
 
 export type Intent = "greet" | "buy" | "sell" | "quest" | "ask_info" | "smalltalk" | "rude" | "goodbye";
 
@@ -93,7 +94,8 @@ export async function decideWith(ctx: NpcContext, env: BrainEnv, makeClient: typ
 
 /** Words for the decision. Uses Workers AI when NPC_AI_MODE !== "off"; scripted line on error/timeout. Max 200 chars. */
 export async function speak(ctx: NpcContext, decision: Decision, env: BrainEnv, timeoutMs = SPEAK_TIMEOUT_MS): Promise<string> {
-  const scripted = () => pickLine(ctx.npc, decision.intent, ctx.speaker.name);
+  // Questions and plain requests for advice get one of the villager's tips now and then.
+  const scripted = () => scriptedLine(ctx.npc, decision.intent, ctx.speaker.name, ctx.text);
   if (!aiEnabled(env) || !env.AI || !env.NPC_MODEL) return scripted();
   // Ai.run is typed per model name; NPC_MODEL is configuration, so call it through a plain signature.
   const ai = env.AI as unknown as { run(model: string, input: unknown, options?: AiOptions): Promise<unknown> };

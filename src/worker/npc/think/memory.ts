@@ -5,6 +5,7 @@ import { getItem } from "../../../shared/items";
 import { NPC_BIBLE, UNIVERSAL_NEVER, type GiftTaste, type NpcId } from "../bible";
 import { getNpc } from "../catalog";
 import { safeName, safePlayerText, stripControls } from "../text";
+import { tipsPrompt } from "../tips";
 
 export const MEMORY_VERSION = 1;
 export const MAX_FACTS = 12;
@@ -215,6 +216,9 @@ export function soulBlock(id: NpcId): string {
   return [
     `Name: ${def?.name ?? id}. Role: ${def?.role ?? ""}.`,
     `Background: ${b.background}`,
+    `What you want most: ${b.wants}`,
+    `Your secret (hint at it freely; say it plainly only to a visitor with 6 or more hearts): ${b.secret}`,
+    `Your habits: ${b.quirks.join("; ")}.`,
     `Personality: ${b.personality}`,
     `Speech style: ${b.speechStyle}`,
     `Example lines: ${b.sampleLines.map((l) => `"${l}"`).join(" ")}`,
@@ -223,7 +227,10 @@ export function soulBlock(id: NpcId): string {
     `You love to talk about: ${b.lovesToTalkAbout.join("; ")}.`,
     `Neighbours:\n${rel}`,
     `Facts you know: ${def?.knowledge.join(" ") ?? ""}`,
-  ].join("\n");
+    tipsPrompt(id),
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function factLine(f: Fact): string {
@@ -270,6 +277,13 @@ export const TOOL_GUIDE = [
   "Use tools only through tool calls. Never write a tool name, its arguments or JSON in your words: the visitor only hears what you say aloud.",
 ].join("\n");
 
+/** How tips from the soul block fit into replies: sometimes, one at a time, in character, never invented. */
+export const TIP_GUIDE = [
+  "Helping newcomers: your soul block lists valley know-how you can pass on.",
+  "Now and then, when it fits, weave one tip into your reply in your own voice; not every reply, never more than one, and never invent rules, keys, prices or places that are not listed.",
+  "When the visitor asks for advice or how to do something, answer with your most fitting tip; if none fits, point them to the neighbour who would know.",
+].join("\n");
+
 /** Top of the system prompt: identity and the hard rules. Context blocks follow it. */
 export function systemPrompt(id: NpcId): string {
   const def = getNpc(id);
@@ -281,6 +295,7 @@ export function systemPrompt(id: NpcId): string {
     ...UNIVERSAL_NEVER.map((r) => `- ${r}`),
     ...own.map((r) => `- ${r}`),
     "Reply with spoken words only: no narration, stage directions, lists, emojis or quotation marks.",
+    TIP_GUIDE,
     TOOL_GUIDE,
   ].join("\n");
 }

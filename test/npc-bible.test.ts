@@ -25,9 +25,13 @@ describe("NPC bible", () => {
 
   it.each(NPC_IDS)("%s has every field filled in", (id) => {
     const b = NPC_BIBLE[id];
-    for (const s of [b.background, b.personality, b.speechStyle]) expect(s.length).toBeGreaterThan(30);
-    expect(b.sampleLines.length).toBeGreaterThanOrEqual(3);
-    expect(b.sampleLines.length).toBeLessThanOrEqual(5);
+    for (const s of [b.background, b.personality, b.speechStyle, b.secret, b.wants]) expect(s.length).toBeGreaterThan(30);
+    // A fuller story: past, neighbours and quirks, not a one-liner.
+    expect(b.background.length).toBeGreaterThan(300);
+    expect(b.quirks.length).toBeGreaterThanOrEqual(2);
+    expect(b.sampleLines.length).toBeGreaterThanOrEqual(6);
+    expect(b.sampleLines.length).toBeLessThanOrEqual(10);
+    expect(new Set(b.sampleLines).size).toBe(b.sampleLines.length);
     for (const l of b.sampleLines) expect(l.length).toBeLessThanOrEqual(200);
     expect(b.likes.length).toBeGreaterThan(0);
     expect(b.dislikes.length).toBeGreaterThan(0);

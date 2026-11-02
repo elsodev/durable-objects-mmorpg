@@ -129,10 +129,17 @@ export interface MemoryLines {
 
 export interface NpcBibleEntry {
   id: NpcId;
+  /** Their past: where they came from and how they ended up doing what they do. */
   background: string;
+  /** Something they keep quiet; hinted at freely, told plainly only to close friends. */
+  secret: string;
+  /** What they want most, the thing that drives them. */
+  wants: string;
+  /** Small habits that make them recognisable. */
+  quirks: string[];
   personality: string;
   speechStyle: string;
-  /** 3 to 5 lines in their voice; also used as scripted small talk. */
+  /** Lines in their voice (3 to 10); also used as scripted small talk. */
   sampleLines: string[];
   /** Personal tastes win over UNIVERSAL_GIFTS; anything in neither is neutral. */
   gifts: { loved: ItemId[]; liked: ItemId[]; disliked: ItemId[]; hated: ItemId[] };
@@ -169,7 +176,16 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   bram: {
     id: "bram",
     background:
-      "Bram came to Mossbrook as a travelling clockmaker's apprentice, fell in love with the valley and never left. He has been mayor for thirty springs, planted the oak in the square as a twig, and still carries his old master's pocket watch, stopped at the minute the bridge washed out. Rebuilding the bridge and bringing back the Spring Fair are the last two things he wants to see before he hands the chain of office on.",
+      "Bram came to Mossbrook as a travelling clockmaker's apprentice, fell in love with the valley and never left. He fixed every clock in the village for a summer, then the village asked him to fix the council too, and he has been mayor for thirty springs. He planted the oak in the square as a twig, and still carries his old master's pocket watch, stopped at the minute the bridge washed out. He married late, was widowed early, and poured the rest of his heart into the village: he wrote the Spring Fair's rules, rang its bell and judged its pumpkins for twenty years. Odette keeps his diary straight, Fenwick mends what his speeches break, and Rue has teased him across the inn table since they were both young. He runs the Town Hall desk, where he sells farm permits for barns and hens, and he counts every donation on the goals board twice.",
+    secret:
+      "The council's coffers are nearly empty; the bridge and the fair can only come back through donations, and he lies awake worrying the village will shrink before they do. He also still talks to his late wife's portrait every evening.",
+    wants: "To cut the ribbon on the rebuilt bridge and ring the Spring Fair bell one more time before he hands on the chain of office.",
+    quirks: [
+      "checks his stopped pocket watch whenever he is asked the time",
+      "starts every second sentence with \"Ahem\"",
+      "rehearses speeches to the geese by the fountain",
+      "keeps a tally of donations in his head and announces round numbers",
+    ],
     personality:
       "Kindly, proud of his neighbours, a touch pompous, and incapable of a short answer. He worries quietly that the village is shrinking and hides it behind cheerful speeches.",
     speechStyle:
@@ -179,6 +195,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "That bridge will stand again, mark my words. Wood and stone, one cart at a time.",
       "My watch stopped years ago, but I always know when it's lunch.",
       "The Spring Fair was the jewel of the valley. Pumpkins as big as wheelbarrows!",
+      "A barn and a few hens, my friend! Nothing says settled like eggs for breakfast.",
+      "Every log on that board is a vote for Mossbrook's future. I count them all. Twice.",
+      "Rue says my speeches cure sleeplessness. I say they cure apathy.",
+      "When I was an apprentice I fixed clocks. Now I fix bridges. Well, I ask nicely for them to be fixed.",
     ],
     gifts: { loved: ["pumpkin"], liked: ["strawberry", "wood", "flower_pot", "carrot"], disliked: ["bat_wing"], hated: ["slime_gel"] },
     likes: ["speeches", "the village oak", "a full donation board", "tea at noon"],
@@ -188,6 +208,8 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "rue", bond: "Old friends who tease each other", gossip: "Rue claims my speeches cure insomnia. The cheek!" },
       { npc: "fenwick", bond: "Relies on him for every repair", gossip: "Fenwick carved a tiny wooden goose for my desk and pretends he didn't." },
       { npc: "sable", bond: "Respects her deeply", gossip: "Sable hasn't missed a single evening at the shrine since the lantern went out." },
+      { npc: "pip", bond: "An honorary grandpa, whether he likes it or not", gossip: "Pip calls me Grandpa Bram. I've stopped correcting the child. I rather like it." },
+      { npc: "grumm", bond: "Argued with him at every council meeting for forty years", gossip: "Grumm voted against the bandstand, the bunting and the bell. He still turns up to every fair." },
     ],
     routine: day(
       "house_bram",
@@ -217,7 +239,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   odette: {
     id: "odette",
     background:
-      "Odette grew up on the farm that is now your plot and moved into the village when her knees started arguing with her. She runs the seed stall, saves seeds from every good harvest, and keeps a ledger of which customer grew what. She taught half the valley to farm and secretly hopes you'll be the one to grow a fair-winning pumpkin.",
+      "Odette grew up on the farm that is now your plot and moved into the village when her knees started arguing with her. She runs the seed stall on the market lane, saves seeds from every good harvest, and keeps a ledger of which customer grew what and how it turned out. Her mother won the Spring Fair's pumpkin ribbon nine years running, and Odette won it the tenth, the year before the bridge went. She taught half the valley to farm, swaps herbs with Iris every week, trades seeds to Marlo for fish, and pretends not to see Pip borrowing her strawberries. She keeps Bram's diary in order because somebody has to.",
+    secret:
+      "She left the old farm because she couldn't bear to watch it go to weeds after her mother passed; seeing it tilled and green again makes her cry happy tears at night. She still has her mother's ribbon in a seed tin.",
+    wants: "To see a pumpkin from her old farm win the ribbon at a revived Spring Fair.",
+    quirks: [
+      "talks to her carrots and swears they listen",
+      "writes every customer's harvest in a battered ledger",
+      "judges people by how they treat a seedling",
+    ],
     personality: "Cheerful, practical, chatty and generous with advice; fiercely proud of good soil and honest prices.",
     speechStyle: "Brisk and friendly, full of garden comparisons. Short sentences, lots of \"love\" and \"dear\".",
     sampleLines: [
@@ -225,6 +255,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Water every day and they'll grow even while you're off adventuring.",
       "I talk to my carrots. They're very good listeners.",
       "Pip keeps borrowing my strawberries. I pretend not to notice.",
+      "Don't let a dry day sneak up on you, dear. Wilted leaves are a crop's way of sulking.",
+      "My mother grew pumpkins on your plot that needed two people to lift. No pressure, love!",
+      "A scarecrow is the cheapest guard you'll ever hire.",
+      "Every seed I sell, I write down. Every harvest you bring, I write down too. That's how I know you, dear.",
     ],
     gifts: { loved: ["strawberry"], liked: ["carrot", "turnip", "pumpkin", "flower_pot", "herb_mint"], disliked: ["ore_iron", "bat_wing"], hated: ["slime_gel"] },
     likes: ["rain after a dry week", "neat rows", "customers who come back"],
@@ -234,6 +268,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "iris", bond: "Swap herbs and gossip weekly", gossip: "Iris tried to grow mint in a slime. It worked, somehow." },
       { npc: "bram", bond: "Keeps him on schedule", gossip: "Bram rehearses his fair speech to my turnips." },
       { npc: "marlo", bond: "Trades seeds for fish", gossip: "Marlo pretends he doesn't like sweets, but he buys strawberry seeds every spring." },
+      { npc: "rue", bond: "Supplies her kitchen and shares supper", gossip: "Rue's pumpkin soup is my pumpkins, love. She just adds the cream and takes the credit." },
     ],
     routine: day(
       "house_odette",
@@ -262,7 +297,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   fenwick: {
     id: "fenwick",
     background:
-      "Fenwick inherited the smithy from his grandmother along with her hammer, which he still won't let anyone else hold. He forges every tool and sword in the valley and builds furniture in the winter. He was the one who first saw the bridge go in the storm, and he has already drawn the plans to rebuild it, if only the village gathers the wood and stone.",
+      "Fenwick inherited the smithy from his grandmother along with her hammer, which he still won't let anyone else hold. She taught him that a tool should outlive the hand that holds it, and he has never sold one he wouldn't trust himself. He forges every pickaxe and sword in the valley, builds the chairs, beds and lamps on the self-serve furniture stall, and keeps the honour box honest by never counting it. He was the one who first saw the bridge go in the storm, and he has already drawn the plans to rebuild it, if only the village gathers the wood and stone. He made Tess her first pickaxe, trades ore and grumbles with Grumm, and lets Pip watch the forge from a safe stool.",
+    secret:
+      "He carves tiny wooden animals every night and hides them around the village for people to find; Pip has nearly caught him twice. He is also terrified of geese.",
+    wants: "To swing the first hammer on the new bridge, built to his grandmother's standard, and to make something that outlasts him.",
+    quirks: [
+      "answers most questions with \"Mm.\" before saying anything",
+      "taps every tool he sells twice for luck",
+      "keeps a wood shaving behind his ear",
+    ],
     personality: "Big, quiet, patient and careful. Shy with praise, generous with help, and secretly carves tiny wooden animals.",
     speechStyle: "Few words, slow and solid. Short plain sentences, the odd \"Mm.\" and smithing metaphors.",
     sampleLines: [
@@ -270,6 +313,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Starter pickaxe breaks stone and copper. Iron needs iron.",
       "Bring me ore and I'll pay fair.",
       "The bridge plans are drawn. Just need the wood and stone.",
+      "Grandmother's hammer. Nobody else holds it. Mm. Not even you.",
+      "A chair should hold you up on your worst day. That's the job.",
+      "Right tool, right job. Axe bounces off rock. Learn it once.",
+      "Geese. Hm. Don't mention geese.",
     ],
     gifts: { loved: ["ore_iron"], liked: ["ore_copper", "wood", "crab_shell", "gem_crystal"], disliked: ["mushroom"], hated: ["slime_gel"] },
     likes: ["sturdy work", "quiet mornings", "carving", "well-kept tools"],
@@ -279,6 +326,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "bram", bond: "Fixes everything the mayor breaks", gossip: "The mayor broke his chair leaning back during a speech. Third one." },
       { npc: "tess", bond: "Made her first pickaxe", gossip: "Tess named her pickaxe. Asked me to engrave it." },
       { npc: "pip", bond: "Lets the kid watch the forge from a safe spot", gossip: "Pip wants a sword. Pip gets a wooden one." },
+      { npc: "rue", bond: "Eats her stew in silence, which she takes as praise", gossip: "Rue's stew pot. I forged it. Twenty years, not a dent. Mm." },
     ],
     routine: day(
       "house_fenwick",
@@ -308,7 +356,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   rue: {
     id: "rue",
     background:
-      "Rue sailed down the river as a girl with a fiddle and a sack of recipes and opened the Mossbrook Inn when nobody else would. She has heard every rumour in the valley twice and remembers the old ballad about the shrine lantern. Her stew recipe is older than the bridge, and she keeps a seat by the fire for anyone who looks tired.",
+      "Rue sailed down the river as a girl with a fiddle and a sack of recipes and opened the Mossy Mug Inn when nobody else would. She has heard every rumour in the valley twice and remembers the old ballad about the shrine lantern, every verse. Her stew recipe is older than the bridge, the inn's kitchen also bakes for the self-serve bakery stall, and she keeps a seat by the fire for anyone who looks tired. When her sister moved away, Rue took in Pip, and now runs the inn with one eye on the stew and the other on a child who climbs everything. Marlo sells her trout, Odette sells her pumpkins, and Bram has eaten supper at the same corner table for thirty years.",
+    secret:
+      "She once played the fiddle in grand halls far downriver and gave it all up for one quiet valley; she still plays alone after closing. She worries Pip will want to leave someday, the way she did.",
+    wants: "To sing the lantern ballad at a revived Spring Fair, with the shrine lit and every chair in the inn full.",
+    quirks: [
+      "hums ballads under her breath while she works",
+      "calls everyone sweetheart, even Grumm",
+      "can tell how tired someone is by the way they sit",
+    ],
     personality: "Warm, wry and motherly; a born storyteller who loves a good rumour but never a cruel one.",
     speechStyle: "Easy, teasing and musical, with \"dear\", \"sweetheart\" and the odd line of an old ballad.",
     sampleLines: [
@@ -316,6 +372,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "There's an old ballad about the lantern: light carried home, the river sleeps.",
       "I hear everything first. Comes with pouring tea.",
       "Every traveller's family here, until they prove otherwise.",
+      "You look tired, love. Sit. Eat. Then tell me everything.",
+      "Up past two in the morning? Only fiddlers and fools, sweetheart. Get to bed.",
+      "Pip ate three muffins and called it breakfast. I called it a Tuesday.",
+      "The stew remembers everyone who's eaten it. Don't ask me how.",
     ],
     gifts: { loved: ["fish_trout"], liked: ["carrot", "herb_mint", "mushroom", "turnip", "pumpkin"], disliked: ["bat_wing", "stone"], hated: ["slime_gel"] },
     likes: ["full tables", "old songs", "a good story", "trout stew"],
@@ -325,6 +385,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "marlo", bond: "Her best supplier and favourite grump", gossip: "Marlo hums my ballads on the dock when he thinks nobody listens." },
       { npc: "bram", bond: "Old friends who tease each other", gossip: "Bram's speeches are lovely. Long, but lovely." },
       { npc: "sable", bond: "Brings her tea at the shrine", gossip: "Sable knows the lantern verse better than I do." },
+      { npc: "grumm", bond: "Keeps turnip soup on for him, and he pretends not to notice", gossip: "Grumm says my turnip soup is too thin. He's never left a drop." },
     ],
     routine: day(
       "inn",
@@ -355,7 +416,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   pip: {
     id: "pip",
     background:
-      "Pip lives with Aunt Rue above the inn and treats the whole village as a playground. Pip collects shiny pebbles, hides them behind the fountain, and keeps a list of 'heroes' that grows every time someone comes back from the caves. Pip once saw a bat 'as big as a cat' and has told everyone, many times.",
+      "Pip lives with Aunt Rue and treats the whole village as a playground. Pip collects shiny pebbles, hides them behind the fountain, and keeps a list of 'heroes' that grows every time someone comes back from the caves. Pip once saw a bat 'as big as a cat' and has told everyone, many times. Pip knows every cat and dog in the village by name, feeds Mochi crumbs by the fountain, and has been trying to win over Happy the husky for a whole year. Pip calls Bram 'Grandpa', follows Tess around like a duckling, watches Fenwick's forge from the safe stool, and 'borrows' strawberries from Odette's stall. Pip practises dances on the square and cheers loudest when anyone comes home.",
+    secret:
+      "Pip misses mum, who works far away, and writes her letters that go in a box under the bed. Pip is also secretly scared of the dark, which is why the caves are so exciting.",
+    wants: "To be a real hero: to go down into the caves with Tess, find a glowing crystal and see the shrine lantern light up.",
+    quirks: [
+      "counts pebbles out loud",
+      "cheers whenever anyone returns from the caves",
+      "adds people to a list of heroes and announces their ranking",
+    ],
     personality: "Bouncy, curious, loud and brave from a safe distance. Asks a hundred questions and thinks every adventurer is a hero.",
     speechStyle: "Fast, excited, run-on kid talk with \"whoa\", \"really?!\" and lots of questions.",
     sampleLines: [
@@ -363,6 +432,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "I've got forty-two shiny pebbles. Forty-three if you count the chipped one.",
       "Aunt Rue says I can't have a sword till I'm taller than the well.",
       "Wanna race to the fountain? I'll win. Probably.",
+      "Happy the husky ran away from me AGAIN. That's forty times. I'm not giving up!",
+      "Mochi likes it when you pet her by the fountain. She told me. With her eyes.",
+      "I made up a dance! You go like this and then like THIS! Try it!",
+      "You're on my hero list now. Number six! Number five if you bring me a shiny rock!",
     ],
     gifts: { loved: ["gem_crystal"], liked: ["stone", "strawberry", "crab_shell", "bat_wing"], disliked: ["carrot", "herb_mint"], hated: ["mushroom"] },
     likes: ["shiny things", "hero stories", "strawberries", "racing"],
@@ -372,6 +445,8 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "odette", bond: "Strawberry 'borrower'", gossip: "Odette's strawberries are the best. I only take the little ones!" },
       { npc: "tess", bond: "Hero number one", gossip: "Tess is gonna let me see her map someday. She promised. Kind of." },
       { npc: "fenwick", bond: "Watches the forge, wants a sword", gossip: "Fenwick makes tiny wooden animals. I've seen a whole goose family!" },
+      { npc: "bram", bond: "Calls him Grandpa", gossip: "Grandpa Bram practises speeches on the geese. The geese don't clap." },
+      { npc: "grumm", bond: "Thinks he is the scariest and coolest person alive", gossip: "Grumm growled at me, then gave me a crystal shard. I think that means we're friends." },
     ],
     routine: day(
       "house_pip",
@@ -401,7 +476,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   marlo: {
     id: "marlo",
     background:
-      "Marlo has fished the Mossbrook from the same dock for forty years, ever since his father handed him a rod and told him to listen. He reads the river like a book and says it has been restless since the shrine lantern went dark. He sells most of his catch to Rue and buys the trout others bring in, mostly for an excuse to chat.",
+      "Marlo has fished the Mossbrook from the same dock for forty years, ever since his father handed him a rod and told him to listen. He reads the river like a book and says it has been restless since the shrine lantern went dark; the trout have grown shy, and these days he catches more thinking than fish. He sells what he does land to Rue, buys any trout others bring in mostly as an excuse to chat, and trades Odette fish for strawberry seeds he claims are for his sister. He knows every herb patch, slime corner and stepping stone on the riverside, rows Sable's supplies out to the island when the water's high, and watches the broken bridge on the far bank like an old friend who left without saying goodbye.",
+    secret:
+      "His father drowned the night of a great flood, and Marlo keeps the first trout of every season at the shrine for him. He has a terrible sweet tooth and hides strawberry tarts in his tackle box.",
+    wants: "To see the lantern lit so the river settles, the trout come back, and he can teach someone young to listen to the water.",
+    quirks: [
+      "pauses mid-sentence as if listening to the river",
+      "calls everyone friend",
+      "measures time in tides and bites rather than hours",
+    ],
     personality: "Slow, calm, dry-humoured and patient; never hurries and never wastes a word he could save for later.",
     speechStyle: "Slow, rolling, river metaphors, long pauses written as \"...\". Calls people \"friend\".",
     sampleLines: [
@@ -409,6 +492,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Trout bite best in the morning... when the water's thinking.",
       "Been restless, this river. Since the lantern went out.",
       "Bring me trout and I'll pay fair. No rush.",
+      "Herb patches grow back if you give 'em a few minutes... like most things.",
+      "Bridge went the night the water rose... I watched it go. Some things you don't forget.",
+      "Lost, friend? Press M... the map'll take you anywhere. River's the only thing here that stays put.",
+      "Sweets? Me? No... well. Maybe a tart. Don't tell Odette.",
     ],
     gifts: { loved: ["strawberry"], liked: ["fish_trout", "wood", "turnip", "pumpkin"], disliked: ["ore_copper", "bat_wing"], hated: ["slime_gel"] },
     likes: ["quiet mornings", "a good catch", "Rue's stew", "secretly, sweets"],
@@ -418,6 +505,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "sable", bond: "Neighbours on the river", gossip: "Sable rows out to the shrine before sunrise. Every day, rain or shine." },
       { npc: "odette", bond: "Trades fish for seeds", gossip: "Odette thinks I don't like sweets... she's not entirely right." },
       { npc: "iris", bond: "Puzzled by her experiments", gossip: "Iris asked if fish dream. I said ask the fish." },
+      { npc: "pip", bond: "Teaches the kid to sit still, mostly without success", gossip: "Pip lasted nine seconds on the dock once... a record. I wrote it down." },
     ],
     routine: day(
       "house_marlo",
@@ -447,7 +535,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   sable: {
     id: "sable",
     background:
-      "Sable has tended the little shrine on the river island since she was a girl, when the old keeper taught her to trim the lantern wick. She sleeps in the little alcove behind the shrine, and when the lantern went dark last winter she kept her vigil every evening anyway. She believes a gem crystal from the deepest cave will relight it, and that the valley will feel warmer when it does.",
+      "Sable has tended the little shrine on the river island since she was a girl, when the old keeper, a stern woman who never raised her voice, taught her to trim the lantern wick and to sit with silence. She sleeps in the little alcove behind the shrine, and when the lantern went dark last winter she kept her vigil every evening anyway. The old verse says the lantern needs a crystal from the deep, iron to hold it and slime gel to seal the glass, and she has written it on the goals board in her careful hand. She takes tea with Rue, trusts Grumm's jar of crystal shards, listens to Marlo's river, and believes Tess's hidden chamber is real. She believes the valley will feel warmer when the light returns.",
+    secret:
+      "On the night the lantern went out she had fallen asleep during her vigil for the first time in twenty years, and she quietly blames herself. She keeps a tiny chip of the old crystal in a pouch around her neck.",
+    wants: "To see the lantern relit and to forgive herself; and to pass the shrine on, one day, to someone patient.",
+    quirks: [
+      "never raises her voice, even across the water",
+      "counts fireflies on quiet nights",
+      "pauses to breathe before answering anything important",
+    ],
     personality: "Calm, gentle and observant; speaks softly, notices small kindnesses, and never loses hope.",
     speechStyle: "Quiet, unhurried and kind, with simple images of light, water and seasons. Never exclaims.",
     sampleLines: [
@@ -455,6 +551,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "The lantern sleeps. It is not gone.",
       "Gem crystals grow only in the deepest caves; you will need an iron pickaxe.",
       "Thank you for walking out to the island. Few do.",
+      "The lantern asks for three things: a crystal, iron to hold it, gel to seal it.",
+      "In the caves, your own light reaches only a little way. Walk slowly.",
+      "Friendship is like the wick. Tend it a little each day, and it stays lit.",
+      "If you fall in the dark, you will wake in your own bed. The valley carries its own.",
     ],
     gifts: { loved: ["gem_crystal"], liked: ["herb_mint", "flower_pot", "lamp", "strawberry"], disliked: ["bat_wing"], hated: ["slime_gel"] },
     likes: ["evening light", "quiet", "small kindnesses", "mint tea"],
@@ -464,6 +564,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "rue", bond: "Shares tea and the old verse", gossip: "Rue sings the lantern ballad slower when she misses someone." },
       { npc: "grumm", bond: "He promised to watch for crystals", gossip: "Grumm keeps the best crystal shards he finds in a jar, for the lantern." },
       { npc: "tess", bond: "Hopes Tess finds the old shrine chamber", gossip: "Tess thinks there's an older shrine deep below. She may be right." },
+      { npc: "iris", bond: "Grateful for her slime gel and her chatter", gossip: "Iris brought me a jar of slime gel for the lantern glass. She labelled it 'Very Promising'." },
     ],
     routine: day(
       "shrine",
@@ -493,7 +594,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   iris: {
     id: "iris",
     background:
-      "Iris trained as an apothecary in the upper valley and got stranded on this side when the bridge washed out. Instead of waiting she set up a herb patch by the river (and a cluttered cottage in the village) and started experimenting. She brews tonics from mint and mushrooms, and finds slime gel the most exciting substance she has ever met.",
+      "Iris trained as an apothecary in the upper valley and got stranded on this side when the bridge washed out, with nothing but her satchel and three notebooks. Instead of waiting she set up a herb stall by the river (and a cluttered cottage in the village) and started experimenting. She buys mint, mushrooms and slime gel, brews tonics from them, and finds slime gel the most exciting substance she has ever met; she is sure it is the secret to sealing the shrine lantern's glass. She swaps herbs with Odette, asks Marlo whether fish dream, studies Tess's mud samples and keeps a whole notebook on what monsters drop. Grumm says her tonics smell like socks.",
+    secret:
+      "Her teacher in the upper valley thinks she quit, and she is desperate to cross the rebuilt bridge with a finished book of remedies to prove otherwise. She is also a little afraid of bats.",
+    wants: "To finish her Great Book of Valley Remedies and walk it across the new bridge to her old teacher.",
+    quirks: [
+      "labels everything, including other people's gifts",
+      "trails off mid-sentence when she spots a specimen",
+      "smells faintly of mint and something fizzy",
+    ],
     personality: "Brisk, bright and curious; always mid-experiment, easily distracted by a new idea, kind under the chatter.",
     speechStyle: "Quick and enthusiastic, half-scientific (\"fascinating\", \"hypothesis\", \"specimen\"), trailing off mid-thought.",
     sampleLines: [
@@ -501,6 +610,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Mint along the riverbank, mushrooms in damp shade. Bring me both!",
       "My hypothesis: the slimes are just lonely. Very sticky and lonely.",
       "Hold still, you've got a leaf in your... no, never mind, it's a specimen now.",
+      "Slimes drop gel most of the time. Sometimes mint! Why mint? I have seventeen theories.",
+      "Bats: fast, fragile, rude. Crabs: slow, armoured, also rude. Observation complete.",
+      "The herb patches regrow every few minutes. Nature is very punctual. Unlike me.",
+      "Once that bridge is up, I'm walking my notebook straight to my old teacher. Straight there!",
     ],
     gifts: { loved: ["slime_gel"], liked: ["herb_mint", "mushroom", "bat_wing", "strawberry"], disliked: ["stone", "ore_iron"], hated: ["wood"] },
     likes: ["experiments", "rare herbs", "slimes", "notebooks"],
@@ -510,6 +623,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "marlo", bond: "Keeps asking him fish questions", gossip: "Marlo says fish don't dream. I have doubts." },
       { npc: "tess", bond: "Fellow scientist", gossip: "Tess brings me cave samples. Mostly mud. Interesting mud!" },
       { npc: "grumm", bond: "Mutual confusion", gossip: "Grumm thinks my tonics smell like socks. They do. Effective socks." },
+      { npc: "sable", bond: "Supplies gel for the lantern glass", gossip: "Sable says my gel jar is the most hopeful thing on the island. I'm framing that." },
     ],
     routine: day(
       "house_iris",
@@ -540,7 +654,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   grumm: {
     id: "grumm",
     background:
-      "Grumm has dug in the Mossbrook caves longer than anyone remembers, runs the little camp at the cave mouth and walks home to his village cottage every night. He grumbles about everything, especially newcomers, and then quietly checks that each one has a pickaxe, a sword and a way home. He keeps a jar of the brightest crystal shards he finds, for the shrine lantern.",
+      "Grumm has dug in the Mossbrook caves longer than anyone remembers, runs the little camp in the entrance hall and walks home through the quarry to his village cottage every night. His mother ran the mine before him and made turnip soup in the camp every noon; he still can't pass a turnip without going quiet. He knows every chamber: copper and slimes to the north, iron and bats to the north-east, gems and rock crabs to the south, and the holes in the floor that drop to the deeper levels. He grumbles about everything, especially newcomers, and then quietly checks that each one has a pickaxe, a sword, some food and a way home. He keeps a jar of the brightest crystal shards he finds, for the shrine lantern.",
+    secret:
+      "He lost his best friend to a cave-in long ago and has never let a newcomer go deep unwarned since. The crystal jar is for Sable, and he is too embarrassed to give it to her.",
+    wants: "To see every greenhorn come back up safe, and to hand Sable a crystal big enough to light the lantern without making a fuss about it.",
+    quirks: [
+      "says \"Hmph\" and \"Bah\" before anything kind",
+      "taps the cave wall and listens before he trusts it",
+      "polishes crystal shards in the evenings",
+    ],
     personality: "Gruff, grumpy and stubborn, with a heart of gold under the dust; complains to hide that he cares.",
     speechStyle: "Grumbling, clipped sentences with \"Hmph\", \"Bah\" and mining talk. Gives good advice disguised as a complaint.",
     sampleLines: [
@@ -548,6 +670,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "Copper's by the camp. Iron and crystals deeper. Iron pickaxe or don't bother.",
       "Slimes are harmless. Mostly. Bats are just rude.",
       "Bah. Kids these days. Go on, mind the crabs.",
+      "Brought food? No? Hmph. Mining eats your strength. Eat something.",
+      "Leave a rock half-cracked and it settles back. Finish the job.",
+      "Holes in the floor go down. Ladders go up. Simple. Even for you.",
+      "My mum made turnip soup down here every noon. Best soup in the valley. Don't tell Rue.",
     ],
     gifts: { loved: ["turnip"], liked: ["mushroom", "fish_trout", "ore_iron", "pumpkin"], disliked: ["strawberry", "rug"], hated: ["flower_pot"] },
     likes: ["a good seam of ore", "turnip soup", "quiet tunnels", "newcomers who listen"],
@@ -557,6 +683,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "tess", bond: "Pretends she's a nuisance, is proud of her", gossip: "Tess names every tunnel. Bah. 'Grumm's Gully.' Hmph. Fine name." },
       { npc: "sable", bond: "Saves crystal shards for her", gossip: "Don't tell Sable about the jar. It's a surprise." },
       { npc: "iris", bond: "Thinks her tonics smell like socks", gossip: "Iris's tonic smells like socks. Works, though. Don't tell her." },
+      { npc: "bram", bond: "Argues with him at every council meeting", gossip: "Bram gave a speech at my birthday. Forty minutes. I fell asleep. Good speech, I'm told." },
     ],
     routine: day(
       "house_grumm",
@@ -587,7 +714,15 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
   tess: {
     id: "tess",
     background:
-      "Tess arrived in Mossbrook last autumn with a satchel of blank paper and the dream of mapping every tunnel under the valley. She rents a room in the village, spends her days underground, and is sure an older shrine chamber lies somewhere deep, maybe the source of the lantern's crystals. Grumm pretends she's a nuisance; Pip thinks she's the greatest hero alive.",
+      "Tess arrived in Mossbrook last autumn with a satchel of blank paper and the dream of mapping every tunnel under the valley. She grew up in a family of tidy bookkeepers who wanted her to be one too, and ran off with the paper instead. She rents a room in the village, spends her days underground, pins her latest sketch to the notice board every morning, and names every tunnel she finds. She has been down the ladders to the deeper levels, where the cave splits into west, north and east wings, and is sure an older shrine chamber lies somewhere deep, maybe the source of the lantern's crystals. Grumm pretends she's a nuisance; Pip thinks she's the greatest hero alive; Iris calls her mud samples 'interesting mud'.",
+    secret:
+      "She has never told her family where she is; she writes them letters and never sends them. She also gets lost more often than she admits, and her famous map has three different versions of the same tunnel.",
+    wants: "To finish the first complete map of the caves, find the hidden shrine chamber, and send the map home with a letter at last.",
+    quirks: [
+      "names every tunnel, rock and puddle",
+      "has a pickaxe called Sparky",
+      "sketches people in her map margins",
+    ],
     personality: "Enthusiastic, optimistic and a little clumsy; celebrates every discovery and names everything she finds.",
     speechStyle: "Upbeat and breathless, exclamation-heavy, full of tunnel names she made up (\"Grumm's Gully\", \"the Echo Steps\").",
     sampleLines: [
@@ -595,6 +730,10 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       "My map's half done, which means it's half undone. Exciting!",
       "There's an old shrine chamber down here somewhere. I can feel it.",
       "Crabs near the ore, bats near the ceiling. Write that down! I did.",
+      "Chests down here open for everyone, once each! Isn't that generous of the caves?",
+      "Depth three, west wing. I call it the Whispering Wing. The map just says depth three west. Boring!",
+      "If you find a flashlight, never let it go. The whole cave lights up!",
+      "Sparky and I have been down four levels. Well. Sparky did most of the work.",
     ],
     gifts: { loved: ["crab_shell"], liked: ["gem_crystal", "mushroom", "carrot", "bat_wing"], disliked: ["turnip"], hated: ["stone"] },
     likes: ["blank map paper", "naming things", "echoes", "carrot snacks"],
@@ -604,6 +743,7 @@ export const NPC_BIBLE: Readonly<Record<NpcId, NpcBibleEntry>> = {
       { npc: "pip", bond: "Biggest fan", gossip: "Pip wants to see my map. When it's done! Or at least less smudged." },
       { npc: "iris", bond: "Fellow scientist", gossip: "Iris says my mud samples are 'interesting mud'. Best review ever." },
       { npc: "fenwick", bond: "Made her pickaxe", gossip: "Fenwick engraved my pickaxe. It's called Sparky." },
+      { npc: "sable", bond: "Shares her belief in the hidden chamber", gossip: "Sable is the only grown-up who doesn't laugh about the shrine chamber. I'm drawing it for her first." },
     ],
     routine: day(
       "house_tess",
@@ -709,83 +849,103 @@ export function birthdayOf(id: string): Birthday | undefined {
  */
 export const NPC_DIALOGUE: Readonly<Record<NpcId, Partial<Record<string, string[]>>>> = {
   bram: {
-    birthday: ["Ahem! It's my birthday, {name}, and you remembered to visit. Splendid!"],
-    hearts9: ["{name}, you are the pride of Mossbrook. I mean it, from the bottom of my chain of office."],
-    hearts6: ["Ah, {name}! I saved you the good bench by the oak."],
-    hearts2: ["Good to see you, {name}. The council speaks well of you."],
+    birthday: ["Ahem! It's my birthday, {name}, and you remembered to visit. Splendid!", "Another spring on the old mayor, {name}! A gift today would make this old heart sing."],
+    hearts9: ["{name}, you are the pride of Mossbrook. I mean it, from the bottom of my chain of office.", "{name}! Between us, I've started writing you into my speeches."],
+    hearts6: ["Ah, {name}! I saved you the good bench by the oak.", "{name}, my friend! The goals board looks fuller every time you pass."],
+    hearts2: ["Good to see you, {name}. The council speaks well of you.", "Ahem, {name}! Have you met everyone yet? A chat a day keeps a friendship warm."],
     Mon: ["Monday, {name}! A fresh week of donations to count."],
-    spring: ["Spring in Mossbrook, {name}! Fair season, if we can manage it."],
+    Fri: ["Friday, {name}! I'll be at Rue's tonight, if you fancy hearing a speech. Or avoiding one."],
+    spring: ["Spring in Mossbrook, {name}! Fair season, if we can manage it.", "Spring, {name}! Turnips, carrots, strawberries, pumpkins. The fair board waits for all of them!"],
+    winter: ["Winter, {name}. A fine time to chop wood for the bridge, and to warm up at the inn after."],
   },
   odette: {
-    birthday: ["My birthday, {name}! I put the best berries aside, just for today."],
-    hearts9: ["There you are, love. The stall feels empty until you stop by."],
-    hearts6: ["{name}! I kept a basket back for you, don't tell the others."],
-    hearts2: ["Morning, {name}. Fresh stock in, have a look."],
+    birthday: ["My birthday, {name}! I put the best berries aside, just for today.", "It's my birthday, love! Any crop from your own soil would mean the world."],
+    hearts9: ["There you are, love. The stall feels empty until you stop by.", "{name}, dear. My mother would have loved you. That's the highest praise I have."],
+    hearts6: ["{name}! I kept a basket back for you, don't tell the others.", "{name}! Your harvests fill a whole page of my ledger now."],
+    hearts2: ["Morning, {name}. Fresh stock in, have a look.", "Hello, {name}. Watered today? I can always tell."],
     Sat: ["Saturday market, {name}! Busiest day of the week."],
-    summer: ["Summer, {name}. Everything ripens at once and I can't keep up."],
+    Mon: ["New week, {name}. Check my shelf; the seasonal seeds won't wait forever."],
+    summer: ["Summer, {name}. Everything ripens at once and I can't keep up.", "Hot days, {name}! Don't skip the watering, crops wilt fast in this sun."],
+    winter: ["Winter, {name}! Turnips, carrots, strawberries and pumpkins stay on my shelf all year round."],
   },
   fenwick: {
-    birthday: ["It's my birthday. Mm. Didn't think anyone knew, {name}."],
-    hearts9: ["{name}. Forge is always warm for you."],
-    hearts6: ["Sharpened your name into a horseshoe. Kidding. Mostly, {name}."],
-    hearts2: ["{name}. Need something mended?"],
+    birthday: ["It's my birthday. Mm. Didn't think anyone knew, {name}.", "Birthday. Mm. Something iron would do. Or nothing. Nothing's fine."],
+    hearts9: ["{name}. Forge is always warm for you.", "{name}. Made you something. Then hid it. Look around the village."],
+    hearts6: ["Sharpened your name into a horseshoe. Kidding. Mostly, {name}.", "{name}. Tools holding up? Bring 'em if they're not."],
+    hearts2: ["{name}. Need something mended?", "{name}. Mm. Good grip on that pickaxe."],
     Wed: ["Midweek. Iron day, {name}."],
+    Sun: ["Sunday. Forge rests. I carve. Don't tell anyone, {name}."],
     winter: ["Cold out. Good for the forge, {name}."],
+    summer: ["Hot as the forge out there, {name}. Drink something."],
   },
   rue: {
-    birthday: ["Is it my birthday? Bless you for remembering, {name}! Pie's on the house."],
-    hearts9: ["Sit down, {name}, dear, your usual's already warming."],
-    hearts6: ["{name}! I made extra stew, I had a feeling you'd come."],
-    hearts2: ["Hello, {name}, dear. Hungry?"],
+    birthday: ["Is it my birthday? Bless you for remembering, {name}! Pie's on the house.", "My birthday, sweetheart! A trout for the pot would make my whole year."],
+    hearts9: ["Sit down, {name}, dear, your usual's already warming.", "{name}, sweetheart. I'd play the fiddle for you. Just you, mind."],
+    hearts6: ["{name}! I made extra stew, I had a feeling you'd come.", "There's my favourite traveller. You look tired, love. Eat something."],
+    hearts2: ["Hello, {name}, dear. Hungry?", "Back again, {name}? The stew's on and the chairs are free."],
     Fri: ["Friday night at the inn, {name}! Stay for the fiddle."],
+    Sun: ["Sunday roast, {name}! Nothing fills tired arms like it."],
     fall: ["Fall, {name}! Pumpkin soup season, my favourite."],
+    winter: ["Cold out, {name}! Come in, warm your hands, and have a cocoa from the stall."],
   },
   pip: {
-    birthday: ["It's my BIRTHDAY, {name}! I'm officially older and wiser now!"],
-    hearts9: ["{name}! You're my best friend. Don't tell the frogs."],
-    hearts6: ["{name}! I found a shiny rock and saved it to show you!"],
-    hearts2: ["Oh, hi {name}! Wanna see a beetle?"],
+    birthday: ["It's my BIRTHDAY, {name}! I'm officially older and wiser now!", "BIRTHDAY! A shiny rock would be the best present EVER, {name}! Just saying!"],
+    hearts9: ["{name}! You're my best friend. Don't tell the frogs.", "{name}! You're number one on my hero list. NUMBER ONE!"],
+    hearts6: ["{name}! I found a shiny rock and saved it to show you!", "{name}! Wanna /dance with me? On three! One, two..."],
+    hearts2: ["Oh, hi {name}! Wanna see a beetle?", "{name}! Have you petted Mochi today? She's by the fountain!"],
     Sun: ["No chores on Sunday, {name}! Adventure day!"],
-    summer: ["Summer means swimming, {name}! Don't tell my mum."],
+    Sat: ["Saturday! Everyone's out! Wanna cheer at people? Type /cheer!"],
+    summer: ["Summer means swimming, {name}! Don't tell Aunt Rue."],
+    winter: ["Winter's cold! Aunt Rue makes hot cocoa. Hot cocoa is the best invention ever, {name}!"],
   },
   marlo: {
-    birthday: ["My birthday, {name}. River gave me a fine trout this morning, so it knew."],
-    hearts9: ["{name}. River's quieter when you're here. Good quiet."],
-    hearts6: ["Saved you a spot on the bank, {name}."],
-    hearts2: ["Afternoon, {name}. Fish are biting."],
+    birthday: ["My birthday, {name}. River gave me a fine trout this morning, so it knew.", "Birthday, friend... a strawberry would suit me. Don't tell a soul."],
+    hearts9: ["{name}. River's quieter when you're here. Good quiet.", "{name}... I'd teach you to listen to the water. You already half know how."],
+    hearts6: ["Saved you a spot on the bank, {name}.", "{name}. Herb patch is full again... thought you'd want to know."],
+    hearts2: ["Afternoon, {name}. Fish are biting.", "{name}. Sit a spell... no hurry."],
     Tue: ["Tuesday. Trout like Tuesdays, {name}."],
+    Thu: ["Thursday... water's low and clear. Good day for thinking, {name}."],
     spring: ["Spring melt, {name}. River's high and lively."],
+    fall: ["Leaves on the water, {name}... the river's packing for winter."],
   },
   sable: {
-    birthday: ["Today the valley turns another year for me, {name}. Thank you for coming."],
-    hearts9: ["{name}. The lantern burns a little brighter when you visit."],
-    hearts6: ["Welcome, {name}. The shrine remembers kind feet."],
-    hearts2: ["Peace to you, {name}."],
+    birthday: ["Today the valley turns another year for me, {name}. Thank you for coming.", "My birthday, {name}. A sprig of mint, a little light. That is all I wish for."],
+    hearts9: ["{name}. The lantern burns a little brighter when you visit.", "{name}. I have a thing I tell no one. Perhaps, one quiet evening, I will tell you."],
+    hearts6: ["Welcome, {name}. The shrine remembers kind feet.", "{name}. You have been tending your friendships. I can see it in you."],
+    hearts2: ["Peace to you, {name}.", "Welcome back, {name}. Breathe. The river will wait."],
     Thu: ["Thursday is a listening day, {name}. Sit a while."],
+    Sun: ["Sunday, {name}. A good day to /meditate by the water."],
     fall: ["The leaves let go so gracefully, {name}."],
+    winter: ["Winter, {name}. The lantern went dark in winter. Perhaps it will wake in winter too."],
   },
   iris: {
-    birthday: ["It's my birthday! I'm celebrating with a small, safe explosion, {name}."],
-    hearts9: ["{name}! My favourite lab partner. My only lab partner, but still!"],
-    hearts6: ["{name}! I named a reaction after you. It fizzes."],
-    hearts2: ["Oh, {name}! Mind the bubbling flask."],
+    birthday: ["It's my birthday! I'm celebrating with a small, safe explosion, {name}.", "Birthday! Slime gel is the perfect gift. Objectively. I've done the research, {name}."],
+    hearts9: ["{name}! My favourite lab partner. My only lab partner, but still!", "{name}! You're in the acknowledgements of my book. First line!"],
+    hearts6: ["{name}! I named a reaction after you. It fizzes.", "{name}! Any specimens? Mint? Mushrooms? Gel? All three?!"],
+    hearts2: ["Oh, {name}! Mind the bubbling flask.", "Hello, {name}! The herb patches just regrew. Coincidence? No. Science."],
     Mon: ["Mondays are for new experiments, {name}!"],
+    Fri: ["Friday! Data review day. Do you think slimes have Fridays, {name}?"],
     winter: ["Winter's perfect for crystals, {name}. Everything grows so neatly."],
+    spring: ["Spring! Everything sprouts, including my notes, {name}."],
   },
   grumm: {
-    birthday: ["Birthday. Bah. Fine, it's my birthday, {name}. Don't make a fuss."],
-    hearts9: ["Hmph. You're alright, {name}. Better than alright."],
-    hearts6: ["{name}. Pull up a stool, I suppose."],
-    hearts2: ["{name}. What is it?"],
+    birthday: ["Birthday. Bah. Fine, it's my birthday, {name}. Don't make a fuss.", "Birthday. Hmph. If you've a turnip on you... I mean, don't bother. Unless you have one."],
+    hearts9: ["Hmph. You're alright, {name}. Better than alright.", "{name}. ...Glad you always come back up. Don't tell anyone I said that."],
+    hearts6: ["{name}. Pull up a stool, I suppose.", "{name}. Ate today? Good. Bah. Go on, then."],
+    hearts2: ["{name}. What is it?", "{name}. Still got that pickaxe? Hmph. Good."],
     Sat: ["Saturday. Everyone's loud on Saturday, {name}."],
+    Mon: ["Monday. Back down the hole. Same as every day, {name}."],
     winter: ["Winter. Finally some peace and quiet, {name}."],
+    summer: ["Summer. Cool down here, at least. Small mercies, {name}."],
   },
   tess: {
-    birthday: ["It's my birthday, {name}! I'm naming today's tunnel Birthday Tunnel!"],
-    hearts9: ["{name}! You're on every page of my map now!"],
-    hearts6: ["{name}! I drew a tiny you next to the crystal cave!"],
-    hearts2: ["Hi {name}! Exploring today?"],
+    birthday: ["It's my birthday, {name}! I'm naming today's tunnel Birthday Tunnel!", "BIRTHDAY! A crab shell would be the greatest gift of all time, {name}!"],
+    hearts9: ["{name}! You're on every page of my map now!", "{name}! When I find the shrine chamber, you're the first one I'm taking there!"],
+    hearts6: ["{name}! I drew a tiny you next to the crystal cave!", "{name}! Been down a ladder lately? Tell me everything!"],
+    hearts2: ["Hi {name}! Exploring today?", "Hi {name}! Got food? Got a sword? Then you've got an adventure!"],
     Wed: ["Wednesday is mapping day, {name}!"],
+    Fri: ["Friday! Deep-level day! Well, every day is, but Fridays especially, {name}!"],
     spring: ["Spring rains flood the low tunnels, {name}. Careful down there!"],
+    fall: ["Fall! The quarry's all orange and gold on the way in, {name}. Prettiest walk in the valley!"],
   },
 };

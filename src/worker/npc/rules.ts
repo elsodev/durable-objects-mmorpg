@@ -14,7 +14,7 @@ const SELL = ["sell", "selling", "trade", "buy my", "buy this", "want my"];
 const GREET = ["hi", "hello", "hey", "howdy", "greetings", "yo", "hiya", "good morning", "good afternoon", "good evening", "morning", "sup"];
 const QUEST = ["quest", "task", "job", "help", "errand", "work", "need", "donate", "goal", "fix", "repair", "rebuild", "relight", "can i do"];
 const STORY = ["lantern", "bridge", "fair", "festival", "shrine", "slime", "slimes", "bat", "bats", "crab", "crabs", "critters", "monsters", "gem", "crystal"];
-const ASK = ["who", "what", "where", "why", "how", "when", "tell me", "know", "rumor", "rumour", "news", "explain", "story"];
+const ASK = ["who", "what", "where", "why", "how", "when", "tell me", "know", "rumor", "rumour", "news", "explain", "story", "tip", "tips", "advice", "hint", "hints", "teach"];
 
 /** Lowercase words separated by single spaces, so phrases match on word boundaries. */
 export function normalize(text: string): string {

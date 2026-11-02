@@ -171,7 +171,7 @@ export class NpcAgent extends Think<Env> {
       let result: ConverseResult | null = null;
       if (req.ai && this.aiAvailable()) result = await this.modelTurn(npcId, userId, mem, req).catch(() => null);
       if (!result) {
-        const reply = scriptedReply(npcId, mem, req.context.intent, req.context.interact, Math.random, this.situation ?? undefined);
+        const reply = scriptedReply(npcId, mem, req.context.intent, req.context.interact, Math.random, this.situation ?? undefined, req.text);
         await this.log(turnInput(req.playerName, req.text), reply);
         result = { reply, intents: [], source: "scripted" };
       }

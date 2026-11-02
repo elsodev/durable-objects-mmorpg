@@ -252,6 +252,8 @@ const NOT_DROPS: Record<string, string[]> = {
   // Happy the husky bolting from a pet or running off with a meal: behaviour, not a drop.
   "src/shared/mischief.ts": ["rand() < (atHome ? m.homeRun : m.run)", "rand() < (atHome ? m.homeSnatch : m.snatch)"],
   "src/worker/npc/think/scripted.ts": ['rand() < 0.5'],
+  // Whether a scripted answer is a game tip: NPC chatter, not a drop.
+  "src/worker/npc/tips.ts": ["rand() < TIP_CHANCE"],
 };
 
 describe("every drop roll goes through the drop-rate helper (source scan)", () => {

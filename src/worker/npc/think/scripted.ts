@@ -7,6 +7,7 @@ import { getNpc } from "../catalog";
 import type { Intent } from "../brain";
 import { clampLine, pickLine, safeName } from "../text";
 import { itemName, lastGift, type Fact, type PairMemory } from "./memory";
+import { pickTip, shouldTip } from "../tips";
 
 export interface Fill {
   name: string;
@@ -59,9 +60,19 @@ export function keyedGreeting(id: NpcId, sit: Situation | undefined): { key: str
  * A reply in the NPC's voice. `mem` is the memory BEFORE this talk is counted, so talks === 0
  * means a first meeting. Greetings pick by situation key first (a birthday always wins; hearts,
  * weekday and season lines take turns with the memory lines), then memory (name, last gift, a
- * fact); other intents use the catalog lines for that intent.
+ * fact); other intents use the catalog lines for that intent, or one of the villager's tips when
+ * the player asked for advice (always) or asked a question (sometimes). `text` is the player's
+ * words, used only to choose among fixed lines.
  */
-export function scriptedReply(id: NpcId, mem: PairMemory, intent: Intent, interact: boolean, rand: () => number, sit?: Situation): string {
+export function scriptedReply(
+  id: NpcId,
+  mem: PairMemory,
+  intent: Intent,
+  interact: boolean,
+  rand: () => number,
+  sit?: Situation,
+  text = "",
+): string {
   const def = getNpc(id);
   const lines = NPC_BIBLE[id].memoryLines;
   const name = mem.playerName;
@@ -76,6 +87,10 @@ export function scriptedReply(id: NpcId, mem: PairMemory, intent: Intent, intera
     const facts = mem.facts.map(factForRecall).filter((f): f is string => !!f);
     if (facts.length && mem.talks % 3 === 2) return clampLine(fillTemplate(pick(FACT_RECALL, rand), { name, fact: pick(facts, rand) }));
     return clampLine(fillTemplate(pick(lines.welcomeBack, rand), { name }));
+  }
+  if (shouldTip(intent, text, rand)) {
+    const tip = pickTip(id, text, name, rand);
+    if (tip) return tip;
   }
   if (intent === "smalltalk" && rand() < 0.5) return clampLine(fillTemplate(pick(NPC_BIBLE[id].sampleLines, rand), { name }));
   return def ? pickLine(def, intent, name, rand) : "...";
