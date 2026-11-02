@@ -86,3 +86,12 @@ describe("wrong-tool energy", () => {
     expect(wrongToolNotice("Clang.", WRONG_TOOL_WARN_AT)).toMatch(/^Clang\. .*wearing you out/);
   });
 });
+
+describe("hoe rebounds outside the farm too", () => {
+  it("bounces off rocks, trees and boulders in shared zones", () => {
+    for (const t of [rock, tree, boulder, { kind: "stump" } as ToolTarget]) {
+      expect(resolveToolUse("hoe", t, { farm: false }), t.kind).toMatchObject({ ok: false, bounce: true });
+    }
+    expect(resolveToolUse("hoe", { kind: "none" }, { farm: false })).toMatchObject({ ok: false, reason: "That's for your farm at home." });
+  });
+});

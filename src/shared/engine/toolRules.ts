@@ -275,6 +275,9 @@ export function resolveToolUse(key: ToolKey, target: ToolTarget, opts: { farm: b
   // So is a dead one pulled up: by hand, or by the hoe if that's what you hold.
   if (target.kind === "soil" && target.crop === "dead" && opts.farm) return ok("clear");
   if (target.kind === "monster") return swings ? ok("hitMonster") : no("", false);
+  // A hoe striking something solid rebounds anywhere, not only on the farm.
+  const solid = target.kind === "rock" || target.kind === "tree" || target.kind === "stump" || target.kind === "boulder";
+  if (key === "hoe" && solid) return bounce(key, target.kind);
   if (!opts.farm && (key === "hoe" || key === "water" || key === "seed")) {
     if (key === "water" && target.kind === "water") return no("", true);
     return no("That's for your farm at home.", swings);

@@ -1,3 +1,5 @@
+import { getItem } from "../../shared/items";
+import type { ItemId } from "../../shared/types";
 // Pure maths behind hit-fx.ts (no Pixi), so it is unit-testable.
 import type { Vec2 } from "../../shared/types";
 
@@ -114,4 +116,17 @@ export function toolContactPoint(at: Vec2, facing: "up" | "down" | "left" | "rig
   // Facing away, the head (about 1.5 tiles up) would hide it: the spark goes at the top of the head, under the name tag.
   const dy = facing === "up" ? -0.85 : facing === "down" ? 0.5 : 0;
   return { x: at.x + dx, y: at.y - chest + dy };
+}
+
+/** Tools with their own rebound sheet (fx/rebound_<tool>.png). */
+export const REBOUND_TOOLS: ReadonlySet<string> = new Set(["axe", "pickaxe", "hoe", "sword"]);
+
+/** Which rebound sheet an item swings: its tool kind when that has one, else null (the shared sheet). */
+export function reboundTool(item: string | null | undefined, toolOf: (item: string) => string | undefined = defaultToolOf): string | null {
+  const tool = item ? toolOf(item) : undefined;
+  return tool && REBOUND_TOOLS.has(tool) ? tool : null;
+}
+
+function defaultToolOf(item: string): string | undefined {
+  return getItem(item as ItemId)?.tool;
 }

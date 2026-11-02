@@ -72,7 +72,7 @@ import {
   type LocalSwing,
 } from "./tool-swing";
 import { ImpactQueue, impactDueMs } from "./impact";
-import { reboundRecoil, toolContactPoint } from "../render/hit-fx-logic";
+import { reboundRecoil, reboundTool, toolContactPoint } from "../render/hit-fx-logic";
 import { INTERP_DELAY_MS } from "../state/interp";
 
 type StampedMsg = Extract<ServerMsg, { t: "farm" | "rock" | "tree" }>;
@@ -1053,7 +1053,7 @@ export async function startSession(
       if (clunk) playSfx("tool_clunk");
       else if (sfx !== "tool_sword") playSfx(sfx);
       if (outcome?.ok) impactFx(tile, outcome.effect, used);
-      else if (outcome?.bounce && store.youId) reboundFx(tile, store.youId);
+      else if (outcome?.bounce && store.youId) reboundFx(tile, store.youId, item);
     };
     // Seeds and other non-swings land at once; a swing lands at its impact frame (see frame()).
     if (s) onImpact = land;
@@ -1082,8 +1082,16 @@ export async function startSession(
     }
   }
 
+  /** The selected hoe, when the tile holds something solid it would rebound off; else null. */
+  function hoeAtSolid(tile: Vec2): string | null {
+    const item = usableItem(store.inventory, selectedSlot);
+    if (!item || getItem(item)?.tool !== "hoe") return null;
+    const k = probeTarget(tile)?.kind;
+    return k === "rock" || k === "tree" || k === "stump" || k === "boulder" ? item : null;
+  }
+
   /** A tool rebounded off `tile`: a spark and grit where it struck, and the swinger jolts back. */
-  function reboundFx(tile: Vec2, by: string): void {
+  function reboundFx(tile: Vec2, by: string, item?: string | null): void {
     const w = world;
     const m = map();
     if (!w || !m) return;
@@ -1093,7 +1101,9 @@ export async function startSession(
     // The spark goes where the blade meets the thing, in front of the swinger at arm height, so
     // their own head doesn't hide it.
     const at = who ? toolContactPoint(who, who.facing) : { x: tile.x + 0.5, y: tile.y + 0.5 };
-    w.hitFx.rebound(at, wood ? "wood" : "stone");
+    // Each tool has its own rebound (sparks, steel flash, a puff of dirt...): from the swing's item.
+    const used = item ?? who?.act?.item ?? who?.held ?? null;
+    w.hitFx.rebound(at, wood ? "wood" : "stone", reboundTool(used));
     if (who) w.entities.nudge?.(by, reboundRecoil(who, { x: tile.x + 0.5, y: tile.y + 0.5 }));
   }
 
@@ -1355,7 +1365,9 @@ export async function startSession(
     // further away it walks there.
     // Inside the house there is nothing to till, water or mine: clicks walk.
     const indoors = world.map.ambient === "indoor" && store.zone === "home";
-    const tool = !indoors && inUseRange(me, p.tile) ? usableHere(store.inventory, selectedSlot, store.zone) : null;
+    const inReach = !indoors && inUseRange(me, p.tile);
+    // A hoe away from home still swings at something solid (and rebounds off it).
+    const tool = inReach ? (usableHere(store.inventory, selectedSlot, store.zone) ?? hoeAtSolid(useTarget(me, me.facing, p.tile))) : null;
     if (tool) {
       const t = useTarget(me, me.facing, p.tile);
       const probe = probeAt(t);

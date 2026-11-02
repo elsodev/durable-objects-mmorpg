@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import catalog from "../src/client/public/assets/lpc/catalog.json";
 import { repeatsNotice } from "../src/client/ui/dialogs-logic";
-import { REBOUND_FRAME_MS, REBOUND_FRAMES, REBOUND_RECOIL, reboundFrame, reboundRecoil, toolContactPoint } from "../src/client/render/hit-fx-logic";
+import { REBOUND_FRAME_MS, REBOUND_FRAMES, REBOUND_RECOIL, REBOUND_TOOLS, reboundFrame, reboundRecoil, reboundTool, toolContactPoint } from "../src/client/render/hit-fx-logic";
 
 describe("rebound spark", () => {
   it("plays each frame once, then ends", () => {
@@ -36,5 +37,27 @@ describe("tool contact point", () => {
     expect(toolContactPoint(me, "left").x).toBeLessThan(me.x);
     expect(toolContactPoint(me, "right").x).toBeGreaterThan(me.x);
     expect(toolContactPoint(me, "down").y).toBeGreaterThan(me.y - 0.55);
+  });
+});
+
+describe("rebound sheet per tool", () => {
+  it("uses the tool's own sheet for every tier of axe, pickaxe, hoe and sword", () => {
+    for (const [item, tool] of [["axe", "axe"], ["pickaxe", "pickaxe"], ["hoe", "hoe"], ["sword_wood", "sword"]] as const) {
+      expect(reboundTool(item), item).toBe(tool);
+    }
+    expect(reboundTool("watering_can")).toBeNull();
+    expect(reboundTool(null)).toBeNull();
+    expect(reboundTool("x", () => "sword")).toBe("sword");
+  });
+
+  it("has a catalog sheet with four 32 px frames for each tool, all centred", () => {
+    const cat = catalog as unknown as { props: Record<string, { frames: number[][]; anchor: number[] }> };
+    for (const tool of [...REBOUND_TOOLS, null]) {
+      const e = cat.props[tool ? `fx_rebound_${tool}` : "fx_rebound"];
+      expect(e, String(tool)).toBeTruthy();
+      expect(e.frames).toHaveLength(REBOUND_FRAMES);
+      expect(e.anchor).toEqual([16, 16]);
+      for (const f of e.frames) expect(f.slice(2)).toEqual([32, 32]);
+    }
   });
 });

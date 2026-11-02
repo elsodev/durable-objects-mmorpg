@@ -7318,7 +7318,163 @@
    "note": "ripe crop as a garden decoration"
   },
   "fx_rebound": {
-   "file": "fx/rebound_spark.png",
+   "file": "fx/rebound_pickaxe.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    16
+   ],
+   "frames": [
+    [
+     0,
+     0,
+     32,
+     32
+    ],
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     64,
+     0,
+     32,
+     32
+    ],
+    [
+     96,
+     0,
+     32,
+     32
+    ]
+   ]
+  },
+  "fx_rebound_pickaxe": {
+   "file": "fx/rebound_pickaxe.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    16
+   ],
+   "frames": [
+    [
+     0,
+     0,
+     32,
+     32
+    ],
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     64,
+     0,
+     32,
+     32
+    ],
+    [
+     96,
+     0,
+     32,
+     32
+    ]
+   ]
+  },
+  "fx_rebound_axe": {
+   "file": "fx/rebound_axe.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    16
+   ],
+   "frames": [
+    [
+     0,
+     0,
+     32,
+     32
+    ],
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     64,
+     0,
+     32,
+     32
+    ],
+    [
+     96,
+     0,
+     32,
+     32
+    ]
+   ]
+  },
+  "fx_rebound_hoe": {
+   "file": "fx/rebound_hoe.png",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    16
+   ],
+   "frames": [
+    [
+     0,
+     0,
+     32,
+     32
+    ],
+    [
+     32,
+     0,
+     32,
+     32
+    ],
+    [
+     64,
+     0,
+     32,
+     32
+    ],
+    [
+     96,
+     0,
+     32,
+     32
+    ]
+   ]
+  },
+  "fx_rebound_sword": {
+   "file": "fx/rebound_sword.png",
    "rect": [
     0,
     0,

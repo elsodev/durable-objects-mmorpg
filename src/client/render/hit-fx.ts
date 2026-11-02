@@ -61,7 +61,7 @@ export interface HitFx {
   /** Tips a tree sprite over (it fades as it lands), then calls done. */
   fall(s: Sprite, dir: 1 | -1, done: () => void): void;
   /** A tool rebounding off something it can't work: a spark at the impact point (tile coords) and grit. */
-  rebound(at: Vec2, chip: ChipKind): void;
+  rebound(at: Vec2, chip: ChipKind, tool?: string | null): void;
   /** Item icons popping out of a tile in little arcs. */
   drops(at: Vec2, items: readonly ItemId[]): void;
   destroy(): void;
@@ -76,14 +76,16 @@ export function createHitFx(art: Art, layers: Layers): HitFx {
   const drops: Drop[] = [];
   const falls: Fall[] = [];
   const sparks: Spark[] = [];
-  let sparkFrames: Texture[] | null | undefined;
-  const reboundFrames = (): Texture[] | null => {
-    if (sparkFrames === undefined) {
-      const a = art.prop("fx_rebound");
-      sparkFrames = a.frames && a.frames.length > 1 ? a.frames : null;
+  const sparkFrames = new Map<string, Texture[] | null>();
+  const framesOf = (key: string): Texture[] | null => {
+    if (!sparkFrames.has(key)) {
+      const a = art.prop(key);
+      sparkFrames.set(key, a.frames && a.frames.length > 1 ? a.frames : null);
     }
-    return sparkFrames;
+    return sparkFrames.get(key)!;
   };
+  /** The tool's own rebound sheet (fx_rebound_axe...), else the shared one. */
+  const reboundFrames = (tool?: string | null): Texture[] | null => (tool ? framesOf(`fx_rebound_${tool}`) : null) ?? framesOf("fx_rebound");
   const cracks = new Map<string, Graphics>();
   let seed = 1;
   const rand = () => {
@@ -216,8 +218,8 @@ export function createHitFx(art: Art, layers: Layers): HitFx {
       falls.push({ s, dir, t: 0, done });
     },
 
-    rebound(at, chip) {
-      const frames = reboundFrames();
+    rebound(at, chip, tool) {
+      const frames = reboundFrames(tool);
       if (frames) {
         const s = new Sprite(frames[0]!);
         s.anchor.set(0.5);

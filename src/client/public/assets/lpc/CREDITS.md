@@ -805,8 +805,8 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - Source: https://github.com/OpenGameArt/LiberatedPixelCup (sprite/original/CharlesGabriel/PNG/bat.png) for the wing
 - Notes: The gel uses colours sampled from monsters/slime.png.
 
-### fx/rebound_spark.png
+### fx/rebound_pickaxe.png, fx/rebound_axe.png, fx/rebound_hoe.png, fx/rebound_sword.png
 - Authors: DurableMMO project
 - License: **CC0**
 - Source: drawn by script for this game
-- Notes: Four-frame spark shown when a tool rebounds off something it can't work (axe on a rock, pickaxe on a tree, any tool on a boulder).
+- Notes: Four-frame effects shown when a tool rebounds off something it can't work. Pickaxe: hot sparks. Axe: a steel flash. Sword: a bright ring. Hoe: a puff of dirt.

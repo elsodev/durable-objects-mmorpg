@@ -91,12 +91,22 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
   - Nothing may touch the cell edge.
   - Use warm white, yellow and orange, with a dark warm outline (not black) so it reads on grass, stone and dirt.
   - It casts no shadow. It is CC0 and drawn by script, and it is credited in `CREDITS.md`.
-- **One spark for every tool, for now:** the axe, pickaxe, hoe and sword all share the same spark. Only the grit changes with the target. To give a tool its own rebound:
-  1. Draw `fx/rebound_<tool>.png` in the same 4 × 32 px layout, keeping the same centre and timing so every tool lands on the same frame.
-  2. Add it to the catalog as `props.fx_rebound_<tool>`.
-  3. Pick it in `reboundFx` (`src/client/game/session.ts`) from the swinger's held item, and fall back to `fx_rebound`.
-  4. Credit it.
-  5. Check it in the browser, facing all four ways. A screencast shows the frames more reliably than screenshots, because headless screenshots are slower than the effect.
+- **One sheet per tool:** each striking tool has its own rebound sheet in `fx/`, catalog `props.fx_rebound_<tool>`:
+
+  | Tool | Sheet | Look |
+  |---|---|---|
+  | Pickaxe | `rebound_pickaxe.png` | Hot orange sparks (also the shared fallback, `props.fx_rebound`) |
+  | Axe | `rebound_axe.png` | A cold steel flash with a ringing arc |
+  | Sword | `rebound_sword.png` | A bright "ting": a thin cross and a halo ring |
+  | Hoe | `rebound_hoe.png` | A dull clang and a puff of dirt with clods |
+
+  `reboundTool` (in `hit-fx-logic.ts`) picks the sheet from the swung item's tool kind, so every tier of a tool (copper or iron pickaxe, any sword) shares its sheet. A tool without a sheet falls back to `fx_rebound`.
+- **Any character:** the effect is drawn in the world above the y-sorted sprites. It is never baked into, or layered onto, the character sheets, so it works the same for every body type and look. Its position comes from the swinger's feet point and facing, not from the art.
+- **Adding or redrawing a tool's rebound:**
+  1. Keep the same 4 × 32 px layout, centre and timing, so every tool lands on the same frame.
+  2. Add it to the catalog as `props.fx_rebound_<tool>` and to `REBOUND_TOOLS`.
+  3. Credit it.
+  4. Check it in the browser on at least two body types, facing all four ways. A screencast (CDP `Page.startScreencast`) shows the frames more reliably than screenshots, because headless screenshots are slower than the effect.
 
 ## Monsters
 
