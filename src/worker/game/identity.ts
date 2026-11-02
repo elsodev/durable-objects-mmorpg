@@ -1,5 +1,5 @@
 // Identity helpers: everything here derives from the verified x-dmmo-* headers only.
-import { H_GUEST, H_SESSION, H_SPAWN, H_USER_ID, H_USER_NAME } from "../env";
+import { H_ADMIN, H_GUEST, H_IP, H_SESSION, H_SPAWN, H_USER_ID, H_USER_NAME } from "../env";
 import type { VisitAttachment } from "../visit/visitors";
 import { coerceName } from "../../shared/names";
 import type { HomeMapId } from "../../shared/types";
@@ -37,6 +37,10 @@ export interface Identity {
   spawn: string | null;
   /** Better Auth session id (re-checked periodically), or null if the Worker sent none. */
   sessionId: string | null;
+  /** The Worker found this account in ADMIN_EMAILS (x-dmmo-admin: 1). */
+  admin: boolean;
+  /** Client IP as the Worker saw it, or null. */
+  ip: string | null;
 }
 
 export function readIdentity(req: Request): Identity | null {
@@ -48,6 +52,8 @@ export function readIdentity(req: Request): Identity | null {
     guest: req.headers.get(H_GUEST) === "1",
     spawn: req.headers.get(H_SPAWN),
     sessionId: req.headers.get(H_SESSION)?.slice(0, 256) || null,
+    admin: req.headers.get(H_ADMIN) === "1" && req.headers.get(H_GUEST) !== "1",
+    ip: req.headers.get(H_IP)?.slice(0, 64) || null,
   };
 }
 
@@ -69,6 +75,8 @@ export interface SocketAttachment {
   guest: boolean;
   /** Better Auth session id behind this socket. */
   sid?: string;
+  /** Admin (from the Worker's x-dmmo-admin header): their entity wears the halo. */
+  admin?: boolean;
   /** Last known position, refreshed on periodic saves. */
   x?: number;
   y?: number;

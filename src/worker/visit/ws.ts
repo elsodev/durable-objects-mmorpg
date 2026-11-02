@@ -14,7 +14,7 @@ import {
   H_ZONE,
 } from "../env";
 import type { AuthUser } from "../auth";
-import { errorJson, stripIdentityHeaders } from "../http/util";
+import { errorJson, setAdminAndIp, stripIdentityHeaders } from "../http/util";
 import { originAllowed } from "../http/origin";
 import { encodeHeaderName } from "../http/ws";
 import { isUserId } from "../../shared/friends";
@@ -52,6 +52,7 @@ export async function forwardVisit(request: Request, env: VisitEnv, ownerId: str
   headers.set(H_ZONE, "home");
   headers.set(H_GUEST, "0");
   headers.set(H_SESSION, user.sessionId);
+  setAdminAndIp(headers, request, user);
   headers.set(H_VISIT_OWNER, ownerId);
   headers.set(H_VISIT_RETURN, me.zone);
   headers.set(H_VISIT_SPRITE, me.sprite);

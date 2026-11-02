@@ -82,6 +82,7 @@ import { CoalescingSaver, SaveDebouncer, type SaveOutcome } from "./game/saver";
 import { CLOSE_ABUSE, SocketLimiter } from "./game/rateLimit";
 import { arrivedFrom, resolveSpawn, routeExit, transferHonoured } from "./game/spawn";
 import { CLOSE_SESSION_ENDED, recheckDue, sessionStillValid } from "./game/session";
+import { CLOSE_REMOVED } from "../shared/admin";
 import { timeout } from "./game/timeout";
 import { stripControls } from "./npc/text";
 import { scheduleHour } from "../shared/npcSchedule";
@@ -455,6 +456,7 @@ export class ZoneRoom extends DurableObject<Env> {
       entityId: entityIdFor(id.userId),
       guest: false,
       ...(id.sessionId ? { sid: id.sessionId } : {}),
+      ...(id.admin ? { admin: true } : {}),
     };
     server.serializeAttachment(att);
     const p = this.addPlayer(server, att, save, at, Date.now());
@@ -520,6 +522,7 @@ export class ZoneRoom extends DurableObject<Env> {
         hp: clampHp(save.hp, maxHp),
         maxHp,
         look: shownLook(save.look),
+        ...(att.admin ? { admin: true } : {}),
       },
       inv: sanitizeInventory(save.inventory),
       stats: cleanStats(save.stats),
@@ -607,6 +610,17 @@ export class ZoneRoom extends DurableObject<Env> {
     for (const p of [...this.players.values()]) {
       if (p.userId === userId && p.sid === sessionId) this.kick(p, CLOSE_SESSION_ENDED, "You signed out.");
     }
+  }
+
+  /** RPC (admin /kick via SocialRoom): close every socket this player has here. */
+  async removeUser(userId: string, text: string): Promise<number> {
+    let n = 0;
+    for (const p of [...this.players.values()]) {
+      if (p.userId !== userId) continue;
+      this.kick(p, CLOSE_REMOVED, String(text).slice(0, 120));
+      n++;
+    }
+    return n;
   }
 
   /** Removes a player, tells them why, closes the socket and saves them (after any donation). */

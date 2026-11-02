@@ -19,6 +19,7 @@ import type { PlayerHit } from "./player-card-logic";
 import type { MuteSet } from "./mute-logic";
 import type { SlotDrag } from "./slot-drag";
 import type { WaterLevel } from "./water-gauge-logic";
+import type { AdminCommand, Shout } from "../../shared/admin";
 export type { PlayerHit } from "./player-card-logic";
 
 export interface SessionUser {
@@ -85,6 +86,10 @@ export interface GameApi {
   requestTrade?(target: PlayerHit | string): void;
   /** Out in a shared zone with an account, where trading works. */
   canTrade?(): boolean;
+  /** The server said this account is an admin (shout, kick, unban). The server re-checks every command. */
+  isAdmin?(): boolean;
+  /** Sends an admin command (/shout, /kick, /unban, or the player card's Kick) to the server. */
+  adminCommand?(cmd: Exclude<AdminCommand, { cmd: "error" }>): void;
 }
 
 /** Where a chat line belongs (tabs) and, for whispers, which way it went. */
@@ -129,6 +134,10 @@ export interface Hud {
   npcSaid?(entityId: string, text: string): void;
   /** The server refused a conversation-window reply. */
   npcSayFailed?(reason: string): void;
+  /** A global announcement (ui/shout-banner.ts): marquee banner, top centre, with chimes. */
+  shout?(s: Shout): void;
+  /** Admin tools on or off (the Options tab's Shout button, the card's Kick). */
+  setAdmin?(on: boolean): void;
 }
 
 /**
@@ -209,6 +218,9 @@ export type CreateShop = (root: HTMLElement, opts: { send(msg: ClientMsg): void 
 export type CreateGoals = (root: HTMLElement, opts: { send(msg: ClientMsg): void }) => GoalsPanel;
 export type CreateNotices = (root: HTMLElement) => Notices;
 export type CreateAccountPrompt = (root: HTMLElement) => AccountPrompt;
+
+/** ui/removed.ts: the "You've been removed from Mossbrook." screen, and the GET /api/standing check behind it. */
+export { showRemoved, checkRemoved } from "./removed";
 
 /** ui/icons.ts: icon source shared by hotbar, inventory, shop and goals. Falls back to a lettered tile. */
 export { setIconSource, iconFor } from "./icons";

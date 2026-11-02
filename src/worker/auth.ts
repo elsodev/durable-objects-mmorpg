@@ -18,6 +18,8 @@ export interface AuthUser {
   isGuest: boolean;
   /** Better Auth session id, forwarded to the DOs so they can re-check it. */
   sessionId: string;
+  /** Set by the Worker from ADMIN_EMAILS (admin/config.ts) after the session check; never from the client. */
+  admin?: boolean;
 }
 
 export const CAPTCHA_ENDPOINTS = ["/sign-up/email", "/sign-in/email", "/sign-in/anonymous"];

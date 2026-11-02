@@ -1,4 +1,5 @@
 // Small HTTP helpers shared by the Worker routes.
+import { H_ADMIN, H_IP } from "../env";
 
 export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -18,6 +19,16 @@ export function stripIdentityHeaders(headers: Headers): Headers {
     if (!key.toLowerCase().startsWith("x-dmmo-")) out.append(key, value);
   });
   return out;
+}
+
+/**
+ * Server-set admin and IP headers for a forwarded socket. Call after stripIdentityHeaders: the
+ * admin flag comes from the Worker's own ADMIN_EMAILS check, the IP from Cloudflare.
+ */
+export function setAdminAndIp(headers: Headers, request: Request, user: { admin?: boolean; isGuest: boolean }): void {
+  headers.set(H_ADMIN, user.admin === true && !user.isGuest ? "1" : "0");
+  const ip = request.headers.get("cf-connecting-ip");
+  if (ip) headers.set(H_IP, ip.slice(0, 64));
 }
 
 export const MAX_NAME_LEN = 24;

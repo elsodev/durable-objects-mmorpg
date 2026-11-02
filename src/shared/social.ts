@@ -6,6 +6,7 @@ import { cleanChat, MAX_CHAT_LEN } from "./validate";
 import { CAVE_DEPTH_ZONES, type ZoneId } from "./types";
 import { isValidName } from "./names";
 import { EMOTES, isEmote, type EmoteCode } from "./emotes";
+import { cleanReason, cleanShout, type Shout } from "./admin";
 
 // ---------------------------------------------------------------- emotes
 
@@ -174,10 +175,17 @@ export type SocialClientMsg =
   /** Fallback only: the server prefers the zone ZoneRoom/HomeRoom report via RPC. */
   | { t: "here"; zone: ZoneId }
   | { t: "stats" }
-  | { t: "ping"; at: number };
+  | { t: "ping"; at: number }
+  /** Admins only (the server checks): a banner for everyone online. */
+  | { t: "shout"; text: string }
+  /** Admins only: disconnect a player and keep them out. */
+  | { t: "kick"; name: string; reason?: string }
+  /** Admins only: let a removed player back in. */
+  | { t: "unban"; name: string };
 
 export type SocialServerMsg =
-  | { t: "hello"; name: string; guest: boolean; history: WorldLine[] }
+  /** `admin` only for admins; `shout` is the latest announcement when it is a few minutes old at most. */
+  | { t: "hello"; name: string; guest: boolean; history: WorldLine[]; admin?: true; shout?: Shout }
   | ({ t: "world" } & WorldLine)
   /** dir "in": `name` whispered you; "out": echo of what you sent to `name`. */
   | { t: "pm"; dir: "in" | "out"; name: string; text: string; at: number }
@@ -185,7 +193,11 @@ export type SocialServerMsg =
   | { t: "notice"; text: string; kind: "info" | "error" }
   /** Delivered from another Durable Object through SocialRoom.notify (e.g. home invites). */
   | { t: "social"; payload: { t: string } & Record<string, unknown> }
-  | { t: "pong"; at: number };
+  | { t: "pong"; at: number }
+  /** A global announcement (shared/admin.ts): every client shows the banner. */
+  | ({ t: "shout" } & Shout)
+  /** You were removed by an admin; the socket closes with CLOSE_REMOVED next. */
+  | { t: "removed"; text: string };
 
 const ZONE_IDS: readonly ZoneId[] = ["village", "riverside", "caves", "quarry", ...CAVE_DEPTH_ZONES, "home"];
 export const MAX_SOCIAL_FRAME = 1024;
@@ -216,6 +228,17 @@ export function decodeSocialClient(raw: unknown): SocialClientMsg | null {
       return { t: "stats" };
     case "ping":
       return typeof o.at === "number" && Number.isFinite(o.at) ? { t: "ping", at: o.at } : null;
+    case "shout": {
+      const text = cleanShout(o.text);
+      return text ? { t: "shout", text } : null;
+    }
+    case "kick": {
+      if (!isValidName(o.name)) return null;
+      const reason = cleanReason(o.reason);
+      return reason ? { t: "kick", name: o.name, reason } : { t: "kick", name: o.name };
+    }
+    case "unban":
+      return isValidName(o.name) ? { t: "unban", name: o.name } : null;
     default:
       return null;
   }

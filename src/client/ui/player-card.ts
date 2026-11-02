@@ -1,6 +1,7 @@
 // Player card (#player-card): right-click (or touch long-press) a player in the world, or a player's
 // name in chat. Shows a portrait, online/zone, lifetime stats and friendship from
-// GET /api/players/:id/card, with Add friend / Whisper / Trade / Invite home / Mute buttons. Your own card
+// GET /api/players/:id/card, with Add friend / Whisper / Trade / Invite home / Mute buttons, and Kick for
+// admins (two clicks: "Kick" then "Remove <name>?"; the server checks admin rights). Your own card
 // has no buttons. Closes on Esc, a click outside (which then does nothing else), or when the player
 // walks away. Names and stats are untrusted: textContent only.
 import type { PlayerCard as CardData } from "../../shared/players";
@@ -40,6 +41,8 @@ export interface PlayerCardOpts {
   inviteHome(name: string): void;
   /** Ask this player to trade (shown only where CardContext.canTrade). */
   trade?(hit: PlayerHit): void;
+  /** Admins: remove this player from the server (shown only where CardContext.admin). */
+  kick?(name: string): void;
   mutes: MuteStore;
   notice(text: string, kind: "info" | "error" | "loot"): void;
   api?: MutesApi;
@@ -168,6 +171,9 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
             opts.inviteHome(target.name);
           }),
         );
+      } else if (kind === "kick") {
+        if (!opts.kick) continue;
+        actions.appendChild(button("Kick", "player-card-kick", (b) => onKick(target, b), "pc-kick"));
       } else {
         const on = muted();
         actions.appendChild(button(on ? "Unmute" : "Mute", "player-card-mute", (b) => void onMute(!on, b), on ? "" : "pc-mute"));
@@ -176,6 +182,7 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
   }
 
   let armed: ReturnType<typeof setTimeout> | null = null;
+  let armedKick: ReturnType<typeof setTimeout> | null = null;
   async function onFriend(action: ReturnType<typeof friendButton>["action"], b: HTMLButtonElement): Promise<void> {
     const target = hit;
     if (!target || !action) return;
@@ -205,6 +212,23 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
     }
     opts.friendsChanged?.();
     if (hit === target) await load(target);
+  }
+
+  /** "Kick" arms the button ("Remove Ann?"); a second click within CONFIRM_MS sends the kick. */
+  function onKick(target: PlayerHit, b: HTMLButtonElement): void {
+    if (!armedKick) {
+      b.textContent = `Remove ${target.name}?`;
+      b.classList.add("dm-btn-accent");
+      armedKick = setTimeout(() => {
+        armedKick = null;
+        render();
+      }, CONFIRM_MS);
+      return;
+    }
+    clearTimeout(armedKick);
+    armedKick = null;
+    hide();
+    opts.kick?.(target.name);
   }
 
   async function onMute(on: boolean, b: HTMLButtonElement): Promise<void> {
@@ -286,6 +310,8 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
     watch = null;
     if (armed) clearTimeout(armed);
     armed = null;
+    if (armedKick) clearTimeout(armedKick);
+    armedKick = null;
   }
 
   opts.mutes.onChange(() => {

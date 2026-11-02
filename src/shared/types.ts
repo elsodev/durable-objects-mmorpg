@@ -103,6 +103,8 @@ export interface EntityState {
   held?: ItemId;
   /** Players only: running (Shift held) or worn out (slow walk). Absent: a normal walk. */
   pace?: "dash" | "tired";
+  /** Players only: an admin (set by the server from the Worker's check); clients draw a halo. */
+  admin?: boolean;
 }
 
 /** Character creator choices; every field is an option id listed in shared/look.ts. */

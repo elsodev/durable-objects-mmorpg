@@ -1,11 +1,12 @@
 // See ../contracts.ts for the contract.
 // Name tags, speech bubbles, NPC status and hp bars, drawn into layers.overlay at headOf() each frame.
 // All strings reach the screen through Text.text only (never HTML), after sanitizeText().
+import { HALO_CLEARANCE } from "./halo-logic";
 import { Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
 import { EMOTE_MS, type BubbleCode } from "../../shared/emotes";
 import { truncateWords } from "../../shared/social";
 import { emoteTexture } from "../art/emotes";
-import type { CreateOverlays, Overlays } from "../contracts";
+import { SCALE, type CreateOverlays, type Overlays } from "../contracts";
 import type { EntityState, Vec2 } from "../../shared/types";
 
 export const BUBBLE_MS = 5000;
@@ -287,7 +288,8 @@ export const createOverlays: CreateOverlays = (layers): Overlays => {
 
   function layoutView(v: View, e: EntityState, head: Vec2, youId: string | null, now: number): void {
     const hx = Math.round(head.x);
-    let y = Math.round(head.y) - 2;
+    // An admin's halo floats just over the head: the name tag and everything above it sit higher.
+    let y = Math.round(head.y) - 2 - (e.admin === true && e.kind === "player" ? Math.round(HALO_CLEARANCE * SCALE) : 0);
     v.root.position.set(hx, 0);
 
     // Monsters are identified by their sprite and hp bar; a name tag would only add clutter.

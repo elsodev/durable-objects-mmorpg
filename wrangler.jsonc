@@ -98,7 +98,10 @@
         "DROP_RATE": "1",
         "TURNSTILE_SITE_KEY": "",
         "TURNSTILE_SECRET_KEY": "",
-        "DMMO_ENV": "local"
+        "DMMO_ENV": "local",
+        // Admin accounts (comma-separated emails). Empty: nobody is an admin. Set your own in .dev.vars
+        // or with --var ADMIN_EMAILS:you@example.com. In production this is a secret (see README).
+        "ADMIN_EMAILS": ""
       },
       "triggers": { "crons": ["17 4 * * *"] }
     }

@@ -195,6 +195,8 @@ export type CreateConnection = (opts: {
   onForbidden?(zone: ZoneId): void;
   /** Called when the server closes with code 4408 (idle too long). The connection does not retry. */
   onIdle?(zone: ZoneId): void;
+  /** An admin removed this player (close 4451, or the Worker answers 451). The connection does not retry. */
+  onRemoved?(): void;
 }) => Connection;
 
 // ---------------------------------------------------------------- world store (src/client/state/)

@@ -510,6 +510,18 @@
         "sfx/drink_2.ogg"
       ],
       "volume": 0.55
+    },
+    "announce_start": {
+      "files": [
+        "sfx/announce_start.ogg"
+      ],
+      "volume": 0.5
+    },
+    "announce_end": {
+      "files": [
+        "sfx/announce_end.ogg"
+      ],
+      "volume": 0.5
     }
   },
   "missing": []

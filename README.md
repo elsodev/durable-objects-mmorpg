@@ -161,6 +161,24 @@ Set `TURNSTILE_SITE_KEY` in `wrangler.jsonc` → `vars` before deploying. `BETTE
 
 To keep account-specific values out of `wrangler.jsonc`, put them in a git-ignored `.env.production` instead (copy `.env.production.example`) and run `npm run deploy:prod`. It writes `D1_DATABASE_ID` and `TURNSTILE_SITE_KEY` into a generated, git-ignored `wrangler.production.jsonc`, applies the remote D1 migrations, and deploys with the other keys as secrets. `node scripts/deploy-prod.mjs --dry-run` shows what it would do without deploying.
 
+### Admins
+
+Admins are set only by the Worker's environment: `ADMIN_EMAILS` is a comma-separated list of account emails (case-insensitive; `ADMIN_EMAIL` works too). Keep it out of this public repo by making it a secret:
+
+```sh
+npx wrangler secret put ADMIN_EMAILS              # e.g. you@example.com,friend@example.com
+```
+
+With `npm run deploy:prod`, set `ADMIN_EMAILS` in `.env.production` instead and it is uploaded as a secret. Sign up with that email before you set it: the game doesn't verify emails, so whoever registers an address first owns it. Guests are never admins. Locally, put `ADMIN_EMAILS=you@example.com` in `.dev.vars` or pass `--var ADMIN_EMAILS:you@example.com`.
+
+The Worker checks the session, compares the account's email and tells the Durable Objects with a server-set `x-dmmo-admin` header (a client-sent copy is stripped like every `x-dmmo-*` header). Admins get:
+
+- **`/shout message`** (or Options → Shout): up to 200 characters of plain text, one shout per 10 s. It goes to every online player through the global `SocialRoom` and shows as a banner at the top of the screen that scrolls the text as a marquee between a rising and a falling chime. Anyone can close it with ✕; with reduced motion the text stays still. Players who come online within 5 minutes still see the latest shout.
+- **`/kick name [reason]`** or **Kick** on the player card (two clicks): closes all of that player's sockets with close code 4451 and bans them. For admins `/kick` means this; the home "send a visitor home" stays on the visitors list. Admins can't kick themselves or other admins. **`/unban name`** lifts it. Every kick and unban is logged.
+- A glowing golden **halo** over their head that everyone sees (`EntityState.admin`).
+
+Bans live in `SocialRoom` storage (`ban:<userId>`, plus `banip:<ip>` for the addresses their sockets and sessions came from, lifted after 30 days). On every socket, `/api/*` call and sign-in or sign-up, the Worker checks the account and an HMAC-signed `dmmo_ban` cookie (httpOnly, 400 days, signed with `BETTER_AUTH_SECRET`, set on the removed player's browser), plus the `CF-Connecting-IP` address for signed-in players and sign-in or sign-up attempts, and answers 451. The start screen asks `GET /api/standing` first and shows "You've been removed from Mossbrook." Admins are never refused, so an address ban can't lock you out of `/unban`. An address ban also stops anyone else signing in from that address (a shared home or school network) until it lapses or you `/unban`.
+
 Optional services:
 
 - **Workers AI** is on by default in production (`NPC_AI_MODE=on`, model in `NPC_MODEL`). `AI_DAILY_NEURONS` caps daily spend. When the budget runs out NPCs fall back to scripted lines.

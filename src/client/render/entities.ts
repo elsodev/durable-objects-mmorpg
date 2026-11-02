@@ -14,6 +14,7 @@ import { createPoseLayer } from "./poses";
 import { createDashFx } from "./dash-fx";
 import { createFoodHand } from "./food-in-hand";
 import { strideFrame, strideRate } from "./dash-logic";
+import { createHaloArt, makeHalo, updateHalo, type Halo } from "./halo";
 import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFps, type EntityProfile } from "./entityProfile";
 
 /**
@@ -72,6 +73,8 @@ interface Rec {
   /** Monster pose act (slime crouch / leap) and when it was first seen. */
   poseKey: string;
   poseStart: number;
+  /** Admin halo (EntityState.admin), built the first time this record draws an admin. */
+  halo: Halo | null;
 }
 
 /** Soft drop shadow: stacked translucent ellipses fake a blurred edge without a filter. */
@@ -110,6 +113,8 @@ export const createEntityLayer = ((
   const foodHand = createFoodHand(art);
   /** Reused for foodOf(). */
   const foodAt: Vec2 = { x: 0, y: 0 };
+  // Built on first use: most sessions never see an admin.
+  let haloArt: ReturnType<typeof createHaloArt> | null = null;
   let gen = 0;
 
   function applyCharacter(rec: Rec, s: EntityState): void {
@@ -214,6 +219,22 @@ export const createEntityLayer = ((
     }
   }
 
+  /** Admins wear a halo just above the head, wherever the head is (walking, seated, lying down). */
+  function drawHalo(rec: Rec, s: EntityState, headTop: number, now: number): void {
+    const on = s.kind === "player" && s.admin === true && rec.deathT < 0;
+    if (!on) {
+      if (rec.halo) rec.halo.root.visible = false;
+      return;
+    }
+    if (!rec.halo) {
+      haloArt ??= createHaloArt();
+      rec.halo = makeHalo(haloArt);
+      rec.root.addChild(rec.halo.root);
+    }
+    rec.halo.root.visible = true;
+    updateHalo(rec.halo, headTop, now, phaseOf(rec.id) * Math.PI * 2);
+  }
+
   function acquire(s: EntityState): Rec {
     let rec = pool.pop();
     if (!rec) {
@@ -256,6 +277,7 @@ export const createEntityLayer = ((
         deathT: -1,
         poseKey: "",
         poseStart: 0,
+        halo: null,
       };
     }
     rec.id = s.id;
@@ -290,6 +312,7 @@ export const createEntityLayer = ((
     rec.body.skew.x = 0;
     rec.heldBg.skew.x = rec.heldFg.skew.x = 0;
     rec.heldBg.visible = rec.heldFg.visible = rec.food.visible = false;
+    if (rec.halo) rec.halo.root.visible = false;
     rec.root.removeFromParent();
     rec.body.filters = null;
     if (pool.length < POOL_MAX) pool.push(rec);
@@ -384,6 +407,7 @@ export const createEntityLayer = ((
     rec.head.x = fx;
     // Seated bodies are drawn SIT_DROP_PX lower, so the name tag and bubbles follow them down.
     rec.head.y = posed.head !== undefined ? fy - posed.head : fy + rec.body.y - top;
+    drawHalo(rec, s, rec.head.y - fy, now);
 
     if (rec.flashMs > 0) {
       rec.flashMs -= dt;
@@ -479,6 +503,7 @@ export const createEntityLayer = ((
       pool.length = 0;
       flashFilters?.[0].destroy();
       shadowCtx.destroy();
+      haloArt?.destroy();
       poses.destroy();
       dash.destroy();
       foodHand.destroy();

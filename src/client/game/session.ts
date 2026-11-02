@@ -12,7 +12,8 @@ import type { Camera, GameSession, Input, Predictor } from "../contracts";
 import { createConnection } from "../net/connection";
 import { createCamera } from "../render/camera";
 import { createStore } from "../state/store";
-import { mountHud, type GameApi, type Hud, type SessionUser } from "../ui";
+import { mountHud, showRemoved, type GameApi, type Hud, type SessionUser } from "../ui";
+import { readShout } from "../../shared/admin";
 import { createHomeUi } from "../ui/homeui";
 import { createStoragePanel } from "../ui/storage";
 import { STORE_WALK_AWAY, storeTarget, wardrobeTarget } from "./storage-target";
@@ -165,6 +166,10 @@ export async function startSession(
   let pendingZone: ZoneId | null = null;
   let promptOpen = false;
   let destroyed = false;
+  /** The social hello said this account is an admin (the server re-checks every admin command). */
+  let isAdmin = false;
+  /** Set once the session object exists; an admin's kick tears the whole session down through it. */
+  let destroySelf: () => void = () => {};
   const lastHp = new Map<string, number>();
   const combatSfx = createCombatSfx(playSfx);
 
@@ -376,7 +381,18 @@ export async function startSession(
       homeOwner: store.zone === "home" && !visiting,
       guest: isGuest,
       devTools,
+      admin: isAdmin,
     }),
+    isAdmin: () => isAdmin,
+    adminCommand(cmd) {
+      const msg =
+        cmd.cmd === "shout"
+          ? ({ t: "shout", text: cmd.text } as const)
+          : cmd.cmd === "kick"
+            ? ({ t: "kick", name: cmd.name, ...(cmd.reason ? { reason: cmd.reason } : {}) } as const)
+            : ({ t: "unban", name: cmd.name } as const);
+      if (!social.send(msg)) system("Admin tools are reconnecting. Try again in a moment.");
+    },
     tradeOpen: () => tradeUi.isOpen(),
     tradeAdd: (slot, qty) => send({ t: "tradeAdd", slot, qty }),
     requestTrade: (target) => requestTrade(target),
@@ -571,7 +587,14 @@ export async function startSession(
   // ------------------------------------------------------------ social (world chat, whispers, stats)
   let lastWhisper: string | null = null;
   let lastWorldAt = 0;
-  const social = createSocialConnection({ onMessage: onSocial });
+  const social = createSocialConnection({ onMessage: onSocial, onRemoved: () => removedFromGame() });
+
+  /** An admin removed this account: stop everything and show the removed screen. */
+  function removedFromGame(): void {
+    if (destroyed) return;
+    showRemoved(document.body);
+    destroySelf();
+  }
 
   function system(text: string, channel: "system" | "world" | "pm" = "system"): void {
     hud.addChat("", text, "system", { channel });
@@ -623,6 +646,20 @@ export async function startSession(
         }
         if (store.zone) social.send({ t: "here", zone: store.zone });
         requestStats();
+        isAdmin = msg.admin === true;
+        hud.setAdmin?.(isAdmin);
+        if (msg.shout) {
+          const s = readShout(msg.shout);
+          if (s) hud.shout?.(s);
+        }
+        break;
+      case "shout": {
+        const s = readShout(msg);
+        if (s) hud.shout?.(s);
+        break;
+      }
+      case "removed":
+        removedFromGame();
         break;
       case "world":
         lastWorldAt = Math.max(lastWorldAt, msg.at);
@@ -753,6 +790,7 @@ export async function startSession(
     },
     // The server closed a socket that sent no input for a long while: same screen as going AFK here.
     onIdle: () => goAfk(),
+    onRemoved: () => removedFromGame(),
   });
 
   // ------------------------------------------------------------ AFK
@@ -1913,7 +1951,7 @@ export async function startSession(
   // Accounts arrive in the village square; guests can only be at home.
   joinZone(opts.startZone ?? (isGuest ? "home" : "village"));
 
-  return {
+  const handle = {
     destroy() {
       if (destroyed) return;
       destroyed = true;
@@ -1946,4 +1984,6 @@ export async function startSession(
       game.destroy();
     },
   };
+  destroySelf = () => handle.destroy();
+  return handle;
 }

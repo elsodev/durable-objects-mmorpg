@@ -1,7 +1,7 @@
 // Chat slash commands: the one table the "/" suggestion popup reads, and its filter. Pure (no DOM).
 // The handlers live in shared/social.ts parseChatInput (/w /r /world /zone /emote),
 // shared/friends.ts parseFriendCommand, shared/players.ts parseMuteCommand, shared/visits.ts parseHomeCommand,
-// shared/trade.ts parseTradeCommand,
+// shared/trade.ts parseTradeCommand, shared/admin.ts parseAdminCommand (admins only),
 // and the dev tools in worker/home.ts devCommand (/day /time) and worker/zone.ts onChat (/hour, /hearts, /warp);
 // slash-commands.test.ts checks every entry here against those parsers.
 import { EMOTES } from "../../shared/emotes";
@@ -15,6 +15,8 @@ export interface SlashContext {
   guest: boolean;
   /** Local dev server with DEV_TOOLS on (welcome.devTools). */
   devTools: boolean;
+  /** The server said you are an admin (social hello). The server checks every admin command again. */
+  admin?: boolean;
 }
 
 export interface SlashCommand {
@@ -31,6 +33,7 @@ export interface SlashCommand {
 const always = () => true;
 const account = (c: SlashContext) => !c.guest;
 const owner = (c: SlashContext) => c.homeOwner && !c.guest;
+const admin = (c: SlashContext) => c.admin === true && !c.guest;
 
 export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "w", aliases: ["whisper", "msg", "tell", "pm"], args: "name message", description: "Whisper to a player", available: account },
@@ -52,8 +55,12 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "mute", aliases: [], args: "name", description: "Hide a player's chat and requests", available: account },
   { name: "unmute", aliases: [], args: "name", description: "Show a muted player again", available: account },
   { name: "invite", aliases: [], args: "name", description: "Invite a friend to your home", available: owner },
-  { name: "kick", aliases: [], args: "name", description: "Send a visitor home", available: owner },
+  // For admins /kick removes the player from the server (shared/admin.ts), so the home version is not offered.
+  { name: "kick", aliases: [], args: "name", description: "Send a visitor home", available: (c) => owner(c) && !admin(c) },
   { name: "uninvite", aliases: [], args: "name", description: "Take back an invitation", available: owner },
+  { name: "shout", aliases: ["announce"], args: "message", description: "Admin: a banner for everyone online", available: admin },
+  { name: "kick", aliases: [], args: "name [reason]", description: "Admin: remove a player from Mossbrook", available: admin },
+  { name: "unban", aliases: [], args: "name", description: "Admin: let a removed player back in", available: admin },
   { name: "day", aliases: [], args: "", description: "Dev: end the day now", available: (c) => c.devTools && c.homeOwner },
   { name: "time", aliases: [], args: "hour", description: "Dev: set your home clock, e.g. /time 21", available: (c) => c.devTools && c.homeOwner },
   { name: "hour", aliases: [], args: "hour", description: "Dev: run village routines as if at this UTC hour", available: (c) => c.devTools && !c.atHome },

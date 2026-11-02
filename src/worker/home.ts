@@ -159,6 +159,7 @@ import { distToRect, inToolReach, PROP_REACH } from "./game/range";
 import { CLOSE_ABUSE, SocketLimiter } from "./game/rateLimit";
 import { sanitizeTransfer, type PendingTransfer } from "./game/spawn";
 import { CLOSE_SESSION_ENDED, recheckDue, sessionStillValid } from "./game/session";
+import { CLOSE_REMOVED } from "../shared/admin";
 import { stripControls } from "./npc/text";
 import { ChatGuards } from "./game/chat";
 import { SLEEP_COUNTDOWN_MS } from "./game/homeTiming";
@@ -986,6 +987,7 @@ export class HomeRoom extends DurableObject<Env> {
       entityId: entityIdFor(id.userId),
       guest: id.guest,
       ...(id.sessionId ? { sid: id.sessionId } : {}),
+      ...(id.admin ? { admin: true } : {}),
     };
     server.serializeAttachment(att);
     const p = this.makePlayer(server, att, arrival.at, Date.now(), arrival.map);
@@ -1054,6 +1056,7 @@ export class HomeRoom extends DurableObject<Env> {
       entityId: entityIdFor(id.userId),
       guest: false,
       ...(id.sessionId ? { sid: id.sessionId } : {}),
+      ...(id.admin ? { admin: true } : {}),
       visit,
     };
     server.serializeAttachment(att);
@@ -1206,6 +1209,7 @@ export class HomeRoom extends DurableObject<Env> {
         hp: save.hp,
         maxHp: save.maxHp,
         look: shownLook(save.look),
+        ...(att.admin ? { admin: true } : {}),
       },
       motion: this.ownerMotion(),
       lastAck: undefined,
@@ -1288,6 +1292,28 @@ export class HomeRoom extends DurableObject<Env> {
     this.closed(p.ws);
     send(p.ws, { t: "notice", text: reason, kind: "error" });
     closeQuietly(p.ws, code, reason);
+  }
+
+  /** RPC (admin /kick via SocialRoom): close the owner's socket if it is theirs, and any visit of theirs here. */
+  async removeUser(userId: string, text: string): Promise<number> {
+    const why = String(text).slice(0, 120);
+    let n = 0;
+    const p = this.player;
+    if (p && userId === this.owner) {
+      this.kick(p, CLOSE_REMOVED, why);
+      n++;
+    }
+    const v = this.visitors.byUser(userId);
+    if (v) {
+      this.visitors.remove(v);
+      markLeft(this.invites, v.userId, Date.now(), true);
+      this.persist({ invites: true });
+      send(v.ws, { t: "notice", text: why, kind: "error" });
+      closeQuietly(v.ws, CLOSE_REMOVED, why);
+      this.sendVisitorList();
+      n++;
+    }
+    return n;
   }
 
   /** RPC (sign-out hook): close the socket that belongs to this session. */

@@ -96,6 +96,7 @@ export class VisitorSet {
         hp: PLAYER_MAX_HP,
         maxHp: PLAYER_MAX_HP,
         look: shownLook(att.visit.look),
+        ...(att.admin ? { admin: true } : {}),
       },
       // A visitor's stamina lives in their own home, so here they walk (no dash, no drain).
       motion: Object.assign(new Motion(), { canDash: false }),

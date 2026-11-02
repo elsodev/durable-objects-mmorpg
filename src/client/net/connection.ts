@@ -5,6 +5,7 @@ import type { ZoneId } from "../../shared/types";
 import { backoffDelay } from "./backoff";
 import { createClockSync } from "./clock";
 import { probeUrl, wsUrl } from "./url";
+import { CLOSE_REMOVED, HTTP_REMOVED } from "../../shared/admin";
 
 /** The slice of the browser WebSocket we use, so tests can pass a fake. */
 export interface WsLike {
@@ -112,6 +113,14 @@ export function createConnectionWith(opts: Opts, deps: ConnectionDeps): Connecti
     if (z && opts.onForbidden) opts.onForbidden(z);
   };
 
+  const removed = () => {
+    stopped = true;
+    teardown();
+    queue = [];
+    setState("offline");
+    opts.onRemoved?.();
+  };
+
   const idle = () => {
     const z = zone;
     stopped = true;
@@ -183,6 +192,7 @@ export function createConnectionWith(opts: Opts, deps: ConnectionDeps): Connecti
       ws = null;
       if (ev.code === FORBIDDEN_CLOSE) return forbidden();
       if (ev.code === IDLE_CLOSE) return idle();
+      if (ev.code === CLOSE_REMOVED) return removed();
       if (opened) return scheduleRetry(my);
       setState("offline");
       deps
@@ -190,7 +200,8 @@ export function createConnectionWith(opts: Opts, deps: ConnectionDeps): Connecti
         .catch(() => null)
         .then((status) => {
           if (my !== gen || stopped) return;
-          if (status === 401 || status === 403) forbidden();
+          if (status === HTTP_REMOVED) removed();
+          else if (status === 401 || status === 403) forbidden();
           else scheduleRetry(my);
         });
     };

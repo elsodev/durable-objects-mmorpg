@@ -54,6 +54,12 @@ export interface Env {
   DROP_RATE_RARE?: string;
   /** "1" deliberately runs a non-local deploy without Turnstile (otherwise sign-up/sign-in fail closed). */
   CAPTCHA_DISABLED?: string;
+  /**
+   * Admin accounts: comma-separated emails, matched case-insensitively against the signed-in
+   * account (never a guest). Empty = no admins. ADMIN_EMAIL (singular) is read too. See admin/config.ts.
+   */
+  ADMIN_EMAILS?: string;
+  ADMIN_EMAIL?: string;
 }
 
 /** Local-only test hooks: needs DEV_TOOLS "on" AND scripted NPCs, so a stray var in production does nothing. */
@@ -77,6 +83,10 @@ export const H_COPY = "x-dmmo-copy";
 export const H_GUEST = "x-dmmo-guest";
 /** Better Auth session id behind the socket, so the DO can re-check it (game/session.ts). */
 export const H_SESSION = "x-dmmo-session-id";
+/** "1" when the Worker found the account in ADMIN_EMAILS. Durable Objects trust nothing else for admin rights. */
+export const H_ADMIN = "x-dmmo-admin";
+/** The client's IP (CF-Connecting-IP) as the Worker saw it; SocialRoom keeps it to ban a kicked player's address. */
+export const H_IP = "x-dmmo-ip";
 /** Visits (/ws/visit/<ownerId>): the home owner being visited. Its presence marks the socket as a visitor's. */
 export const H_VISIT_OWNER = "x-dmmo-visit-owner";
 /** Visits: the zone the visitor returns to when the visit ends (from their own save, read without a lease). */

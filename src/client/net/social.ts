@@ -2,6 +2,7 @@
 // Independent of the zone socket: it stays open across zone changes and reconnects with backoff.
 import { decodeSocialServer, type SocialClientMsg, type SocialServerMsg } from "../../shared/social";
 import { backoffDelay } from "./backoff";
+import { CLOSE_REMOVED } from "../../shared/admin";
 import type { WsLike } from "./connection";
 
 type Timer = ReturnType<typeof setTimeout>;
@@ -36,7 +37,7 @@ export function socialUrl(loc: { protocol: string; host: string }): string {
 }
 
 export function createSocialConnectionWith(
-  opts: { onMessage(msg: SocialServerMsg): void; onState?(online: boolean): void },
+  opts: { onMessage(msg: SocialServerMsg): void; onState?(online: boolean): void; onRemoved?(): void },
   deps: SocialDeps,
 ): SocialConnection {
   let ws: WsLike | null = null;
@@ -89,6 +90,11 @@ export function createSocialConnectionWith(
       setOpen(false);
       if (ev.code === SESSION_CLOSE) {
         stopped = true;
+        return;
+      }
+      if (ev.code === CLOSE_REMOVED) {
+        stopped = true;
+        opts.onRemoved?.();
         return;
       }
       schedule();

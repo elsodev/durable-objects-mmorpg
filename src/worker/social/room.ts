@@ -5,6 +5,7 @@
 //
 // RPC for other Durable Objects: presence(), recordStat(), notify(), presenceOf(), closeSession(),
 // and the village notice board (noticeList/Post/Vote/Delete; see noticeDesk.ts for why it lives here).
+// Admin tools (adminDesk.ts): /shout, /kick, /unban from admin sockets, and banCheck() for the Worker.
 // Subclass hook: onPresenceChange() fires when a user comes online, goes offline or changes zone.
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "../env";
@@ -31,6 +32,11 @@ import { mutedIds } from "../mutes/store";
 import { MUTES_NOTICE } from "../../shared/players";
 import { isNoticeId, isNoticePress, type NoticePress } from "../../shared/notices";
 import { NoticeDesk, type BoardAnswer, type DeskHost } from "./noticeDesk";
+import { AdminDesk, type AdminActor, type AdminHost, type UserInfo } from "./adminDesk";
+import { BanBook, cleanIp, type BanVerdict } from "./bans";
+import { CLOSE_REMOVED, type Shout } from "../../shared/admin";
+import { isAdminEmail } from "../admin/config";
+import { removeFromGame } from "../admin/disconnect";
 
 /** Friend lists are cached briefly so a burst of zone changes costs one D1 query. */
 const FRIEND_CACHE_MS = 60_000;
@@ -52,6 +58,10 @@ interface SocialAttachment {
   czone: ZoneId | null;
   /** Notice board open until (ms): live board updates go to this socket. */
   board?: number;
+  /** From the Worker's x-dmmo-admin header only. */
+  admin?: boolean;
+  /** Client IP the Worker forwarded (kept to ban the address if this player is kicked). */
+  ip?: string;
 }
 
 interface Conn {
@@ -91,6 +101,8 @@ export class SocialRoom extends DurableObject<Env> {
   /** Name of each online user, kept until their offline push has gone out. */
   private lastNames = new Map<string, string>();
   private desk!: NoticeDesk;
+  private bans!: BanBook;
+  private admin!: AdminDesk;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -105,6 +117,9 @@ export class SocialRoom extends DurableObject<Env> {
       this.history = Array.isArray(history) ? history.slice(-HISTORY_MAX) : [];
       this.stats = DailyStats.from(stats, Date.now());
       this.desk = await NoticeDesk.load(this.deskHost());
+      this.bans = new BanBook(ctx.storage);
+      this.admin = new AdminDesk(this.adminHost());
+      await this.admin.load();
       const now = Date.now();
       for (const [k, until] of mutes) {
         if (typeof until === "number" && until > now) this.guards.get(k.slice(5), now).muteUntil(until);
@@ -186,10 +201,20 @@ export class SocialRoom extends DurableObject<Env> {
       sid: id.sessionId,
       zone: this.presenceState.serverZoneOf(id.userId),
       czone: null,
+      ...(id.admin ? { admin: true } : {}),
+      ...(cleanIp(id.ip) ? { ip: cleanIp(id.ip)! } : {}),
     };
     server.serializeAttachment(att);
     const cameOnline = this.addConn(server, att, now);
-    send(server, { t: "hello", name: att.name, guest: att.guest, history: this.history });
+    const shout = this.admin.current(now);
+    send(server, {
+      t: "hello",
+      name: att.name,
+      guest: att.guest,
+      history: this.history,
+      ...(att.admin ? { admin: true as const } : {}),
+      ...(shout ? { shout } : {}),
+    });
     send(server, { t: "stats", ...this.statsView(now) });
     if (cameOnline) this.changed(att.userId);
     return new Response(null, { status: 101, webSocket: client });
@@ -269,7 +294,31 @@ export class SocialRoom extends DurableObject<Env> {
         return send(c.ws, { t: "stats", ...this.statsView(now) });
       case "ping":
         return send(c.ws, { t: "pong", at: msg.at });
+      case "shout": {
+        const r = this.admin.shout(this.actor(c), msg.text, now, crypto.randomUUID());
+        if (!r.ok) send(c.ws, { t: "notice", text: r.text, kind: "error" });
+        return;
+      }
+      case "kick":
+        return void this.answerAdmin(c, this.admin.kick(this.actor(c), msg.name, msg.reason, now));
+      case "unban":
+        return void this.answerAdmin(c, this.admin.unban(this.actor(c), msg.name, now));
     }
+  }
+
+  private actor(c: Conn): AdminActor {
+    return { userId: c.att.userId, name: c.att.name, admin: c.att.admin === true && !c.att.guest };
+  }
+
+  private async answerAdmin(c: Conn, pending: Promise<{ ok: boolean; text: string }>): Promise<void> {
+    let r: { ok: boolean; text: string };
+    try {
+      r = await pending;
+    } catch (err) {
+      console.error("admin action failed", err);
+      r = { ok: false, text: "That didn't work. Try again in a moment." };
+    }
+    send(c.ws, { t: "notice", text: r.text, kind: r.ok ? "info" : "error" });
   }
 
   /** Shared rate limit + mute for world chat and whispers. Returns the clean text or null. */
@@ -419,6 +468,89 @@ export class SocialRoom extends DurableObject<Env> {
         const online = this.presenceState.isOnline(userId);
         return { userId, online, zone: online ? this.presenceState.zoneOf(userId) : null };
       });
+  }
+
+  // ------------------------------------------------------------------ admin
+
+  private adminHost(): AdminHost {
+    const db = () => this.env.DB;
+    const toInfo = (r: { id: unknown; name: unknown; email: unknown; isAnonymous: unknown } | null): UserInfo | null =>
+      r && typeof r.id === "string"
+        ? {
+            userId: r.id,
+            name: cleanName(r.name),
+            email: typeof r.email === "string" ? r.email : null,
+            guest: r.isAnonymous === 1 || r.isAnonymous === true,
+          }
+        : null;
+    type Row = { id: unknown; name: unknown; email: unknown; isAnonymous: unknown };
+    return {
+      bans: this.bans,
+      storage: { get: (k) => this.ctx.storage.get(k), put: (k, v) => this.ctx.storage.put(k, v) },
+      broadcast: (shout: Shout) => {
+        const frame = JSON.stringify({ t: "shout", ...shout } satisfies SocialServerMsg);
+        for (const c of this.conns.values()) {
+          try {
+            c.ws.send(frame);
+          } catch {
+            // closing
+          }
+        }
+      },
+      online: (name) => {
+        const hit = this.presenceState.findByName(name);
+        return hit ? { userId: hit.userId, name: hit.name } : null;
+      },
+      // Accounts first, then guests: names are unique among accounts (0006_unique_names.sql).
+      userByName: async (name) =>
+        toInfo(
+          await db()
+            .prepare(`SELECT id, name, email, isAnonymous FROM "user" WHERE name = ?1 COLLATE NOCASE ORDER BY COALESCE(isAnonymous, 0), createdAt LIMIT 1`)
+            .bind(name)
+            .first<Row>(),
+        ),
+      userById: async (userId) =>
+        toInfo(await db().prepare(`SELECT id, name, email, isAnonymous FROM "user" WHERE id = ?`).bind(userId).first<Row>()),
+      isAdminEmail: (email) => isAdminEmail(this.env, email),
+      socketIps: (userId) =>
+        this.presenceState
+          .connsOf(userId)
+          .map((id) => this.conns.get(id)?.att.ip)
+          .filter((ip): ip is string => typeof ip === "string"),
+      sessionIps: async (userId) => {
+        try {
+          const rows = await db()
+            .prepare(`SELECT ipAddress FROM "session" WHERE userId = ? AND ipAddress IS NOT NULL ORDER BY updatedAt DESC LIMIT 3`)
+            .bind(userId)
+            .all<{ ipAddress: unknown }>();
+          return (rows.results ?? []).map((r) => r.ipAddress).filter((ip): ip is string => typeof ip === "string");
+        } catch {
+          return [];
+        }
+      },
+      remove: (userId, text) => {
+        for (const connId of this.presenceState.connsOf(userId)) {
+          const c = this.conns.get(connId);
+          if (!c) continue;
+          send(c.ws, { t: "removed", text });
+          try {
+            c.ws.close(CLOSE_REMOVED, text);
+          } catch {
+            // already closed
+          }
+          this.dropConn(c.ws);
+        }
+        void removeFromGame(this.env, userId, text).catch((err) => console.error("remove from game failed", err));
+      },
+      log: (line) => console.log(line),
+    };
+  }
+
+  /** RPC (Worker): is this account, browser cookie's account or address removed? */
+  async banCheck(userId: string | null, ip: string | null, cookieUser: string | null): Promise<BanVerdict> {
+    const id = validUser(userId) ? userId : null;
+    const cookie = validUser(cookieUser) ? cookieUser : null;
+    return this.bans.check(id, typeof ip === "string" ? ip : null, cookie, Date.now());
   }
 
   // ------------------------------------------------------------------ notice board

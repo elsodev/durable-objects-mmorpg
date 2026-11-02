@@ -5,7 +5,7 @@ import type { AuthUser } from "../auth";
 import { getMap } from "../../shared/maps";
 import { safeSpawnName } from "../../shared/validate";
 import type { ZoneId } from "../../shared/types";
-import { errorJson, stripIdentityHeaders } from "./util";
+import { errorJson, setAdminAndIp, stripIdentityHeaders } from "./util";
 import { zoneAllowed } from "./zone-route";
 import { originAllowed } from "./origin";
 
@@ -24,6 +24,7 @@ export async function forwardWs(request: Request, env: Env, zone: ZoneId, user: 
   headers.set(H_SPAWN, safeSpawnName(getMap(zone).spawns, url.searchParams.get("spawn")));
   headers.set(H_GUEST, user.isGuest ? "1" : "0");
   headers.set(H_SESSION, user.sessionId);
+  setAdminAndIp(headers, request, user);
 
   if (zone === "home") return env.HOME.get(env.HOME.idFromName(user.id)).fetch(new Request(request.url, { method: "GET", headers }));
   // A busy zone runs as several copies: try the one asked for, then the lowest with room.

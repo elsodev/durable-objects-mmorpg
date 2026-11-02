@@ -54,7 +54,7 @@ const PREWARM = ["ui_click", "ui_hover", "ui_open", "ui_close", "ui_slot", "step
  * Loaded right after PREWARM: a sound still loading when it's asked for is dropped (MAX_LATE_MS),
  * so without these the first swing of each tool, the first harvest and so on were silent.
  */
-const PREWARM_PLAY = ["hoe", "water", "plant", "harvest", "pick_swing", "pick_hit", "rock_break", "sword_swing", "sword_hit", "sword_miss", "pickup", "coins", "place", "error", "refill", "eat", "drink", "ui_tab", "ui_confirm", "ui_cancel", "npc_talk", "dog_bark", "husky_yip", "husky_awoo", "cat_purr", "cat_meow", "hen_cluck"];
+const PREWARM_PLAY = ["hoe", "water", "plant", "harvest", "pick_swing", "pick_hit", "rock_break", "sword_swing", "sword_hit", "sword_miss", "pickup", "coins", "place", "error", "refill", "eat", "drink", "ui_tab", "ui_confirm", "ui_cancel", "npc_talk", "dog_bark", "husky_yip", "husky_awoo", "cat_purr", "cat_meow", "hen_cluck", "announce_start", "announce_end"];
 
 interface MusicTrack {
   key: string;

@@ -23,3 +23,7 @@ TURNSTILE_SECRET_KEY=
 # DROP_RATE_GIFT=
 # DROP_RATE_HARVEST=
 # DROP_RATE_RARE=
+
+# Admin accounts (comma-separated emails, case-insensitive): /shout, /kick, /unban and the halo.
+# In production: npx wrangler secret put ADMIN_EMAILS
+# ADMIN_EMAILS=you@example.com

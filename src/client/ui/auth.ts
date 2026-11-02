@@ -14,6 +14,7 @@ import {
   MIN_PASSWORD_LEN,
   cleanName,
   friendlyAuthError,
+  isRemovedError,
   parseNameCheck,
   toSessionUser,
   validateEmail,
@@ -22,6 +23,7 @@ import {
   type Mode,
   type RawUser,
 } from "./auth-logic";
+import { showRemoved } from "./removed";
 import { NAME_PATTERN, NAME_RULE_TEXT } from "../../shared/names";
 import "./styles/auth.css";
 
@@ -220,6 +222,7 @@ function accountForm(
           ? await authClient().signUp.email({ email: email.value.trim(), password: password.value, name: n, fetchOptions })
           : await authClient().signIn.email({ email: email.value.trim(), password: password.value, fetchOptions });
       if (res.error) {
+        if (isRemovedError(res.error)) showRemoved();
         setError(friendlyAuthError(res.error, mode));
         cap.reset();
         busy.set(false);
@@ -374,6 +377,7 @@ export async function mountAuth(root: HTMLElement): Promise<SessionUser> {
         guestBusy.set(true, "Planting your farm…");
         const res = await authClient().signIn.anonymous({ fetchOptions: { headers: captchaHeaders(token) } });
         if (res.error) {
+          if (isRemovedError(res.error)) showRemoved();
           err.set(friendlyAuthError(res.error, "guest"));
           cap.reset();
           guestBusy.set(false);

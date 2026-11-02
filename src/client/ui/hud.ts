@@ -39,6 +39,8 @@ import { createSlotMenu, type SlotMenu } from "./slot-menu";
 import { BAG_BUMP_EVENT, replayClass } from "./buy-fx";
 import { tradeMenuChoices } from "./slot-menu-logic";
 import { parseTradeCommand } from "../../shared/trade";
+import { parseAdminCommand } from "../../shared/admin";
+import { createShoutBanner, type ShoutBanner } from "./shout-banner";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -234,7 +236,28 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   if (wardrobeBtn) optionButtons.appendChild(wardrobeBtn);
   if (controlsBtn) optionButtons.appendChild(controlsBtn);
   optionButtons.appendChild(creditsBtn);
+  // Admins only (setAdmin): starts a /shout in the chat box.
+  const shoutBtn = button("Shout", "dm-btn dm-btn-small", "hud-btn-shout", () => {
+    uiSound("click");
+    menu.close();
+    prefillChat("/shout ");
+  });
+  shoutBtn.title = "Admin: a banner for everyone online";
+  shoutBtn.hidden = true;
+  optionButtons.appendChild(shoutBtn);
   optionsPane.appendChild(optionButtons);
+  const shoutBanner: ShoutBanner | null = safe(
+    "shout banner",
+    () =>
+      createShoutBanner(hud, {
+        // Centred just under the top menu, so the menu stays usable; at the very top where the menu moved to the bottom.
+        top: () => {
+          const m = topMenu.getBoundingClientRect();
+          return m.height > 0 && m.top < 120 ? m.bottom + 8 : null;
+        },
+      }),
+    null,
+  );
   optionsPane.appendChild(
     el("p", { className: "options-keys dm-muted", text: "Keys: I bag · H hearts · O friends · M map · G goals · Esc closes. Drag items between slots; Shift-drag splits a stack." }),
   );
@@ -488,8 +511,10 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
           viewerGuest: safe("isGuest", () => game.isGuest(), false),
           homeOwner: safe("slashContext", () => game.slashContext?.().homeOwner ?? false, false),
           canTrade: !!game.requestTrade && safe("canTrade", () => game.canTrade?.() ?? false, false),
+          admin: safe("isAdmin", () => game.isAdmin?.() ?? false, false),
         }),
         trade: (hit) => game.requestTrade?.(hit),
+        kick: (name) => game.adminCommand?.({ cmd: "kick", name, reason: "" }),
         addFriend: (name) => friends.addByName(name),
         friendsChanged: () => void friends.refresh(),
         prefillChat,
@@ -512,6 +537,18 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     return "error" in r ? say(r.error, "error") : say(`Unmuted ${r.name || name}.`, "info");
   }
   function chatCommand(text: string): boolean {
+    // Admin commands first: for an admin "/kick name" removes them from the server, not just from home.
+    const admin = parseAdminCommand(text);
+    if (admin && safe("isAdmin", () => game.isAdmin?.() ?? false, false)) {
+      if (admin.cmd === "error") notices.notice(admin.message, "error");
+      else game.adminCommand?.(admin);
+      return true;
+    }
+    // Non-admins: never let "/shout ..." or "/unban ..." go out as zone chat.
+    if (admin && !/^\/kick\b/i.test(text.trim())) {
+      notices.notice("That command is for admins.", "error");
+      return true;
+    }
     const trade = parseTradeCommand(text);
     if (trade) {
       if (safe("isGuest", () => game.isGuest(), false)) void showAccountPrompt("Create an account to trade with other players.");
@@ -862,6 +899,12 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     },
     npcSayFailed(reason) {
       convo.failed(reason);
+    },
+    shout(s) {
+      shoutBanner?.show(s);
+    },
+    setAdmin(on) {
+      shoutBtn.hidden = !on;
     },
     setIconSource(src: (item: ItemId) => string) {
       safe("icons", () => setIconSource(src), undefined);

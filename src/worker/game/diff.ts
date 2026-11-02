@@ -22,6 +22,7 @@ export function snapshotEntity(e: EntityState): EntityState {
   if (e.act !== undefined) s.act = e.act;
   if (e.held !== undefined) s.held = e.held;
   if (e.pace !== undefined) s.pace = e.pace;
+  if (e.admin === true) s.admin = true;
   return s;
 }
 

@@ -305,6 +305,15 @@
   grid-template-columns: 1fr 1fr;
   gap: 4px;
 }
+/* Admin only: a full-width row of its own, in berry, so it never reads as a friendly button. */
+.pc-actions .pc-kick {
+  grid-column: 1 / -1;
+  color: var(--dm-berry-dark);
+  border-color: var(--dm-berry);
+}
+.pc-actions .pc-kick.dm-btn-accent {
+  color: var(--dm-cream);
+}
 .pc-actions:empty,
 .pc-msg:empty,
 .pc-stats[hidden],

@@ -1,6 +1,7 @@
 // DOM-free auth helpers (validation, error text, session mapping) so tests typecheck without DOM.
 
 import { NAME_MAX, NAME_RULE_TEXT, NAME_TAKEN_TEXT, nameProblem } from "../../shared/names";
+import { HTTP_REMOVED, REMOVED_CODE, REMOVED_TEXT } from "../../shared/admin";
 
 export type Mode = "signin" | "signup";
 
@@ -47,6 +48,7 @@ export function friendlyAuthError(err: AuthErrorLike | null | undefined, mode: M
   const msg = (err?.message ?? "").toLowerCase();
   const status = err?.status ?? 0;
   if (status === 429) return "Too many attempts. Take a short break and try again in a minute.";
+  if (isRemovedError(err)) return REMOVED_TEXT;
   if (code === "VERIFICATION_FAILED" || code === "MISSING_RESPONSE" || msg.includes("captcha"))
     return "The human check didn't go through. Please try again.";
   if (code === "NAME_TAKEN") return NAME_TAKEN_TEXT;
@@ -59,6 +61,11 @@ export function friendlyAuthError(err: AuthErrorLike | null | undefined, mode: M
   if (status === 0 || status >= 500) return "Couldn't reach Mossbrook. Check your connection and try again.";
   if (mode === "signin" && status === 401) return "That email and password don't match.";
   return mode === "guest" ? "Couldn't start a guest farm. Please try again." : "Something went wrong. Please try again.";
+}
+
+/** The Worker refused sign-in / sign-up because this browser or address was removed by an admin. */
+export function isRemovedError(err: AuthErrorLike | null | undefined): boolean {
+  return err?.status === HTTP_REMOVED || err?.code === REMOVED_CODE;
 }
 
 export interface RawUser {

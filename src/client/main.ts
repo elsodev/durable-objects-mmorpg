@@ -3,7 +3,7 @@ import { installAudio } from "./audio/player";
 import { showFatal } from "./game/errors";
 import { startSession } from "./game/session";
 import { watchStart } from "./game/start-watch";
-import { mountAuth } from "./ui";
+import { checkRemoved, mountAuth, showRemoved } from "./ui";
 import { createLoadingScreen, type LoadingScreen } from "./ui/loading";
 
 /** Audio counts as loaded once its manifest and common sounds are in, or after a short wait. */
@@ -30,7 +30,16 @@ async function main(): Promise<void> {
   const audio = installAudio();
   let loading: LoadingScreen | null = null;
   try {
+    // A removed account, browser or address sees only the removed screen (the server refuses it anyway).
+    if (await checkRemoved()) {
+      showRemoved(root);
+      return;
+    }
     const user = await mountAuth(ui);
+    if (await checkRemoved()) {
+      showRemoved(root);
+      return;
+    }
     stage = "start";
     loading = createLoadingScreen(root);
     waitForAudio(audio.ready(), loading);

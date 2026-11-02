@@ -8,6 +8,8 @@ export interface PlayerHit {
   userId: string;
   name: string;
   self: boolean;
+  /** Wears the admin halo (admins can't be kicked, so the card offers no Kick). */
+  admin?: boolean;
 }
 
 /** The card closes once its player is further than this (tiles) from you, or gone. */
@@ -47,7 +49,7 @@ export function friendButton(f: Friendship): { label: string; action: FriendActi
   }
 }
 
-export type CardButton = "friend" | "whisper" | "trade" | "invite" | "mute";
+export type CardButton = "friend" | "whisper" | "trade" | "invite" | "mute" | "kick";
 
 export interface CardContext {
   viewerGuest: boolean;
@@ -55,21 +57,24 @@ export interface CardContext {
   homeOwner: boolean;
   /** You are out in a shared zone, where players can trade. */
   canTrade?: boolean;
+  /** You are an admin (the server checks again on every kick). */
+  admin?: boolean;
 }
 
 /**
  * Which action buttons the card shows. None on your own card; guests get none; a guest target can
  * only be muted. Trade only out in a shared zone (never with villagers: the card is for players).
  */
-export function cardButtons(hit: Pick<PlayerHit, "self">, card: PlayerCard | null, ctx: CardContext): CardButton[] {
+export function cardButtons(hit: Pick<PlayerHit, "self" | "admin">, card: PlayerCard | null, ctx: CardContext): CardButton[] {
   if (hit.self || card?.self) return [];
   if (ctx.viewerGuest) return [];
-  if (card?.guest) return ["mute"];
+  const kick: CardButton[] = ctx.admin && !hit.admin ? ["kick"] : [];
+  if (card?.guest) return ["mute", ...kick];
   const out: CardButton[] = ["friend", "whisper"];
   if (ctx.canTrade) out.push("trade");
   if (ctx.homeOwner) out.push("invite");
   out.push("mute");
-  return out;
+  return [...out, ...kick];
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
