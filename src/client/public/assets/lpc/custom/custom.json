@@ -874,42 +874,95 @@
   "hoe": {
    "action": "hoe",
    "bg": "tools/hoe.bg.png",
-   "fg": "tools/hoe.fg.png"
+   "fg": "tools/hoe.fg.png",
+   "held": {
+    "bg": "tools/hoe.held.bg.png",
+    "fg": "tools/hoe.held.fg.png"
+   }
   },
   "watering_can": {
    "action": "watering",
    "bg": "tools/watering_can.bg.png",
-   "fg": "tools/watering_can.fg.png"
+   "fg": "tools/watering_can.fg.png",
+   "held": {
+    "bg": "tools/watering_can.held.bg.png",
+    "fg": "tools/watering_can.held.fg.png"
+   }
   },
   "pickaxe": {
    "action": "smash",
    "bg": "tools/pickaxe.bg.png",
-   "fg": "tools/pickaxe.fg.png"
+   "fg": "tools/pickaxe.fg.png",
+   "held": {
+    "fg": "tools/pickaxe.held.fg.png",
+    "bodies": {
+     "male_slim": {
+      "fg": "tools/pickaxe.held.thin.fg.png"
+     },
+     "female": {
+      "fg": "tools/pickaxe.held.thin.fg.png"
+     }
+    }
+   }
   },
   "pickaxe_iron": {
    "action": "smash",
    "bg": "tools/pickaxe_iron.bg.png",
-   "fg": "tools/pickaxe_iron.fg.png"
+   "fg": "tools/pickaxe_iron.fg.png",
+   "held": {
+    "fg": "tools/pickaxe_iron.held.fg.png",
+    "bodies": {
+     "male_slim": {
+      "fg": "tools/pickaxe_iron.held.thin.fg.png"
+     },
+     "female": {
+      "fg": "tools/pickaxe_iron.held.thin.fg.png"
+     }
+    }
+   }
   },
   "axe": {
    "action": "smash",
    "bg": "tools/axe.bg.png",
-   "fg": "tools/axe.fg.png"
+   "fg": "tools/axe.fg.png",
+   "held": {
+    "fg": "tools/axe.held.fg.png",
+    "bodies": {
+     "male_slim": {
+      "fg": "tools/axe.held.thin.fg.png"
+     },
+     "female": {
+      "fg": "tools/axe.held.thin.fg.png"
+     }
+    }
+   }
   },
   "sword_wood": {
    "action": "sword",
    "bg": "tools/sword_wood.bg.png",
-   "fg": "tools/sword_wood.fg.png"
+   "fg": "tools/sword_wood.fg.png",
+   "held": {
+    "bg": "tools/sword_wood.held.bg.png",
+    "fg": "tools/sword_wood.held.fg.png"
+   }
   },
   "sword_copper": {
    "action": "sword",
    "bg": "tools/sword_copper.bg.png",
-   "fg": "tools/sword_copper.fg.png"
+   "fg": "tools/sword_copper.fg.png",
+   "held": {
+    "bg": "tools/sword_copper.held.bg.png",
+    "fg": "tools/sword_copper.held.fg.png"
+   }
   },
   "fishing_rod": {
    "action": "fishing",
    "bg": "tools/fishing_rod.bg.png",
-   "fg": "tools/fishing_rod.fg.png"
+   "fg": "tools/fishing_rod.fg.png",
+   "held": {
+    "bg": "tools/fishing_rod.held.bg.png",
+    "fg": "tools/fishing_rod.held.fg.png"
+   }
   }
  },
  "characters": {

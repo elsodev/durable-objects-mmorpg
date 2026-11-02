@@ -20,6 +20,7 @@ export function snapshotEntity(e: EntityState): EntityState {
   if (e.status !== undefined) s.status = e.status;
   if (e.look !== undefined) s.look = e.look;
   if (e.act !== undefined) s.act = e.act;
+  if (e.held !== undefined) s.held = e.held;
   return s;
 }
 

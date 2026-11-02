@@ -5,6 +5,7 @@ import { createLookCompositor } from "../art/compositor";
 import { lookResolver } from "../render/look-characters";
 import { openCreator, type CreatorHandle } from "../ui/creator";
 import { DEFAULT_LOOK, validateLook } from "../../shared/look";
+import { heldItemAt } from "../../shared/held";
 import type { Camera, GameSession, Input, Predictor } from "../contracts";
 import { createConnection } from "../net/connection";
 import { createCamera } from "../render/camera";
@@ -198,12 +199,17 @@ export async function startSession(
     if (!base) return null;
     // Seated: the server places you on the chair; nothing to predict.
     if (base.act?.k === "sit") return applyAppearance({ ...base, moving: false }, appearance);
+    // Your own hand shows the selected tool at once; the server's copy is for everyone else.
+    const held = visiting ? undefined : heldItemAt(store.inventory, selectedSlot);
     const p = predictor.state();
     const act = effectiveAct(base.act, localAct);
     const now = performance.now();
     // While your swing plays you face what you swing at.
     const facing = swing && now < swing.endMs && act === swing.act ? swing.facing : p.facing;
-    return applyAppearance({ ...base, act, x: p.x, y: p.y, facing, moving: p.moving }, appearance);
+    const me: EntityState = { ...base, act, x: p.x, y: p.y, facing, moving: p.moving };
+    if (held) me.held = held;
+    else delete me.held;
+    return applyAppearance(me, appearance);
   }
 
   function visibleEntities(): EntityState[] {
@@ -236,6 +242,8 @@ export async function startSession(
 
   function selectSlot(slot: number): void {
     if (!Number.isInteger(slot) || slot < 0 || slot >= HOTBAR_SLOTS) return;
+    // Others see what you hold: tell the server, but only when the selection changes.
+    if (slot !== selectedSlot && !visiting) send({ t: "hold", slot });
     selectedSlot = slot;
     hud.setSelectedSlot(slot);
     refreshEdible();
@@ -886,6 +894,8 @@ export async function startSession(
     homeUi.setVisiting?.(!!visiting);
     visitsUi.setVisiting(visiting?.ownerName ?? null);
     visitsUi.setAtHome(msg.zone === "home" && !visiting);
+    // Each room starts with empty hands: say what is selected so others see it.
+    if (!visiting) send({ t: "hold", slot: selectedSlot });
     if (msg.zone !== "home") homeUi.closeBin();
     farmFx.reset();
     farmFx.redraw();

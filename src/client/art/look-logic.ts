@@ -83,6 +83,22 @@ export interface ToolArt {
   action: string;
   bg?: string;
   fg?: string;
+  /** Sheets for holding the tool while standing and walking (see HeldFiles). */
+  held?: HeldArtFiles;
+}
+
+/**
+ * A held tool's layers, laid out exactly like the walk rows (4 rows: up, left, down, right x the
+ * walk frames, frameW x frameH cells), so frame i of a facing sits on walk frame i of the body.
+ * "bg" is drawn behind the body, "fg" in front of it. `bodies` overrides them per body type,
+ * where the generator draws the tool differently for a slimmer build.
+ */
+export interface HeldFiles {
+  bg?: string;
+  fg?: string;
+}
+export interface HeldArtFiles extends HeldFiles {
+  bodies?: Record<string, HeldFiles>;
 }
 
 /** One body type's layer files. Pixel-identical layers may be shared between bodies. */
@@ -180,6 +196,7 @@ export function parseLookManifest(json: unknown): LookManifest | null {
           action: v.action,
           ...(typeof v.bg === "string" ? { bg: v.bg } : {}),
           ...(typeof v.fg === "string" ? { fg: v.fg } : {}),
+          ...(parseHeld(v.held) ?? {}),
         };
   const a = Array.isArray(json.anchor) && isNum(json.anchor[0]) && isNum(json.anchor[1]) ? json.anchor : null;
   const characters: Record<string, FixedCharacterArt> = {};
@@ -208,6 +225,45 @@ export function parseLookManifest(json: unknown): LookManifest | null {
     tools,
     characters,
   };
+}
+
+function heldLayers(v: unknown): HeldFiles | null {
+  if (!isObj(v)) return null;
+  const out: HeldFiles = {};
+  if (typeof v.bg === "string") out.bg = v.bg;
+  if (typeof v.fg === "string") out.fg = v.fg;
+  return out.bg || out.fg ? out : null;
+}
+
+function parseHeld(v: unknown): { held: HeldArtFiles } | null {
+  const base = heldLayers(v);
+  if (!base || !isObj(v)) return null;
+  const held: HeldArtFiles = { ...base };
+  if (isObj(v.bodies)) {
+    const bodies: Record<string, HeldFiles> = {};
+    for (const [body, b] of Object.entries(v.bodies)) {
+      const l = heldLayers(b);
+      if (l) bodies[body] = l;
+    }
+    if (Object.keys(bodies).length) held.bodies = bodies;
+  }
+  return { held };
+}
+
+/**
+ * The held-tool layers for `who` holding `item`: the body type's own sheets when the manifest
+ * has them, else the shared ones. Null when the item has no held art. Catalog characters (no
+ * body type) use the shared sheets, which fit the regular build.
+ */
+export function heldFiles(m: LookManifest, who: Actor, item: string): HeldFiles | null {
+  const held = Object.hasOwn(m.tools, item) ? m.tools[item]!.held : undefined;
+  if (!held) return null;
+  const body = "sprite" in who ? null : who.body;
+  const own = body && held.bodies && Object.hasOwn(held.bodies, body) ? held.bodies[body]! : null;
+  const bg = own ? own.bg : held.bg;
+  const fg = own ? own.fg : held.fg;
+  if (!bg && !fg) return null;
+  return { ...(bg ? { bg } : {}), ...(fg ? { fg } : {}) };
 }
 
 const own = (o: Record<string, string>, k: string): string | null => (Object.hasOwn(o, k) ? o[k]! : null);

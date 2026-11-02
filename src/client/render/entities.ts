@@ -1,7 +1,7 @@
 // Players, NPCs and monsters: one pooled Container per entity (ground shadow + body sprite),
 // y-sorted in layers.sorted, animated by facing/moving with manual frame stepping.
 import { ColorMatrixFilter, Container, Graphics, GraphicsContext, Sprite } from "pixi.js";
-import type { Art, CharacterArt, CreateEntityLayer, EntityLayer, Layers } from "../contracts";
+import type { Art, CharacterArt, CreateEntityLayer, EntityLayer, HeldArt, Layers } from "../contracts";
 import { SCALE, TILE } from "../contracts";
 import type { EntityState, Vec2 } from "../../shared/types";
 import { runActionHook } from "./action-anim";
@@ -9,6 +9,7 @@ import { isSeated, seatedFallback, seatedZ, SIT_DROP_PX } from "./sit-pose";
 import { blinkVisible, deathSquash, knockbackDone, knockbackOffset, slimePose } from "../game/combat-fx-logic";
 import { actionFrame, actionNameFor, impactFrameOf, ITEM_POSE_ACTS, swingFrame } from "./tool-actions";
 import { toolTiming } from "../../shared/engine/toolTiming";
+import { heldFrameIndex, heldToShow } from "./held-logic";
 import { bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFrame, type EntityProfile } from "./entityProfile";
 
 /**
@@ -33,6 +34,9 @@ interface Rec {
   root: Container;
   shadow: Graphics;
   body: Sprite;
+  /** The held tool's layers (EntityState.held): behind and in front of the body. */
+  heldBg: Sprite;
+  heldFg: Sprite;
   char: CharacterArt;
   spriteKey: string;
   look: unknown;
@@ -148,6 +152,33 @@ export const createEntityLayer = ((
     return true;
   }
 
+  /**
+   * The held tool rides the body: same anchor, offset, scale and alpha, with the frame that
+   * matches the body's walk frame, so it bobs with each step. Its sheets load on first use.
+   */
+  function drawHeld(rec: Rec, s: EntityState, item: string | null, walkIndex: number): void {
+    const art = item ? (rec.char.held?.(item) ?? null) : null;
+    const layers: [Sprite, HeldArt["bg"]][] = [
+      [rec.heldBg, art?.bg ?? null],
+      [rec.heldFg, art?.fg ?? null],
+    ];
+    for (const [sprite, sheet] of layers) {
+      const frames = sheet?.[s.facing] ?? null;
+      const i = frames ? heldFrameIndex(walkIndex, frames.length) : -1;
+      if (!frames || i < 0) {
+        sprite.visible = false;
+        continue;
+      }
+      const t = frames[i]!;
+      if (sprite.texture !== t) sprite.texture = t;
+      sprite.anchor.copyFrom(rec.body.anchor);
+      sprite.position.copyFrom(rec.body.position);
+      sprite.scale.copyFrom(rec.body.scale);
+      sprite.alpha = rec.body.alpha;
+      sprite.visible = true;
+    }
+  }
+
   function acquire(s: EntityState): Rec {
     let rec = pool.pop();
     if (!rec) {
@@ -155,12 +186,17 @@ export const createEntityLayer = ((
       const shadow = new Graphics(shadowCtx);
       const body = new Sprite();
       body.scale.set(SCALE);
-      root.addChild(shadow, body);
+      const heldBg = new Sprite();
+      const heldFg = new Sprite();
+      heldBg.visible = heldFg.visible = false;
+      root.addChild(shadow, heldBg, body, heldFg);
       rec = {
         id: s.id,
         root,
         shadow,
         body,
+        heldBg,
+        heldFg,
         char: undefined as unknown as CharacterArt,
         spriteKey: "",
         look: undefined,
@@ -210,6 +246,7 @@ export const createEntityLayer = ((
 
   function release(rec: Rec): void {
     live.delete(rec.id);
+    rec.heldBg.visible = rec.heldFg.visible = false;
     rec.root.removeFromParent();
     rec.body.filters = null;
     if (pool.length < POOL_MAX) pool.push(rec);
@@ -225,15 +262,20 @@ export const createEntityLayer = ((
     const seated = isSeated(s);
     const animating = !seated && (s.moving || p.animateIdle);
     const frames = c.walk[s.facing] ?? c.walk.down;
-    const tex = animating && frames.length > 0 ? frames[walkFrame(rec.clock, p.fps, frames.length)] : c.idle[s.facing] ?? c.idle.down;
+    const walkIndex = animating && frames.length > 0 ? walkFrame(rec.clock, p.fps, frames.length) : 0;
+    const tex = animating && frames.length > 0 ? frames[walkIndex] : c.idle[s.facing] ?? c.idle.down;
     const now = performance.now();
+    let acting = false;
     if (seated) {
       // The character's own "sit" frame; without sit art (or while it loads) the whole idle frame.
       if (!playAction(rec, s, now)) {
         const t = seatedFallback(c, s.facing);
         if (rec.body.texture !== t) rec.body.texture = t;
       }
-    } else if (!playAction(rec, s, now) && !runActionHook(rec.body, s, now) && rec.body.texture !== tex) rec.body.texture = tex;
+    } else {
+      acting = playAction(rec, s, now) || runActionHook(rec.body, s, now);
+      if (!acting && rec.body.texture !== tex) rec.body.texture = tex;
+    }
 
     const t = rec.clock + rec.phaseMs;
     if (s.kind === "monster" && s.act) {
@@ -265,6 +307,8 @@ export const createEntityLayer = ((
         rec.body.alpha = 1;
       }
     }
+
+    drawHeld(rec, s, heldToShow(s, { acting, seated, dying: rec.deathT >= 0 }), walkIndex);
 
     // Higher off the ground = smaller, fainter shadow.
     const height = lift / (TILE * 0.75);

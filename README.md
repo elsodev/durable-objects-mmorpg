@@ -206,6 +206,7 @@ All art is Liberated Pixel Cup (LPC) style, under CC-BY-SA 3.0, GPL 3.0 or 2.0, 
 - TheraHedwig
 - Nila122
 - Pierre Vigier (pvigier)
+- Inboxninja
 - Durrani
 - Evert
 - MuffinElZangano

@@ -3,7 +3,7 @@
 // message type fails to compile until someone decides whether visitors may send it.
 import type { ClientMsg } from "../../shared/protocol";
 
-export type VisitorAction = "move" | "chat" | "emote" | "ping" | "harvest";
+export type VisitorAction = "move" | "chat" | "emote" | "ping" | "harvest" | "hold";
 export type VisitorVerdict = { allow: VisitorAction } | { deny: string };
 
 const NOT_YOURS = "Only the owner can do that here.";
@@ -14,6 +14,8 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   chat: { allow: "chat" },
   emote: { allow: "emote" },
   ping: { allow: "ping" },
+  // Accepted and ignored: a visitor's bag isn't loaded here, so their hands stay empty.
+  hold: { allow: "hold" },
   // `use` only ever harvests a ready crop for a visitor; the slot is ignored (no tools, no seeds).
   use: { allow: "harvest" },
   interact: { deny: NOT_YOURS },

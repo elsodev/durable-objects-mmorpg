@@ -67,6 +67,7 @@ import { timeout } from "./game/timeout";
 import { stripControls } from "./npc/text";
 import { scheduleHour } from "../shared/npcSchedule";
 import { EntityDiffer } from "./game/diff";
+import { applyHeld } from "./game/held";
 import { AIMED_REACH, MonsterPool, strikeTargets } from "./game/monsterPool";
 import type { MonsterState } from "../shared/engine/monsters";
 import { INTERACT_TEXT, NpcRunner, type NpcHost } from "./game/npcRunner";
@@ -137,6 +138,8 @@ interface ZPlayer {
   /** The save's chosen look (undefined until picked); entity.look falls back to the default. */
   look: Look | undefined;
   lastLook: number;
+  /** Selected hotbar slot (the `hold` intent); its tool shows in the hand as entity.held. */
+  heldSlot: number | null;
   maxHp: number;
   lease: string;
   entity: EntityState;
@@ -393,6 +396,7 @@ export class ZoneRoom extends DurableObject<Env> {
       sprite: save.sprite,
       look: savedLook(save.look),
       lastLook: 0,
+      heldSlot: null,
       maxHp,
       lease: save.lease ?? "",
       entity: {
@@ -792,6 +796,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private inventoryChanged(p: ZPlayer, loot?: string): void {
+    applyHeld(p.entity, p.inv, p.heldSlot);
     send(p.ws, { t: "inventory", inventory: p.inv });
     if (loot) send(p.ws, { t: "notice", text: loot, kind: "loot" });
     // Bursts (mining, selling a stack, loot) coalesce into one HomeRoom call.
@@ -852,6 +857,10 @@ export class ZoneRoom extends DurableObject<Env> {
         return this.onMoveSlot(p, msg);
       case "setLook":
         return this.onSetLook(p, msg, now);
+      case "hold":
+        p.heldSlot = msg.slot;
+        applyHeld(p.entity, p.inv, p.heldSlot);
+        return;
       case "emote":
         // Everyone here sees it; spam just gets dropped.
         if (this.emotes.allow(p.userId, now)) this.broadcast({ t: "emote", from: p.entity.id, code: msg.code });

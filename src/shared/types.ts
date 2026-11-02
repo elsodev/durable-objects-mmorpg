@@ -79,6 +79,8 @@ export interface EntityState {
    * sits on a seat (entity at the seat tile's centre, facing the table); it is removed on standing.
    */
   act?: { k: string; at: number; item?: ItemId };
+  /** Players only: the tool or weapon in their selected hotbar slot, drawn in their hand (shared/held.ts). */
+  held?: ItemId;
 }
 
 /** Character creator choices; every field is an option id listed in shared/look.ts. */

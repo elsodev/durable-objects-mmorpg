@@ -5,6 +5,7 @@ import type { ClientMsg } from "./protocol";
 import { validateLook } from "./look";
 import { validateHomeClientMsg } from "./home";
 import { isEmote } from "./emotes";
+import { HOTBAR_SIZE } from "./held";
 
 /** Frames larger than this are dropped without parsing. */
 export const MAX_FRAME_BYTES = 2048;
@@ -101,6 +102,8 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       const look = validateLook(o.look);
       return look ? { t: "setLook", look } : null;
     }
+    case "hold":
+      return o.slot === null || isInt(o.slot, 0, HOTBAR_SIZE - 1) ? { t: "hold", slot: o.slot as number | null } : null;
     case "ping":
       return typeof o.at === "number" && Number.isFinite(o.at) ? { t: "ping", at: o.at } : null;
     case "emote":

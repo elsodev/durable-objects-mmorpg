@@ -181,6 +181,7 @@ describe("visitor permission matrix", () => {
     giftNpc: { t: "giftNpc", npc: "n", slot: 0 },
     emote: { t: "emote", code: EMOTE_CODE },
     moveSlot: { t: "moveSlot", from: 0, to: 1 },
+    hold: { t: "hold", slot: 0 },
   };
 
   it("allows only walking, chat, ping and harvest-use", () => {
@@ -188,7 +189,7 @@ describe("visitor permission matrix", () => {
       .filter(([, v]) => "allow" in v)
       .map(([k]) => k)
       .sort();
-    expect(allowed).toEqual(["chat", "emote", "move", "moveTo", "ping", "use"]);
+    expect(allowed).toEqual(["chat", "emote", "hold", "move", "moveTo", "ping", "use"]);
     for (const m of Object.values(samples)) expect(visitorVerdict(m as ClientMsg)).toBe(VISITOR_RULES[m.t]);
   });
 

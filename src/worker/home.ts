@@ -103,6 +103,7 @@ import {
 } from "./game/identity";
 import { clampHp, cloneInventory, isZoneId, objSeqFor, sanitizeFarm, sanitizeInventory, sanitizeObjects } from "./game/sanitize";
 import { Motion } from "./game/motion";
+import { applyHeld } from "./game/held";
 import { bondList } from "./game/bonds";
 import { sanitizeBonds, type Bonds } from "../shared/hearts";
 import { canChangeLook, savedLook, shownLook } from "./game/look";
@@ -240,6 +241,8 @@ interface HPlayer {
   /** Last hotbar slot used, so a plain "shipping_bin" interact knows which stack to sell. */
   lastSlot: number | null;
   lastLook: number;
+  /** Selected hotbar slot (the `hold` intent); its tool shows in the hand as entity.held. */
+  heldSlot: number | null;
   leaving: boolean;
   lastBuild: number;
   /** Last emote time (rate limit). */
@@ -1118,6 +1121,7 @@ export class HomeRoom extends DurableObject<Env> {
       lastUse: 0,
       lastSlot: null,
       lastLook: 0,
+      heldSlot: null,
       leaving: false,
       lastBuild: 0,
       lastEmote: 0,
@@ -1356,6 +1360,7 @@ export class HomeRoom extends DurableObject<Env> {
 
   private inventoryChanged(p: HPlayer, loot?: string): void {
     const save = this.save!;
+    applyHeld(p.entity, save.inventory, p.heldSlot);
     send(p.ws, { t: "inventory", inventory: save.inventory });
     if (loot) send(p.ws, { t: "notice", text: loot, kind: "loot" });
     this.persist({ save: true });
@@ -1393,6 +1398,11 @@ export class HomeRoom extends DurableObject<Env> {
         return this.reject(p, msg, "Visit the village for that.");
       case "setLook":
         return this.onSetLook(p, msg, now);
+      case "hold":
+        p.heldSlot = msg.slot;
+        applyHeld(p.entity, this.save!.inventory, p.heldSlot);
+        this.startTick();
+        return;
       case "emote":
         if (now - p.lastEmote < EMOTE_MIN_INTERVAL_MS) return;
         p.lastEmote = now;
@@ -1478,6 +1488,8 @@ export class HomeRoom extends DurableObject<Env> {
         return;
       case "use":
         return this.visitorHarvest(v, msg, now);
+      case "hold":
+        return; // a visitor's bag isn't loaded here: nothing to show in their hand
       default:
         return this.reject(v, msg, "Only the owner can do that here.");
     }

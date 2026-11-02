@@ -50,6 +50,12 @@ export interface CharacterArt {
    * character has none, or while its frames are still loading (they load on the first ask).
    */
   action?(nameOrItem: string): ActionArt | null;
+  /**
+   * The tool `item` held in the hand while standing and walking: layers whose frame i of a facing
+   * lines up with walk[facing][i] (same size and anchor). Null when the item has no held art, or
+   * while it loads (it loads on the first ask).
+   */
+  held?(item: string): HeldArt | null;
   /** Floats above the ground (bats): keep the shadow at the anchor. */
   flying?: boolean;
   /** Flying: draw the sprite this many screen px (already x SCALE) above the anchor/shadow. */
@@ -65,6 +71,12 @@ export interface ActionArt {
   hold: boolean;
   /** Feet position in texture space 0..1 for these frames. */
   anchor: Vec2;
+}
+
+/** A held tool (CharacterArt.held): "bg" frames go behind the body, "fg" frames in front. */
+export interface HeldArt {
+  bg: Record<Facing, Texture[]> | null;
+  fg: Record<Facing, Texture[]> | null;
 }
 
 /** Drop shadow sizes the art pack provides. */

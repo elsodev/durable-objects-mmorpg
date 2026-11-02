@@ -2,7 +2,7 @@
 // bottom, top, hair; order from custom.json) onto one sheet-sized canvas. Sheets are cached by look key
 // (LRU, MAX_LOOK_SHEETS), so a crowd of players with the same outfit costs one canvas.
 import type { Look } from "../../shared/types";
-import { actionPlan, actorKey, allLayerFiles, layerFiles, lookKey, LruCache, parseLookManifest, unknownOptionIds, type ActionPlan, type Actor, type LookManifest } from "./look-logic";
+import { actionPlan, actorKey, allLayerFiles, heldFiles, layerFiles, lookKey, LruCache, parseLookManifest, unknownOptionIds, type ActionPlan, type Actor, type LookManifest } from "./look-logic";
 
 export const LOOK_BASE = "/assets/lpc/custom/";
 export const MAX_LOOK_SHEETS = 32;
@@ -35,6 +35,12 @@ export interface LookCompositor<C extends SheetCanvas = HTMLCanvasElement> {
    * them, so ask again next frame. Also null when there is no such action for `who`.
    */
   action(who: Actor, nameOrItem: string): { canvas: C; plan: ActionPlan } | null;
+  /**
+   * Held-tool layers for `who` holding `item` (see look-logic HeldFiles): canvases laid out like
+   * the walk rows, "bg" behind the body and "fg" in front. Null until loaded (the first call
+   * starts loading, so ask again next frame), and null when the item has no held art.
+   */
+  held(who: Actor, item: string): { bg: C | null; fg: C | null } | null;
   /** Loads what `action` needs and resolves with it (null if there is no such action for `who`). */
   loadAction(who: Actor, nameOrItem: string): Promise<{ canvas: C; plan: ActionPlan } | null>;
 }
@@ -76,6 +82,8 @@ export function createLookCompositor<I, C extends SheetCanvas>(
   const pending = new Map<string, Promise<void>>();
   const settled = new Set<string>();
   let loading: Promise<boolean> | null = null;
+  /** Held-tool sheets by file: each image drawn once onto a canvas of the walk rows' size. */
+  const heldSheets = new Map<string, C | null>();
 
   function loadFiles(files: string[]): Promise<void> {
     return Promise.all(
@@ -128,6 +136,37 @@ export function createLookCompositor<I, C extends SheetCanvas>(
     return made;
   }
 
+  function heldSheet(m: LookManifest, file: string): C | null {
+    if (heldSheets.has(file)) return heldSheets.get(file)!;
+    const img = images.get(file);
+    let canvas: C | null = null;
+    if (img) {
+      canvas = deps.makeCanvas(m.walk.down.frames * m.frameW, 4 * m.frameH);
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img as unknown as CanvasImageSource, 0, 0);
+      } else canvas = null;
+    }
+    heldSheets.set(file, canvas);
+    return canvas;
+  }
+
+  function held(who: Actor, item: string): { bg: C | null; fg: C | null } | null {
+    if (!manifest) return null;
+    const files = heldFiles(manifest, who, item);
+    if (!files) return null;
+    const list = [files.bg, files.fg].filter((f): f is string => !!f);
+    if (!list.every((f) => images.has(f) || settled.has(f))) {
+      void loadFiles(list);
+      return null;
+    }
+    const m = manifest;
+    const bg = files.bg ? heldSheet(m, files.bg) : null;
+    const fg = files.fg ? heldSheet(m, files.fg) : null;
+    return bg || fg ? { bg, fg } : null;
+  }
+
   async function doLoad(): Promise<boolean> {
     try {
       manifest = parseLookManifest(await deps.fetchJson(`${base}custom.json`));
@@ -168,6 +207,7 @@ export function createLookCompositor<I, C extends SheetCanvas>(
     },
     manifest: () => manifest,
     action,
+    held,
     async loadAction(who, name) {
       if (!(await (loading ??= doLoad())) || !manifest) return null;
       const plan = actionPlan(manifest, who, name);

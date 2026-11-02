@@ -60,6 +60,11 @@ export type ClientMsg =
    * same item: merge up to the stack limit; otherwise swap. Answered with `inventory` or `reject`.
    */
   | { t: "moveSlot"; from: number; to: number; qty?: number; req?: string }
+  /**
+   * The hotbar slot you have selected (null: none), sent only when it changes and after each
+   * welcome. The server shows the tool in that slot in your hand (EntityState.held).
+   */
+  | { t: "hold"; slot: number | null }
   | HomeClientMsg;
 
 // ---------------- Server -> Client ----------------

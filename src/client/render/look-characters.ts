@@ -2,7 +2,7 @@
 // get CharacterArt sliced from their composited sheet; everyone else keeps the catalog sprite.
 // Both get action(name) (tool swings, harvest, hurt) from lazily composited action sheets.
 import { Rectangle, Texture } from "pixi.js";
-import type { ActionArt, CharacterArt } from "../contracts";
+import type { ActionArt, CharacterArt, HeldArt } from "../contracts";
 import type { LookCompositor } from "../art/compositor";
 import { lookKey, LruCache, rowFrames, type ActionPlan, type Actor, type LookManifest, type LookRow } from "../art/look-logic";
 import { validateLook } from "../../shared/look";
@@ -37,6 +37,37 @@ function lookActions(comp: LookCompositor, m: LookManifest, who: Actor): (name: 
   };
 }
 
+/** Slices a held-tool sheet into walk-aligned frames: 4 rows (up, left, down, right) x walk frames. */
+function heldFrames(m: LookManifest, canvas: HTMLCanvasElement | null): Record<Facing, Texture[]> | null {
+  if (!canvas) return null;
+  const source = Texture.from(canvas).source;
+  source.scaleMode = "nearest";
+  const n = m.walk.down.frames;
+  const frames = {} as Record<Facing, Texture[]>;
+  FACINGS.forEach((f, r) => {
+    frames[f] = Array.from({ length: n }, (_, j) => new Texture({ source, frame: new Rectangle(j * m.frameW, r * m.frameH, m.frameW, m.frameH) }));
+  });
+  return frames;
+}
+
+/** CharacterArt.held for a look or a catalog character, built from the compositor's lazily loaded sheets. */
+function lookHeld(comp: LookCompositor, m: LookManifest, who: Actor): (item: string) => HeldArt | null {
+  const made = new Map<string, HeldArt | null>();
+  return (item) => {
+    const hit = made.get(item);
+    if (hit !== undefined) return hit;
+    if (!Object.hasOwn(m.tools, item) || !m.tools[item]!.held) {
+      made.set(item, null);
+      return null;
+    }
+    const sheets = comp.held(who, item);
+    if (!sheets) return null; // still loading
+    const art: HeldArt = { bg: heldFrames(m, sheets.bg), fg: heldFrames(m, sheets.fg) };
+    made.set(item, art);
+    return art;
+  };
+}
+
 function buildArt(m: LookManifest, canvas: HTMLCanvasElement): CharacterArt {
   const source = Texture.from(canvas).source;
   source.scaleMode = "nearest";
@@ -66,7 +97,7 @@ export function lookResolver(comp: LookCompositor, fallback: CharacterResolver =
     if (!Object.hasOwn(m.characters, sprite)) return base;
     const hit = fixed.get(sprite);
     if (hit && hit.from === base) return hit.art;
-    const made: CharacterArt = { ...base, action: lookActions(comp, m, { sprite }) };
+    const made: CharacterArt = { ...base, action: lookActions(comp, m, { sprite }), held: lookHeld(comp, m, { sprite }) };
     fixed.set(sprite, { from: base, art: made });
     return made;
   };
@@ -82,6 +113,7 @@ export function lookResolver(comp: LookCompositor, fallback: CharacterResolver =
     if (!canvas) return withActions(fallback(art, state), state.sprite, m);
     const made = buildArt(m, canvas);
     made.action = lookActions(comp, m, look);
+    made.held = lookHeld(comp, m, look);
     cache.set(key, made);
     return made;
   };
