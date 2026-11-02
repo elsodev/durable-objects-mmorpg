@@ -1,5 +1,5 @@
 // Town Hall: the mayor's desk at the back, the notice board by the door (village goals), a
-// meeting table, shelves of records and plants. Bram works here in the afternoon; Tess pores over
+// meeting table, shelves of records and plants. Bram keeps the desk through the day; Tess pores over
 // cave maps in the evening.
 
 import { Ground, type MapData } from "../../types";

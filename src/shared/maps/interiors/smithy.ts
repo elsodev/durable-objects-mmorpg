@@ -1,5 +1,6 @@
 // Fenwick's smithy: forge and coal against the back wall, anvil and grindstone in the middle,
-// tool racks and a workbench, stock in barrels and crates. Fenwick finishes orders here evenings.
+// tool racks and a workbench, stock in barrels and crates. Fenwick works the anvil here through the
+// day and finishes orders here evenings.
 
 import { Ground, type MapData } from "../../types";
 import { Room } from "./room";

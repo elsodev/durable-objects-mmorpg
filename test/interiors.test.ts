@@ -171,9 +171,10 @@ describe("NPC routines", () => {
   });
 
   it("keeps shopkeepers at their posts through shop hours and sends everyone home at night", () => {
-    for (const id of ["odette", "fenwick", "marlo", "iris"]) {
+    for (const id of ["odette", "marlo", "iris"]) {
       for (let h = 8; h < 18; h++) expect(npcZoneAt(id, h), `${id}@${h}`).toBe(NPC_WORK_ZONE[id]);
     }
+    for (let h = 8; h < 17; h++) expect(npcZoneAt("fenwick", h), `fenwick@${h}`).toBe("int_smithy");
     for (const owner of HOUSE_OWNERS) expect(npcZoneAt(owner, 2)).toBe(`int_house_${owner}`);
     expect(npcZoneAt("rue", 2)).toBe("int_inn");
     expect(npcZoneAt("bram", 15)).toBe("int_townhall");

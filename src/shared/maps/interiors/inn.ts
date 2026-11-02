@@ -1,5 +1,5 @@
 // The Mossy Mug: bar along the west side with kegs behind it, a stone fireplace with a rug in
-// front, stairs up to the guest rooms, and tables set for supper. Rue runs it from lunch on; most
+// front, stairs up to the guest rooms, and tables set for supper. Rue runs it from breakfast on; most
 // villagers drop in after work.
 
 import { Ground, type MapData } from "../../types";

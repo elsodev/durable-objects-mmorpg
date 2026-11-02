@@ -22,10 +22,10 @@ interface Setup {
   budget?: boolean;
 }
 
-// NPCs follow daily routines: pin the clock to mid-morning, when Bram is out in the village.
+// NPCs follow daily routines: pin the clock to five o'clock, when Bram strolls the village after work.
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(Date.UTC(2026, 10, 1, 10, 0));
+  vi.setSystemTime(Date.UTC(2026, 10, 1, 17, 0));
 });
 afterEach(() => vi.useRealTimers());
 

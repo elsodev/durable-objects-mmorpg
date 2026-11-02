@@ -4,7 +4,7 @@ import { getMap } from "../src/shared/maps";
 import { isPondTile, POND_DOCK, pondTiles } from "../src/shared/maps/pond";
 import { BUILDING_DOORS } from "../src/shared/maps/interiors";
 import { NPC_HANGOUTS, pickStop, roamsOutdoors } from "../src/shared/npcHangouts";
-import { NPC_SCHEDULE, npcZoneAt } from "../src/shared/npcSchedule";
+import { jobZone, NPC_SCHEDULE, npcZoneAt, onShift } from "../src/shared/npcSchedule";
 import { Ground, OUTDOOR_ZONES, type Hangout, type Seat } from "../src/shared/types";
 import { NpcRunner, type NpcHost } from "../src/worker/game/npcRunner";
 import { standSpots } from "../src/worker/game/seats";
@@ -99,8 +99,8 @@ describe("pickStop", () => {
 
 describe("daytime schedule", () => {
   it("keeps villagers outdoors through the day and indoors at night", () => {
-    // Indoor exceptions: the mayor's paperwork after lunch, and the innkeeper's lunch rush.
-    const indoorsOk = (id: string, h: number) => (id === "bram" && h >= 13 && h < 16) || (id === "rue" && (h < 15 || h >= 17) && h >= 12);
+    // Indoor exceptions: villagers whose job is indoors (the mayor's desk, the smithy, the inn).
+    const indoorsOk = (id: string, h: number) => onShift(id, h) && jobZone(id)!.startsWith("int_");
     for (let h = 9; h < 17; h++) {
       for (const id of Object.keys(NPC_SCHEDULE)) {
         const z = npcZoneAt(id, h)!;
@@ -118,7 +118,8 @@ describe("village NPC runner", () => {
 
   it("walks roaming villagers away from their spawn to benches and hangouts", () => {
     vi.useFakeTimers();
-    const start = Date.UTC(2026, 10, 1, 10, 0);
+    // Five o'clock: shops are shut and the mayor, the smith and Grumm stroll the square with Pip.
+    const start = Date.UTC(2026, 10, 1, 17, 0);
     vi.setSystemTime(start);
     let seed = 7;
     const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);

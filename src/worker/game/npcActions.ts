@@ -18,6 +18,8 @@ export interface ActionScope {
   hasShop: boolean;
   /** False if this speaker already got a gift from this NPC today. */
   giftAllowed: boolean;
+  /** On shift at its counter/desk/stall: it never follows anyone off (walks stay within `leash`). */
+  atPost?: boolean;
 }
 
 const EMOTES = new Set(["happy", "sad", "angry", "surprised", "love", "think"]);
@@ -46,7 +48,7 @@ export function sanitizeActions(actions: unknown, scope: ActionScope): NpcAction
         break;
       }
       case "follow":
-        if (act.targetId === scope.speakerId && Number.isFinite(act.ms)) {
+        if (!scope.atPost && act.targetId === scope.speakerId && Number.isFinite(act.ms)) {
           out.push({ kind: "follow", targetId: act.targetId, ms: Math.min(MAX_FOLLOW_MS, Math.max(0, act.ms)) });
         }
         break;

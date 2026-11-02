@@ -2,7 +2,7 @@
 // Conversations run async next to the tick; the tick never awaits them.
 import { sanitizeLine } from "../npc/text";
 import { isInteriorZone, type EntityState, type Facing, type MapData, type NpcSpawn, type Seat, type SharedZoneId, type Vec2 } from "../../shared/types";
-import { msToNextHour, npcNextZone, npcPresent, npcPrevZone, scheduleHour } from "../../shared/npcSchedule";
+import { atWork, msToNextHour, npcNextZone, npcPresent, npcPrevZone, scheduleHour } from "../../shared/npcSchedule";
 import { pickStop, roamsOutdoors } from "../../shared/npcHangouts";
 import { BUILDING_DOORS } from "../../shared/maps/interiors/doors";
 import { bumps, canStand, dist, facingFor, findPath, isBlocked, NPC_SPEED, stepToward, withPeople, type CollisionGrid } from "../../shared/engine";
@@ -59,9 +59,6 @@ interface Poi {
   y: number;
   face: Facing;
 }
-
-/** Who works the room and stays at their post (behind the bar) instead of sitting about. */
-const INDOOR_KEEPERS: Partial<Record<string, string>> = { int_inn: "rue" };
 
 type Goal = { kind: "seat"; seatId: string } | { kind: "poi"; face: Facing; spot?: string } | { kind: "wander" };
 /** NpcAgent RPC budget (its own model turn stops at 5 s). */
@@ -312,7 +309,9 @@ export class NpcRunner {
    * else its spot.
    */
   private arrivalSpot(n: NpcState, hour: number): Vec2 {
-    const prev = this.indoor ? null : npcPrevZone(n.id, hour);
+    // A stall keeper's spot is behind the counter, which no walk reaches: they open up in place.
+    const stall = n.spawn.wander <= 0 && atWork(n.id, this.zone, hour);
+    const prev = this.indoor || stall ? null : npcPrevZone(n.id, hour);
     const p = prev ? this.wayTo(prev) : null;
     return p && canStand(this.grid, p.x, p.y) ? p : { x: n.spawn.x + 0.5, y: n.spawn.y + 0.5 };
   }
@@ -326,8 +325,16 @@ export class NpcRunner {
   }
 
   /** Outdoors: walks between spots (benches, the fountain, the pond...) instead of a short wander. */
-  private roams(n: NpcState): boolean {
-    return !this.indoor && this.hangouts.length > 0 && n.spawn.wander > 0 && roamsOutdoors(n.id);
+  private roams(n: NpcState, now: number): boolean {
+    return !this.indoor && this.hangouts.length > 0 && n.spawn.wander > 0 && roamsOutdoors(n.id) && !this.atPost(n, now);
+  }
+
+  /**
+   * On shift in this zone: the NPC keeps to its spot (behind the counter, the desk, the anvil, the
+   * stall) so players can find it to trade. No benches, strolls or following anyone.
+   */
+  atPost(n: NpcState, now: number): boolean {
+    return atWork(n.id, this.zone, this.hour(now));
   }
 
   nearest(p: Vec2, range: number): NpcState | null {
@@ -367,17 +374,19 @@ export class NpcRunner {
     }
   }
 
-  private leash(n: NpcState): number {
-    return n.spawn.wander + LEASH_EXTRA;
+  /** How far from its spot an NPC may be sent (walk_to, follow); on shift only its own short wander. */
+  private leash(n: NpcState, now: number): number {
+    return this.atPost(n, now) ? Math.max(0, n.spawn.wander) : n.spawn.wander + LEASH_EXTRA;
   }
 
   private move(n: NpcState, players: EntityState[], dtMs: number, now: number): void {
     const home = { x: n.spawn.x + 0.5, y: n.spawn.y + 0.5 };
+    if (n.follow && this.atPost(n, now)) n.follow = null;
     if (n.follow && isSitting(n.entity)) this.getUp(n, now);
     if (n.follow) {
       const p = players.find((e) => e.id === n.follow!.id);
       if (!p || now >= n.follow.until) n.follow = null;
-      else if (dist(n.entity, p) > FOLLOW_GAP && dist(p, home) <= this.leash(n) * 2) {
+      else if (dist(n.entity, p) > FOLLOW_GAP && dist(p, home) <= this.leash(n, now) * 2) {
         this.stepTo(n, p, dtMs, now);
         return;
       } else {
@@ -386,12 +395,17 @@ export class NpcRunner {
         return;
       }
     }
-    if ((this.indoor || this.roams(n)) && !n.target) return this.moveIndoors(n, dtMs, now);
+    if ((this.indoor || this.roams(n, now)) && !n.target) return this.moveIndoors(n, dtMs, now);
     if (!n.target) {
       n.entity.moving = false;
       if (now < n.idleUntil) return;
       n.idleUntil = now + 2000 + this.rand() * 5000;
-      if (n.spawn.wander <= 0) return;
+      if (n.spawn.wander <= 0) {
+        // A stall keeper stands inside the stall's footprint (the counter hides their legs), where
+        // no walk can reach: if anything moved them off it, they are put straight back behind it.
+        if (dist(n.entity, home) > 0.05) Object.assign(n.entity, { x: home.x, y: home.y, facing: "down" });
+        return;
+      }
       for (let i = 0; i < 6; i++) {
         const a = this.rand() * Math.PI * 2;
         const r = this.rand() * n.spawn.wander;
@@ -443,7 +457,7 @@ export class NpcRunner {
   private plan(n: NpcState, now: number): void {
     n.idleUntil = now + 2000 + this.rand() * 4000;
     if (!this.indoor) return this.planOutdoors(n, now);
-    const keeper = INDOOR_KEEPERS[this.zone] === n.id;
+    const keeper = this.atPost(n, now);
     const evening = this.hour(now) >= 18 || this.hour(now) < 2;
     const sitChance = keeper ? 0 : this.zone === "int_inn" && evening ? 0.75 : 0.35;
     const roll = this.rand();
@@ -745,7 +759,8 @@ export class NpcRunner {
     const scope: ActionScope = {
       speakerId: speaker.entityId,
       home: { x: npc.spawn.x + 0.5, y: npc.spawn.y + 0.5 },
-      leash: this.leash(npc),
+      leash: this.leash(npc, now),
+      atPost: this.atPost(npc, now),
       hasShop: !!npc.def?.shop,
       giftAllowed: (await this.storage.get<string>(giftKey)) !== today,
     };
@@ -937,12 +952,15 @@ export class NpcRunner {
           break;
         }
         case "walk_to":
+          // A request that slipped past the clamp (the shift began meanwhile) never leaves the post.
           if (!canStand(this.grid, a.x, a.y)) break;
+          if (this.atPost(npc, now) && dist(a, { x: npc.spawn.x + 0.5, y: npc.spawn.y + 0.5 }) > Math.max(0, npc.spawn.wander) + 0.01) break;
           if (isSitting(npc.entity)) this.getUp(npc, now);
           if (this.indoor) this.walk(npc, { x: a.x, y: a.y }, { kind: "wander" });
           else npc.target = { x: a.x, y: a.y };
           break;
         case "follow":
+          if (this.atPost(npc, now)) break;
           npc.follow = { id: a.targetId, until: now + a.ms };
           break;
         case "open_shop":
