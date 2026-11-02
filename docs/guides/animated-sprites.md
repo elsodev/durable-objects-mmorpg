@@ -65,6 +65,39 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
   3. Add `held` to the tool's entry in `custom.json` `tools`, and credit the files.
   4. Check it in the browser: all four facings standing and mid-walk, the hand on the handle, nothing cut off, and the layer gone during a swing.
 
+### Wrong-tool rebounds
+
+- **When it happens:** a striking tool hits something solid that it can't work:
+  - an axe, hoe or sword on a rock;
+  - a pickaxe, hoe or sword on a tree or stump;
+  - any of them on a decorative boulder (`rock_deco`), which no tool breaks.
+
+  The rules live in `resolveToolUse` in `src/shared/engine/toolRules.ts`, which marks these outcomes `bounce: true`. A pickaxe that is too weak for an ore is the right tool, so it is not a rebound and costs no extra energy.
+- **What the player sees, at the swing's impact frame:**
+  1. **The spark:** a 4-frame one-shot sprite, `fx/rebound_spark.png` (catalog `props.fx_rebound`), at 80 ms per frame (`REBOUND_FRAME_MS`).
+  2. **Grit:** three chips, either wood (tree or stump) or stone (rock or boulder).
+  3. **A jolt:** the swinger is pushed 0.18 tiles away from the target and settles back (`reboundRecoil`, using the entity `nudge`).
+  4. **Sound and notice:** the `tool_clunk` sound plays, and a notice says which tool is needed.
+- **Who sees it:** the swinger shows it from their own swing. Everyone else in the zone gets a `bounce` message with the impact time, so they see it at the same frame.
+- **Energy:** each wrong hit in a row costs more energy: 1, then 2, and so on, up to 6. The streak resets after 8 s or after a correct hit. From the third hit, the notice also says it is wearing you out. All of this is in `src/shared/engine/wrongTool.ts`.
+- **Where the spark goes:** `toolContactPoint` puts it where the blade meets the target, so the character's own head never hides it:
+  - facing up, it sits at the top of the head, under the name tag;
+  - facing left or right, it sits at arm's length, at chest height;
+  - facing down, it sits in front of the feet.
+- **Art rules for the spark:**
+  - Each frame is a 32×32 cell, with the impact point in the centre of the cell (anchor `[16, 16]`).
+  - Frame 0 is a small hot core, and frame 1 is the biggest flash.
+  - Frame 2 flies apart, and frame 3 is the last embers near the cell edge.
+  - Nothing may touch the cell edge.
+  - Use warm white, yellow and orange, with a dark warm outline (not black) so it reads on grass, stone and dirt.
+  - It casts no shadow. It is CC0 and drawn by script, and it is credited in `CREDITS.md`.
+- **One spark for every tool, for now:** the axe, pickaxe, hoe and sword all share the same spark. Only the grit changes with the target. To give a tool its own rebound:
+  1. Draw `fx/rebound_<tool>.png` in the same 4 × 32 px layout, keeping the same centre and timing so every tool lands on the same frame.
+  2. Add it to the catalog as `props.fx_rebound_<tool>`.
+  3. Pick it in `reboundFx` (`src/client/game/session.ts`) from the swinger's held item, and fall back to `fx_rebound`.
+  4. Credit it.
+  5. Check it in the browser, facing all four ways. A screencast shows the frames more reliably than screenshots, because headless screenshots are slower than the effect.
+
 ## Monsters
 
 - **Catalog entry:** monsters are listed in `catalog.json` `monsters` with `frameW` and `frameH`, an `anchor`, and `animations.walk` rows per direction. Optional `attack` rows can be added the same way.
@@ -75,7 +108,7 @@ This guide covers how moving art is laid out and wired up: characters, tool swin
 
 - **Looping props:** list the frames as an array in `frames` (for example the campfire, fireplace, forge, candles and wall torches). They loop at a steady rate, with each prop offset by its tile position so neighbours don't flicker in sync.
 - **Lids and doors:** these use named frames, `closed`, `opening` and `open`, for example the shipping bin and the cave chest. The renderer plays closed → opening → open and back again.
-- **One-shot effects:** short effects that play once, like the tool-rebound spark (`fx/rebound_spark.png`, catalog `props.fx_rebound`), list their frames like a looping prop. The code plays them once (`REBOUND_FRAME_MS` in `src/client/render/hit-fx-logic.ts`) and places them clear of the character's head. Draw them centred in the cell, with the anchor in the middle.
+- **One-shot effects:** these are short effects that play once, such as the tool-rebound spark (see [Wrong-tool rebounds](#wrong-tool-rebounds)). List their frames the same way as a looping prop. The code plays them once. Draw them centred in the cell, with the anchor in the middle.
 - **Swaying plants:** trees and bushes sway in code (`SWAY_TYPES`). Don't draw sway frames for them.
 
 ## Animated terrain (water)
@@ -104,3 +137,4 @@ Ponds and rivers are animated by `src/client/render/water.ts`; the pure timing a
 - [ ] Wide frames don't overlap the name tag or the HUD.
 - [ ] The animation goes back to idle, unless it is meant to hold.
 - [ ] The moving thing has a shadow; its static props have none.
+- [ ] Effects that play once (sparks, puffs) start on the impact frame and stay clear of the character's head and name tag.
