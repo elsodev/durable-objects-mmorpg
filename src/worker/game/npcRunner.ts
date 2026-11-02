@@ -748,7 +748,9 @@ export class NpcRunner {
 
     // Replies are personal (names, gifts), so the cache is per (NPC, player), never shared.
     const pair = this.pairKey(npc.id, speaker.userId);
-    const cached = this.gate.cached(pair, text, now);
+    // Walking up always sends the same text, so a cached greeting would repeat word for word.
+    const cacheable = text !== INTERACT_TEXT;
+    const cached = cacheable ? this.gate.cached(pair, text, now) : null;
     const useAi = !cached && (await this.mayUseAi(npc.id, speaker.userId, now, opts.judge));
     const benv = this.brainEnv(useAi);
     // Runs beside the decision and the line; the verdict is applied just before the answer.
@@ -799,7 +801,7 @@ export class NpcRunner {
     if (verdict) this.host.judged?.(speaker.entityId, npc.id, await verdict);
     const clean = cleanChat(line);
     if (!clean) return;
-    if (useAi && (source === "agent" || source === "speak")) this.gate.remember(pair, text, { line: clean, intent: decision.intent, at: now });
+    if (cacheable && useAi && (source === "agent" || source === "speak")) this.gate.remember(pair, text, { line: clean, intent: decision.intent, at: now });
 
     this.rememberLines(npc.id, speaker.userId, [`${speaker.name}: ${text}`, `${ctx.npc.name}: ${clean}`]);
 

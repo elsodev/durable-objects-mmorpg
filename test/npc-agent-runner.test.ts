@@ -130,6 +130,14 @@ describe("NpcRunner + NpcAgent mind", () => {
     expect(s.requests[0]!.req.context.world).toEqual(["The village is still working on: Rebuild the Bridge."]);
   });
 
+  it("never replays a cached reply for walking up to talk", async () => {
+    const s = setup({ budget: true });
+    await s.talk("A", INTERACT_TEXT);
+    await s.talk("A", INTERACT_TEXT);
+    // The greeting text is always the same; a cached line would repeat the first greeting word for word.
+    expect(s.requests).toHaveLength(2);
+  });
+
   it("never lets player A's conversation reach player B's context", async () => {
     const s = setup({ budget: true });
     await s.talk("A", "my secret plan is moonberries");
