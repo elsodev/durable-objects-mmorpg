@@ -10,6 +10,7 @@
 import type { BondView } from "../../shared/hearts";
 import type { ClientMsg, ServerMsg, ShopOffer, VillageGoal } from "../../shared/protocol";
 import type { SlashContext } from "./slash-commands";
+import type { TravelId } from "./map-pane-logic";
 import type { Inventory, ItemId, ZoneId } from "../../shared/types";
 import type { ChatChannel, ChatTab, SocialStats } from "../../shared/social";
 import type { EmoteCode } from "../../shared/emotes";
@@ -72,6 +73,8 @@ export interface GameApi {
   emote?(code: EmoteCode): void;
   /** Where the player is, for the chat "/" command suggestions. */
   slashContext?(): SlashContext;
+  /** Fast travel from the Map tab to a place on the island. Optional: no Travel button without it. */
+  travel?(to: TravelId): void;
 }
 
 /** Where a chat line belongs (tabs) and, for whispers, which way it went. */

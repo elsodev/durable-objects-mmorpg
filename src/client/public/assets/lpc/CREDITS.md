@@ -816,3 +816,9 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - License: **CC0**
 - Source: drawn by script for this game
 - Notes: Pose props. `bedroll.png` is a patchwork quilt and a pillow for `/sleep`, `zzz.png` is three frames of a rising Z, and `pee.png` holds the side and front stream frames plus the puddles for `/piss`. `calm.png` is the soft ground glow and the three light-mote frames for `/meditate`.
+
+### map/island.png, map/pins.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game
+- Notes: The island picture on the Map tab (256 × 160, shown at 2× with pixelated scaling) and its place pins (12 × 16: red for a place, gold for where you are).

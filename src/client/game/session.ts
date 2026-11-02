@@ -300,6 +300,14 @@ export async function startSession(
     isGuest: () => isGuest,
     openWardrobe: () => openWardrobe(false),
     openControls: () => tutorial.open(),
+    travel(to) {
+      // Fast travel is a plain join without a named spawn: the server puts you at the place's
+      // default spawn (only exits you actually took may name one).
+      if (destroyed || pendingZone !== null) return;
+      if (isGuest && to !== "home") return void askForAccount("Create an account to explore the valley.", to);
+      playSfx("door");
+      joinZone(to);
+    },
     playerAt(clientX, clientY) {
       if (!world) return null;
       const r = game.app.canvas.getBoundingClientRect();

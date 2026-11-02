@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MENU_TABS, menuStep, restoreTab, type MenuState } from "../src/client/ui/game-menu-logic";
 import { shortcutFor } from "../src/client/ui/hud-logic";
-import { mapRows, buildingName } from "../src/client/ui/map-pane-logic";
+import { buildingName, isTravelId, ISLAND, mapRows, TRAVEL_COOLDOWN_MS, travelRefusal } from "../src/client/ui/map-pane-logic";
 import { rowMarkers } from "../src/client/ui/bonds-logic";
 import type { BondView } from "../src/shared/hearts";
 
@@ -63,6 +63,29 @@ describe("map tab", () => {
     expect(inn.inside).toBe("the inn");
     expect(buildingName("int_house_tess")).toBe("Tess's house");
     expect(mapRows(null).some((r) => r.here)).toBe(false);
+  });
+
+  it("puts every pin on the island picture, apart enough to click", () => {
+    const rows = mapRows("village");
+    for (const r of rows) {
+      expect(r.pin.x).toBeGreaterThan(5);
+      expect(r.pin.x).toBeLessThan(95);
+      expect(r.pin.y).toBeGreaterThan(10);
+      expect(r.pin.y).toBeLessThan(95);
+    }
+    for (const a of rows)
+      for (const b of rows) if (a !== b) expect(Math.hypot((a.pin.x - b.pin.x) * ISLAND.w, (a.pin.y - b.pin.y) * ISLAND.h) / 100).toBeGreaterThan(14);
+  });
+
+  it("fast travel: anywhere but where you are, once per cooldown", () => {
+    expect(travelRefusal("caves", "village", 10_000, 0)).toBeNull();
+    expect(travelRefusal("village", "village", 10_000, 0)).toBe("You are already here.");
+    expect(travelRefusal("village", "int_inn", 10_000, 0)).toBeNull();
+    expect(travelRefusal("home", "village", 1000, 0)).toBe("Just a moment.");
+    expect(travelRefusal("home", "village", TRAVEL_COOLDOWN_MS, 0)).toBeNull();
+    expect(travelRefusal("home", null, 10_000, 0)).not.toBeNull();
+    expect(isTravelId("quarry")).toBe(true);
+    expect(isTravelId("int_inn")).toBe(false);
   });
 });
 

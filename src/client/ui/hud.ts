@@ -21,6 +21,7 @@ import { runHomeCommand } from "./visits-api";
 import { uiSound } from "./sound";
 import { createGameMenu, type GameMenu } from "./game-menu";
 import { createMapPane, type MapPane } from "./map-pane";
+import type { TravelId } from "./map-pane-logic";
 import { createSlotDrag, type SlotDrag } from "./slot-drag";
 import { planMove } from "./slot-drag-logic";
 import { openCredits } from "./credits";
@@ -478,7 +479,13 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     blank.hidden = true;
     return blank;
   };
-  const mapPane: MapPane = safe("map", () => createMapPane({ zone: () => zoneId }), {
+  const travel = game.travel
+    ? (to: TravelId): void => {
+        menu.close();
+        game.travel?.(to);
+      }
+    : undefined;
+  const mapPane: MapPane = safe("map", () => createMapPane({ zone: () => zoneId, ...(travel ? { travel } : {}) }), {
     el: el("div"),
     show() {},
     hide() {},
