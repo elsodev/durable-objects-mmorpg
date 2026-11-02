@@ -68,6 +68,26 @@ This guide covers every image in the game: terrain, buildings, props, furniture,
 - **Tables and counters:** these need a `surface` rect, the tabletop that items stand on. Items placed there sort above the table.
 - **Wall decor:** paintings, mirrors and windows must stay visible. Tall furniture (potted trees, shelves, barrel stacks, beds) must not cover them.
 
+## Placeable furniture
+
+Furniture players buy and place lives in `src/shared/furnitureItems.ts` (shop and rare pieces) and `src/shared/items.ts` (older and gift pieces). The art is the catalog's `furniture[id]` entry, or `props[id]` when there is none.
+
+- **Size to the footprint:** one tile is 32 px. Draw a 1x1 piece about 26–32 px wide, a 2x1 piece 56–64 px wide, and let tall pieces (fridge, bookcase, arcade cabinet) rise up to two tiles above their row. Solid floor art may lip past its footprint by at most 4 px a side. Rugs and wall pieces are exempt.
+- **Feet point:** the anchor is the bottom-centre of the footprint row the piece stands on. No more than 2 px of art may hang below it.
+- **Packing a sheet:** leave at least 2 px of clear space around every cell, so a rect can never pick up its neighbour or slice a sprite off.
+- **Rugs:** walkable floor pieces lie flat under the room. Other furniture may stand on a rug, but rugs don't stack. A click picks the piece on top.
+- **Wall pieces:** they hang on the wall's lowest row or the one above. On the lowest row the renderer raises them 10 source px (`WALL_SKIRT_LIFT`) so they clear the skirting board. Draw wall art with its bottom edge as the hanging point.
+- **Turning:** a piece may only list rotations it has art for: `left` for 1 and `back` for 2. Rotation 3 uses `right`, else `left` or the front mirrored.
+- **Where it comes from:** shop pieces have a `buy` price and are sold at the village Furniture Stall (`STALL_SHOPS` in `src/worker/game/shop.ts`). Rare pieces (`rarity: "rare"`, no `buy`) are never sold. They drop from cave monsters (`RARE_MONSTER_FURNITURE`) or are a villager's gift at a heart milestone (`RARE_GIFTS`). To add one, add a row there.
+- **Storage furniture:** give the item `storage: { slots, accepts }` and its art `closed`/`opening`/`open` frames (see [Sprite lifecycles](sprite-lifecycle.md#bins-chests-and-other-lids)).
+- **The audit:** `test/catalog-art.test.ts` checks that:
+  - every catalog rect sits inside its image;
+  - every placeable piece has art and a footprint;
+  - every view stands on its anchor, fits its footprint and isn't cut off at a rect edge;
+  - animation frames match the front cell.
+
+  A tightly packed legacy sheet goes on its allowlist only after you've looked at the sheet, with the reason written down.
+
 ## Layering
 
 - The world draws in rows by the feet point (the anchor `y`). Anything whose feet are further south is drawn on top.

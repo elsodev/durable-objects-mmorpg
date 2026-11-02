@@ -76,7 +76,7 @@ export function buildVillage(): MapData {
   b.prop("blacksmith", 43, 27, { id: "blacksmith" });
   b.prop("market_stall", 42, 18, { id: "stall_seeds" });
   b.prop("market_stall", 46, 18, { id: "stall_produce" });
-  b.prop("market_stall", 50, 18, { id: "stall_goods" });
+  b.prop("market_stall", 50, 18, { id: "stall_goods", label: "Furniture" }); // self-serve (worker/game/shop.ts STALL_SHOPS)
   // Each house is its owner's: stone, brick or painted boards, gable or hipped roof, porch side.
   b.prop("house_iris", 6, 6, { id: "house_nw1" });
   b.prop("house_tess", 15, 5, { id: "house_nw2" });

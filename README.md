@@ -12,7 +12,7 @@ A cozy multiplayer farming game set in the valley of Mossbrook, with light monst
 
 ## Features
 
-- Your own home farm: till, plant, water and harvest over 20 crops that grow in real time (skip a day of watering and they wilt; three dry days and they die). Common seeds come from the market, rarer ones from monsters, and the rarest from villager friends. Decorate with furniture and fences
+- Your own home farm: till, plant, water and harvest over 20 crops that grow in real time (skip a day of watering and they wilt; three dry days and they die). Common seeds come from the market, rarer ones from monsters, and the rarest from villager friends. Decorate with furniture and fences: the village Furniture Stall sells cosy and modern pieces (a fridge that keeps your food among them). Rare pieces only drop from cave monsters or come as gifts from close villager friends
 - Silver and gold crops: your farming level grows with every harvest and raises the odds, some crops give extras, and each harvest is rolled from a fixed seed (owner, day, tile) so retrying can't reroll it. Rules live in `src/shared/engine/harvest.ts`
 - Tools land mid-swing: the soil, chips or splash show at the tool's impact frame for you and for anyone watching (timings in `src/shared/engine/toolTiming.ts`)
 - Shared zones (village, riverside, the quarry and its caves) with other players, chat, shops and village goals everyone contributes to

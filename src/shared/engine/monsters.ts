@@ -6,6 +6,7 @@ import { CONTACT_RANGE, stepKnockback, type Knockback } from "./combat";
 import { dist, facingFor } from "./geometry";
 import { stepToward } from "./movement";
 import { rollSeedDrop } from "../seeds";
+import { isCaveZone, RARE_MONSTER_FURNITURE } from "../furnitureItems";
 import type { Drop } from "./toolRules";
 import { DEFAULT_DROP_RATES, isRareDrop, rollDrop, type DropRates } from "./dropRate";
 
@@ -189,7 +190,24 @@ export function rollMonsterDrops(
   }
   const seed = zone ? rollSeedDrop(zone, type, rand, rates) : null;
   if (seed) out.push(seed);
+  const piece = zone ? rollRareFurniture(zone, type, rand, rates) : null;
+  if (piece) out.push({ item: piece, qty: 1 });
   return out;
+}
+
+/**
+ * The rare furniture piece a kill in `zone` drops, if any (RARE_MONSTER_FURNITURE: caves only,
+ * a fraction of a percent). Counts as a rare drop, so DROP_RATE_RARE scales it when set.
+ */
+export function rollRareFurniture(
+  zone: string,
+  type: MonsterType,
+  rand: () => number,
+  rates: Readonly<DropRates> = DEFAULT_DROP_RATES,
+): ItemId | null {
+  if (!isCaveZone(zone)) return null;
+  const rule = Object.hasOwn(RARE_MONSTER_FURNITURE, type) ? RARE_MONSTER_FURNITURE[type] : undefined;
+  return rule && rollDrop(rule.chance, "monster", rand, rates, true) ? rule.item : null;
 }
 
 /** A fresh monster at `at`. */

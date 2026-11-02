@@ -26,6 +26,7 @@ import { isNpcId, NPC_BIRTHDAYS, type NpcId } from "../npc/bible";
 import { NPCS } from "../npc/catalog";
 import { rollMilestoneGift } from "../npc/giftTables";
 import { rollMilestoneSeed } from "../../shared/seeds";
+import { rareGiftAt } from "../../shared/furnitureItems";
 import { DEFAULT_DROP_RATES, type DropRates } from "../../shared/engine/dropRate";
 
 export interface BondOutcome {
@@ -92,6 +93,13 @@ function settle(
   let fresh = 0;
   for (const m of dueMilestones(b, heartsAfter)) {
     b.milestones.push(m);
+    // A villager's rare piece comes once, at its milestone, ahead of anything else owed.
+    const rare = rareGiftAt(npc, m);
+    if (rare && !b.given.includes(rare)) {
+      b.given.push(rare);
+      b.pending.push(rare);
+      fresh++;
+    }
     const item = rollMilestoneGift(npc, m, b, rand, rates);
     if (item) {
       b.given.push(item);

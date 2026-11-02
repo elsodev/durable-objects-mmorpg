@@ -35,6 +35,10 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   pose: { deny: "Not in someone else's home." },
   // A visitor's save lives in their own HomeRoom; the client just leaves the visit instead.
   travel: { deny: "Leave the visit first." },
+  storeOpen: { deny: "That isn't yours to open." },
+  storePut: { deny: "That isn't yours to open." },
+  storeTake: { deny: "That isn't yours to open." },
+  storeClose: { deny: "That isn't yours to open." },
 };
 
 export function visitorVerdict(msg: ClientMsg): VisitorVerdict {

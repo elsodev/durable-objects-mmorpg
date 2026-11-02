@@ -176,6 +176,7 @@ export const NPCS: Record<string, NpcDef> = {
       "An iron pickaxe breaks iron, silver, gold, gem and diamond rocks; the starter pickaxe only handles stone and copper.",
       "Fenwick buys stone, ores, gems and crab shells, but pays less for ore than the shipping bin does.",
       "Gold and diamond rocks are very rare, and turn up mostly on the deepest cave floor.",
+      "Fenwick's workshop stocks the self-serve Furniture Stall, the east stall on the market lane: chairs, beds, rugs, lamps, a sofa, a fridge, a TV and more. You pay into the honour box.",
       LORE.critters,
       LORE.bridge,
     ],

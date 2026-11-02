@@ -29,7 +29,9 @@ import { parseDropRates, type DropRates } from "../shared/engine/dropRate";
 import type { DaySummary, HomeServerMsg } from "../shared/home";
 import { decodeClient, type ClientMsg, type ImpactStamp, type ServerMsg } from "../shared/protocol";
 import { cleanChat, safeSpawnName } from "../shared/validate";
-import { getItem, isShippable, starterInventory, type ItemDef } from "../shared/items";
+import { getItem, isBedItem, isShippable, starterInventory, type ItemDef } from "../shared/items";
+import { putIntoStorage, takeFromStorage } from "../shared/engine/storage";
+import { boxFor, containerEmpty, orphanedItems, sanitizeContainers, storageMsg, type Containers } from "./home/containers";
 import { isRareCrop } from "../shared/seeds";
 import { getMap } from "../shared/maps";
 import { bumpStat, cleanStats, mergeStats, type PlayerStats, type StatKey } from "../shared/players";
@@ -208,6 +210,8 @@ export interface HomeExport {
   objects: import("../shared/types").PlacedObject[];
   /** Furniture inside the house; absent in exports from before the house. */
   objectsIn?: import("../shared/types").PlacedObject[];
+  /** What is inside storage furniture (fridges), by object id; absent in older exports. */
+  containers?: Containers;
 }
 
 /** The yard (exits, farm, rocks, shipping bin, mailbox). The house inside is HOME_IN (./home/submaps). */
@@ -251,6 +255,8 @@ interface HPlayer {
   /** Last hotbar slot used, so a plain "shipping_bin" interact knows which stack to sell. */
   lastSlot: number | null;
   lastLook: number;
+  /** The storage piece (object id) the owner has open, if any. */
+  openStore?: string | null;
   /** Selected hotbar slot (the `hold` intent); its tool shows in the hand as entity.held. */
   heldSlot: number | null;
   leaving: boolean;
@@ -273,6 +279,8 @@ export class HomeRoom extends DurableObject<Env> {
   /** Placed furniture per home map. */
   private objects: HomeObjects = emptyObjects();
   private objSeq = 0;
+  /** Storage furniture contents (fridges), by object id. */
+  private containers: Containers = {};
   private transfer: PendingTransfer | null = null;
   private rocks = new RockField(HOME_MAP);
   /** Collision grids and entity differs of the yard and the house. */
@@ -371,6 +379,7 @@ export class HomeRoom extends DurableObject<Env> {
       "layout",
       "homeObjects",
       "mail",
+      "containers",
     ]);
     const owner = got.get("owner");
     this.owner = typeof owner === "string" ? owner : null;
@@ -382,6 +391,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.mail = sanitizeMail(got.get("mail"));
     this.loadObjects(got.get("layout"), got.get("homeObjects"), got.get("objects"), Date.now());
     this.objSeq = objSeqFor(allObjects(this.objects), got.get("objSeq"));
+    this.containers = sanitizeContainers(got.get("containers"), allObjects(this.objects));
     this.transfer = sanitizeTransfer(got.get("transfer"));
     this.clock = sanitizeClock(got.get("clock"), Date.now());
     this.bin = sanitizeBin(got.get("bin"));
@@ -497,6 +507,7 @@ export class HomeRoom extends DurableObject<Env> {
     invites?: boolean;
     inbox?: boolean;
     mail?: boolean;
+    containers?: boolean;
   }): void {
     const entries: Record<string, unknown> = {};
     if (keys.save && this.save) entries.save = this.save;
@@ -507,6 +518,7 @@ export class HomeRoom extends DurableObject<Env> {
       entries.objSeq = this.objSeq;
     }
     if (keys.mail) entries.mail = this.mail;
+    if (keys.containers) entries.containers = this.containers;
     if (keys.rocks) {
       entries.rocks = this.rocks.record();
       entries.rockSpawns = this.rocks.spawnRecord();
@@ -617,6 +629,7 @@ export class HomeRoom extends DurableObject<Env> {
       farm: structuredClone(this.farm),
       objects: structuredClone(this.objects.home),
       objectsIn: structuredClone(this.objects.home_in),
+      containers: structuredClone(this.containers),
     };
   }
 
@@ -645,6 +658,10 @@ export class HomeRoom extends DurableObject<Env> {
       : migrateObjects(sanitizeObjects(data?.objects), this.farm);
     this.objects = moved.objects;
     for (const item of moved.returned) if (!addItem(this.save.inventory, item, 1)) addParcel(this.mail, item);
+    const kept = allObjects(this.objects);
+    this.containers = sanitizeContainers(data?.containers, kept);
+    // Food from a fridge that found no place comes back too.
+    for (const s of orphanedItems(data?.containers, kept)) if (!addItem(this.save.inventory, s.item, s.qty, s.quality)) addParcel(this.mail, s.item, s.qty);
     this.objSeq = objSeqFor(allObjects(this.objects));
     this.ensureBed();
     this.rebuildGrid();
@@ -660,6 +677,7 @@ export class HomeRoom extends DurableObject<Env> {
       rockSpawns: this.rocks.spawnRecord(),
       mail: this.mail,
       trees: this.trees.record(),
+      containers: this.containers,
     });
     await this.ctx.storage.delete("lease");
   }
@@ -677,6 +695,7 @@ export class HomeRoom extends DurableObject<Env> {
     this.lease = null;
     this.farm = [];
     this.objects = emptyObjects();
+    this.containers = {};
     this.mail = emptyMail();
     this.objSeq = 0;
     this.clock = sanitizeClock(null, Date.now());
@@ -1040,6 +1059,7 @@ export class HomeRoom extends DurableObject<Env> {
    * on the same socket. The socket attachment records the map so a woken home puts them back.
    */
   private switchMap(who: HPlayer | Visitor, to: HomeMapId, at: Vec2, now: number): void {
+    if (who === this.player) this.closeStore(this.player);
     who.motion.stop();
     who.map = to;
     who.entity.x = at.x;
@@ -1153,6 +1173,7 @@ export class HomeRoom extends DurableObject<Env> {
     if (!keepVisitors) this.endAllVisits(this.hostGoneReason());
     if (!p) return;
     this.storePosition(p);
+    this.closeStore(p);
     this.player = null;
     this.sleepAt = null;
     this.stopTick();
@@ -1449,6 +1470,13 @@ export class HomeRoom extends DurableObject<Env> {
         return this.onSleep(p, now);
       case "unship":
         return this.onUnship(p, msg);
+      case "storeOpen":
+      case "storePut":
+      case "storeTake":
+        return this.onStore(p, msg);
+      case "storeClose":
+        if (p.openStore === msg.id) this.closeStore(p);
+        return;
       case "moveSlot":
         if (!moveSlot(this.save!.inventory, msg.from, msg.to, msg.qty)) {
           this.reject(p, msg, "Can't move that there.");
@@ -1573,6 +1601,12 @@ export class HomeRoom extends DurableObject<Env> {
       this.endDay("sleep", now);
       return true;
     }
+    const coins = /^\/coins (\d{1,5})$/.exec(text);
+    if (coins) {
+      this.save!.inventory.coins += Number(coins[1]);
+      this.inventoryChanged(p);
+      return true;
+    }
     const give = /^\/give ([a-z_]{1,32})(?: (\d{1,2}))?$/.exec(text);
     if (give) {
       const item = give[1]!;
@@ -1638,7 +1672,7 @@ export class HomeRoom extends DurableObject<Env> {
   private nearBed(p: HPlayer): boolean {
     if (p.map !== "home_in") return false;
     return this.objects.home_in.some(
-      (o) => o.item === BED_ITEM && distToRect(p.entity, objectRect(o.item, o.x, o.y, o.rotation)) <= BED_REACH,
+      (o) => isBedItem(o.item) && distToRect(p.entity, objectRect(o.item, o.x, o.y, o.rotation)) <= BED_REACH,
     );
   }
 
@@ -1707,7 +1741,7 @@ export class HomeRoom extends DurableObject<Env> {
   /** A free spot beside the bed inside the house, if there is one. */
   private bedSide(): Vec2 | undefined {
     const inside = this.objects.home_in;
-    const bed = inside.find((o) => o.id === BED_ID) ?? inside.find((o) => o.item === BED_ITEM);
+    const bed = inside.find((o) => o.id === BED_ID) ?? inside.find((o) => isBedItem(o.item));
     if (!bed) return undefined;
     const grid = this.maps.grids.home_in;
     const r = objectRect(bed.item, bed.x, bed.y, bed.rotation);
@@ -2087,11 +2121,53 @@ export class HomeRoom extends DurableObject<Env> {
     if (i < 0) return this.reject(p, msg, "That isn't here any more.");
     const obj = list[i];
     if (obj.id === BED_ID) return this.reject(p, msg, "Your bed stays. You can move it instead.");
+    if (!containerEmpty(this.containers, obj.id)) return this.reject(p, msg, `Empty the ${getItem(obj.item)?.name.toLowerCase() ?? "storage"} first.`);
     if (!this.inPlaceReach(p, obj.x, obj.y)) return this.reject(p, msg, "Too far away.");
     const inv = this.save!.inventory;
     if (!addItem(inv, obj.item, 1)) return this.reject(p, msg, "Your bag is full.");
     list.splice(i, 1);
+    if (Object.hasOwn(this.containers, obj.id)) {
+      delete this.containers[obj.id];
+      this.persist({ containers: true });
+    }
+    if (p.openStore === obj.id) this.closeStore(p);
     this.objectsChanged(p, [], [obj.id]);
     this.inventoryChanged(p);
+  }
+
+  // ------------------------------------------------------------------ storage furniture (fridge)
+
+  /** Open, put into or take out of a storage piece: owner only, on its map, within reach. */
+  private onStore(p: HPlayer, msg: Extract<ClientMsg, { t: "storeOpen" | "storePut" | "storeTake" }>): void {
+    const obj = this.objects[p.map].find((o) => o.id === msg.id);
+    const box = obj ? boxFor(this.containers, obj) : null;
+    if (!obj || !box) return this.reject(p, msg, "There's nothing to open there.");
+    if (distToRect(p.entity, objectRect(obj.item, obj.x, obj.y, obj.rotation)) > PROP_REACH) return this.reject(p, msg, "Walk a little closer.");
+    if (msg.t === "storeOpen") {
+      if (p.openStore && p.openStore !== obj.id) this.closeStore(p);
+      if (p.openStore !== obj.id) {
+        p.openStore = obj.id;
+        this.toMap(p.map, { t: "lid", id: obj.id, open: true });
+      }
+      return send(p.ws, storageMsg(obj, box, true));
+    }
+    if (p.openStore !== obj.id) return this.reject(p, msg, "Open it first.");
+    const spec = getItem(obj.item)!.storage!;
+    const r = msg.t === "storePut" ? putIntoStorage(this.save!.inventory, box, spec, msg.slot, msg.qty) : takeFromStorage(this.save!.inventory, box, msg.index, msg.qty);
+    if (!r.ok) {
+      this.reject(p, msg, r.reason);
+      return send(p.ws, storageMsg(obj, box));
+    }
+    this.persist({ containers: true });
+    send(p.ws, storageMsg(obj, box));
+    this.inventoryChanged(p);
+  }
+
+  /** Shuts the owner's open storage piece (the door closes for everyone on that map). */
+  private closeStore(p: HPlayer): void {
+    const id = p.openStore;
+    if (!id) return;
+    p.openStore = null;
+    this.toMap(p.map, { t: "lid", id, open: false });
   }
 }

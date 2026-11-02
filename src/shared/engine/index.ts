@@ -11,6 +11,7 @@
 //   inventory.ts  stacking add/remove/count
 //   farming.ts    day index, crop growth, tile mutations
 //   placement.ts  canPlace for home furniture
+//   storage.ts    fridge (storage furniture) slots: put in / take out
 //   monsters.ts   monster stats + AI tick
 
 /** Walk speed in tiles per second. */
@@ -56,7 +57,19 @@ export {
   type CropView,
   type GrowthStage,
 } from "./farming";
-export { canPlace, wallFaceRow, MAX_WALL_DROP, type PlaceResult } from "./placement";
+export { canPlace, isRug, wallFaceRow, MAX_WALL_DROP, type PlaceResult } from "./placement";
+export {
+  emptyStorage,
+  isStorageEmpty,
+  putIntoStorage,
+  roomIn,
+  sanitizeStorage,
+  storageAccepts,
+  storageOf,
+  takeFromStorage,
+  type StorageSlots,
+  type StoreResult,
+} from "./storage";
 export {
   MONSTER_AI,
   MONSTER_LEVEL_SCALE,
@@ -65,6 +78,7 @@ export {
   newMonster,
   provoke,
   rollMonsterDrops,
+  rollRareFurniture,
   stepMonster,
   type MonsterMode,
   type MonsterState,

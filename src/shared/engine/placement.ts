@@ -56,6 +56,8 @@ export function canPlace(
   if (map.rocks?.some((k) => pointInRect(r, k.x, k.y))) return fail("Something is in the way.");
   for (const o of objects) {
     if (o.id === opts?.ignoreId) continue;
+    // A rug lies flat under the room, so furniture may stand on it (but rugs don't stack).
+    if (isRug(o.item) !== isRug(item)) continue;
     if (rectsOverlap(objectRect(o.item, o.x, o.y, o.rotation), r)) return fail("Overlaps other furniture.");
   }
   if (farm.some((t) => pointInRect(r, t.x, t.y))) return fail("Can't place on farmland.");
@@ -125,4 +127,10 @@ function canHang(map: MapData, objects: PlacedObject[], r: Rect, ignoreId: strin
     if (rectsOverlap(objectRect(o.item, o.x, o.y, o.rotation), r)) return fail("Overlaps something on the wall.");
   }
   return { ok: true };
+}
+
+/** Floor furniture you walk over (rugs and mats): drawn flat, and other pieces may stand on it. */
+export function isRug(item: ItemId): boolean {
+  const def = getItem(item);
+  return !!def?.walkable && def.placeOn !== "wall";
 }

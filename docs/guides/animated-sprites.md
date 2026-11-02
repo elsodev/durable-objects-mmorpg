@@ -194,6 +194,7 @@ Check a climb in the browser on two body types, in both directions, and on the f
 ## Looping and state props
 
 - **Looping props:** list the frames as an array in `frames` (for example the campfire, fireplace, forge, candles and wall torches). They loop at a steady rate, with each prop offset by its tile position so neighbours don't flicker in sync.
+- **Placed furniture:** a placed piece animates its front view only. Turned views are still pictures. Give it looping `frames` the same size as `rect`, and add `frameMs` (40–2000) when the default 250 ms is wrong: slow for an aquarium, quicker for an arcade screen. Keep the body still between frames and move only small parts (a fish, a light, a screen), so the piece doesn't seem to jump.
 - **Lids and doors:** these use named frames, `closed`, `opening` and `open`, for example the shipping bin and the cave chest. The renderer plays closed → opening → open and back again.
 - **One-shot effects:** these are short effects that play once, such as the tool-rebound spark (see [Wrong-tool rebounds](#wrong-tool-rebounds)). List their frames the same way as a looping prop. The code plays them once. Draw them centred in the cell, with the anchor in the middle.
 - **Swaying plants:** trees and bushes sway in code (`SWAY_TYPES`). Don't draw sway frames for them.

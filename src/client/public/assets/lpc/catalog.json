@@ -8135,13 +8135,19 @@
      32
     ],
     "back": [
-     192,
-     128,
-     32,
-     32
+     227,
+     133,
+     26,
+     27
     ]
    },
-   "shadow": "character"
+   "shadow": "character",
+   "variantAnchors": {
+    "back": [
+     13,
+     25
+    ]
+   }
   },
   "table_wood": {
    "file": "furniture/table_rough_wood.png",
@@ -8343,6 +8349,536 @@
    },
    "note": "potted fern (planter sheet top-row pieces are flower overlays for the vases)",
    "shadow": "character"
+  },
+  "chair_dining": {
+   "file": "furniture/interiors.png",
+   "rect": [
+    375,
+    322,
+    32,
+    32
+   ],
+   "anchor": [
+    16,
+    31
+   ],
+   "footprintTiles": {
+    "w": 1,
+    "h": 1
+   },
+   "variants": {
+    "left": [
+     409,
+     322,
+     32,
+     32
+    ],
+    "right": [
+     443,
+     322,
+     32,
+     32
+    ],
+    "back": [
+     477,
+     322,
+     32,
+     32
+    ]
+   }
+  },
+  "sofa": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    0,
+    6,
+    64,
+    38
+   ],
+   "anchor": [
+    32,
+    37
+   ]
+  },
+  "armchair": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    66,
+    4,
+    32,
+    36
+   ],
+   "anchor": [
+    16,
+    35
+   ]
+  },
+  "coffee_table": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    102,
+    4,
+    60,
+    26
+   ],
+   "anchor": [
+    30,
+    25
+   ]
+  },
+  "nightstand": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    169,
+    3,
+    26,
+    32
+   ],
+   "anchor": [
+    13,
+    31
+   ]
+  },
+  "bookcase": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    201,
+    0,
+    62,
+    72
+   ],
+   "anchor": [
+    31,
+    71
+   ]
+  },
+  "plant_pilea": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    267,
+    3,
+    30,
+    47
+   ],
+   "anchor": [
+    15,
+    46
+   ]
+  },
+  "plant_cactus": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    305,
+    3,
+    22,
+    37
+   ],
+   "anchor": [
+    11,
+    36
+   ]
+  },
+  "wall_clock": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    339,
+    1,
+    22,
+    28
+   ],
+   "anchor": [
+    11,
+    27
+   ]
+  },
+  "painting_meadow": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    368,
+    0,
+    62,
+    30
+   ],
+   "anchor": [
+    31,
+    29
+   ]
+  },
+  "coat_rack": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    437,
+    1,
+    20,
+    56
+   ],
+   "anchor": [
+    11,
+    55
+   ]
+  },
+  "rug_round": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    0,
+    74,
+    96,
+    58
+   ],
+   "anchor": [
+    48,
+    57
+   ]
+  },
+  "fridge": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    99,
+    76,
+    33,
+    61
+   ],
+   "anchor": [
+    18,
+    60
+   ],
+   "frames": {
+    "closed": [
+     99,
+     76,
+     33,
+     61
+    ],
+    "opening": [
+     141,
+     76,
+     33,
+     61
+    ],
+    "open": [
+     183,
+     76,
+     33,
+     61
+    ]
+   }
+  },
+  "oven": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    225,
+    75,
+    30,
+    48
+   ],
+   "anchor": [
+    15,
+    47
+   ]
+  },
+  "washer": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    260,
+    76,
+    28,
+    43
+   ],
+   "anchor": [
+    14,
+    42
+   ]
+  },
+  "tv": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    294,
+    76,
+    60,
+    51
+   ],
+   "anchor": [
+    30,
+    50
+   ]
+  },
+  "game_console": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    360,
+    76,
+    28,
+    31
+   ],
+   "anchor": [
+    14,
+    30
+   ]
+  },
+  "computer_desk": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    393,
+    76,
+    62,
+    55
+   ],
+   "anchor": [
+    31,
+    54
+   ]
+  },
+  "monitor_stand": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    458,
+    76,
+    32,
+    44
+   ],
+   "anchor": [
+    16,
+    43
+   ]
+  },
+  "speaker": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    6,
+    142,
+    20,
+    47
+   ],
+   "anchor": [
+    10,
+    46
+   ]
+  },
+  "air_con": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    34,
+    141,
+    60,
+    23
+   ],
+   "anchor": [
+    30,
+    22
+   ]
+  },
+  "throne_gold": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    97,
+    141,
+    30,
+    60
+   ],
+   "anchor": [
+    15,
+    59
+   ]
+  },
+  "aquarium": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    132,
+    142,
+    60,
+    51
+   ],
+   "anchor": [
+    30,
+    50
+   ],
+   "frames": [
+    [
+     132,
+     142,
+     60,
+     51
+    ],
+    [
+     198,
+     142,
+     60,
+     51
+    ],
+    [
+     264,
+     142,
+     60,
+     51
+    ]
+   ],
+   "frameMs": 420
+  },
+  "arcade_cabinet": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    330,
+    141,
+    28,
+    62
+   ],
+   "anchor": [
+    14,
+    61
+   ],
+   "frames": [
+    [
+     330,
+     141,
+     28,
+     62
+    ],
+    [
+     364,
+     141,
+     28,
+     62
+    ],
+    [
+     398,
+     141,
+     28,
+     62
+    ],
+    [
+     432,
+     141,
+     28,
+     62
+    ]
+   ],
+   "frameMs": 220
+  },
+  "jukebox": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    2,
+    206,
+    28,
+    57
+   ],
+   "anchor": [
+    14,
+    56
+   ],
+   "frames": [
+    [
+     2,
+     206,
+     28,
+     57
+    ],
+    [
+     36,
+     206,
+     28,
+     57
+    ],
+    [
+     70,
+     206,
+     28,
+     57
+    ],
+    [
+     104,
+     206,
+     28,
+     57
+    ]
+   ],
+   "frameMs": 200
+  },
+  "star_globe": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    138,
+    208,
+    29,
+    47
+   ],
+   "anchor": [
+    14,
+    46
+   ]
+  },
+  "crystal_lamp": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    174,
+    212,
+    24,
+    51
+   ],
+   "anchor": [
+    12,
+    50
+   ],
+   "frames": [
+    [
+     174,
+     212,
+     24,
+     51
+    ],
+    [
+     208,
+     212,
+     24,
+     51
+    ],
+    [
+     242,
+     212,
+     24,
+     51
+    ]
+   ],
+   "frameMs": 360
+  },
+  "slime_statue": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    277,
+    208,
+    22,
+    39
+   ],
+   "anchor": [
+    11,
+    38
+   ]
+  },
+  "geode": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    308,
+    212,
+    28,
+    29
+   ],
+   "anchor": [
+    14,
+    28
+   ]
+  },
+  "suit_of_armor": {
+   "file": "furniture/home_goods.png",
+   "rect": [
+    343,
+    206,
+    28,
+    63
+   ],
+   "anchor": [
+    13,
+    62
+   ]
   }
  },
  "icons": {

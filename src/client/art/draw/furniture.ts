@@ -191,6 +191,7 @@ export function drawFurniture(item: string, rotation: Rotation): PixelGrid {
       chair(g, rotation);
       break;
     case "table_wood":
+    case "table_long":
       table(g, rotation);
       break;
     case "bed_simple":

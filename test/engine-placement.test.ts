@@ -128,3 +128,15 @@ describe("doorways and rugs", () => {
     expect(canPlace(room, [], [], "chair_wood", 3, 2, 0)).toEqual({ ok: false, reason: "Keep the doorway clear." });
   });
 });
+
+describe("furniture on rugs", () => {
+  const rug: PlacedObject = { id: "r1", item: "rug", x: 1, y: 1, rotation: 0 };
+  it("lets a table or chair stand on a rug, but never a rug on a rug", () => {
+    expect(canPlace(map, [rug], [], "chair_wood", 2, 2, 0)).toEqual(ok);
+    expect(canPlace(map, [rug], [], "rug_round", 2, 1, 0)).toEqual({ ok: false, reason: "Overlaps other furniture." });
+  });
+  it("lets a rug go under furniture already placed", () => {
+    const chair: PlacedObject = { id: "c1", item: "chair_wood", x: 2, y: 2, rotation: 0 };
+    expect(canPlace(map, [chair], [], "rug", 1, 1, 0)).toEqual(ok);
+  });
+});

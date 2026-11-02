@@ -4,6 +4,7 @@ import { Container, Graphics, Sprite } from "pixi.js";
 import type { BuildMode, CreateBuildMode } from "../contracts";
 import { SCALE, TILE } from "../contracts";
 import { footprint } from "../../shared/engine";
+import { wallLift } from "./farm";
 import type { Vec2 } from "../../shared/types";
 import { normalizeRotation, stepRotation } from "../../shared/items";
 import {
@@ -67,7 +68,8 @@ export const createBuildMode: CreateBuildMode = (art, layers, deps) => {
       }
     }
     // Same base point the farm layer uses for furniture: bottom-centre of the footprint.
-    ghost.position.set((last.x + last.w / 2) * TILE, (last.y + last.h) * TILE);
+    const lift = wallLift({ id: "", item: target.item, x: last.x, y: last.y, rotation }, deps.map()) * SCALE;
+    ghost.position.set((last.x + last.w / 2) * TILE, (last.y + last.h) * TILE - lift);
     ghost.tint = last.ok ? OK_TINT : BAD_TINT;
     root.visible = true;
   }

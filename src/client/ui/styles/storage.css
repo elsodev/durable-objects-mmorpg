@@ -1,0 +1,67 @@
+/* Storage panel (fridge): its shelves above your bag. Base look from theme.css. */
+.store-panel {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  z-index: var(--dm-z-panel);
+  padding: 10px 12px 12px;
+  width: min(332px, calc(100vw - 24px));
+  box-sizing: border-box;
+  user-select: none;
+  --dm-slot: 44px;
+}
+.store-panel[hidden] {
+  display: none;
+}
+.store-used,
+.store-sub {
+  margin: 6px 0 4px;
+  font-size: var(--dm-fs-sm);
+  color: var(--dm-text-dim);
+}
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(6, var(--dm-slot));
+  gap: 4px;
+}
+.store-box {
+  padding: 4px;
+  border-radius: 4px;
+  background: #dbeef2;
+  border: 2px solid #9fbcc4;
+}
+.store-slot.is-empty {
+  cursor: default;
+  opacity: 0.6;
+}
+.store-slot.is-off img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.store-slot:disabled {
+  cursor: default;
+}
+.store-qty {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--dm-cream, #fff8e7);
+  text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  pointer-events: none;
+}
+.store-hint {
+  margin: 8px 0 0;
+  font-size: var(--dm-fs-sm);
+  color: var(--dm-text-dim);
+}
+@media (max-width: 420px) {
+  .store-panel {
+    --dm-slot: 38px;
+    right: 50%;
+    transform: translate(50%, -50%);
+  }
+}

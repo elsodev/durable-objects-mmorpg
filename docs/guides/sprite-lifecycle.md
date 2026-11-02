@@ -82,6 +82,11 @@ The stump's anchor must sit on the trunk base of the tree art. Check by drawing 
 - **Frames:** they use named frames, `closed`, `opening` and `open`, in the same cell with the same anchor.
 - **Shipping bin:** the lid opens when you drop an item in and closes after.
 - **Cave chests:** a chest stays open once looted.
+- **Storage furniture (the fridge):** the item's `storage` spec gives its slot count and what it accepts (`"food"` or `"any"`). The contents live in the owner's HomeRoom under the `containers` key, keyed by the placed object's id:
+  - Opening it plays the lid forward for everyone in the house. Closing it, walking away or leaving plays it back.
+  - Visitors can't open it.
+  - A piece that still holds items can't be picked up.
+  - Draw the door swinging out past the body in `open`, inside the same cell, so the rect stays fixed.
 
 ## Checking a lifecycle
 

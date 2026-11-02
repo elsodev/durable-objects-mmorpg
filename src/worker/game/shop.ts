@@ -5,10 +5,38 @@ import { baseItem, getItem, shopSellPrice } from "../../shared/items";
 import { addItem, canAdd, removeFromSlot } from "../../shared/engine";
 import { seedSeasons, STORE_SEEDS } from "../../shared/seeds";
 import { worldDate } from "../../shared/calendar";
+import { FURNITURE_SHOP } from "../../shared/furnitureItems";
 
 export interface Shop {
   sells: ShopOffer[];
   buys: ItemId[];
+}
+
+/** Shop offers at the item table's `buy` price (items without one are left out). */
+export function offersFor(ids: readonly ItemId[]): ShopOffer[] {
+  return ids.flatMap((id) => {
+    const price = getItem(id)?.buy;
+    return price ? [{ item: id, price }] : [];
+  });
+}
+
+/** Prefix of a stall shop's id in shop / buy / sell messages ("stall:<prop id>"). */
+export const STALL_PREFIX = "stall:";
+
+/**
+ * Self-serve stalls on the village square: no keeper, an honour box for the coins. Keyed by the
+ * stall prop's id; Fenwick's workshop stocks the furniture stall.
+ */
+export const STALL_SHOPS: Readonly<Record<string, { name: string; shop: Shop }>> = {
+  stall_goods: { name: "Furniture Stall", shop: { sells: offersFor(FURNITURE_SHOP), buys: [] } },
+};
+
+/** The stall shop behind a "stall:<id>" shop id, if any. */
+export function stallShop(shopId: string): { propId: string; name: string; shop: Shop } | null {
+  if (!shopId.startsWith(STALL_PREFIX)) return null;
+  const propId = shopId.slice(STALL_PREFIX.length);
+  const s = Object.hasOwn(STALL_SHOPS, propId) ? STALL_SHOPS[propId] : undefined;
+  return s ? { propId, ...s } : null;
 }
 
 /** The shop as it stands today: store seeds out of season are off the shelf. */

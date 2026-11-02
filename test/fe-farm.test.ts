@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { diffKeyed, farmSig, findObjectAt, objectSig } from "../src/client/render/farm";
+import { diffKeyed, farmSig, findObjectAt, objectSig, wallLift, WALL_SKIRT_LIFT } from "../src/client/render/farm";
+import { makeMap } from "./engine-fixtures";
 import { DAY_MS, type FarmTile, type PlacedObject } from "../src/shared/types";
 
 describe("diffKeyed", () => {
@@ -74,5 +75,30 @@ describe("findObjectAt with rotation", () => {
     const table: PlacedObject = { id: "t", item: "table_wood", x: 2, y: 2, rotation: 1 };
     expect(findObjectAt([table], { x: 2.5, y: 3.5 })).toBe("t");
     expect(findObjectAt([table], { x: 3.5, y: 2.5 })).toBeNull();
+  });
+});
+
+describe("findObjectAt with rugs", () => {
+  it("picks the piece standing on a rug, and the rug where nothing stands", () => {
+    const objs = [
+      { id: "rug", item: "rug_round", x: 1, y: 1, rotation: 0 as const },
+      { id: "chair", item: "chair_wood", x: 2, y: 2, rotation: 0 as const },
+    ];
+    expect(findObjectAt(objs, { x: 2.5, y: 2.5 })).toBe("chair");
+    expect(findObjectAt(objs, { x: 1.5, y: 1.5 })).toBe("rug");
+  });
+});
+
+describe("wallLift", () => {
+  // Wall rows 0-2 above a wood floor (rows 3-4).
+  const room = makeMap(["#######", "#######", "#######", "#wwwww#", "#wwwww#", "#######"], {
+    floorArea: [{ x: 1, y: 3, w: 5, h: 2 }],
+  });
+  const at = (item: string, x: number, y: number) => wallLift({ id: "o", item, x, y, rotation: 0 }, room);
+  it("raises a piece on the wall's lowest row above the skirting, and nothing else", () => {
+    expect(at("wall_clock", 2, 2)).toBe(WALL_SKIRT_LIFT);
+    expect(at("wall_clock", 2, 1)).toBe(0);
+    expect(at("nightstand", 2, 3)).toBe(0);
+    expect(wallLift({ id: "o", item: "wall_clock", x: 2, y: 2, rotation: 0 }, null)).toBe(0);
   });
 });

@@ -292,8 +292,32 @@ function buildArt(app: Application, cat: Catalog, sheets: Map<string, TextureSou
     const base = e ? asRect(e.rect) : null;
     // A view with its own feet point uses it; other turned views keep the front's offset.
     const anchorPx = view?.anchor ?? (view && base ? viewAnchorPx(base, asPoint(e?.anchor), view.rect) : undefined);
-    return (e && view && spriteFrom(e, view.rect, view.mirror, anchorPx)) || fb().furniture(item, rotation);
+    const art = e && view && spriteFrom(e, view.rect, view.mirror, anchorPx);
+    if (!art) return fb().furniture(item, rotation);
+    // Turned views are still pictures; only the front view animates (all frames share its cell).
+    if (e && view && base && view.rect.every((v, i) => v === base[i])) addFrames(art, e, view.mirror);
+    return art;
   });
+
+  /** Looping frames (aquarium, arcade) or closed/opening/open lid frames (fridge) of a furniture entry. */
+  const addFrames = (art: SpriteArt, e: SpriteEntry, mirror: boolean): void => {
+    if (Array.isArray(e.frames)) {
+      const frames = e.frames.map((r) => slice(e.file, asRect(r), mirror));
+      if (frames.length > 1 && frames.every((t) => t)) {
+        art.frames = frames as Texture[];
+        art.texture = art.frames[0]!;
+        const ms = (e as { frameMs?: unknown }).frameMs;
+        if (typeof ms === "number" && ms >= 40 && ms <= 2000) art.frameMs = ms;
+      }
+    } else if (e.frames && typeof e.frames === "object") {
+      const named = e.frames as Record<string, unknown>;
+      const lid = ["closed", "opening", "open"].map((k) => slice(e.file, asRect(named[k]), mirror));
+      if (lid.every((t) => t)) {
+        art.open = lid as Texture[];
+        art.texture = art.open[0]!;
+      }
+    }
+  };
 
   // Silver and gold crops have no art of their own: the crop's icon, plus the pack's badge in slots.
   const qualityOf = (item: ItemId): { base: ItemId; badge: Texture | null } | null => {

@@ -89,6 +89,8 @@ export interface SpriteArt {
   shadow?: ShadowSize;
   /** Looping animation frames (campfire); texture is frames[0]. Same anchor. */
   frames?: Texture[];
+  /** Milliseconds per looping frame, when the catalog sets one (placed furniture). */
+  frameMs?: number;
   /** Lid frames from closed to open (shipping bin); texture is open[0]. Same anchor. */
   open?: Texture[];
   /** Drawn above an NPC standing at `keeper` (market stall counter). Place at the same position as the sprite. */
@@ -354,6 +356,8 @@ export interface FarmLayer {
   /** `map`: the map they stand on (wall pieces sort in front of their wall); kept until the next one. */
   setObjects(objects: Iterable<PlacedObject>, map?: MapData | null): void;
   objectAt(tile: Vec2): string | null;
+  /** Opens or shuts a placed storage piece's door (fridge lid frames); no-op without lid art. */
+  setLid?(id: string, open: boolean): void;
   /** The sprite drawing a rock, for hit effects. */
   rockSprite?(id: string): Sprite | null;
   destroy(): void;

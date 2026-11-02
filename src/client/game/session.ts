@@ -14,6 +14,8 @@ import { createCamera } from "../render/camera";
 import { createStore } from "../state/store";
 import { mountHud, type GameApi, type Hud, type SessionUser } from "../ui";
 import { createHomeUi } from "../ui/homeui";
+import { createStoragePanel } from "../ui/storage";
+import { STORE_WALK_AWAY, storeTarget } from "./storage-target";
 import { createVisitsUi } from "../ui/visits";
 import { createMailboxUi } from "../ui/mailbox";
 import { createDoorFade } from "../ui/door-fade";
@@ -22,7 +24,7 @@ import { MAILBOX_TAKE } from "../../shared/mail";
 import { visitsApi } from "../ui/visits-api";
 import type { InviteNotice, VisitInfo, VisitorEntry } from "../../shared/visits";
 import { clockMinutes, dayPhase, farmNow, formatClock, type HomeClock } from "../../shared/engine/homeclock";
-import { getItem } from "../../shared/items";
+import { getItem, isBedItem } from "../../shared/items";
 import type { HomeServerMsg } from "../../shared/home";
 import { footstep } from "../audio/player";
 import { getMap, hasMap } from "../../shared/maps";
@@ -368,6 +370,12 @@ export async function startSession(
     setTyping: (t) => gameApi.setTyping(t),
   });
   homeUi.setAtHome(false);
+  // The fridge (any storage furniture): its shelves beside your bag while the door is open.
+  const storageUi = createStoragePanel(mount.ui, {
+    put: (id, slot, qty) => send({ t: "storePut", id, slot, qty }),
+    take: (id, index, qty) => send({ t: "storeTake", id, index, qty }),
+    onClose: (id) => send({ t: "storeClose", id }),
+  });
   const visitsUi = createVisitsUi(mount.ui, {
     accept: (n) => void acceptInvite(n),
     decline: (n) =>
@@ -731,6 +739,7 @@ export async function startSession(
         break;
       case "inventory":
         hud.setInventory(store.inventory);
+        storageUi.setInventory(store.inventory);
         refreshEdible();
         world?.effects.setFlashlight?.(hasFlashlight(store.inventory));
         break;
@@ -750,6 +759,16 @@ export async function startSession(
         for (const t of msg.tiles) store.farm.set(`${t.x},${t.y}`, t);
         farmFx.farmChanged(null);
         break;
+      case "storage":
+        storageUi.setInventory(store.inventory);
+        storageUi.set(msg.id, msg.item, msg.slots, msg.accepts, !!msg.open);
+        break;
+      case "lid": {
+        world?.farm.setLid?.(msg.id, msg.open);
+        const it = store.objects.get(msg.id)?.item;
+        if (it && getItem(it)?.storage) playSfx(msg.open ? "bin_open" : "bin_close");
+        break;
+      }
       case "bin":
         homeUi.setBin(msg.items, msg.total, !!msg.open);
         farmFx.bin(msg);
@@ -936,6 +955,7 @@ export async function startSession(
     // Each room starts with empty hands: say what is selected so others see it.
     if (!visiting) send({ t: "hold", slot: selectedSlot });
     if (msg.zone !== "home") homeUi.closeBin();
+    storageUi.close();
     farmFx.reset();
     farmFx.redraw();
     world.farm.setRocks(m, store.brokenRocks, store.rockOres);
@@ -992,6 +1012,13 @@ export async function startSession(
     for (const id of msg.del) lastHp.delete(id);
     combatSfx.onTick(msg.upd, msg.del, store.youId, performance.now());
     farmFx.tick();
+    // Walking away from the open fridge shuts it.
+    const openStore = storageUi.openId();
+    if (openStore) {
+      const o = store.objects.get(openStore);
+      const me = you();
+      if (!o || !me || storeTarget([o], me, me, STORE_WALK_AWAY) !== o.id) storageUi.close();
+    }
     const mine = store.youId ? msg.upd.find((e) => e.id === store.youId) : undefined;
     if (mine?.act && (mine.act.k === "sit" || CLIMB_ACTS.has(mine.act.k))) {
       // On a chair or a ladder: follow the server exactly, so standing up starts from the seat
@@ -1248,7 +1275,8 @@ export async function startSession(
   }
 
   function isBed(objId: string | null): boolean {
-    return !!objId && store.objects.get(objId)?.item === "bed_simple";
+    const item = objId ? store.objects.get(objId)?.item : undefined;
+    return !!item && isBedItem(item);
   }
 
   function interact(target: string): void {
@@ -1274,6 +1302,10 @@ export async function startSession(
         if (store.zone === "home" && !visiting && (isBed(world.farm.objectAt(ahead)) || isBed(world.farm.objectAt(floorTile(me))))) {
           void askSleep();
           break;
+        }
+        if (store.zone === "home" && !visiting) {
+          const box = storeTarget(store.objects.values(), me, ahead);
+          if (box) return void send({ t: "storeOpen", id: box });
         }
         const herb = world.groundItems.nearestForage(me, FORAGE_REACH);
         if (herb) return interact(`${GROUND_TARGET_PREFIX}${herb.id}`);
@@ -1339,6 +1371,12 @@ export async function startSession(
     }
     if (store.zone === "home") {
       const obj = world.farm.objectAt(tile);
+      const objItem = obj ? store.objects.get(obj)?.item : undefined;
+      if (obj && objItem && getItem(objItem)?.storage && p.button !== 2) {
+        if (storeTarget([store.objects.get(obj)!], me, me)) send({ t: "storeOpen", id: obj });
+        else moveTo(tile.x + 0.5, tile.y + 1.5);
+        return;
+      }
       if (obj && isBed(obj) && p.button !== 2) {
         if (withinInteract(me, { x: tile.x + 0.5, y: tile.y + 0.5 })) void askSleep();
         else moveTo(tile.x + 0.5, tile.y + 1.5);
@@ -1548,6 +1586,7 @@ export async function startSession(
       stopDir();
       window.removeEventListener("keydown", onEatKey);
       homeUi.destroy();
+      storageUi.destroy();
       visitsUi.destroy();
       mailboxUi.destroy();
       doorFade.destroy();

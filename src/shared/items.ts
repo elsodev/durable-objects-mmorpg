@@ -1,5 +1,6 @@
 // Item catalog. Signatures are the contract; fill in the data.
 import type { Inventory, ItemId } from "./types";
+import { HOME_GOODS, type StorageSpec } from "./furnitureItems";
 
 export type Rotation = 0 | 1 | 2 | 3;
 
@@ -47,8 +48,12 @@ export interface ItemDef {
   walkable?: boolean;
   /** Short flavour text for tooltips. */
   desc?: string;
-  /** Seeds and crops: how hard the seed is to come by (shop, monster drops, villager gifts). */
+  /** Seeds and crops: how hard the seed is to come by (shop, monster drops, villager gifts). Furniture: "rare" pieces are never sold. */
   rarity?: CropRarity;
+  /** Furniture you can keep items in (the fridge): its slots and what it takes. */
+  storage?: StorageSpec;
+  /** Furniture you can sleep in to end the day. */
+  bed?: boolean;
 }
 
 export type CropRarity = "common" | "uncommon" | "rare";
@@ -323,7 +328,7 @@ const ALL: ItemDef[] = [
   // Furniture (footprint at rotation 0)
   furniture("chair_wood", "Wooden Chair", 1, 1, "floor", 40, { rotations: ALL_TURNS }),
   furniture("table_wood", "Wooden Table", 2, 1, "floor", 80, { rotations: [0, 1] }),
-  furniture("bed_simple", "Simple Bed", 1, 2, "floor", 150, { rotations: ALL_TURNS }),
+  furniture("bed_simple", "Simple Bed", 1, 2, "floor", 150, { rotations: ALL_TURNS, bed: true }),
   // 5x2 like its art (a 2x2 footprint drew the rug 1.5 tiles past each side, even over walls).
   furniture("rug", "Rug", 5, 2, "floor", 60, { walkable: true }),
   furniture("lamp", "Lamp", 1, 1, "floor", 50),
@@ -334,6 +339,9 @@ const ALL: ItemDef[] = [
   // Interior kit furniture: never sold in shops. Villagers give it as friendship gifts and
   // cave chests hold it now and then. Footprints match the village interiors' props.
   ...GIFT_FURNITURE,
+
+  // The furniture stall's stock and the rare pieces (shared/furnitureItems.ts).
+  ...HOME_GOODS,
 ];
 
 export const ITEMS: Record<ItemId, ItemDef> = Object.fromEntries(ALL.map((d) => [d.id, d]));
@@ -371,6 +379,11 @@ export function stepRotation(id: ItemId, r: Rotation, dir: 1 | -1 = 1): Rotation
   if (ok.length <= 1) return ok[0] ?? 0;
   const i = ok.indexOf(normalizeRotation(id, r));
   return ok[(i + dir + ok.length) % ok.length]!;
+}
+
+/** True for furniture you can sleep in. */
+export function isBedItem(id: ItemId): boolean {
+  return getItem(id)?.bed === true;
 }
 
 /** Normal-quality id of an item (quality crops map to their base crop; others to themselves). */

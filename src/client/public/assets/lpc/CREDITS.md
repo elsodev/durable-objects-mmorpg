@@ -694,7 +694,7 @@ Derived: stone altar + statue from decorations-medieval (Statues & Fountains Col
 - Authors: Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling)
 - License: **OGA-BY 3.0**
 - Source: https://github.com/ElizaWy/LPC (Objects/Furniture/); https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles; https://opengameart.org/content/lpc-modified-base-tiles; https://opengameart.org/content/lpc-upholstery; https://opengameart.org/content/lpc-dungeon-elements; https://opengameart.org/content/lpc-interior-castle-tiles
-- Notes: Per-file entries in ElizaWy/LPC Objects/Furniture/**/Credits.txt (Barrel, Chest, Ladder, Lighting: Sharm + Eliza Wyatt; Crate, Swirling Vine rug: Eliza Wyatt; Chair Dining, Single Beds: Sharm + BlueCarrot16 + Eliza Wyatt; Tables Rough Wood: Sharm + Eliza Wyatt; Planter: Sharm).
+- Notes: Per-file entries in ElizaWy/LPC Objects/Furniture/**/Credits.txt (Barrel, Chest, Ladder, Lighting: Sharm + Eliza Wyatt; Crate, Swirling Vine rug: Eliza Wyatt; Chair Dining, Single Beds: Sharm + BlueCarrot16 + Eliza Wyatt; Tables Rough Wood: Sharm + Eliza Wyatt; Planter: Sharm). The back view at x 224 (seat with its backrest on top) was composited by the DurableMMO project from the sheet's own seat and backrest pieces.
 
 ### furniture/lighting_floor.png
 - Authors: Lanea Zimmerman (Sharm), BlueCarrot16, Eliza Wyatt (DeathsDarling)
@@ -726,6 +726,12 @@ Derived: stone altar + statue from decorations-medieval (Statues & Fountains Col
 - License: **OGA-BY 3.0**
 - Source: https://github.com/ElizaWy/LPC (Objects/Furniture/: Cabinet, Dresser, Clock Grandfather, Fireplace, Fireplace Cast Iron, Desk Office, Countertop, Chest, Cauldron, Seating/Bar Stools, Seating/Chair Dining A, Rugs/Swirling Vine Rug, Beds/Single Beds B, Smithing/Forge A, Smithing/Anvils, Smithing/Workbench Smith, Smithing/Grindstone, Smithing/Coal Piles, Table Rough Wood, Planter, Lighting Floor; Objects/Small Items/: Fire Fireplace, Food/Bread A, Dishes A, Loose Paper, Lighting Table, Flowers, Baskets A, Games, Food/Vegetables A, Food/Seafood A, Food/Tea Coffee Medicinal Herbs, Ores & Ingots/Ore Iron; props/crate.png from this pack); https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles; https://opengameart.org/content/lpc-modified-base-tiles; https://opengameart.org/content/lpc-interior-castle-tiles; https://opengameart.org/content/lpc-dungeon-elements; https://opengameart.org/content/lpc-food; https://opengameart.org/content/lpc-meals; https://opengameart.org/content/lpc-tailor; https://opengameart.org/content/lpc-ore-and-forge
 - Notes: Atlas of building-interior furniture assembled by the DurableMMO project: pieces cropped from the sheets above, a few composited (fire in the fireplaces, stove pipe on the cast iron stove, bread and plates on tables, lamp and papers on the mayor's desk, two tables joined into a meeting table, a candle and paper on the writing desk, produce, fish, ore and games set in baskets, crates and a chest; chair backrests are kept as separate same-size overlays drawn in front of a seated character). Per-file artists are listed in each folder's Credits.txt in ElizaWy/LPC (all OGA-BY 3.0). Interior north walls, stairs and door mats are drawn procedurally in src/client/art/draw/interior.ts.
+
+### furniture/home_goods.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game, in the LPC palette (colours sampled from furniture/interiors.png) with the LPC dark outline and top-left light
+- Notes: Shop and rare furniture: sofa, armchair, coffee table, nightstand, bookcase, pancake plant, cactus, wall clock, meadow painting, coat rack, round rug, fridge (closed, opening and open frames), kitchen range, washer, TV, game console, computer desk, gaming monitor, speaker, air conditioner, golden throne, aquarium (3 frames), arcade cabinet (4), jukebox (4), star globe, crystal lamp (3), slime statue, geode and suit of armour. Cells are packed with 2 px of clear space between them.
 
 ## interior/
 

@@ -114,7 +114,7 @@ import { capFromEnv, copyName, FULL_HEADER, FULL_STATUS, hasRoom, isCopyNumber, 
 import { PlayerInterest } from "./game/interest";
 import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
-import { buyFrom, sellTo, shopToday } from "./game/shop";
+import { buyFrom, sellTo, shopToday, stallShop, STALL_PREFIX } from "./game/shop";
 import { donate, GOAL_DEFS, goalsView, sanitizeProgress, type GoalProgress } from "./game/goals";
 import { regen } from "./game/vitals";
 import { distToRect, inToolReach, NPC_CHAT_RANGE, NPC_TALK_RANGE, PROP_REACH, SHOP_RANGE } from "./game/range";
@@ -1285,6 +1285,7 @@ export class ZoneRoom extends DurableObject<Env> {
     const prop = world.map.props.find((pr) => pr.id === target);
     if (!prop || distToRect(p.entity, prop) > PROP_REACH) return;
     if (SEAT_FACING[prop.type]) return this.onSeat(p, prop.id, now);
+    if (prop.type === "market_stall" && stallShop(STALL_PREFIX + prop.id)) return this.sendStallShop(p, prop.id);
     if (prop.type === "market_stall") {
       const keeper = this.shopkeeperNear(prop);
       if (keeper) this.sendShop(p, keeper);
@@ -1366,7 +1367,25 @@ export class ZoneRoom extends DurableObject<Env> {
     send(p.ws, { t: "shop", npc: n.id, name: n.entity.name, offers: today.sells, buys: today.buys });
   }
 
+  /** A self-serve stall's shop (no keeper; you pay into the honour box). */
+  private sendStallShop(p: ZPlayer, propId: string): void {
+    const s = stallShop(STALL_PREFIX + propId);
+    if (!s) return;
+    const now = Date.now();
+    const key = STALL_PREFIX + propId;
+    if (now - (p.lastShop.get(key) ?? 0) < SHOP_DEDUP_MS) return;
+    p.lastShop.set(key, now);
+    send(p.ws, { t: "shop", npc: key, name: s.name, offers: s.shop.sells, buys: s.shop.buys });
+  }
+
   private shopFor(p: ZPlayer, npcId: string) {
+    const stall = stallShop(npcId);
+    if (stall) {
+      const prop = this.world!.map.props.find((pr) => pr.id === stall.propId);
+      if (!prop) return { error: "There's no such stall here." } as const;
+      if (distToRect(p.entity, prop) > SHOP_RANGE) return { error: "You're too far from the stall." } as const;
+      return { shop: stall.shop } as const;
+    }
     const n = this.world!.npcs.byEntityId(npcId);
     if (!n?.def?.shop) return { error: "They don't run a shop." } as const;
     if (dist(n.entity, p.entity) > SHOP_RANGE) return { error: "You're too far from the shop." } as const;

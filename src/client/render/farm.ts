@@ -3,8 +3,8 @@
 // tiles lay a darker patch of the same shape on top.
 // Every set* call diffs against what is on screen by a per-item signature, so the store can
 // call them on each change event without rebuilding sprites. See ../contracts.ts.
-import { Container, Graphics, GraphicsContext, Sprite, Ticker, type Texture } from "pixi.js";
-import { cropLook, cropView, objectRect, footprint, pointInRect, wallFaceRow } from "../../shared/engine";
+import { AnimatedSprite, Container, Graphics, GraphicsContext, Sprite, Ticker, type Texture } from "pixi.js";
+import { cropLook, cropView, objectRect, footprint, isRug, pointInRect, wallFaceRow } from "../../shared/engine";
 import { getItem } from "../../shared/items";
 import { Ground, type FarmTile, type MapData, type PlacedObject, type Vec2 } from "../../shared/types";
 import { hashXY } from "../art/slice";
@@ -73,6 +73,16 @@ export function wallObjectZ(o: PlacedObject, map: MapData | null): number {
   return (row ?? bottom + 2) * TILE + 0.5;
 }
 
+/** Source px a piece on the lowest wall row is raised by, so it hangs above the skirting board. */
+export const WALL_SKIRT_LIFT = 10;
+
+/** How far (source px) to raise a hung piece: only on the wall's lowest row, never higher up. */
+export function wallLift(o: PlacedObject, map: MapData | null): number {
+  if (!map || getItem(o.item)?.placeOn !== "wall") return 0;
+  const bottom = Math.floor(o.y) + footprint(o.item, o.rotation).h - 1;
+  return wallFaceRow(map, Math.floor(o.x), bottom) === bottom + 1 ? WALL_SKIRT_LIFT : 0;
+}
+
 /**
  * Per-tile variety so a row of the same crop doesn't look stamped: a mirror flip and a nudge of up
  * to 2 source px sideways and 1 px down/up, fixed by tile position (same on every client).
@@ -80,6 +90,39 @@ export function wallObjectZ(o: PlacedObject, map: MapData | null): number {
 export function cropJitter(x: number, y: number): { flip: boolean; dx: number; dy: number } {
   const h = hashXY(x, y);
   return { flip: (h & 1) === 1, dx: ((h >>> 1) % 5) - 2, dy: ((h >>> 4) % 3) - 1 };
+}
+
+/** Default speed of placed furniture loops (aquarium, arcade) when the art sets no frameMs. */
+const OBJECT_FRAME_MS = 250;
+/** Fridge doors swing at the shipping bin's lid speed (frames per second). */
+const OBJECT_LID_FPS = 14;
+
+/**
+ * Sprite for a placed piece: looping frames play on their own (each piece offset by its tile so
+ * neighbours don't blink together); lid frames stop on "closed" (or "open" if it already is).
+ */
+export function objectSprite(look: SpriteArt, x: number, y: number, tile: Vec2, open: boolean): Sprite {
+  if (look.open && look.open.length > 1) {
+    const a = new AnimatedSprite({ textures: look.open, autoUpdate: true, loop: false });
+    a.animationSpeed = OBJECT_LID_FPS / 60;
+    a.gotoAndStop(open ? look.open.length - 1 : 0);
+    return place(a, look, x, y);
+  }
+  if (look.frames && look.frames.length > 1) {
+    const a = new AnimatedSprite({ textures: look.frames, autoUpdate: true, loop: true });
+    a.animationSpeed = 1000 / (look.frameMs ?? OBJECT_FRAME_MS) / 60;
+    a.gotoAndPlay(hashXY(tile.x, tile.y) % look.frames.length);
+    return place(a, look, x, y);
+  }
+  return makeSprite(look, x, y);
+}
+
+function place(sp: Sprite, a: SpriteArt, x: number, y: number): Sprite {
+  sp.anchor.set(a.anchor.x, a.anchor.y);
+  sp.scale.set(SCALE);
+  sp.position.set(x, y);
+  sp.zIndex = y;
+  return sp;
 }
 
 export function objectSig(o: PlacedObject): string {
@@ -90,10 +133,14 @@ export function objectSig(o: PlacedObject): string {
 export function findObjectAt(objects: Iterable<PlacedObject>, tile: Vec2): string | null {
   const tx = Math.floor(tile.x);
   const ty = Math.floor(tile.y);
+  // A piece standing on a rug is the one you mean; the rug answers only where nothing stands.
+  let rug: string | null = null;
   for (const o of objects) {
-    if (pointInRect(objectRect(o.item, o.x, o.y, o.rotation), tx, ty)) return o.id;
+    if (!pointInRect(objectRect(o.item, o.x, o.y, o.rotation), tx, ty)) continue;
+    if (!isRug(o.item)) return o.id;
+    rug ??= o.id;
   }
-  return null;
+  return rug;
 }
 
 // ---------------------------------------------------------------- rendering
@@ -193,6 +240,8 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
   const objects = new Map<string, PlacedObject>();
   /** Map the objects stand on (wall pieces sort by the wall they hang on). */
   let objMap: MapData | null = null;
+  /** Placed storage pieces whose door is open now (kept across a rebuild of the piece). */
+  const openLids = new Set<string>();
 
   // ---- sparkle animation runs only while some crop is ready
   let t = 0;
@@ -289,9 +338,10 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
     const y = Math.floor(o.y);
     const mask = o.item === "fence" ? maskOf(o) : 0;
     const look = (mask && art.fence?.(mask)) || art.furniture(o.item, o.rotation);
-    const sprite = makeSprite(look, (x + fp.w / 2) * TILE, (y + fp.h) * TILE);
+    const sprite = objectSprite(look, (x + fp.w / 2) * TILE, (y + fp.h) * TILE, { x, y }, openLids.has(o.id));
     const def = getItem(o.item);
     if (def?.placeOn === "wall") {
+      sprite.y -= wallLift(o, objMap) * SCALE;
       sprite.zIndex = wallObjectZ(o, objMap);
       layers.sorted.addChild(sprite);
     }
@@ -383,6 +433,17 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       return findObjectAt(objects.values(), tile);
     },
 
+    setLid(id, open) {
+      if (open === openLids.has(id)) return;
+      if (open) openLids.add(id);
+      else openLids.delete(id);
+      const sp = objViews.get(id)?.sprite;
+      if (!(sp instanceof AnimatedSprite) || sp.loop) return;
+      // Negative speed plays the frames backwards and stops on "closed".
+      sp.animationSpeed = (open ? 1 : -1) * (OBJECT_LID_FPS / 60);
+      sp.play();
+    },
+
     destroy() {
       if (ticking) Ticker.shared.remove(tick);
       ticking = false;
@@ -392,6 +453,7 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
       blobs.destroy();
       farmViews.clear();
       objViews.clear();
+      openLids.clear();
       farmSigs.clear();
       objSigs.clear();
       objects.clear();
