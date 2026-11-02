@@ -8,12 +8,13 @@
 // pair would scale with players, so everything happens on the next conversation.
 import { Think, type ThinkModel, type ThinkScheduledTasks, type TurnConfig, type TurnContext } from "@cloudflare/think";
 import { createCompactFunction } from "agents/sessions";
-import { generateText, type ToolSet, type UIMessage } from "ai";
+import { generateText, wrapLanguageModel, type LanguageModel, type ToolSet, type UIMessage } from "ai";
 import type { Env } from "../../env";
 import { getNpc } from "../catalog";
 import type { NpcId } from "../bible";
 import { utcDay } from "../budget-logic";
 import { sanitizeLine } from "../text";
+import { dedupeDoubledText } from "./dedupe-stream";
 import {
   addFact,
   extractFacts,
@@ -86,6 +87,12 @@ export class NpcAgent extends Think<Env> {
 
   override getModel(): ThinkModel {
     return (this.env.NPC_AGENT_MODEL || this.env.NPC_MODEL) as ThinkModel;
+  }
+
+  override resolveModel(model: ThinkModel = this.getModel()): LanguageModel {
+    const base = super.resolveModel(model);
+    if (typeof base === "string") return base;
+    return wrapLanguageModel({ model: base as Parameters<typeof wrapLanguageModel>[0]["model"], middleware: dedupeDoubledText });
   }
 
   override getSystemPrompt(): string {

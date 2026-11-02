@@ -28,7 +28,7 @@ export const PROP_FOOTPRINTS = {
   shipping_bin: { w: 2, h: 1 },
   /** One fence tile; the client picks the piece (run, corner, post) from neighbouring fence tiles. */
   fence_deco: { w: 1, h: 1 },
-  /** Mooring end of a dock (boat + posts). The walkable planks are Ground.Wood tiles. */
+  /** Mooring end of a dock, drawn flat under players; the Ground.Wood tiles beneath carry the walking. */
   dock: { w: 4, h: 1 },
   shrine: { w: 3, h: 2 },
   bridge_broken: { w: 4, h: 3 },
@@ -77,4 +77,4 @@ export const PROP_FOOTPRINTS = {
 export type PropType = keyof typeof PROP_FOOTPRINTS;
 
 /** Outdoor props that lie flat on the ground or water: walkable, drawn under everyone, no shadow. */
-export const FLAT_OUTDOOR_PROPS: ReadonlySet<string> = new Set(["lilypad", "lilypad_small", "lily_pink", "lily_white", "water_reeds"]);
+export const FLAT_OUTDOOR_PROPS: ReadonlySet<string> = new Set(["lilypad", "lilypad_small", "lily_pink", "lily_white", "water_reeds", "dock"]);

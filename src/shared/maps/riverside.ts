@@ -45,7 +45,7 @@ export function buildRiverside(): MapData {
 
   // ---- dock: wooden planks into the river, boat/mooring prop at the end ----
   const dockTop = riverTop(21) - 1;
-  b.fill({ x: 21, y: dockTop, w: 2, h: 5 }, Ground.Wood);
+  b.fill({ x: 21, y: dockTop, w: 2, h: 6 }, Ground.Wood);
   b.prop("dock", 20, dockTop + 5, { id: "dock" });
   b.reserve({ x: 20, y: dockTop - 1, w: 4, h: 6 });
 

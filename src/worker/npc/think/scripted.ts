@@ -101,5 +101,16 @@ export function giftReply(id: NpcId, item: ItemId, playerName: string, rand: () 
 export function twoSentences(s: string): string {
   const parts = s.match(/[^.!?…]+[.!?…]+["')\]]*|[^.!?…]+$/g);
   if (!parts) return clampLine(s.trim());
-  return clampLine(parts.slice(0, 2).join("").trim());
+  return clampLine(dropStrayQuotes(parts.slice(0, 2).join("").trim()));
+}
+
+/** The model often wraps its whole reply in quotes; once trimmed, a lone closing quote is left over. */
+function dropStrayQuotes(s: string): string {
+  const straight = (s.match(/"/g) ?? []).length;
+  const open = (s.match(/“/g) ?? []).length;
+  const close = (s.match(/”/g) ?? []).length;
+  if (straight % 2 === 1) s = s.replace(/"$/, "").replace(/^"/, "");
+  if (close > open) s = s.replace(/”$/, "");
+  if (open > close) s = s.replace(/^“/, "");
+  return s.trim();
 }
