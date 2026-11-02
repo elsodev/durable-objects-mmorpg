@@ -23,7 +23,7 @@ import { clockMinutes, dayPhase, farmNow, formatClock, type HomeClock } from "..
 import { getItem } from "../../shared/items";
 import type { HomeServerMsg } from "../../shared/home";
 import { footstep } from "../audio/player";
-import { getMap } from "../../shared/maps";
+import { getMap, hasMap } from "../../shared/maps";
 import type { LoadingScreen } from "../ui/loading";
 import { createTutorial } from "../ui/tutorial";
 import type { ClientMsg, ServerMsg } from "../../shared/protocol";
@@ -102,7 +102,7 @@ export interface SessionOptions {
   /** Called on the first welcome from the server: the renderer is up and the game is connected. */
   onReady?: () => void;
   /** Loading screen to drive: steps as they finish, zone changes, and when the world is on screen. */
-  loading?: Pick<LoadingScreen, "done" | "zone" | "ready">;
+  loading?: Pick<LoadingScreen, "done" | "zone" | "ready"> & Partial<Pick<LoadingScreen, "zoneStep" | "outdated">>;
 }
 
 type ActionReq = "use" | "place" | "moveObject" | "pickup";
@@ -554,7 +554,10 @@ export async function startSession(
   // ------------------------------------------------------------ network
   const conn = createConnection({
     onMessage: handleMessage,
-    onState: (s) => hud.setConnection(s),
+    onState: (s) => {
+      hud.setConnection(s);
+      if (s === "online") loading?.zoneStep?.("connected");
+    },
     // The socket to a shared zone was refused (guest): go back home unless they upgrade.
     onForbidden: (zone) => {
       if (visitTarget) {
@@ -578,12 +581,20 @@ export async function startSession(
   });
 
   function joinZone(zone: ZoneId, spawn?: string): void {
+    if (!hasMap(zone)) return pageOutdated(zone);
     loading?.zone(zoneName(zone));
     pendingZone = zone;
     visitTarget = null;
     world?.build.exit();
     hud.setConnection("connecting");
     conn.connect(zone, spawn);
+  }
+
+  /** The server named a map this page can't draw: the page is older than the server. */
+  function pageOutdated(mapId: string): void {
+    console.warn(`[DurableMMO] unknown map "${mapId}": this page is older than the server`);
+    conn.close();
+    loading?.outdated?.();
   }
 
   /** Connects to /ws/visit/<ownerId>; their home arrives as zone "home" with welcome.visit set. */
@@ -691,6 +702,7 @@ export async function startSession(
   }
 
   function applyMessage(msg: ServerMsg): void {
+    if (msg.t === "welcome" && !hasMap(msg.homeMap ?? msg.zone)) return pageOutdated(msg.homeMap ?? msg.zone);
     sfxBefore(msg);
     store.apply(msg, performance.now());
     switch (msg.t) {
@@ -858,6 +870,7 @@ export async function startSession(
     pendingZone = null;
     devTools = msg.devTools === true;
     loading?.done("world");
+    loading?.zoneStep?.("arrived");
     afterFrame(() => {
       loading?.ready();
       if (!firstWorldShown) {

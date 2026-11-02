@@ -1,13 +1,17 @@
 // Loading screen: plain DOM shown while the renderer, art, audio and first zone load (Pixi is not
 // ready yet, so it can't be drawn in the canvas), and briefly while switching zones.
 import "./styles/loading.css";
-import { LOAD_STEPS, loadLabel, loadProgress, zoneLoadLabel, type LoadStep } from "./loading-logic";
+import { LOAD_STEPS, OUTDATED_LABEL, loadLabel, loadProgress, zoneLoadLabel, zoneProgress, type LoadStep, type ZoneStage } from "./loading-logic";
 
 export interface LoadingScreen {
   /** A first-load step finished. */
   done(step: LoadStep): void;
   /** Show the short zone-change variant (no-op while the first load is still showing). */
   zone(name: string | null | undefined): void;
+  /** A zone change moved on (socket open, welcome in). No-op unless a zone change is showing. */
+  zoneStep(stage: ZoneStage): void;
+  /** The server wants a map this page doesn't have: stay up and offer a refresh. */
+  outdated(): void;
   /** The world is on screen: fade out. */
   ready(): void;
   readonly visible: boolean;
@@ -48,7 +52,14 @@ export function createLoadingScreen(parent: HTMLElement): LoadingScreen {
   bar.setAttribute("aria-valuemax", String(LOAD_STEPS.length));
   const label = div("dm-loading-label");
 
-  for (const child of [sprout, title, tagline, bar, label]) card.appendChild(child);
+  const refresh = document.createElement("button");
+  refresh.type = "button";
+  refresh.className = "dm-btn dm-loading-refresh";
+  refresh.textContent = "Refresh";
+  refresh.hidden = true;
+  refresh.addEventListener("click", () => location.reload());
+
+  for (const child of [sprout, title, tagline, bar, label, refresh]) card.appendChild(child);
   root.appendChild(card);
   parent.appendChild(root);
 
@@ -56,6 +67,18 @@ export function createLoadingScreen(parent: HTMLElement): LoadingScreen {
   let firstLoad = true;
   let visible = true;
   let hideTimer: ReturnType<typeof setTimeout> | null = null;
+  let zoneShowing = false;
+  let stuck = false;
+
+  const setBar = (fraction: number, animate = true) => {
+    // Jumping back to the start of a new trip shouldn't slide backwards.
+    fill.style.transition = animate ? "" : "none";
+    fill.style.width = `${Math.round(fraction * 100)}%`;
+    if (!animate) void fill.offsetWidth;
+    fill.style.transition = "";
+    bar.setAttribute("aria-valuemax", "100");
+    bar.setAttribute("aria-valuenow", String(Math.round(fraction * 100)));
+  };
 
   const render = () => {
     const p = loadProgress(doneSteps);
@@ -80,12 +103,32 @@ export function createLoadingScreen(parent: HTMLElement): LoadingScreen {
       if (firstLoad) render();
     },
     zone(name) {
-      if (firstLoad && visible) return;
+      if (stuck || (firstLoad && visible)) return;
       root.classList.add("is-zone");
       label.textContent = zoneLoadLabel(name);
+      zoneShowing = true;
+      setBar(zoneProgress("leaving"), false);
+      show();
+    },
+    zoneStep(stage) {
+      if (!zoneShowing || stuck) return;
+      setBar(zoneProgress(stage));
+    },
+    outdated() {
+      stuck = true;
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = null;
+      root.classList.add("is-zone", "is-outdated");
+      label.textContent = OUTDATED_LABEL;
+      refresh.hidden = false;
       show();
     },
     ready() {
+      if (stuck) return;
+      if (zoneShowing) {
+        zoneShowing = false;
+        setBar(zoneProgress("shown"));
+      }
       if (firstLoad) {
         firstLoad = false;
         for (const s of LOAD_STEPS) doneSteps.add(s.id);

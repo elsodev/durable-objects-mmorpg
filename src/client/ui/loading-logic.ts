@@ -25,3 +25,16 @@ export function zoneLoadLabel(name: string | null | undefined): string {
   const n = (name ?? "").trim();
   return n ? `Heading to ${n}…` : "On the way…";
 }
+
+/** Stages of a zone change, in order. The bar shows how far along the trip is. */
+export type ZoneStage = "leaving" | "connected" | "arrived" | "shown";
+
+const ZONE_PROGRESS: Record<ZoneStage, number> = { leaving: 0.15, connected: 0.5, arrived: 0.85, shown: 1 };
+
+/** Bar fraction for a zone-change stage. */
+export function zoneProgress(stage: ZoneStage): number {
+  return ZONE_PROGRESS[stage];
+}
+
+/** Shown when the server sends us to a map this build doesn't have: the page is older than the server. */
+export const OUTDATED_LABEL = "Mossbrook has been updated. Refresh to keep playing.";

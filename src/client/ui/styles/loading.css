@@ -27,8 +27,14 @@
 }
 .dm-loading.is-zone .dm-loading-title,
 .dm-loading.is-zone .dm-loading-tagline,
-.dm-loading.is-zone .dm-loading-bar {
+.dm-loading.is-outdated .dm-loading-bar {
   display: none;
+}
+.dm-loading.is-zone .dm-loading-bar {
+  width: min(240px, 64vw);
+}
+.dm-loading-refresh {
+  margin-top: 6px;
 }
 
 .dm-loading-card {

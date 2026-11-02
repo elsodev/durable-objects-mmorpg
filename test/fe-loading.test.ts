@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOAD_STEPS, loadLabel, loadProgress, zoneLoadLabel, type LoadStep } from "../src/client/ui/loading-logic";
+import { LOAD_STEPS, OUTDATED_LABEL, loadLabel, loadProgress, zoneLoadLabel, zoneProgress, type LoadStep } from "../src/client/ui/loading-logic";
 
 describe("loading screen logic", () => {
   it("counts finished steps in any order", () => {
@@ -20,5 +20,19 @@ describe("loading screen logic", () => {
     expect(zoneLoadLabel("Riverside")).toBe("Heading to Riverside…");
     expect(zoneLoadLabel("  ")).toBe("On the way…");
     expect(zoneLoadLabel(null)).toBe("On the way…");
+  });
+});
+
+describe("zone change bar", () => {
+  it("moves forward through the trip", () => {
+    const stages = ["leaving", "connected", "arrived", "shown"] as const;
+    const values = stages.map(zoneProgress);
+    for (let i = 1; i < values.length; i++) expect(values[i]!).toBeGreaterThan(values[i - 1]!);
+    expect(values[0]!).toBeGreaterThan(0);
+    expect(values.at(-1)).toBe(1);
+  });
+
+  it("asks for a refresh when the page is out of date", () => {
+    expect(OUTDATED_LABEL).toMatch(/refresh/i);
   });
 });

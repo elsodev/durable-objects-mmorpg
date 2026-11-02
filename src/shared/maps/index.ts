@@ -25,6 +25,11 @@ const BUILDERS: Record<MapId, () => MapData> = {
 
 const cache = new Map<MapId, MapData>();
 
+/** Can this build draw that map? An older client meets a newer server's new zones here. */
+export function hasMap(zone: unknown): zone is MapId {
+  return typeof zone === "string" && Object.prototype.hasOwnProperty.call(BUILDERS, zone);
+}
+
 export function getMap(zone: MapId): MapData {
   let map = cache.get(zone);
   if (!map) {

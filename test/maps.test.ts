@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMap, mapToAscii, PROP_FOOTPRINTS } from "../src/shared/maps";
+import { getMap, hasMap, mapToAscii, PROP_FOOTPRINTS } from "../src/shared/maps";
 import { buildCaves } from "../src/shared/maps/caves";
 import { buildHome } from "../src/shared/maps/home";
 import { NPC_SCHEDULE, placeZone } from "../src/shared/npcSchedule";
@@ -306,5 +306,12 @@ describe("village paths", () => {
       }
       expect(seen.has("31,23"), `${d.name} path reaches the square`).toBe(true);
     }
+  });
+});
+
+describe("hasMap", () => {
+  it("knows every zone and home map, and nothing else", () => {
+    for (const z of ["village", "riverside", "caves", "quarry", "home", "home_in"]) expect(hasMap(z)).toBe(true);
+    for (const z of ["mines", "", "toString", "__proto__", 3, null]) expect(hasMap(z)).toBe(false);
   });
 });
