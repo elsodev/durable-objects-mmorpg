@@ -1,7 +1,7 @@
 // Friendly animal AI: wander near home, pause, sit, nap and react to a pet. Pure and
 // deterministic given `now` and `rand`; the same code moves the village animals (ZoneRoom) and the
 // pets and hens at home (HomeRoom). Never blocks anyone and never fights.
-import type { EntityState, Facing, MapExit, Vec2 } from "../types";
+import type { EntityState, Facing, MapExit, MapProp, Vec2 } from "../types";
 import type { Species } from "../animals";
 import { canStand, setBlocked, type CollisionGrid } from "./collision";
 import { stepToward } from "./movement";
@@ -86,10 +86,26 @@ const span = ([a, b]: [number, number], rand: () => number): number => a + Math.
  * A copy of `grid` with exits (and doorways) blocked: animals wander but never walk out of the
  * map or into a building.
  */
-export function animalGrid(grid: CollisionGrid, exits: readonly MapExit[]): CollisionGrid {
+export function animalGrid(grid: CollisionGrid, exits: readonly MapExit[], cover: readonly MapProp[] = []): CollisionGrid {
   const g: CollisionGrid = { width: grid.width, height: grid.height, cells: new Uint8Array(grid.cells) };
   for (const e of exits) setBlocked(g, e.x - 1, e.y - 1, e.w + 2, e.h + 2, true);
+  for (const r of coveredTiles(cover)) setBlocked(g, r.x, r.y, r.w, r.h, true);
   return g;
+}
+
+/**
+ * Tiles hidden under tall art (tree tops spread a tile each side and two rows up from the trunk).
+ * A small animal there vanishes behind the leaves with only its name showing, so it stays out.
+ */
+export const CANOPY: Readonly<Record<string, { up: number; side: number }>> = { tree: { up: 2, side: 1 } };
+
+export function coveredTiles(props: readonly MapProp[]): { x: number; y: number; w: number; h: number }[] {
+  const out: { x: number; y: number; w: number; h: number }[] = [];
+  for (const p of props) {
+    const c = CANOPY[p.type];
+    if (c) out.push({ x: p.x - c.side, y: p.y - c.up, w: p.w + c.side * 2, h: c.up });
+  }
+  return out;
 }
 
 /** A random standable tile centre within `radius` of home that a path reaches, or null. */

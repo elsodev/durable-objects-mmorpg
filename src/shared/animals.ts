@@ -41,7 +41,7 @@ export interface Mischief {
 
 export const VILLAGE_ANIMALS: readonly VillageAnimal[] = [
   { id: "mochi", name: "Mochi", species: "cat", sprite: "cat_ginger", home: { x: 27.5, y: 26.5 }, radius: 5, blurb: "A ginger tabby who naps by the fountain." },
-  { id: "pepper", name: "Pepper", species: "cat", sprite: "cat_grey", home: { x: 5.5, y: 15.5 }, radius: 4, blurb: "A grey cat with white socks. Shy at first." },
+  { id: "pepper", name: "Pepper", species: "cat", sprite: "cat_grey", home: { x: 9.5, y: 14.5 }, radius: 4, blurb: "A grey cat with white socks. Shy at first." },
   { id: "biscuit", name: "Biscuit", species: "dog", sprite: "dog_golden", home: { x: 20.5, y: 40.5 }, radius: 6, blurb: "A golden dog who greets everyone on the green." },
   { id: "patch", name: "Patch", species: "dog", sprite: "dog_patch", home: { x: 57.5, y: 32.5 }, radius: 4, blurb: "A brown-and-white dog with one spotted ear." },
   {

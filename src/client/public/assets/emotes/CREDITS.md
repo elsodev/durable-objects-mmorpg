@@ -1,6 +1,6 @@
 # Emote icons
 
-The 12 emote icons are original pixel art drawn in code for DurableMMO (`src/client/art/emote-pixels.ts`). No external sheet is used.
+The 12 emote icons are original pixel art made for the game.
 
 ## Emotes
 

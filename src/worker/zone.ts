@@ -377,7 +377,7 @@ export class ZoneRoom extends DurableObject<Env> {
     ground.load(await this.ctx.storage.get("ground"), Date.now());
     const forage = ForageGrower.forZone(zone, map, grid);
     const monsters = new MonsterPool(map, grid, rand, zone, Date.now());
-    const animals = zoneHasAnimals(zone) ? new AnimalHerd(() => this.world!.grid, map.exits, rand) : null;
+    const animals = zoneHasAnimals(zone) ? new AnimalHerd(() => this.world!.grid, map.exits, rand, map.props) : null;
     this.world = { zone, map, grid, rocks, trees, hits: new HitTracker(), monsters, npcs, seats, chests, ground, forage, animals };
     if (animals) syncZoneHerd(animals, zone, Date.now(), false);
   }

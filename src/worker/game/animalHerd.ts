@@ -6,7 +6,7 @@ import type { Species } from "../../shared/animals";
 import { ANIMAL_PREFIX } from "../../shared/animals";
 import { canStand, type CollisionGrid } from "../../shared/engine";
 import { animalGrid, animalStart, newAnimalMind, pickRunAway, reactToLove, startRun, stepAnimal, type AnimalMind } from "../../shared/engine/animals";
-import type { EntityState, MapExit, Vec2 } from "../../shared/types";
+import type { EntityState, MapExit, MapProp, Vec2 } from "../../shared/types";
 
 /** The animal grid is rebuilt from the map's grid this often, so felled trees or new furniture count. */
 const GRID_REFRESH_MS = 2000;
@@ -36,11 +36,13 @@ export class AnimalHerd {
     private readonly baseGrid: () => CollisionGrid,
     private readonly exits: readonly MapExit[],
     private readonly rand: () => number,
+    /** Props whose tall art would hide an animal behind it (trees). */
+    private readonly cover: readonly MapProp[] = [],
   ) {}
 
   private walkable(now: number): CollisionGrid {
     if (!this.grid || now - this.gridAt >= GRID_REFRESH_MS) {
-      this.grid = animalGrid(this.baseGrid(), this.exits);
+      this.grid = animalGrid(this.baseGrid(), this.exits, this.cover);
       this.gridAt = now;
     }
     return this.grid;

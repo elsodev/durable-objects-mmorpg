@@ -76,16 +76,6 @@ function render(body: HTMLElement, docs: (CreditDoc | null)[]): void {
 
   if (loaded.length < docs.length) add(body, el("p", "dm-muted", "Some credit files couldn't be loaded. Try again later."));
 
-  const files = el("p", "dm-muted credits-files", "Full per-file details: ");
-  CREDIT_FILES.forEach((path, i) => {
-    const a = el("a", "credits-link", path.replace(/^\/assets\//, ""));
-    a.href = path;
-    a.target = "_blank";
-    a.rel = "noopener";
-    if (i) files.appendChild(document.createTextNode(", "));
-    add(files, a);
-  });
-  add(body, files);
 }
 
 let openDialog: { close(): void } | null = null;

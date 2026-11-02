@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CREDIT_FILES, allAuthors, isShareAlike, parseCredits, type CreditDoc } from "../src/client/ui/credits-logic";
+import { CREDIT_FILES, allAuthors, friendlyName, friendlySummary, isShareAlike, parseCredits, type CreditDoc } from "../src/client/ui/credits-logic";
 
 interface NodeFs {
   readFileSync(path: string, enc: "utf8"): string;
@@ -35,10 +35,10 @@ describe("parseCredits", () => {
     );
     expect(doc.title).toBe("Pack credits");
     expect(doc.summary).toBe("All art is LPC.");
-    expect(doc.groups.map((g) => g.title)).toEqual(["Licences", "props", "Music"]);
+    expect(doc.groups.map((g) => g.title)).toEqual(["Licences", "Props", "Music"]);
     expect(doc.groups[0]!.notices).toEqual(["Required line by Someone, CC BY 4.0."]);
     expect(doc.groups[1]!.entries).toEqual([
-      { name: "props/barrel.png", authors: ["Alice", "Bob"], licenses: ["CC-BY-SA 3.0", "GPL 3.0"], shareAlike: true },
+      { name: "Barrel", authors: ["Alice", "Bob"], licenses: ["CC-BY-SA 3.0", "GPL 3.0"], shareAlike: true },
     ]);
     expect(doc.groups[2]!.entries).toEqual([{ name: "Song", authors: ["Carol"], licenses: ["CC0 1.0"], shareAlike: false }]);
   });
@@ -78,12 +78,32 @@ describe("shipped CREDITS files", () => {
     }
     const lpc = docs[0]!;
     const names = lpc.groups.flatMap((g) => g.entries.map((e) => e.name));
-    expect(names).toContain("characters/player_1.png");
-    expect(names).toContain("icons/veggies_shadowless.png");
+    expect(names).toContain("Player 1");
+    expect(names).toContain("Veggies shadowless");
     expect(lpc.groups.some((g) => g.entries.some((e) => e.shareAlike))).toBe(true);
     const authors = allAuthors(docs);
     for (const a of ["Johannes Sjölund (wulax)", "Lanea Zimmerman (Sharm)", "Kenney (kenney.nl)", "JaidynReiman"]) {
       expect(authors).toContain(a);
+    }
+  });
+});
+
+describe("credits shown in the game", () => {
+  it("names assets, not files or code", () => {
+    expect(friendlyName("animals/cat_grey.png")).toBe("Cat grey");
+    expect(friendlyName("characters/villager_old.png — Mayor Bram")).toBe("Villager old — Mayor Bram");
+    expect(friendlyName("characters/")).toBe("Characters");
+    expect(friendlySummary("Drawn in code (`src/client/ui/logo-pixels.ts`). See https://x.y/z.")).toBe("Drawn in code. See");
+  });
+
+  it("no entry, group or summary mentions a path or source file", async () => {
+    const re = /\.(png|ts|md|ogg|mp3|wav)\b|src\/|`/;
+    for (const d of await shippedDocs()) {
+      expect(d.summary).not.toMatch(re);
+      for (const g of d.groups) {
+        expect(g.title).not.toMatch(re);
+        for (const e of g.entries) expect(e.name).not.toMatch(re);
+      }
     }
   });
 });

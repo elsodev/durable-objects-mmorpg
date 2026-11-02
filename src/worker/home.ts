@@ -335,7 +335,7 @@ export class HomeRoom extends DurableObject<Env> {
   private tally = new HarvestTally();
   private chatGuards = new ChatGuards();
   /** Adopted pets and hens wandering the yard (rebuilt from the save; not persisted). */
-  private herd = new AnimalHerd(() => this.maps.grids.home, HOME_MAP.exits, Math.random);
+  private herd = new AnimalHerd(() => this.maps.grids.home, HOME_MAP.exits, Math.random, HOME_MAP.props);
 
   /** Drop-rate multipliers from env (DROP_RATE*), read once per instance. */
   private readonly rates: DropRates;

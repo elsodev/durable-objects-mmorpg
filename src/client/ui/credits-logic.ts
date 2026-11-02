@@ -33,6 +33,31 @@ export const CREDIT_FILES = [
 
 const MAX_TEXT = 400;
 
+const FILE_PATH = /(?:[\w.-]+\/)*([\w.-]+)\.(?:png|ogg|mp3|wav|webp|json|md)\b/gi;
+
+/** Players see names, not files: "animals/cat_grey.png" reads "Cat grey". */
+export function friendlyName(s: string): string {
+  const named = s
+    .replace(FILE_PATH, (_, base: string) => base.replace(/[_-]+/g, " "))
+    .replace(/\/+$/, "")
+    .replace(/\//g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return named.charAt(0).toUpperCase() + named.slice(1);
+}
+
+/** A file's intro line without code spans, paths or links, which mean nothing in the game. */
+export function friendlySummary(s: string): string {
+  return s
+    .replace(/`[^`]*`/g, "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(FILE_PATH, "")
+    .replace(/\(\s*[,;]?\s*\)/g, "")
+    .replace(/\s+([.,;:])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function clean(s: string): string {
   return s
     .replace(/\*\*|`/g, "")
@@ -147,12 +172,12 @@ export function parseCredits(md: string): CreditDoc {
       doc.title = clean(m[1]!);
       wantSummary = true;
     } else if ((m = line.match(/^##\s+(.+)/))) {
-      group = { title: clean(m[1]!).replace(/\/$/, ""), notices: [], entries: [] };
+      group = { title: friendlyName(clean(m[1]!)), notices: [], entries: [] };
       doc.groups.push(group);
       heading = null;
       wantSummary = false;
     } else if ((m = line.match(/^###\s+(.+)/))) {
-      heading = clean(m[1]!);
+      heading = friendlyName(clean(m[1]!));
       wantSummary = false;
     } else if ((m = line.match(/^\s*>\s?(.*)/))) {
       const text = clean(m[1]!);
@@ -169,11 +194,11 @@ export function parseCredits(md: string): CreditDoc {
       if (cols === undefined) {
         cols = tableCols(row);
       } else if (cols && !row.every((c) => /^:?-+:?$/.test(c))) {
-        const name = heading ?? clean(row[cols.name] ?? "");
+        const name = heading ?? friendlyName(clean(row[cols.name] ?? ""));
         credit(name, splitList(row[cols.authors] ?? ""), splitList(row[cols.licenses] ?? "", true));
       }
     } else if (wantSummary && line.trim()) {
-      doc.summary = clean(line);
+      doc.summary = friendlySummary(clean(line));
       wantSummary = false;
     }
   }
