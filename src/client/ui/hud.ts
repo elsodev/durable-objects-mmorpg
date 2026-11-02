@@ -37,6 +37,8 @@ import { createNameFlash, itemTitle, type NameFlash } from "./item-tip-logic";
 import { gaugeLabel, holdsWater, waterGauge, type WaterLevel } from "./water-gauge";
 import { createSlotMenu, type SlotMenu } from "./slot-menu";
 import { BAG_BUMP_EVENT, replayClass } from "./buy-fx";
+import { tradeMenuChoices } from "./slot-menu-logic";
+import { parseTradeCommand } from "../../shared/trade";
 import "./styles/hud.css";
 
 export { HOTBAR_SIZE };
@@ -147,10 +149,21 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   let inv: Inventory | null = null;
   let water: WaterLevel | null = null;
   let selected = 0;
-  const slotMenu: SlotMenu = safe("slot menu", () => createSlotMenu(root, (slot, qty) => game.send({ t: "dropItem", slot, ...(qty !== null ? { qty } : {}) })), {
-    open() {},
-    close() {},
-  });
+  const slotMenu: SlotMenu = safe(
+    "slot menu",
+    () =>
+      createSlotMenu(root, (slot, qty) => game.send({ t: "dropItem", slot, ...(qty !== null ? { qty } : {}) }), {
+        extra: (stack) => (safe("tradeOpen", () => game.tradeOpen?.() ?? false, false) ? tradeMenuChoices(stack.qty) : []),
+        onTrade: (slot, qty) => {
+          const s = inv?.slots[slot];
+          if (s) game.tradeAdd?.(slot, qty ?? s.qty);
+        },
+      }),
+    {
+      open() {},
+      close() {},
+    },
+  );
   /** Right-click on a filled hotbar or bag slot: Drop 1 / Drop all. */
   function openSlotMenu(slot: number, x: number, y: number): void {
     const s = inv?.slots[slot];
@@ -474,7 +487,9 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         context: () => ({
           viewerGuest: safe("isGuest", () => game.isGuest(), false),
           homeOwner: safe("slashContext", () => game.slashContext?.().homeOwner ?? false, false),
+          canTrade: !!game.requestTrade && safe("canTrade", () => game.canTrade?.() ?? false, false),
         }),
+        trade: (hit) => game.requestTrade?.(hit),
         addFriend: (name) => friends.addByName(name),
         friendsChanged: () => void friends.refresh(),
         prefillChat,
@@ -497,6 +512,13 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     return "error" in r ? say(r.error, "error") : say(`Unmuted ${r.name || name}.`, "info");
   }
   function chatCommand(text: string): boolean {
+    const trade = parseTradeCommand(text);
+    if (trade) {
+      if (safe("isGuest", () => game.isGuest(), false)) void showAccountPrompt("Create an account to trade with other players.");
+      else if (!trade.name) notices.notice("Usage: /trade name. Stand near them out in the valley.", "error");
+      else game.requestTrade?.(trade.name);
+      return true;
+    }
     const home = parseHomeCommand(text);
     if (home) {
       if (safe("isGuest", () => game.isGuest(), false)) {

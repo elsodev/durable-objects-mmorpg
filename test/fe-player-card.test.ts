@@ -108,6 +108,13 @@ describe("player card", () => {
     expect(cardButtons({ self: false }, fullCard(), { ...ctx, homeOwner: true })).toEqual(["friend", "whisper", "invite", "mute"]);
   });
 
+  it("offers Trade only out in a shared zone", () => {
+    expect(cardButtons({ self: false }, fullCard(), { ...ctx, canTrade: true })).toEqual(["friend", "whisper", "trade", "mute"]);
+    expect(cardButtons({ self: true }, fullCard({ self: true, friendship: "self" }), { ...ctx, canTrade: true })).toEqual([]);
+    expect(cardButtons({ self: false }, fullCard({ guest: true, minimal: true }), { ...ctx, canTrade: true })).toEqual(["mute"]);
+    expect(cardButtons({ self: false }, fullCard(), { ...ctx, viewerGuest: true, canTrade: true })).toEqual([]);
+  });
+
   it("guests see no buttons; a guest can only be muted", () => {
     expect(cardButtons({ self: false }, fullCard(), { ...ctx, viewerGuest: true })).toEqual([]);
     expect(cardButtons({ self: false }, fullCard({ guest: true, minimal: true }), ctx)).toEqual(["mute"]);

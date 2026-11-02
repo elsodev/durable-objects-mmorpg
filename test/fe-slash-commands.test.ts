@@ -10,6 +10,7 @@ import { parseChatInput } from "../src/shared/social";
 import { parseFriendCommand } from "../src/shared/friends";
 import { parseHomeCommand } from "../src/shared/visits";
 import { parseMuteCommand } from "../src/shared/players";
+import { parseTradeCommand } from "../src/shared/trade";
 import { EMOTES } from "../src/shared/emotes";
 
 const village: SlashContext = { atHome: false, homeOwner: false, guest: false, devTools: false };
@@ -115,6 +116,13 @@ describe("the command table matches the real handlers", () => {
     }
     expect(labels("/", village)).toEqual(expect.arrayContaining(["/mute", "/unmute"]));
     expect(labels("/", { ...village, guest: true })).not.toContain("/mute");
+  });
+
+  it("/trade is parsed by parseTradeCommand and offered to accounts out in the valley", () => {
+    expect(parseTradeCommand("/trade bob")).toEqual({ name: "bob" });
+    expect(labels("/", village)).toContain("/trade");
+    expect(labels("/", myHome)).not.toContain("/trade");
+    expect(labels("/", { ...village, guest: true })).not.toContain("/trade");
   });
 
   it("emote options are exactly the emote codes", () => {

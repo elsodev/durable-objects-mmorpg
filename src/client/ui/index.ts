@@ -77,6 +77,14 @@ export interface GameApi {
   slashContext?(): SlashContext;
   /** Fast travel from the Map tab to a place on the island. Optional: no Travel button without it. */
   travel?(to: TravelId): void;
+  /** A trade window is open (the bag's right-click menu then offers Add to trade). */
+  tradeOpen?(): boolean;
+  /** Put up to `qty` from a bag slot into the open trade. */
+  tradeAdd?(slot: number, qty: number): void;
+  /** Ask a player here to trade: a player card hit, or a name typed after /trade. */
+  requestTrade?(target: PlayerHit | string): void;
+  /** Out in a shared zone with an account, where trading works. */
+  canTrade?(): boolean;
 }
 
 /** Where a chat line belongs (tabs) and, for whispers, which way it went. */

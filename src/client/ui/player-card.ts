@@ -1,6 +1,6 @@
 // Player card (#player-card): right-click (or touch long-press) a player in the world, or a player's
 // name in chat. Shows a portrait, online/zone, lifetime stats and friendship from
-// GET /api/players/:id/card, with Add friend / Whisper / Invite home / Mute buttons. Your own card
+// GET /api/players/:id/card, with Add friend / Whisper / Trade / Invite home / Mute buttons. Your own card
 // has no buttons. Closes on Esc, a click outside (which then does nothing else), or when the player
 // walks away. Names and stats are untrusted: textContent only.
 import type { PlayerCard as CardData } from "../../shared/players";
@@ -38,6 +38,8 @@ export interface PlayerCardOpts {
   friendsChanged?(): void;
   prefillChat(text: string): void;
   inviteHome(name: string): void;
+  /** Ask this player to trade (shown only where CardContext.canTrade). */
+  trade?(hit: PlayerHit): void;
   mutes: MuteStore;
   notice(text: string, kind: "info" | "error" | "loot"): void;
   api?: MutesApi;
@@ -149,6 +151,14 @@ export function createPlayerCard(root: HTMLElement, opts: PlayerCardOpts): Playe
           button("Whisper", "player-card-whisper", () => {
             hide();
             opts.prefillChat(whisperPrefill(target.name));
+          }),
+        );
+      } else if (kind === "trade") {
+        if (!opts.trade || !target.entityId) continue;
+        actions.appendChild(
+          button("Trade", "player-card-trade", () => {
+            hide();
+            opts.trade?.(target);
           }),
         );
       } else if (kind === "invite") {

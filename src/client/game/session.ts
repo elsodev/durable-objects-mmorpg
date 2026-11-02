@@ -106,6 +106,8 @@ import { CLIMB_ACTS } from "../../shared/climb";
 import { createEnergy } from "./energy";
 import { createEditMode } from "./edit-mode";
 import { createEditUi } from "../ui/edit-ui";
+import { createTradeUi } from "../ui/trade";
+import type { PlayerHit } from "../ui/player-card-logic";
 
 const HOTBAR_SLOTS = 8;
 /** Stats panel refresh while in a shared zone. */
@@ -372,7 +374,21 @@ export async function startSession(
       guest: isGuest,
       devTools,
     }),
+    tradeOpen: () => tradeUi.isOpen(),
+    tradeAdd: (slot, qty) => send({ t: "tradeAdd", slot, qty }),
+    requestTrade: (target) => requestTrade(target),
+    canTrade: () => !isGuest && store.zone !== null && store.zone !== "home",
   };
+
+  /** Ask a player here to trade (player card or /trade name). The server checks it all again. */
+  function requestTrade(target: PlayerHit | string): void {
+    if (isGuest) return void askForAccount("Create an account to trade with other players.");
+    if (store.zone === "home") return notice("Meet in the village to trade.", "error");
+    const hit = typeof target === "string" ? gameApi.playerByName?.(target) ?? null : target;
+    if (!hit || !hit.entityId) return notice(`${typeof target === "string" ? target : "They"} isn't nearby. Stand close to them to trade.`, "error");
+    if (hit.self) return notice("You can't trade with yourself.", "error");
+    send({ t: "tradeRequest", target: hit.entityId });
+  }
   const tutorial = createTutorial(mount.ui, { userId: user.id, setTyping: (t) => gameApi.setTyping(t) });
   const hud: Hud = mountHud(mount.ui, gameApi);
   hud.setIconSource((item) => art.iconUrl(item));
@@ -486,6 +502,17 @@ export async function startSession(
     coins: () => store.inventory.coins,
     now: () => serverNow(),
     isGuest: () => isGuest,
+  });
+  const tradeUi = createTradeUi(mount.ui, {
+    answer: (from, accept) => send({ t: "tradeAnswer", from, accept }),
+    add: (slot, qty) => send({ t: "tradeAdd", slot, qty }),
+    remove: (index, qty) => send({ t: "tradeRemove", index, ...(qty !== undefined ? { qty } : {}) }),
+    coins: (coins) => send({ t: "tradeCoins", coins }),
+    ready: (ready) => send({ t: "tradeReady", ready }),
+    confirm: () => send({ t: "tradeConfirm" }),
+    cancel: () => send({ t: "tradeCancel" }),
+    setTyping: (t) => gameApi.setTyping(t),
+    now: () => serverNow(),
   });
   const doorFade = createDoorFade(mount.ui);
   const socialUnsubs = [
@@ -923,6 +950,7 @@ export async function startSession(
         editMode.refresh();
         hud.setInventory(store.inventory);
         storageUi.setInventory(store.inventory);
+        tradeUi.setInventory(store.inventory);
         noticeBoardUi.refresh();
         refreshEdible();
         world?.effects.setFlashlight?.(hasFlashlight(store.inventory));
@@ -1097,6 +1125,22 @@ export async function startSession(
         playSfx("loot");
         break;
       }
+      case "tradeAsk":
+        tradeUi.ask(msg.from, msg.name, msg.expiresAt);
+        break;
+      case "tradeAskGone":
+        tradeUi.askGone(msg.from);
+        break;
+      case "trade":
+        // Nothing may change behind the trade window: a shop dialog closes.
+        if (!tradeUi.isOpen()) hud.closeShop();
+        tradeUi.set(msg.view);
+        break;
+      case "tradeEnd":
+        tradeUi.end();
+        notice(msg.reason, msg.done ? "loot" : "info");
+        if (msg.done) playSfx("loot");
+        break;
       case "pong":
         break;
     }
@@ -1168,6 +1212,9 @@ export async function startSession(
     if (!visiting) send({ t: "hold", slot: selectedSlot });
     if (msg.zone !== "home") homeUi.closeBin();
     storageUi.close();
+    // A new room: any trade or request belonged to the last one.
+    tradeUi.end();
+    tradeUi.setInventory(store.inventory);
     farmFx.reset();
     farmFx.redraw();
     world.farm.setRocks(m, store.brokenRocks, store.rockOres);
@@ -1855,6 +1902,7 @@ export async function startSession(
       visitsUi.destroy();
       mailboxUi.destroy();
       noticeBoardUi.destroy();
+      tradeUi.destroy();
       doorFade.destroy();
       for (const u of socialUnsubs) u();
       for (const u of unsubs) u();

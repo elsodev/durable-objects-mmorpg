@@ -7,6 +7,7 @@ export type VisitorAction = "move" | "chat" | "emote" | "ping" | "harvest" | "ho
 export type VisitorVerdict = { allow: VisitorAction } | { deny: string };
 
 const NOT_YOURS = "Only the owner can do that here.";
+export const TRADE_ELSEWHERE = "Meet in the village to trade.";
 
 export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } = {
   move: { allow: "move" },
@@ -52,6 +53,15 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   noticePost: { deny: "Visit the village for that." },
   noticeVote: { deny: "Visit the village for that." },
   noticeDelete: { deny: "Visit the village for that." },
+  // Trades happen between players out in the shared zones, never inside someone's home.
+  tradeRequest: { deny: TRADE_ELSEWHERE },
+  tradeAnswer: { deny: TRADE_ELSEWHERE },
+  tradeAdd: { deny: TRADE_ELSEWHERE },
+  tradeRemove: { deny: TRADE_ELSEWHERE },
+  tradeCoins: { deny: TRADE_ELSEWHERE },
+  tradeReady: { deny: TRADE_ELSEWHERE },
+  tradeConfirm: { deny: TRADE_ELSEWHERE },
+  tradeCancel: { deny: TRADE_ELSEWHERE },
 };
 
 export function visitorVerdict(msg: ClientMsg): VisitorVerdict {

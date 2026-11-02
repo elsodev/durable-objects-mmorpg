@@ -47,20 +47,26 @@ export function friendButton(f: Friendship): { label: string; action: FriendActi
   }
 }
 
-export type CardButton = "friend" | "whisper" | "invite" | "mute";
+export type CardButton = "friend" | "whisper" | "trade" | "invite" | "mute";
 
 export interface CardContext {
   viewerGuest: boolean;
   /** You are in your own home (so you can invite). */
   homeOwner: boolean;
+  /** You are out in a shared zone, where players can trade. */
+  canTrade?: boolean;
 }
 
-/** Which action buttons the card shows. None on your own card; guests get none; a guest target can only be muted. */
+/**
+ * Which action buttons the card shows. None on your own card; guests get none; a guest target can
+ * only be muted. Trade only out in a shared zone (never with villagers: the card is for players).
+ */
 export function cardButtons(hit: Pick<PlayerHit, "self">, card: PlayerCard | null, ctx: CardContext): CardButton[] {
   if (hit.self || card?.self) return [];
   if (ctx.viewerGuest) return [];
   if (card?.guest) return ["mute"];
   const out: CardButton[] = ["friend", "whisper"];
+  if (ctx.canTrade) out.push("trade");
   if (ctx.homeOwner) out.push("invite");
   out.push("mute");
   return out;

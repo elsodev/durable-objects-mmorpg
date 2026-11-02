@@ -200,6 +200,14 @@ describe("visitor permission matrix", () => {
     noticePost: { t: "noticePost", text: "hello" },
     noticeVote: { t: "noticeVote", id: "n1", press: "like" },
     noticeDelete: { t: "noticeDelete", id: "n1" },
+    tradeRequest: { t: "tradeRequest", target: "p:alice" },
+    tradeAnswer: { t: "tradeAnswer", from: "p:alice", accept: true },
+    tradeAdd: { t: "tradeAdd", slot: 0, qty: 1 },
+    tradeRemove: { t: "tradeRemove", index: 0 },
+    tradeCoins: { t: "tradeCoins", coins: 5 },
+    tradeReady: { t: "tradeReady", ready: true },
+    tradeConfirm: { t: "tradeConfirm" },
+    tradeCancel: { t: "tradeCancel" },
   };
 
   it("allows only walking, chat, ping, petting and harvest-use", () => {
@@ -217,7 +225,7 @@ describe("visitor permission matrix", () => {
     const before = JSON.stringify({ inv: room.save.inventory, objects: room.objects, farm: room.farm, bin: room.bin, clock: room.clock });
     const denied = Object.values(samples).filter((m) => "deny" in VISITOR_RULES[m.t]);
     expect(denied.map((m) => m.t).sort()).toEqual(
-      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "moveObjects", "pickup", "pickupObjects", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete"].sort(),
+      ["buy", "donate", "eat", "giftNpc", "interact", "moveObject", "moveObjects", "pickup", "pickupObjects", "place", "sell", "setLook", "sleep", "unship", "moveSlot", "pose", "npcSay", "travel", "storeOpen", "storePut", "storeTake", "storeClose", "wardrobeOpen", "feedAnimal", "adoptAnimal", "dropItem", "sortBag", "noticePost", "noticeVote", "noticeDelete", "tradeRequest", "tradeAnswer", "tradeAdd", "tradeRemove", "tradeCoins", "tradeReady", "tradeConfirm", "tradeCancel"].sort(),
     );
     for (const m of denied) {
       const msg = m.t === "setLook" ? { t: "setLook", look: { body: "x" } } : m;

@@ -10,6 +10,7 @@ import { isEmote } from "./emotes";
 import { HOTBAR_SIZE } from "./held";
 import { cleanNoticeText, isNoticeId, isNoticePress } from "./notices";
 import { MAX_ARRANGE, type ArrangeMove } from "./engine/arrange";
+import { MAX_TRADE_COINS, TRADE_SLOTS } from "./trade";
 
 /** Frames larger than this are dropped without parsing. */
 export const MAX_FRAME_BYTES = 2048;
@@ -170,6 +171,23 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       return isNoticeId(o.id) && isNoticePress(o.press) ? { t: "noticeVote", id: o.id, press: o.press } : null;
     case "noticeDelete":
       return isNoticeId(o.id) ? { t: "noticeDelete", id: o.id } : null;
+    case "tradeRequest":
+      return isId(o.target) ? { t: "tradeRequest", target: o.target } : null;
+    case "tradeAnswer":
+      return isId(o.from) && typeof o.accept === "boolean" ? { t: "tradeAnswer", from: o.from, accept: o.accept } : null;
+    case "tradeAdd":
+      return isSlot(o.slot) && isQty(o.qty) ? { t: "tradeAdd", slot: o.slot, qty: o.qty } : null;
+    case "tradeRemove":
+      if (!isInt(o.index, 0, TRADE_SLOTS - 1) || (o.qty !== undefined && !isQty(o.qty))) return null;
+      return { t: "tradeRemove", index: o.index, ...(o.qty !== undefined ? { qty: o.qty as number } : {}) };
+    case "tradeCoins":
+      return isInt(o.coins, 0, MAX_TRADE_COINS) ? { t: "tradeCoins", coins: o.coins } : null;
+    case "tradeReady":
+      return typeof o.ready === "boolean" ? { t: "tradeReady", ready: o.ready } : null;
+    case "tradeConfirm":
+      return { t: "tradeConfirm" };
+    case "tradeCancel":
+      return { t: "tradeCancel" };
     default:
       return validateHomeClientMsg(o);
   }

@@ -2,8 +2,19 @@
 
 export interface SlotMenuChoice {
   label: string;
-  /** How many to drop; null drops the whole stack. */
+  /** How many to drop (or put in the trade); null means the whole stack. */
   qty: number | null;
+  /** What the choice does; absent means drop. */
+  action?: "drop" | "trade";
+}
+
+/** While a trade window is open: "Add to trade" for one, else Add 1 / Add 10 / Add all (n). */
+export function tradeMenuChoices(qty: number): SlotMenuChoice[] {
+  if (!(qty > 1)) return [{ label: "Add to trade", qty: null, action: "trade" }];
+  const out: SlotMenuChoice[] = [{ label: "Add 1 to trade", qty: 1, action: "trade" }];
+  if (qty > 10) out.push({ label: "Add 10 to trade", qty: 10, action: "trade" });
+  out.push({ label: `Add all (${qty}) to trade`, qty: null, action: "trade" });
+  return out;
 }
 
 /** "Drop" for one item; "Drop 1" and "Drop all (n)" for a stack. */

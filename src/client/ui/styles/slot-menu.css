@@ -36,3 +36,7 @@
   background: var(--dm-cream-2);
   outline: none;
 }
+.slot-menu-sep {
+  margin: 2px 4px;
+  border-top: 1px dashed var(--dm-wood-light);
+}

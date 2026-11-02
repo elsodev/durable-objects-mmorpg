@@ -175,7 +175,7 @@ import {
   takeInviteQuota as takeQuota,
   type Invite,
 } from "./visit/invites";
-import { visitorVerdict } from "./visit/permissions";
+import { TRADE_ELSEWHERE, visitorVerdict } from "./visit/permissions";
 import { canCredit, creditHarvest, harvestText, HarvestTally } from "./visit/harvest";
 import { sleepCountdownFor, VisitorSet, type VisitAttachment, type Visitor } from "./visit/visitors";
 import { HOME_COMMAND_NOTICE, INVITE_TTL_MS, MAX_VISITORS, parseHomeCommand, type InviteCheck, type InviteNotice, type VisitorEntry } from "../shared/visits";
@@ -1544,6 +1544,15 @@ export class HomeRoom extends DurableObject<Env> {
       case "noticeVote":
       case "noticeDelete":
         return this.reject(p, msg, "Visit the village for that.");
+      case "tradeRequest":
+      case "tradeAnswer":
+      case "tradeAdd":
+      case "tradeRemove":
+      case "tradeCoins":
+      case "tradeReady":
+      case "tradeConfirm":
+      case "tradeCancel":
+        return this.reject(p, msg, TRADE_ELSEWHERE);
       case "setLook":
         return this.onSetLook(p, msg, now);
       case "hold":

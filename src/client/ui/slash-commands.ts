@@ -1,6 +1,7 @@
 // Chat slash commands: the one table the "/" suggestion popup reads, and its filter. Pure (no DOM).
 // The handlers live in shared/social.ts parseChatInput (/w /r /world /zone /emote),
 // shared/friends.ts parseFriendCommand, shared/players.ts parseMuteCommand, shared/visits.ts parseHomeCommand,
+// shared/trade.ts parseTradeCommand,
 // and the dev tools in worker/home.ts devCommand (/day /time) and worker/zone.ts onChat (/hour, /hearts, /warp);
 // slash-commands.test.ts checks every entry here against those parsers.
 import { EMOTES } from "../../shared/emotes";
@@ -41,6 +42,7 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
   { name: "meditate", aliases: ["meditation"], args: "", description: "Sit cross-legged and meditate (move to get up)", available: always },
   { name: "piss", aliases: ["pee"], args: "", description: "Relieve yourself (villagers who see it won't forgive you)", available: always },
   { name: "friend", aliases: [], args: "name", description: "Send a friend request", available: account },
+  { name: "trade", aliases: [], args: "name", description: "Ask a player near you to trade", available: (c) => !c.guest && !c.atHome },
   { name: "mute", aliases: [], args: "name", description: "Hide a player's chat and requests", available: account },
   { name: "unmute", aliases: [], args: "name", description: "Show a muted player again", available: account },
   { name: "invite", aliases: [], args: "name", description: "Invite a friend to your home", available: owner },

@@ -24,6 +24,7 @@ import type { ChestView } from "./chests";
 import type { AnimalView } from "./animals";
 import type { NoticePress, NoticeView } from "./notices";
 import type { ArrangeMove } from "./engine/arrange";
+import type { TradeServerMsg } from "./trade";
 
 // ---------------- Client -> Server ----------------
 // Optional `seq` (move/moveTo): client input sequence number, acked in `tick.ack` so the client
@@ -111,6 +112,20 @@ export type ClientMsg =
   | { t: "noticePost"; text: string; req?: string }
   | { t: "noticeVote"; id: string; press: NoticePress }
   | { t: "noticeDelete"; id: string }
+  /**
+   * Trading with another player in the same shared zone (shared/trade.ts). Ask a player nearby by
+   * entity id; they answer the `tradeAsk` with tradeAnswer. While the window is open, put up bag
+   * stacks (`slot`, up to `qty`) and coins, take entries back by index, then both press Ready and
+   * both press Trade (tradeConfirm). Any change to either side clears Ready for both.
+   */
+  | { t: "tradeRequest"; target: string }
+  | { t: "tradeAnswer"; from: string; accept: boolean }
+  | { t: "tradeAdd"; slot: number; qty: number }
+  | { t: "tradeRemove"; index: number; qty?: number }
+  | { t: "tradeCoins"; coins: number }
+  | { t: "tradeReady"; ready: boolean }
+  | { t: "tradeConfirm" }
+  | { t: "tradeCancel" }
   | HomeClientMsg;
 
 // ---------------- Server -> Client ----------------
@@ -287,7 +302,8 @@ export type ServerMsg =
    */
   | { t: "notices"; posts: NoticeView[]; open?: boolean; nextPostAt?: number; posted?: boolean }
   | HomeServerMsg
-  | VisitServerMsg;
+  | VisitServerMsg
+  | TradeServerMsg;
 
 export function encode(msg: ClientMsg | ServerMsg): string {
   return JSON.stringify(msg);

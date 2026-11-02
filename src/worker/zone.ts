@@ -122,6 +122,8 @@ import { endPose, POSE_ACT, POSE_MIN_INTERVAL_MS, poseRefusal, witnesses, type P
 import { TRAVEL_SPAWN, travelBlock, type TravelZone } from "../shared/travel";
 import { capFromEnv, copyName, FULL_HEADER, FULL_STATUS, hasRoom, isCopyNumber, parseCopy } from "../shared/zoneCopies";
 import { PlayerInterest } from "./game/interest";
+import { TradeDesk } from "./game/trades";
+import type { TradeOffer } from "../shared/trade";
 import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, sellTo, shopToday, stallShop, STALL_PREFIX } from "./game/shop";
@@ -281,6 +283,11 @@ export class ZoneRoom extends DurableObject<Env> {
   private noticeEdits = new Throttle(NOTICE_EDIT_MS);
   /** The "bag full, loot on the ground" notice once in a while, not on every kill. */
   private bagFullNotes = new Throttle(BAG_FULL_NOTICE_MS);
+  /** Player-to-player trades here (requests and open trade windows; memory only). */
+  private trades = new TradeDesk<ZPlayer>({
+    send: (p, msg) => send(p.ws, msg),
+    settled: (a, b, gaveA, gaveB) => this.tradeSettled(a, b, gaveA, gaveB),
+  });
 
   /** Drop-rate multipliers from env (DROP_RATE*), read once per instance. */
   private readonly rates: DropRates;
@@ -420,6 +427,7 @@ export class ZoneRoom extends DurableObject<Env> {
     for (const p of [...this.players.values()]) {
       if (p.userId !== id.userId) continue;
       this.players.delete(p.ws);
+      this.trades.drop(p);
       closeQuietly(p.ws, CLOSE_REPLACED, "Connected from another tab.");
     }
 
@@ -629,6 +637,7 @@ export class ZoneRoom extends DurableObject<Env> {
 
   /** Tells SocialRoom (presence) and forgets per-player throttles. */
   private left(p: ZPlayer): void {
+    this.trades.drop(p);
     this.emotes.drop(p.userId);
     this.noticeEdits.drop(p.userId);
     this.bagFullNotes.drop(p.userId);
@@ -688,6 +697,7 @@ export class ZoneRoom extends DurableObject<Env> {
       if (p) this.hurt(p, hit.damage, now);
     }
     this.tickGround(now);
+    this.trades.tick(now);
     for (const p of this.players.values()) {
       if (regen(p.entity, now, p.lastHurt, p.lastRegen)) {
         p.lastRegen = now;
@@ -951,6 +961,7 @@ export class ZoneRoom extends DurableObject<Env> {
   private leaseLost(p: ZPlayer): void {
     if (this.players.get(p.ws) !== p) return;
     this.players.delete(p.ws);
+    this.trades.drop(p);
     p.saveSoon.cancel();
     send(p.ws, { t: "notice", text: "You are playing somewhere else now.", kind: "error" });
     closeQuietly(p.ws, CLOSE_LEASE_LOST, "Session moved.");
@@ -958,6 +969,7 @@ export class ZoneRoom extends DurableObject<Env> {
   }
 
   private inventoryChanged(p: ZPlayer, loot?: string): void {
+    this.trades.inventoryChanged(p);
     applyHeld(p.entity, p.inv, p.heldSlot);
     send(p.ws, { t: "inventory", inventory: p.inv });
     if (loot) send(p.ws, { t: "notice", text: loot, kind: "loot" });
@@ -967,6 +979,7 @@ export class ZoneRoom extends DurableObject<Env> {
 
   /** Steps onto a ladder: everyone sees the climb (entity act), then takeExit after CLIMB_MS. */
   private startClimb(p: ZPlayer, exit: MapExit, now: number): void {
+    this.trades.cancel(p, "You climbed away, so the trade was called off.", `${p.name} climbed away, so the trade was called off.`);
     this.getUp(p);
     p.motion.stop();
     p.climb = { exit, until: beginClimb(p.entity, exit, now) };
@@ -978,6 +991,7 @@ export class ZoneRoom extends DurableObject<Env> {
     const exit = routeExit(taken, this.world!.zone, isZoneId(above) ? above : undefined);
     // Out of the zone at once (entity disappears next tick), but keep the socket until saved.
     this.players.delete(p.ws);
+    this.trades.drop(p);
     if (this.players.size === 0) this.stopTick();
     p.motion.stop();
     p.saveSoon.cancel();
@@ -1017,8 +1031,10 @@ export class ZoneRoom extends DurableObject<Env> {
       case "interact":
         return this.onInteract(p, msg.target, now);
       case "buy":
+        this.leaveTradeForShop(p);
         return this.onBuy(p, msg);
       case "sell":
+        this.leaveTradeForShop(p);
         return this.onSell(p, msg);
       case "donate":
         return this.onDonate(p, msg);
@@ -1063,7 +1079,66 @@ export class ZoneRoom extends DurableObject<Env> {
       case "noticeVote":
       case "noticeDelete":
         return this.onNoticeEdit(p, msg, now);
+      case "tradeRequest":
+      case "tradeAnswer":
+      case "tradeAdd":
+      case "tradeRemove":
+      case "tradeCoins":
+      case "tradeReady":
+      case "tradeConfirm":
+      case "tradeCancel":
+        return this.onTrade(p, msg, now);
     }
+  }
+
+  /** Trade messages go to the desk (game/trades.ts); a refusal comes back as a reject. */
+  private onTrade(p: ZPlayer, msg: Extract<ClientMsg, { t: `trade${string}` }>, now: number): void {
+    const t = this.trades;
+    let why: string | null;
+    switch (msg.t) {
+      case "tradeRequest":
+        why = t.request(p, this.playerByEntity(msg.target), now);
+        break;
+      case "tradeAnswer":
+        why = t.answer(p, this.playerByEntity(msg.from), msg.accept, now);
+        break;
+      case "tradeAdd":
+        why = t.add(p, msg.slot, msg.qty, now);
+        break;
+      case "tradeRemove":
+        why = t.remove(p, msg.index, msg.qty, now);
+        break;
+      case "tradeCoins":
+        why = t.coins(p, msg.coins, now);
+        break;
+      case "tradeReady":
+        why = t.ready(p, msg.ready, now);
+        break;
+      case "tradeConfirm":
+        why = t.confirm(p, now);
+        break;
+      case "tradeCancel":
+        t.cancel(p, "You called off the trade.", `${p.name} called off the trade.`);
+        why = null;
+        break;
+    }
+    if (why) this.reject(p, msg, why);
+  }
+
+  /** Both bags already hold their new contents: show them, save both right away, and log it. */
+  private tradeSettled(a: ZPlayer, b: ZPlayer, gaveA: TradeOffer, gaveB: TradeOffer): void {
+    for (const p of [a, b]) {
+      applyHeld(p.entity, p.inv, p.heldSlot);
+      send(p.ws, { t: "inventory", inventory: p.inv });
+      void this.save(p);
+    }
+    const line = (o: TradeOffer) => [...o.items.map((i) => `${i.qty}x${i.item}${i.quality ? `@q${i.quality}` : ""}`), ...(o.coins ? [`${o.coins} coins`] : [])].join(", ") || "nothing";
+    console.log(`trade ${this.world?.zone ?? "?"}: ${a.userId} gave ${line(gaveA)}; ${b.userId} gave ${line(gaveB)}`);
+  }
+
+  /** Opening or using a shop ends any trade you have open (nothing can change behind the window). */
+  private leaveTradeForShop(p: ZPlayer): void {
+    this.trades.cancel(p, "You went shopping, so the trade was called off.", `${p.name} went shopping, so the trade was called off.`);
   }
 
   private onMoveSlot(p: ZPlayer, msg: Extract<ClientMsg, { t: "moveSlot" }>): void {
@@ -1474,6 +1549,7 @@ export class ZoneRoom extends DurableObject<Env> {
     const n = this.world!.npcs.byEntityId(npcId);
     const shop = n?.def?.shop;
     if (!n || !shop) return;
+    this.leaveTradeForShop(p);
     const now = Date.now();
     if (now - (p.lastShop.get(n.id) ?? 0) < SHOP_DEDUP_MS) return;
     p.lastShop.set(n.id, now);
@@ -1485,6 +1561,7 @@ export class ZoneRoom extends DurableObject<Env> {
   private sendStallShop(p: ZPlayer, propId: string): void {
     const s = stallShop(STALL_PREFIX + propId);
     if (!s) return;
+    this.leaveTradeForShop(p);
     const now = Date.now();
     const key = STALL_PREFIX + propId;
     if (now - (p.lastShop.get(key) ?? 0) < SHOP_DEDUP_MS) return;
@@ -1894,6 +1971,7 @@ export class ZoneRoom extends DurableObject<Env> {
 
   /** The town hall counter (the mayor's desk): the barn, hens and pet treats; it buys eggs. */
   private sendTownhall(p: ZPlayer): void {
+    this.leaveTradeForShop(p);
     send(p.ws, townhallShop(p.animals));
   }
 
