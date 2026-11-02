@@ -27,6 +27,7 @@ describe("animal wandering", () => {
     }
   });
 
+  // Ten simulated minutes for each animal (Happy roams widely): room for a busy machine.
   it("walks for ten minutes without entering walls, water or exits, facing the way it moves", () => {
     for (const a of VILLAGE_ANIMALS) {
       const rand = mulberry32(a.id.length * 7919);

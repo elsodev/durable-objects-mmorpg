@@ -249,6 +249,8 @@ const NOT_DROPS: Record<string, string[]> = {
   // Crop quality, not a drop; `extra` comes from dropChance a few lines up.
   "src/shared/engine/harvest.ts": ["rand() < gold", "rand() < silver", "rand() < extra"],
   "src/worker/npc/brain.ts": ["rand() >= IDLE_CHANCE"],
+  // Happy the husky bolting from a pet or running off with a meal: behaviour, not a drop.
+  "src/shared/mischief.ts": ["rand() < (atHome ? m.homeRun : m.run)", "rand() < (atHome ? m.homeSnatch : m.snatch)"],
   "src/worker/npc/think/scripted.ts": ['rand() < 0.5'],
 };
 

@@ -7,7 +7,9 @@ import {
   animalView,
   bondWith,
   feedBond,
+  feedPtsOf,
   petBond,
+  petPtsOf,
   type AnimalSave,
   type AnimalView,
   type Chicken,
@@ -16,13 +18,21 @@ import {
 import { worldDay } from "../../shared/calendar";
 import { removeFromSlot } from "../../shared/engine";
 import { getItem } from "../../shared/items";
+import { boltLine, rollsAway, rollsSnatch } from "../../shared/mischief";
 import type { Inventory } from "../../shared/types";
 
-export type CareOutcome = { ok: true; view: AnimalView; delta: number; text: string } | { ok: false; reason: string };
+/** `ran`: the animal bolts (a getaway) instead of the love pose. */
+export type CareOutcome = { ok: true; view: AnimalView; delta: number; text: string; ran?: boolean } | { ok: false; reason: string };
 
-/** A pet: always loved; affection only from the day's first. */
-export function petAnimal(save: AnimalSave, def: VillageAnimal, entity: string, now: number, yours = false): CareOutcome {
-  const r = petBond(bondWith(save, def.id), now);
+/**
+ * A pet: loved, with affection only from the day's first. A mischievous animal may bolt instead:
+ * no affection and today's pet isn't used up, so you can chase it and try again.
+ */
+export function petAnimal(save: AnimalSave, def: VillageAnimal, entity: string, now: number, yours = false, rand: () => number = Math.random): CareOutcome {
+  if (rollsAway(def, yours, rand)) {
+    return { ok: true, view: animalView(save, def, entity, now, yours), delta: 0, text: boltLine(def.name, rand()), ran: true };
+  }
+  const r = petBond(bondWith(save, def.id), now, petPtsOf(def));
   const text = r.counted ? `${def.name} loves the attention!` : `${def.name} leans into your hand.`;
   return { ok: true, view: animalView(save, def, entity, now, yours), delta: r.delta, text };
 }
@@ -36,13 +46,14 @@ export function feedAnimal(
   entity: string,
   now: number,
   yours = false,
+  rand: () => number = Math.random,
 ): CareOutcome {
   const s = inv.slots[slot];
   const item = s ? getItem(s.item) : undefined;
   if (!s || !item) return { ok: false, reason: "Pick some food in your bag first." };
   const b = bondWith(save, def.id);
   const before = { ...b };
-  const r = feedBond(b, def.species, item.id, now);
+  const r = feedBond(b, def.species, item.id, now, feedPtsOf(def));
   if (!r) return { ok: false, reason: `${def.name} sniffs the ${item.name} and turns away.` };
   if (!removeFromSlot(inv, slot, 1)) {
     Object.assign(b, before);
@@ -50,6 +61,11 @@ export function feedAnimal(
   }
   const how = r.taste === "loved" ? "gobbles up" : r.taste === "liked" ? "happily eats" : "nibbles";
   const full = r.counted ? "" : " (Already had a proper meal today.)";
+  // A snatch still counts as the meal: the food is eaten, just somewhere else.
+  if (rollsSnatch(def, yours, rand)) {
+    const text = `${def.name} snatches the ${item.name} and runs off with it!${full}`;
+    return { ok: true, view: animalView(save, def, entity, now, yours), delta: r.delta, text, ran: true };
+  }
   return { ok: true, view: animalView(save, def, entity, now, yours), delta: r.delta, text: `${def.name} ${how} the ${item.name}!${full}` };
 }
 

@@ -44,6 +44,8 @@ const PROFILES: Record<string, EntityProfile> = {
   cat_grey: { ...HUMANOID, fps: 8, shadow: 0.6, hitW: 0.9, hitH: 0.75, head: 18 },
   dog_golden: { ...HUMANOID, fps: 9, shadow: 0.85, hitW: 1.1, hitH: 1.05, head: 30 },
   dog_patch: { ...HUMANOID, fps: 9, shadow: 0.85, hitW: 1.1, hitH: 1.05, head: 30 },
+  // The husky's upright ears stand a few px taller than the other dogs' floppy ones.
+  dog_husky: { ...HUMANOID, fps: 9, shadow: 0.85, hitW: 1.1, hitH: 1.15, head: 34 },
   chicken_white: { ...HUMANOID, fps: 7, shadow: 0.5, hitW: 0.8, hitH: 0.75, head: 18 },
   chicken_brown: { ...HUMANOID, fps: 7, shadow: 0.5, hitW: 0.8, hitH: 0.75, head: 18 },
 };
@@ -63,6 +65,17 @@ export function animalPoseFrame(k: string, ageMs: number, frames: number): numbe
 
 export function profileFor(sprite: string): EntityProfile {
   return PROFILES[sprite] ?? HUMANOID;
+}
+
+/**
+ * An animal sprinting off (act "run", RUN_SPEED) cycles its legs faster than its walk, so paws
+ * keep up with the ground: about 2.2x for a dog.
+ */
+export const RUN_FPS_SCALE = 2.2;
+
+/** Walk cycle fps for this entity right now (a running animal plays it faster). */
+export function walkFps(p: EntityProfile, s: Pick<EntityState, "kind" | "act">): number {
+  return s.kind === "animal" && s.act?.k === "run" ? p.fps * RUN_FPS_SCALE : p.fps;
 }
 
 /** Walk frame index for an accumulated animation clock. */

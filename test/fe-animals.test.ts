@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { animalButtons, animalStatus, speciesLabel } from "../src/client/ui/animals-logic";
-import { ANIMAL_POSE_MS, animalPoseFrame, profileFor } from "../src/client/render/entityProfile";
+import { ANIMAL_POSE_MS, animalPoseFrame, profileFor, RUN_FPS_SCALE, walkFps } from "../src/client/render/entityProfile";
 import { animalLoveSfx } from "../src/client/audio/audio-logic";
 import type { AnimalView } from "../src/shared/animals";
 import catalog from "../src/client/public/assets/lpc/catalog.json";
@@ -47,9 +47,17 @@ describe("animal art and sound", () => {
     expect(profileFor("dog_golden").head).toBeGreaterThan(profileFor("cat_ginger").head);
   });
 
+  it("a running animal cycles its legs faster; nothing else does", () => {
+    const p = profileFor("dog_husky");
+    expect(profileFor("dog_husky").head).toBeGreaterThan(profileFor("dog_patch").head);
+    expect(walkFps(p, { kind: "animal" })).toBe(p.fps);
+    expect(walkFps(p, { kind: "animal", act: { k: "run", at: 1 } })).toBe(p.fps * RUN_FPS_SCALE);
+    expect(walkFps(p, { kind: "player", act: { k: "run", at: 1 } })).toBe(p.fps);
+  });
+
   it("every animal sheet exists and declares its poses within the sheet", () => {
     const animals = (catalog as { animals: Record<string, { file: string; frameH: number; animations: Record<string, Record<string, { row: number; frames: number }>> }> }).animals;
-    expect(Object.keys(animals).sort()).toEqual(["cat_ginger", "cat_grey", "chicken_brown", "chicken_white", "dog_golden", "dog_patch"]);
+    expect(Object.keys(animals).sort()).toEqual(["cat_ginger", "cat_grey", "chicken_brown", "chicken_white", "dog_golden", "dog_husky", "dog_patch"]);
     for (const [k, e] of Object.entries(animals)) {
       expect(existsSync(`src/client/public/assets/lpc/${e.file}`), k).toBe(true);
       for (const pose of ["walk", "rest", "nap", "love"]) expect(Object.keys(e.animations[pose]!).sort(), `${k} ${pose}`).toEqual(["down", "left", "right", "up"]);
@@ -66,8 +74,12 @@ describe("animal art and sound", () => {
     expect(animalLoveSfx("cat_grey")).toBe("cat_purr");
     expect(animalLoveSfx("chicken_brown")).toBe("hen_cluck");
     expect(animalLoveSfx("slime")).toBeNull();
+    // Happy howls when loved and yips as he bolts; other animals stay quiet for a getaway.
+    expect(animalLoveSfx("dog_husky")).toBe("husky_awoo");
+    expect(animalLoveSfx("dog_husky", "laugh")).toBe("husky_yip");
+    expect(animalLoveSfx("dog_patch", "laugh")).toBeNull();
     const sfx = (audio as { sfx: Record<string, { files: string[] }> }).sfx;
-    for (const k of ["dog_bark", "cat_purr", "cat_meow", "hen_cluck"]) {
+    for (const k of ["dog_bark", "husky_yip", "husky_awoo", "cat_purr", "cat_meow", "hen_cluck"]) {
       expect(sfx[k], k).toBeDefined();
       for (const f of sfx[k]!.files) expect(existsSync(`src/client/public/assets/audio/${f}`), f).toBe(true);
     }

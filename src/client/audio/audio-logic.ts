@@ -190,8 +190,13 @@ export function assetUrl(base: string, file: string): string {
 /** Animals are heard this many tiles away (their love sounds are quiet, homely noises). */
 export const ANIMAL_HEAR_RANGE = 10;
 
-/** The happy sound an animal makes when petted or fed: dogs bark, cats purr, hens cluck. */
-export function animalLoveSfx(sprite: string): string | null {
+/**
+ * The sound an animal makes with an emote: when petted or fed (a heart) dogs bark, cats purr and
+ * hens cluck; the husky howls a happy "awoo" instead, and yips as it bolts (a laugh).
+ */
+export function animalLoveSfx(sprite: string, code = "heart"): string | null {
+  if (sprite === "dog_husky") return code === "laugh" ? "husky_yip" : "husky_awoo";
+  if (code !== "heart") return null;
   if (sprite.startsWith("dog_")) return "dog_bark";
   if (sprite.startsWith("cat_")) return "cat_purr";
   if (sprite.startsWith("chicken_")) return "hen_cluck";

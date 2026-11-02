@@ -122,9 +122,11 @@ import { scoldLine } from "./npc/scold";
 import { boulderAt, nextWrongToolStreak, wrongToolCost, wrongToolNotice, type WrongToolStreak } from "../shared/engine/wrongTool";
 import { buyFrom, sellTo, shopToday, stallShop, STALL_PREFIX } from "./game/shop";
 import { AnimalHerd } from "./game/animalHerd";
+import { syncZoneHerd } from "./game/zoneHerd";
+import { zoneHasAnimals } from "../shared/roam";
 import { adoptAnimal, feedAnimal, petAnimal, type CareOutcome } from "./game/animalCare";
 import { townhallBuy, townhallSell, townhallShop } from "./game/townhall";
-import { ANIMAL_CARE_REACH, ANIMAL_PREFIX, animalView, bondWith, HEART_PTS, MAX_ANIMAL_HEARTS, sanitizeAnimals, VILLAGE_ANIMALS, villageAnimal, type AnimalSave } from "../shared/animals";
+import { ANIMAL_CARE_REACH, ANIMAL_PREFIX, animalView, bondWith, HEART_PTS, MAX_ANIMAL_HEARTS, sanitizeAnimals, villageAnimal, type AnimalSave } from "../shared/animals";
 import { TOWNHALL_DESK, TOWNHALL_SHOP } from "../shared/ranch";
 import { donate, GOAL_DEFS, goalsView, sanitizeProgress, type GoalProgress } from "./game/goals";
 import { regen } from "./game/vitals";
@@ -356,9 +358,9 @@ export class ZoneRoom extends DurableObject<Env> {
     ground.load(await this.ctx.storage.get("ground"), Date.now());
     const forage = ForageGrower.forZone(zone, map, grid);
     const monsters = new MonsterPool(map, grid, rand, zone, Date.now());
-    const animals = zone === "village" ? new AnimalHerd(() => this.world!.grid, map.exits, rand) : null;
+    const animals = zoneHasAnimals(zone) ? new AnimalHerd(() => this.world!.grid, map.exits, rand) : null;
     this.world = { zone, map, grid, rocks, trees, hits: new HitTracker(), monsters, npcs, seats, chests, ground, forage, animals };
-    animals?.sync(VILLAGE_ANIMALS.map((a) => ({ ...a })), Date.now());
+    if (animals) syncZoneHerd(animals, zone, Date.now(), false);
   }
 
   private async loadGoals(): Promise<void> {
@@ -683,7 +685,10 @@ export class ZoneRoom extends DurableObject<Env> {
     }
 
     world.npcs.tick(dt, now);
-    world.animals?.tick(dt, now);
+    if (world.animals) {
+      for (const text of syncZoneHerd(world.animals, world.zone, now)) this.broadcast({ t: "notice", text, kind: "info" });
+      world.animals.tick(dt, now);
+    }
     world.seats.retain(new Set(this.allEntities().map((e) => e.id)));
 
     if (world.chests?.respawnDue(world.grid, now, this.allEntities(), Math.random)) {
@@ -1835,15 +1840,17 @@ export class ZoneRoom extends DurableObject<Env> {
     if (msg.t === "feedAnimal") out = feedAnimal(p.animals, p.inv, msg.slot, def, a.entity.id, now);
     else if (msg.t === "adoptAnimal") out = adoptAnimal(p.animals, def, a.entity.id, now);
     else if (quiet) out = { ok: true, view: animalView(p.animals, def, a.entity.id, now), delta: 0, text: "" };
-    else out = petAnimal(p.animals, def, a.entity.id, now);
+    else out = petAnimal(p.animals, def, a.entity.id, now, false, Math.random);
     if (!out.ok) return this.reject(p, msg, out.reason);
     if (msg.t === "feedAnimal") this.inventoryChanged(p);
     if (!quiet) {
       p.entity.facing = facingToTile(p.entity, Math.floor(a.entity.x), Math.floor(a.entity.y));
-      herd.love(a.entity.id, p.entity, now);
-      this.broadcast({ t: "emote", from: a.entity.id, code: "heart" });
+      if (out.ran) herd.runAway(a.entity.id, p.entity, now);
+      else herd.love(a.entity.id, p.entity, now);
+      this.broadcast({ t: "emote", from: a.entity.id, code: out.ran ? "laugh" : "heart" });
     }
-    send(p.ws, { t: "animal", view: out.view, delta: out.delta, ...(open || msg.t === "adoptAnimal" ? { open: true } : {}), ...(msg.t === "adoptAnimal" ? { adopted: true } : {}), ...(msg.t === "feedAnimal" ? { fed: true } : {}) });
+    // A getaway doesn't pop the card open: the animal is already out of reach.
+    send(p.ws, { t: "animal", view: out.view, delta: out.delta, ...((open && !out.ran) || msg.t === "adoptAnimal" ? { open: true } : {}), ...(msg.t === "adoptAnimal" ? { adopted: true } : {}), ...(msg.t === "feedAnimal" ? { fed: true } : {}) });
     if (out.text) send(p.ws, { t: "notice", text: out.text, kind: msg.t === "adoptAnimal" ? "loot" : "info" });
     p.saveSoon.schedule();
   }

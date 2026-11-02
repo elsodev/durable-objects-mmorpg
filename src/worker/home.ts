@@ -2351,14 +2351,17 @@ export class HomeRoom extends DurableObject<Env> {
       if (!def) return this.reject(p, msg, "That animal isn't here.");
       out =
         msg.t === "feedAnimal"
-          ? feedAnimal(animals, this.save!.inventory, msg.slot, def, a.entity.id, now, true)
-          : petAnimal(animals, def, a.entity.id, now, true);
+          ? feedAnimal(animals, this.save!.inventory, msg.slot, def, a.entity.id, now, true, Math.random)
+          : petAnimal(animals, def, a.entity.id, now, true, Math.random);
     }
     if (!out.ok) return this.reject(p, msg, out.reason);
     p.entity.facing = facingToTile(p.entity, Math.floor(a.entity.x), Math.floor(a.entity.y));
-    this.herd.love(a.entity.id, p.entity, now);
-    this.toMap("home", { t: "emote", from: a.entity.id, code: "heart" });
-    send(p.ws, { t: "animal", view: out.view, delta: out.delta, ...(open ? { open: true } : {}), ...(msg.t === "feedAnimal" ? { fed: true } : {}) });
+    // An adopted rascal still bolts now and then (less often than in the village).
+    const ran = !!out.ran;
+    if (ran) this.herd.runAway(a.entity.id, p.entity, now);
+    else this.herd.love(a.entity.id, p.entity, now);
+    this.toMap("home", { t: "emote", from: a.entity.id, code: ran ? "laugh" : "heart" });
+    send(p.ws, { t: "animal", view: out.view, delta: out.delta, ...(open && !ran ? { open: true } : {}), ...(msg.t === "feedAnimal" ? { fed: true } : {}) });
     send(p.ws, { t: "notice", text: out.text, kind: "info" });
     if (msg.t === "feedAnimal") this.inventoryChanged(p);
     else this.persist({ save: true });

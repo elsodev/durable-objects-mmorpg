@@ -8680,6 +8680,130 @@
    },
    "shadow": "character"
   },
+  "dog_husky": {
+   "file": "animals/dog_husky.png",
+   "frameW": 48,
+   "frameH": 48,
+   "anchor": [
+    24,
+    44
+   ],
+   "animations": {
+    "walk": {
+     "up": {
+      "row": 0,
+      "frames": 4
+     },
+     "left": {
+      "row": 1,
+      "frames": 4
+     },
+     "down": {
+      "row": 2,
+      "frames": 4
+     },
+     "right": {
+      "row": 3,
+      "frames": 4
+     }
+    },
+    "idle": {
+     "up": {
+      "row": 0,
+      "frames": 1,
+      "col": 0
+     },
+     "left": {
+      "row": 1,
+      "frames": 1,
+      "col": 0
+     },
+     "down": {
+      "row": 2,
+      "frames": 1,
+      "col": 0
+     },
+     "right": {
+      "row": 3,
+      "frames": 1,
+      "col": 0
+     }
+    },
+    "rest": {
+     "up": {
+      "row": 4,
+      "frames": 4
+     },
+     "left": {
+      "row": 5,
+      "frames": 4
+     },
+     "down": {
+      "row": 6,
+      "frames": 4
+     },
+     "right": {
+      "row": 7,
+      "frames": 4
+     }
+    },
+    "nap": {
+     "up": {
+      "row": 8,
+      "frames": 2
+     },
+     "left": {
+      "row": 8,
+      "frames": 2
+     },
+     "down": {
+      "row": 13,
+      "frames": 2
+     },
+     "right": {
+      "row": 13,
+      "frames": 2
+     }
+    },
+    "love": {
+     "up": {
+      "row": 9,
+      "frames": 2
+     },
+     "left": {
+      "row": 10,
+      "frames": 2
+     },
+     "down": {
+      "row": 11,
+      "frames": 2
+     },
+     "right": {
+      "row": 12,
+      "frames": 2
+     }
+    },
+    "sniff": {
+     "up": {
+      "row": 14,
+      "frames": 4
+     },
+     "left": {
+      "row": 14,
+      "frames": 4
+     },
+     "down": {
+      "row": 15,
+      "frames": 4
+     },
+     "right": {
+      "row": 15,
+      "frames": 4
+     }
+    }
+   },
+   "shadow": "character"
+  },
   "chicken_white": {
    "file": "animals/chicken_white.png",
    "frameW": 32,

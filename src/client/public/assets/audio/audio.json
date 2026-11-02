@@ -469,6 +469,19 @@
       ],
       "volume": 0.4
     },
+    "husky_yip": {
+      "files": [
+        "sfx/husky_yip_0.ogg",
+        "sfx/husky_yip_1.ogg"
+      ],
+      "volume": 0.4
+    },
+    "husky_awoo": {
+      "files": [
+        "sfx/husky_awoo_0.ogg"
+      ],
+      "volume": 0.3
+    },
     "cat_purr": {
       "files": [
         "sfx/cat_purr_0.ogg",

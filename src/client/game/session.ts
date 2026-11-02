@@ -566,11 +566,11 @@ export async function startSession(
     if (delta > 0) world.effects.burst({ x: npc.x, y: npc.y - 1.6 }, "sparkle");
   }
 
-  /** A petted or fed animal barks, purrs or clucks for everyone close enough to hear. */
-  function animalSound(entity: string): void {
+  /** A petted or fed animal barks, purrs or clucks (a bolting husky yips) for everyone close enough to hear. */
+  function animalSound(entity: string, code: string): void {
     const a = store.latest(entity);
     const me = you();
-    const key = a ? animalLoveSfx(a.sprite) : null;
+    const key = a ? animalLoveSfx(a.sprite, code) : null;
     if (key && me && Math.hypot(a!.x - me.x, a!.y - me.y) <= ANIMAL_HEAR_RANGE) playSfx(key);
   }
 
@@ -916,7 +916,7 @@ export async function startSession(
         world?.overlays.emote?.(msg.from, msg.code);
         // An animal's love heart is only a bubble and its happy noise, not a chat line.
         if (msg.from.startsWith(ANIMAL_PREFIX)) {
-          animalSound(msg.from);
+          animalSound(msg.from, msg.code);
           break;
         }
         const who = store.latest(msg.from)?.name ?? (msg.from === store.youId ? "You" : "Someone");

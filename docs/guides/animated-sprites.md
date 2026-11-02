@@ -215,6 +215,7 @@ Village cats and dogs, adopted pets and farm hens live in `catalog.json` `animal
 | Cat | 32x32 | (16, 29) | about knee high |
 | Hen | 32x32 | (16, 29) | a little lower than a cat |
 | Dog | 48x48 | (24, 44) | a medium dog, up to mid thigh |
+| Husky (Happy) | 48x48 | (24, 44) | the same dog skeleton; upright ears add about 4 px of height (profile `head` 34) |
 
 The paws rest on the anchor row in every frame, standing, sitting and lying, so an animal never floats or sinks when it changes pose. Only the walk cycle bobs (one pixel on the passing frames).
 
@@ -247,6 +248,11 @@ The server picks the state (`shared/engine/animals.ts`) and sends it as the enti
 | play | cats | 3-6 s | 230 ms |
 | sniff | dogs | 2-4.5 s | 260 ms |
 | love (petted or fed) | all | 2.5 s, facing the player | 220 ms |
+| run (a getaway) | Happy the husky | until it arrives, 4-8 tiles away | walk rows at 2.2x the walk fps (`RUN_FPS_SCALE`) |
+
+### Happy the husky
+
+Happy (`dog_husky`) is drawn on the other dogs' skeleton with a grey saddle, white belly, legs and face mask, upright ears, blue eyes and a tail curled over the back. Happy has no extra rows. A getaway reuses the walk rows: the server sends `act` `run` while Happy sprints at `RUN_SPEED` (4.2 tiles/s), and the client plays the walk cycle faster. The getaway emote is `laugh` and plays `husky_yip`. A pet or a meal plays `husky_awoo` instead of the bark.
 
 ### Adding an animal
 

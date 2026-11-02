@@ -29,10 +29,20 @@ export interface AnimalMind {
   path: Vec2[];
   /** Walking: last time it made progress, to give up when stuck. */
   movedAt: number;
+  /** Running off (a getaway): tiles per second for this walk; cleared when it stops. */
+  speed?: number;
 }
 
 /** Walk speed in tiles per second: unhurried, well below a player's. */
 export const ANIMAL_SPEED: Readonly<Record<Species, number>> = { cat: 1.5, dog: 1.9, chicken: 1.0 };
+/** A getaway sprint, tiles per second: quicker than any walk, a touch under a player's. */
+export const RUN_SPEED = 4.2;
+/** Entity act while sprinting: the client plays the walk cycle faster (never a held pose). */
+export const RUN_ACT = "run";
+/** How far a getaway goes (straight-line tiles from where it starts) and its longest path. */
+export const RUN_MIN = 4;
+export const RUN_MAX = 8;
+const RUN_MAX_PATH = 14;
 /** How long a pet's reaction holds the animal still (it faces you and shows the love emote). */
 export const LOVE_MS = 2500;
 /** Give up a walk that hasn't moved for this long (someone dropped furniture in the way). */
@@ -98,6 +108,7 @@ export function pickWanderTarget(m: AnimalMind, from: Vec2, grid: CollisionGrid,
 function settle(e: EntityState, m: AnimalMind, mode: Exclude<AnimalMode, "walk" | "love">, now: number, rand: () => number): void {
   m.mode = mode;
   m.path = [];
+  delete m.speed;
   m.until = now + span(PAUSE[mode], rand);
   e.moving = false;
   if (mode === "idle") delete e.act;
@@ -117,13 +128,14 @@ export function stepAnimal(e: EntityState, m: AnimalMind, grid: CollisionGrid, d
     const path = pickWanderTarget(m, e, grid, rand);
     if (!path) return settle(e, m, "idle", now, rand), true;
     delete e.act;
+    delete m.speed;
     m.mode = "walk";
     m.path = path;
     m.movedAt = now;
   }
   const wp = m.path[0];
   if (!wp) return settle(e, m, "idle", now, rand), true;
-  const r = stepToward(e, wp, ANIMAL_SPEED[m.species], dt, grid);
+  const r = stepToward(e, wp, m.speed ?? ANIMAL_SPEED[m.species], dt, grid);
   e.facing = r.facing;
   e.moving = r.moving;
   if (r.moving) {
@@ -140,10 +152,39 @@ export function stepAnimal(e: EntityState, m: AnimalMind, grid: CollisionGrid, d
 export function reactToLove(e: EntityState, m: AnimalMind, toward: Vec2, now: number): void {
   m.mode = "love";
   m.path = [];
+  delete m.speed;
   m.until = now + LOVE_MS;
   e.moving = false;
   e.facing = facingFor(toward.x - e.x, toward.y - e.y, e.facing);
   e.act = { k: ANIMAL_ACTS.love, at: now };
+}
+
+/**
+ * A path for a getaway from `from` (the player): mostly straight away from them, RUN_MIN to
+ * RUN_MAX tiles off, on a standable tile a short path reaches. Null when nowhere fits.
+ */
+export function pickRunAway(at: Vec2, from: Vec2, grid: CollisionGrid, rand: () => number): Vec2[] | null {
+  const away = Math.atan2(at.y - from.y, at.x - from.x);
+  for (let i = 0; i < 12; i++) {
+    // The first tries keep close to "away"; later ones fan out, any way at all by the end.
+    const spread = i < 6 ? 0.9 : Math.PI;
+    const a = (at.x === from.x && at.y === from.y ? rand() * Math.PI * 2 : away) + (rand() * 2 - 1) * spread;
+    const r = RUN_MIN + rand() * (RUN_MAX - RUN_MIN);
+    const t = { x: Math.floor(at.x + Math.cos(a) * r) + 0.5, y: Math.floor(at.y + Math.sin(a) * r) + 0.5 };
+    if (!canStand(grid, t.x, t.y) || dist(t, at) < RUN_MIN - 1) continue;
+    const path = findPath(grid, at, t);
+    if (path && path.length > 0 && path.length <= RUN_MAX_PATH) return path;
+  }
+  return null;
+}
+
+/** Starts a getaway along `path` at RUN_SPEED (the client sees act "run"). */
+export function startRun(e: EntityState, m: AnimalMind, path: Vec2[], now: number): void {
+  m.mode = "walk";
+  m.path = path;
+  m.speed = RUN_SPEED;
+  m.movedAt = now;
+  e.act = { k: RUN_ACT, at: now };
 }
 
 /** Where an animal starts: its home if it can stand there, else the nearest standable spot around. */

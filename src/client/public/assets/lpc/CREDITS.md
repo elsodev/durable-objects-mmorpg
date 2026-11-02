@@ -855,6 +855,12 @@ Building-interior kit. Everything taken from ElizaWy's LPC Revised collection (h
 - Source: drawn by script for this game in the LPC style (top-left light, tinted outlines)
 - Notes: Village cats, dogs and farm hens. Cats and hens use 32x32 frames, dogs 48x48. Rows: walk up/left/down/right (4 frames), sit or peck per direction (4), nap (2, facing left and right), love per direction (2), then cats' scratch and play and dogs' sniff (4, facing left and right). See docs/guides/animated-sprites.md.
 
+### animals/dog_husky.png
+- Authors: DurableMMO project
+- License: **CC0**
+- Source: drawn by script for this game in the LPC style (top-left light, tinted outlines), on the same skeleton as the other dogs
+- Notes: Happy the husky: grey saddle, white belly, legs and face mask, upright ears, blue eyes, a tail curled over the back. 48x48 frames in the dog layout (walk, sit, nap, love, sniff). See docs/guides/animated-sprites.md.
+
 ### buildings/barn.png
 - Authors: DurableMMO project
 - License: **CC0**

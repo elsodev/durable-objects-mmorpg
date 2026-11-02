@@ -23,6 +23,20 @@ export interface VillageAnimal {
   radius: number;
   /** One line for the animal card. */
   blurb: string;
+  /** A rascal that often bolts instead of being petted (shared/mischief.ts). */
+  mischief?: Mischief;
+  /** Affection per pet and per meal when it isn't the usual PET_PTS / FEED_PTS. */
+  care?: { pet: number; feed: Readonly<Record<FoodTaste, number>> };
+  /** Roams between shared zones on a clock instead of staying in the village (shared/roam.ts). */
+  roams?: true;
+}
+
+/** How often a mischievous animal runs off: when petted (village, your yard) and when fed. */
+export interface Mischief {
+  run: number;
+  homeRun: number;
+  snatch: number;
+  homeSnatch: number;
 }
 
 export const VILLAGE_ANIMALS: readonly VillageAnimal[] = [
@@ -30,6 +44,20 @@ export const VILLAGE_ANIMALS: readonly VillageAnimal[] = [
   { id: "pepper", name: "Pepper", species: "cat", sprite: "cat_grey", home: { x: 5.5, y: 15.5 }, radius: 4, blurb: "A grey cat with white socks. Shy at first." },
   { id: "biscuit", name: "Biscuit", species: "dog", sprite: "dog_golden", home: { x: 20.5, y: 40.5 }, radius: 6, blurb: "A golden dog who greets everyone on the green." },
   { id: "patch", name: "Patch", species: "dog", sprite: "dog_patch", home: { x: 57.5, y: 32.5 }, radius: 4, blurb: "A brown-and-white dog with one spotted ear." },
+  {
+    id: "happy",
+    name: "Happy",
+    species: "dog",
+    sprite: "dog_husky",
+    // The village spot; roam.ts says where Happy is right now (village or quarry) and how far it strays.
+    home: { x: 32.5, y: 30.5 },
+    radius: 14,
+    blurb: "A blue-eyed husky who roams the village and the quarry. Pet him and he usually bolts!",
+    // The hardest to win over: most pets end in a getaway, and care is worth half.
+    mischief: { run: 0.8, homeRun: 0.3, snatch: 0.4, homeSnatch: 0.15 },
+    care: { pet: 5, feed: { loved: 15, liked: 10, ok: 5 } },
+    roams: true,
+  },
 ];
 
 export function villageAnimal(id: unknown): VillageAnimal | undefined {
@@ -95,12 +123,12 @@ export interface CareResult {
 }
 
 /** A pet: always welcome (the love emote shows), but only the day's first one counts. */
-export function petBond(b: AnimalBond, now: number): CareResult {
+export function petBond(b: AnimalBond, now: number, pts = PET_PTS): CareResult {
   const day = worldDay(now);
   if (b.petDay === day) return { delta: 0, counted: false };
   b.petDay = day;
   const before = b.pts;
-  b.pts = Math.min(MAX_AFFECTION, b.pts + PET_PTS);
+  b.pts = Math.min(MAX_AFFECTION, b.pts + pts);
   return { delta: b.pts - before, counted: true };
 }
 
@@ -108,15 +136,31 @@ export function petBond(b: AnimalBond, now: number): CareResult {
  * A meal: null when the animal won't eat it (nothing is used up). Only the day's first meal
  * counts; later ones are still eaten and loved, they just add nothing.
  */
-export function feedBond(b: AnimalBond, species: "cat" | "dog", item: ItemId, now: number): CareResult | null {
+export function feedBond(
+  b: AnimalBond,
+  species: "cat" | "dog",
+  item: ItemId,
+  now: number,
+  pts: Readonly<Record<FoodTaste, number>> = FEED_PTS,
+): CareResult | null {
   const taste = foodTaste(species, item);
   if (!taste) return null;
   const day = worldDay(now);
   if (b.fedDay === day) return { delta: 0, counted: false, taste };
   b.fedDay = day;
   const before = b.pts;
-  b.pts = Math.min(MAX_AFFECTION, b.pts + FEED_PTS[taste]);
+  b.pts = Math.min(MAX_AFFECTION, b.pts + pts[taste]);
   return { delta: b.pts - before, counted: true, taste };
+}
+
+/** What one counted pet of this animal is worth. */
+export function petPtsOf(def: VillageAnimal): number {
+  return def.care?.pet ?? PET_PTS;
+}
+
+/** What one counted meal of this animal is worth, by taste. */
+export function feedPtsOf(def: VillageAnimal): Readonly<Record<FoodTaste, number>> {
+  return def.care?.feed ?? FEED_PTS;
 }
 
 export function heartsOf(pts: number): number {

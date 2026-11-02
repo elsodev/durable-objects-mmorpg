@@ -11,7 +11,7 @@ import { actionFrame, actionNameFor, impactFrameOf, ITEM_POSE_ACTS, swingFrame }
 import { toolTiming } from "../../shared/engine/toolTiming";
 import { heldFrameIndex, heldToShow } from "./held-logic";
 import { createPoseLayer } from "./poses";
-import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFrame, type EntityProfile } from "./entityProfile";
+import { animalPoseFrame, bobOffset, hitScore, phaseOf, profileFor, squashFactor, walkFps, walkFrame, type EntityProfile } from "./entityProfile";
 
 /**
  * The single place an entity's textures are chosen. Today it is the catalog sprite key; when
@@ -283,7 +283,7 @@ export const createEntityLayer = ((
     const seated = isSeated(s);
     const animating = !seated && (s.moving || p.animateIdle);
     const frames = c.walk[s.facing] ?? c.walk.down;
-    const walkIndex = animating && frames.length > 0 ? walkFrame(rec.clock, p.fps, frames.length) : 0;
+    const walkIndex = animating && frames.length > 0 ? walkFrame(rec.clock, walkFps(p, s), frames.length) : 0;
     const tex = animating && frames.length > 0 ? frames[walkIndex] : c.idle[s.facing] ?? c.idle.down;
     const now = performance.now();
     let acting = false;

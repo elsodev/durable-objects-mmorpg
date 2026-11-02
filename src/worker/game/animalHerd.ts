@@ -5,7 +5,7 @@
 import type { Species } from "../../shared/animals";
 import { ANIMAL_PREFIX } from "../../shared/animals";
 import { canStand, type CollisionGrid } from "../../shared/engine";
-import { animalGrid, animalStart, newAnimalMind, reactToLove, stepAnimal, type AnimalMind } from "../../shared/engine/animals";
+import { animalGrid, animalStart, newAnimalMind, pickRunAway, reactToLove, startRun, stepAnimal, type AnimalMind } from "../../shared/engine/animals";
 import type { EntityState, MapExit, Vec2 } from "../../shared/types";
 
 /** The animal grid is rebuilt from the map's grid this often, so felled trees or new furniture count. */
@@ -46,11 +46,18 @@ export class AnimalHerd {
     return this.grid;
   }
 
-  /** Makes the herd exactly `specs` (new ones appear at home; gone ones leave). */
-  sync(specs: readonly AnimalSpec[], now: number): void {
+  /** Makes the herd exactly `specs` (new ones appear at home; gone ones leave). Says who came and went. */
+  sync(specs: readonly AnimalSpec[], now: number): { came: AnimalSpec[]; left: AnimalSpec[] } {
     const want = new Set(specs.map((s) => ANIMAL_PREFIX + s.id));
-    for (const id of [...this.members.keys()]) if (!want.has(id)) this.members.delete(id);
-    for (const s of specs) if (!this.members.has(ANIMAL_PREFIX + s.id)) this.add(s, now);
+    const left: AnimalSpec[] = [];
+    for (const [id, m] of [...this.members]) {
+      if (want.has(id)) continue;
+      this.members.delete(id);
+      left.push(m.spec);
+    }
+    const came = specs.filter((s) => !this.members.has(ANIMAL_PREFIX + s.id));
+    for (const s of came) this.add(s, now);
+    return { came, left };
   }
 
   add(spec: AnimalSpec, now: number): EntityState {
@@ -91,6 +98,16 @@ export class AnimalHerd {
     let changed = false;
     for (const m of this.members.values()) changed = stepAnimal(m.entity, m.mind, grid, dt, now, this.rand) || changed;
     return changed;
+  }
+
+  /** A getaway: the animal sprints a few tiles away from `from`. False when it had nowhere to go. */
+  runAway(entityId: string, from: Vec2, now: number): boolean {
+    const m = this.members.get(entityId);
+    if (!m) return false;
+    const path = pickRunAway(m.entity, from, this.walkable(now), this.rand);
+    if (!path) return false;
+    startRun(m.entity, m.mind, path, now);
+    return true;
   }
 
   /** The animal stops, turns to `toward` and looks happy for a moment. */

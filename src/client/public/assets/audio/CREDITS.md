@@ -182,7 +182,7 @@ Added 2026-11-01. Same common processing as above (mono 44.1 kHz Ogg Vorbis q3, 
 
 ### Animal sounds
 
-Added 2026-11-02 for the village cats and dogs and the farm hens. Same common processing as above (mono 44.1 kHz Ogg Vorbis q3, 3 ms fade-in, peak -1 dBFS). Licences were read from the Stendhal project's per-file audio source list (`doc/sources/audio-sfx.txt`), which records author, licence and Freesound page for every file; Freesound itself could not be opened from the build machine. All are CC0.
+Added 2026-11-02 for the village cats and dogs (Happy the husky yips as he bolts and howls a short "awoo" when petted) and the farm hens. Same common processing as above (mono 44.1 kHz Ogg Vorbis q3, 3 ms fade-in, peak -1 dBFS). Licences were read from the Stendhal project's per-file audio source list (`doc/sources/audio-sfx.txt`), which records author, licence and Freesound page for every file; Freesound itself could not be opened from the build machine. All are CC0.
 
 | File | Title | Author | Licence | Original file | Source | Changes beyond the common processing |
 |---|---|---|---|---|---|---|
@@ -194,3 +194,6 @@ Added 2026-11-02 for the village cats and dogs and the farm hens. Same common pr
 | `sfx/cat_meow_0.ogg` | kitten meow | videog (Freesound) | CC0 1.0 | `kitten-meow-1.ogg` | https://freesound.org/people/videog/sounds/149191/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | none |
 | `sfx/cat_meow_1.ogg` | kitten meow | videog (Freesound) | CC0 1.0 | `kitten-meow-2.ogg` | https://freesound.org/people/videog/sounds/149191/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | none |
 | `sfx/hen_cluck_0.ogg` | chicken | Rudmer_Rotteveel (Freesound) | CC0 1.0 | `chicken-03.ogg` | https://freesound.org/people/Rudmer_Rotteveel/sounds/316921/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | 0.1 s fade-out |
+| `sfx/husky_yip_0.ogg` | puppy bark | moffet (Freesound) | CC0 1.0 | `puppy-bark-1.ogg` | https://freesound.org/people/moffet/sounds/72579/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | first bark (0.06–0.36 s), pitched up ×1.35, 50 ms fade-out |
+| `sfx/husky_yip_1.ogg` | puppy bark | moffet (Freesound) | CC0 1.0 | `puppy-bark-1.ogg` | https://freesound.org/people/moffet/sounds/72579/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | second bark (0.56–0.86 s), pitched up ×1.35, 50 ms fade-out |
+| `sfx/husky_awoo_0.ogg` | wolf howl | killyourpepe (Freesound) | CC0 1.0 | `wolf-howl-02.ogg` | https://freesound.org/people/killyourpepe/sounds/395192/ — via https://github.com/arianne/stendhal (data/sounds/, licence per file in doc/sources/audio-sfx.txt) | the rising first 1.7 s, pitched up ×1.12, 0.35 s fade-out |
