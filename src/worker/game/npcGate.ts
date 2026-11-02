@@ -8,9 +8,10 @@ export const AI_REPLY_INTERVAL_MS = 10_000;
 export const REPLY_CACHE_MS = 10 * 60 * 1000;
 const MAX_CACHE = 200;
 
-/** Estimated Workers AI neurons per spoken line, plus a fixed estimate for a Jev decision. */
+/** Estimated Workers AI neurons per spoken line. */
 export const SPEAK_UNITS = 30;
-export const JEV_UNITS = 5;
+/** One decision call (JEV_MODEL): ~500 input tokens on Clef at $0.24/M, output free, is ~11 neurons. */
+export const JEV_UNITS = 12;
 /**
  * Estimated neurons for one NpcAgent turn (one step, tools + words): about 1,500 prompt tokens
  * (soul + player memory + recent lines) and 90 output tokens on NPC_AGENT_MODEL, rounded up.

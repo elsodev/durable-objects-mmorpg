@@ -21,11 +21,21 @@ export interface JevClient {
   systemOne(req: SystemOneRequest<Questions>, opts?: RequestOptions): PromiseLike<{ answers: unknown }>;
 }
 
-/** Jev on the Workers AI binding, through the AI Gateway when one is set. Same request and answer shape as TypeSafe's API. */
+/** Cloudflare's Clef models want their name in the body too ("clef" or "clef-flash"). */
+function modelSelector(model: string): { model: string } | object {
+  const clef = /^@cf\/cloudflare\/(clef(?:-flash)?)$/.exec(model);
+  return clef ? { model: clef[1] } : {};
+}
+
+/**
+ * A System One decision model on the Workers AI binding (Cloudflare's Clef, or TypeSafe's Jev),
+ * through the AI Gateway when one is set. Both take TypeSafe's { state, questions } shape.
+ */
 export function jevClient(ai: Ai, model: string, gatewayId?: string): JevClient {
   return {
     systemOne: async (req, opts) => {
-      const out = await ai.run(model, req as unknown as Record<string, unknown>, { gateway: gatewayOptions(gatewayId), signal: opts?.signal });
+      const body = { ...req, ...modelSelector(model) } as unknown as Record<string, unknown>;
+      const out = await ai.run(model, body, { gateway: gatewayOptions(gatewayId), signal: opts?.signal });
       return { answers: out?.answers };
     },
   };

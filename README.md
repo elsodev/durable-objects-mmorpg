@@ -20,8 +20,8 @@ A cozy multiplayer farming game set in the valley of Mossbrook, with light monst
 - The village notice board (in the square and in the town hall; one board for both and for every village copy): pin a short notice for 200 coins, like or dislike others' notices. Rules and limits live in `src/shared/notices.ts`
 - Mining in the caves: stone, copper, iron, silver, gold, gem crystal and diamond rocks. Gold and diamond rocks are very rare (about 3% and 0.6% of cave rocks), sit mostly on the deepest floor, need the iron pickaxe and take 6 and 8 hits. Ship any stone, ore, gem, forage, fish or material in your shipping bin at its full value, or sell ore to the smith on the spot for 60% of it. Ore tiers live in `src/shared/engine/rockOres.ts`
 - Mining, tree chopping and light combat against slimes, bats and rock crabs: rocks and trees take several hits, trees fall to stumps and regrow, and every tool can hit monsters (swords hit hardest). Tool rules live in `src/shared/engine/toolRules.ts`
-- Ten villagers who chat and react. Their decisions come from rules, optionally TypeSafe Jev, with lines from Workers AI
-- Click a villager (or press F next to one) to open the conversation window and type replies. Each reply is judged good, neutral or bad for that villager (TypeSafe Jev when available, word lists otherwise) and moves your hearts with them: a liked reply adds a little (at most once every 20 s, capped per day), a rude one takes some away (also capped per day). The rules live in `src/shared/npcChat.ts`
+- Ten villagers who chat and react. Their decisions come from rules, optionally Cloudflare's Clef decision model, with lines from Workers AI
+- Click a villager (or press F next to one) to open the conversation window and type replies. Each reply is judged good, neutral or bad for that villager (Clef when available, word lists otherwise) and moves your hearts with them: a liked reply adds a little (at most once every 20 s, capped per day), a rude one takes some away (also capped per day). The rules live in `src/shared/npcChat.ts`
 - Character creator, guest play with an upgrade to a full account later, music and sound effects
 
 ## How it runs on Cloudflare
@@ -45,7 +45,7 @@ The whole game is one Worker plus a few Durable Objects. There is no separate ga
 | **Cron Triggers** | A daily job (`src/worker/cron.ts`) deletes guest accounts idle for over 30 days, with their home, uploads and villager memories. |
 | **Observability** | Worker logs are on (`"observability"` in `wrangler.jsonc`). |
 
-TypeSafe Jev (`typesafe/jev`, a third-party model on Workers AI) makes fast typed villager decisions and judges replies in the conversation window. With `JEV_MODEL` empty, rules and word lists do the same job. Every NPC model call (lines, Think agent turns, Jev) goes through the AI Gateway named in `AI_GATEWAY_ID`.
+Clef (`@cf/cloudflare/clef`, a Workers AI decision model) makes fast typed villager decisions and judges replies in the conversation window. `JEV_MODEL` picks the model: `@cf/cloudflare/clef`, `@cf/cloudflare/clef-flash`, or TypeSafe's `typesafe/jev` (which needs Unified Billing credits). With `JEV_MODEL` empty, rules and word lists do the same job. Every NPC model call (lines, Think agent turns, decisions) goes through the AI Gateway named in `AI_GATEWAY_ID`.
 
 ### How the load is kept down
 
@@ -183,7 +183,7 @@ Optional services:
 
 - **Workers AI** is on by default in production (`NPC_AI_MODE=on`, model in `NPC_MODEL`). `AI_DAILY_NEURONS` caps daily spend. When the budget runs out NPCs fall back to scripted lines.
 - **AI Gateway**: `AI_GATEWAY_ID` (default `durable-mmo`) routes every NPC model call through that gateway, for logs, caching and Unified Billing. Create a gateway with that name in the dashboard (AI → AI Gateway) or change the var to yours. Set it to `""` to call Workers AI directly.
-- **TypeSafe Jev** for typed NPC decisions runs on Workers AI as `JEV_MODEL` (default `typesafe/jev`). It is a third-party model billed through Cloudflare Unified Billing, so load credits on the account first; no TypeSafe key is needed. Set `JEV_MODEL` to `""` for rule-based decisions only. Failed or slow Jev calls (1.5 s) fall back to rules.
+- **Typed NPC decisions** use `JEV_MODEL` (default `@cf/cloudflare/clef`, billed as normal Workers AI: $0.24 per million input tokens, output free). `typesafe/jev` also works but is a third-party model billed through Unified Billing credits. Set `JEV_MODEL` to `""` for rule-based decisions only. Failed or slow decision calls (1.5 s) fall back to rules.
 - **Turnstile** captcha on sign-up and sign-in: the site key and secret above. Without a secret, production sign-up and sign-in answer 503. Set `CAPTCHA_DISABLED=1` to run without a captcha on purpose.
 
 ### Drop rates
