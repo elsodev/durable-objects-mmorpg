@@ -1,6 +1,6 @@
 // See ../contracts.ts for the contract.
 import { AnimatedSprite, Container, Graphics, Sprite, Text, TextStyle, Texture, Ticker } from "pixi.js";
-import type { CreatePropsLayer, SpriteArt } from "../contracts";
+import type { CreatePropsLayer, LightSpot, LitWindowsView, SpriteArt } from "../contracts";
 import { SCALE, SRC_TILE, TILE } from "../contracts";
 import type { MapProp } from "../../shared/types";
 import { fenceKey, fenceMasks } from "./fence";
@@ -22,6 +22,7 @@ import {
   type ArtExtent,
   type HitEntry,
 } from "./props-geom";
+import { lightSpots, litWindowsAt } from "./light-points";
 
 function extentOf(art: SpriteArt): ArtExtent {
   const { width, height } = art.texture.frame;
@@ -210,6 +211,8 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
   /** Sprites of props that change at runtime (choppable trees), by prop id. */
   const views = new Map<string, { body: Sprite; shadow: Sprite | null }>();
   const lids = new Map<string, Lid>();
+  const lights: LightSpot[] = [];
+  const windows: LitWindowsView[] = [];
 
   const fences = fenceMasks(map.props.filter((p) => p.type === "fence_deco"));
   for (const p of map.props) {
@@ -236,6 +239,7 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       const s = makeSprite(sa, at.x, at.y, raised);
       layers.sorted.addChild(s);
       owned.push(s);
+      lights.push(...lightSpots(p.type, at.x, at.y));
       if (sa.frames && sa.frames.length > 1) anims.push({ kind: "frames", s, phase: phaseOf(p.x, p.y), frames: sa.frames });
       continue;
     }
@@ -246,6 +250,7 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       layers.sorted.addChild(lid.box);
       body = lid.box.children[0] as Sprite;
     } else body = makeSprite(sa, fx, fy, z);
+    lights.push(...lightSpots(p.type, fx, fy));
     if (p.walkable) {
       // Rugs and mats lie on the floor: under everyone, nothing to click.
       layers.groundOverlay.addChild(body);
@@ -256,6 +261,8 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       layers.sorted.addChild(body);
       owned.push(body);
     }
+    const lit = litWindowsAt(p.type, fx, fy, z);
+    if (lit) windows.push(lit);
     if (sa.front) {
       const front = makeSprite(sa.front, fx, fy, fy + 1);
       layers.sorted.addChild(front);
@@ -286,6 +293,8 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
 
   return {
     propAt: (tile) => pickProp(hits, tile),
+    lights: () => lights,
+    litWindows: () => windows,
     spriteOf: (id) => views.get(id) ?? null,
     setOpen(id, open) {
       lids.get(id)?.setOpen(open);
@@ -303,6 +312,8 @@ export const createPropsLayer: CreatePropsLayer = (art, map, layers) => {
       hits.length = 0;
       anims.length = 0;
       views.clear();
+      lights.length = 0;
+      windows.length = 0;
     },
   };
 };

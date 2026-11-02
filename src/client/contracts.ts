@@ -313,6 +313,24 @@ export interface GroundLayer {
 export type CreateGroundLayer = (art: Art, map: MapData, layers: Layers) => GroundLayer;
 
 /** render/props.ts: map props as y-sorted sprites with soft shadows (into layers.sorted / groundOverlay). */
+/** A night glow centre in tile coords, with its radius in tiles (render/light-points.ts). */
+export interface LightSpot extends Vec2 {
+  radius: number;
+}
+
+/** A building's lit-window overlay placed in the world (render/light-points.ts LIT_WINDOWS). */
+export interface LitWindowsView {
+  /** Prop art name of the overlay: same size and anchor as the building, only the panes opaque. */
+  art: string;
+  /** Building anchor (feet), world px. */
+  x: number;
+  y: number;
+  /** The building's sort key: anything sorted after it stands in front of its windows. */
+  z: number;
+  /** Each window's panes, world px. */
+  windows: { x: number; y: number; w: number; h: number }[];
+}
+
 export interface PropsLayer {
   /** Prop id under a tile, for interact clicks (shipping_bin, stalls...). */
   propAt(tile: Vec2): string | null;
@@ -322,6 +340,10 @@ export interface PropsLayer {
   setOpen?(id: string, open: boolean): void;
   /** Squashes a lidded prop as something lands in it. */
   bump?(id: string): void;
+  /** Night glows of the map's lamps, lanterns and fires, centred on their lit part (tile coords). */
+  lights?(): readonly LightSpot[];
+  /** Buildings whose windows light up at night, placed in the world. */
+  litWindows?(): readonly LitWindowsView[];
   destroy(): void;
 }
 export type CreatePropsLayer = (art: Art, map: MapData, layers: Layers) => PropsLayer;
@@ -365,6 +387,8 @@ export interface FarmLayer {
   setLid?(id: string, open: boolean): void;
   /** The sprite drawing a rock, for hit effects. */
   rockSprite?(id: string): Sprite | null;
+  /** Night glows of placed lamps, candles and fireplaces, centred on their lit part (tile coords). */
+  lights?(): readonly LightSpot[];
   destroy(): void;
 }
 export type CreateFarmLayer = (art: Art, layers: Layers) => FarmLayer;

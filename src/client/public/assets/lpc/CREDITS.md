@@ -447,6 +447,9 @@ Derived: ElizaWy Brick House B, hue-shifted.
 
 - Lanea Zimmerman (Sharm), Eliza Wyatt (DeathsDarling) — **OGA-BY 3.0** — https://github.com/ElizaWy/LPC (Structure/Structures/)
 
+### buildings/cottage_lit.png
+Own-made by script (**CC0**): the cottage's window panes filled with a warm lamplight gradient, on a transparent canvas the size of buildings/cottage.png so it lies exactly over the panes at night. It holds no pixels from the cottage art.
+
 ### buildings/house_iris.png
 Derived by a recolour script from ElizaWy LPC Brick House B, recoloured: beige brick, mossy green roof (hue shift), flower box. Colours taken from the Roofing and Walls variant sheets.
 

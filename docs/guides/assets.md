@@ -95,6 +95,12 @@ Furniture players buy and place lives in `src/shared/furnitureItems.ts` (shop an
 - Rugs and mats lie under everything and can't be clicked.
 - Roofs and tree canopies hide players who walk behind them. That only works if the anchor sits at the base of the wall or trunk, not at the bottom of the canvas.
 
+## Lights at night
+
+- Every lamp, lantern, candle and fire glows at night from its lit part (the glass, bulb or flame), never from its footprint. The point is in `LIGHT_SOURCES` in `src/client/render/light-points.ts`: source px from the sprite's anchor, one per bulb, plus a glow radius. Map props and placed furniture share these names.
+- A new light-giving prop or furniture item needs an entry there. `test/fe-light-points.test.ts` fails until it has one, and it checks that each point lands on a bright pixel in every frame. Lamps only allow rotation 0, because the points are for the front view.
+- Lit house windows are an overlay the same size as the building's sheet that holds only the panes, recoloured warm (`buildings/cottage_lit.png`, drawn by script). It shares the building's rect and anchor, so it lines up pixel for pixel. Add the overlay to `LIT_WINDOWS` with each window's pane rect. The test checks that the overlay covers exactly the pane pixels.
+
 ## Before you commit art
 
 - [ ] The licence is allowed and the credits are written: the folder's `CREDITS.md` and the README.
@@ -104,6 +110,7 @@ Furniture players buy and place lives in `src/shared/furnitureItems.ts` (shop an
 - [ ] Static art has no drop shadow.
 - [ ] Layering: walk behind it and in front of it.
 - [ ] Wall art and windows stay visible.
+- [ ] Lamps and fires have a light point on their flame or bulb (see Lights at night).
 - [ ] Nothing hangs off the map edge.
 - [ ] Plants on a soil bed stay inside the soil.
 - [ ] Chairs face their tables.

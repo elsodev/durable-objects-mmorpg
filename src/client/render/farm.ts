@@ -12,7 +12,8 @@ import { fenceKey, fenceMasks } from "./fence";
 import { BlobTextures, type GroundEdgeArt } from "./ground";
 import { QUADRANTS, type BlobPiece, type BlobSet, type Quadrant } from "./ground-autotile";
 import { planSoil, soilShift, soilSig, type SoilPlan } from "./soil-autotile";
-import { SCALE, TILE, type Art, type CreateFarmLayer, type SpriteArt } from "../contracts";
+import { SCALE, TILE, type Art, type CreateFarmLayer, type LightSpot, type SpriteArt } from "../contracts";
+import { lightSpots } from "./light-points";
 
 // ---------------------------------------------------------------- pure helpers (tested)
 
@@ -207,6 +208,8 @@ interface FarmView {
 
 interface PlacedView {
   sprite: Sprite;
+  /** Night glows of a lamp, candle or fireplace (tile coords). */
+  lights?: LightSpot[];
 }
 
 function destroyView(v: { sprite?: Sprite; soil?: Container; crop?: Sprite; sparkle?: Graphics }): void {
@@ -348,7 +351,9 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
     // Walkable furniture (rugs) lies flat under everyone instead of y-sorting.
     else if (def?.walkable) floorRoot.addChild(sprite);
     else layers.sorted.addChild(sprite);
-    return { sprite };
+    // After the wall lift, so a hung lamp glows where it is drawn.
+    const lights = lightSpots(o.item, sprite.x, sprite.y, sprite.scale.x < 0);
+    return lights.length ? { sprite, lights } : { sprite };
   }
 
   function clearRocks(): void {
@@ -431,6 +436,12 @@ export const createFarmLayer: CreateFarmLayer = (art: Art, layers) => {
 
     objectAt(tile) {
       return findObjectAt(objects.values(), tile);
+    },
+
+    lights() {
+      const out: LightSpot[] = [];
+      for (const v of objViews.values()) if (v.lights) out.push(...v.lights);
+      return out;
     },
 
     setLid(id, open) {

@@ -1575,21 +1575,18 @@ export async function startSession(
   // ------------------------------------------------------------ frame loop
   const refreshCrops = every(10_000, () => world?.farm.setFarm(store.farm.values(), farmTime()));
   let clockLabel = "";
-  /** Home lights that glow at night: placed lamps and the map's lantern posts (tile coords). */
-  function homeLights(): Vec2[] {
-    const out: Vec2[] = [];
-    for (const o of store.objects.values()) if (o.item === "lamp") out.push({ x: o.x + 0.5, y: o.y + 0.3 });
-    for (const pr of map()?.props ?? []) {
-      if (pr.type === "lantern_post" || pr.type === "wall_sconce") out.push({ x: pr.x + pr.w / 2, y: pr.y + 0.2 });
-      else if (pr.type === "hearth" || pr.type === "fireplace") out.push({ x: pr.x + pr.w / 2, y: pr.y + 0.5 });
-    }
-    return out;
-  }
   function updateHomeClock(): void {
-    if (!world?.daylight || !home) return;
+    if (!world?.daylight) return;
+    // Every lamp, lantern and fire on the map and among the placed furniture, centred on its flame.
+    const lights = [...(world.props.lights?.() ?? []), ...(world.farm.lights?.() ?? [])];
+    if (!home) {
+      // Caves have no clock: their lamps always burn, so any time will do.
+      if (world.map.ambient === "cave") world.daylight.update(0, lights, game.width(), game.height(), performance.now());
+      return;
+    }
     const clock: HomeClock = home.clock;
     const minutes = clockMinutes(clock, serverNow());
-    world.daylight.update(minutes, homeLights(), game.width(), game.height(), performance.now());
+    world.daylight.update(minutes, lights, game.width(), game.height(), performance.now());
     const label = `${clock.day}|${formatClock(minutes)}`;
     if (label !== clockLabel) {
       clockLabel = label;

@@ -4367,6 +4367,25 @@
    "doorHint": "door is on the front (bottom) face",
    "alias": "buildings.cottage"
   },
+  "cottage_lit": {
+   "file": "buildings/cottage_lit.png",
+   "rect": [
+    23,
+    0,
+    144,
+    192
+   ],
+   "anchor": [
+    72,
+    190
+   ],
+   "footprintTiles": {
+    "w": 0,
+    "h": 0
+   },
+   "walkable": true,
+   "note": "own-made overlay: the cottage's window panes lit warm (only the panes are opaque); drawn over the cottage at night"
+  },
   "fountain": {
    "file": "props/fountain_a.png",
    "rect": [

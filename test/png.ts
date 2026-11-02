@@ -9,6 +9,8 @@ export interface Png {
   h: number;
   /** Alpha at (x, y); 0 outside the image. */
   alpha(x: number, y: number): number;
+  /** [r, g, b, a] at (x, y) for 8-bit RGB(A) and palette images; transparent black outside. */
+  rgba(x: number, y: number): [number, number, number, number];
 }
 
 /** Width and height from the IHDR chunk only. */
@@ -28,11 +30,13 @@ export function readPng(path: string): Png {
   if (buf[28] !== 0) throw new Error(`${path}: interlaced PNG`);
   const idat: Uint8Array[] = [];
   let trns: Uint8Array | null = null;
+  let plte: Uint8Array | null = null;
   for (let o = 8; o < buf.length; ) {
     const len = v.getUint32(o);
     const name = String.fromCharCode(...buf.subarray(o + 4, o + 8));
     if (name === "IDAT") idat.push(buf.subarray(o + 8, o + 8 + len));
     if (name === "tRNS") trns = buf.subarray(o + 8, o + 8 + len);
+    if (name === "PLTE") plte = buf.subarray(o + 8, o + 8 + len);
     o += 12 + len;
   }
   const all = new Uint8Array(idat.reduce((n, c) => n + c.length, 0));
@@ -76,5 +80,18 @@ export function readPng(path: string): Png {
     }
     return 255;
   };
-  return { w, h, alpha };
+  const rgba = (x: number, y: number): [number, number, number, number] => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return [0, 0, 0, 0];
+    const row = y * stride;
+    if (type === 6) return [out[row + x * 4]!, out[row + x * 4 + 1]!, out[row + x * 4 + 2]!, out[row + x * 4 + 3]!];
+    if (type === 2) return [out[row + x * 3]!, out[row + x * 3 + 1]!, out[row + x * 3 + 2]!, 255];
+    if (type === 3 && plte) {
+      const perByte = 8 / depth;
+      const byte = out[row + Math.floor(x / perByte)]!;
+      const idx = (byte >> (8 - depth * ((x % perByte) + 1))) & ((1 << depth) - 1);
+      return [plte[idx * 3]!, plte[idx * 3 + 1]!, plte[idx * 3 + 2]!, alpha(x, y)];
+    }
+    throw new Error(`${path}: rgba() needs an 8-bit RGB(A) or palette image`);
+  };
+  return { w, h, alpha, rgba };
 }

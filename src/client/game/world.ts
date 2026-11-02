@@ -40,7 +40,7 @@ export interface World {
   /** Cave treasure chests (empty elsewhere). */
   chests: ChestLayer;
   effects: Effects;
-  /** Home only: day/night tint and lamp glows driven by the home clock. */
+  /** Home: day/night tint, lamp glows and lit windows driven by the home clock. Caves: lamp glows. */
   daylight: Daylight | null;
   doorHint: DoorHintLayer;
   /** Home yard only: the mailbox's red flag (up while there is unread mail). */
@@ -82,7 +82,7 @@ export function createWorld(
       build: track(createBuildMode(art, layers, buildDeps)),
       chests: track(createChestLayer(art, layers)),
       effects: track(createEffects(layers, () => ({ w: game.width(), h: game.height() }))),
-      daylight: map.zone === "home" ? track(createDaylight(layers, { indoor: map.ambient === "indoor" })) : null,
+      daylight: nightLight(map, props, art, layers, track),
       mailboxFlag: map.props.some((p) => p.id === "mailbox") ? track(createMailboxFlag(layers, map)) : null,
       doorHint: track(createDoorHint(layers)),
       hitFx: track(createHitFx(art, layers)),
@@ -101,6 +101,14 @@ export function createWorld(
     game.clearWorld();
     throw err;
   }
+}
+
+/** The night light layer, where there is one: home (yard and house) and the caves. */
+function nightLight(map: MapData, props: PropsLayer, art: Art, layers: GameApp["layers"], track: <T extends { destroy(): void }>(x: T) => T): Daylight | null {
+  if (map.ambient === "cave") return track(createDaylight(layers, { cave: true }));
+  if (map.zone !== "home") return null;
+  const windows = (props.litWindows?.() ?? []).map((view) => ({ view, art: art.prop(view.art) }));
+  return track(createDaylight(layers, { indoor: map.ambient === "indoor", windows }));
 }
 
 function destroyAll(items: { destroy(): void }[]): void {
