@@ -129,7 +129,8 @@ export async function askJev(ctx: NpcContext, client: JevClient, timeoutMs = JEV
       client.systemOne(buildJevRequest(ctx, gifts), { timeout: timeoutMs, signal: ac.signal, retry: { maxRetries: 0 } }),
     ).then((r) => interpretJev(rec(r)?.answers, ctx, gifts));
     return await Promise.race([call, timeout]);
-  } catch {
+  } catch (err) {
+    console.warn("jev decision failed", ctx.npc.id, err instanceof Error ? err.message : String(err));
     return null;
   } finally {
     if (timer !== undefined) clearTimeout(timer);

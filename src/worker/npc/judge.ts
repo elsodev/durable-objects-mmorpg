@@ -204,7 +204,8 @@ export async function askJudge(s: JudgeSubject, client: JevClient, timeoutMs = J
       (r) => interpretJudge((r as { answers?: unknown } | null)?.answers),
     );
     return await Promise.race([call, timeout]);
-  } catch {
+  } catch (err) {
+    console.warn("jev judge failed", s.npcId, err instanceof Error ? err.message : String(err));
     return null;
   } finally {
     if (timer !== undefined) clearTimeout(timer);
