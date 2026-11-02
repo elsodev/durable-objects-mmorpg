@@ -104,6 +104,8 @@ export interface Hud {
   setPing(ms: number): void;
   setBuildMode(on: boolean): void;
   setConnection(state: "connecting" | "online" | "offline"): void;
+  /** Closes every open panel, card and dialog (going AFK: nothing should keep polling or wait on a reply). */
+  closeAll?(): void;
   /** Guest tried to leave home: "Create an account to explore". Resolves true once upgraded (game reconnects). */
   showAccountPrompt(reason: string): Promise<boolean>;
   /** Called by the game once art is loaded, so the HUD can show item icons. */

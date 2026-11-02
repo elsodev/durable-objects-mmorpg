@@ -1,0 +1,178 @@
+/* "You are AFK" screen (ui/afk.ts). The paused game stays visible, dimmed, behind the card. */
+.dm-afk {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  justify-items: center;
+  /* Below the middle of the screen, where your sleeping character lies. */
+  align-content: end;
+  padding: 16px 16px clamp(12px, 4vh, 40px);
+  box-sizing: border-box;
+  pointer-events: auto;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(29, 43, 31, 0.35), rgba(12, 18, 14, 0.82) 75%),
+    rgba(20, 28, 20, 0.35);
+  animation: dm-afk-in 400ms ease both;
+}
+.dm-afk[hidden] {
+  display: none;
+}
+
+.dm-afk-card {
+  position: relative;
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 18px 22px 16px;
+  animation: dm-afk-card-in 450ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* night sky: a crescent moon and three Z's drifting up and away */
+.dm-afk-sky {
+  position: relative;
+  width: 140px;
+  height: 84px;
+  margin: 0 0 6px;
+  border: 2px solid var(--dm-wood-dark);
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 10% 82%, #f6eed8 0 1px, transparent 2px),
+    radial-gradient(circle at 52% 14%, #f6eed8 0 1px, transparent 2px),
+    radial-gradient(circle at 90% 84%, rgba(246, 238, 216, 0.7) 0 1px, transparent 2px),
+    linear-gradient(#24364a, #3b4f68);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08), 0 2px 0 rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.dm-afk-moon {
+  position: absolute;
+  left: 28px;
+  top: 22px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  /* a crescent: only the offset shadow shows, the disc itself is see-through */
+  box-shadow: -8px 5px 0 0 var(--dm-gold);
+  filter: drop-shadow(0 0 5px rgba(232, 179, 58, 0.5));
+}
+.dm-afk-z {
+  position: absolute;
+  /* all three drift up the same path from beside the moon, a second apart */
+  left: 66px;
+  top: 52px;
+  image-rendering: pixelated;
+  opacity: 0;
+  animation: dm-afk-z 3.6s steps(12, end) infinite;
+}
+.dm-afk-z2 {
+  animation-delay: 1.2s;
+}
+.dm-afk-z3 {
+  animation-delay: 2.4s;
+}
+
+.dm-afk-title {
+  margin: 4px 0 6px;
+  font-family: var(--dm-font-pixel);
+  font-weight: 600;
+  font-size: 30px;
+  letter-spacing: 1px;
+  color: var(--dm-wood-dark);
+  text-shadow: 0 2px 0 var(--dm-cream-2);
+}
+.dm-afk-text {
+  margin: 0 0 4px;
+  font-size: var(--dm-fs);
+  font-weight: 700;
+  color: var(--dm-ink);
+  line-height: 1.35;
+}
+.dm-afk-sub {
+  margin: 0 0 14px;
+  font-size: var(--dm-fs-sm);
+  color: var(--dm-ink-soft);
+  line-height: 1.35;
+}
+.dm-afk-btn {
+  min-width: 210px;
+  padding: 12px 20px;
+  font-size: 16px;
+  box-shadow: 0 3px 0 var(--dm-moss-dark);
+}
+.dm-afk-btn:active {
+  box-shadow: 0 0 0 var(--dm-moss-dark);
+  transform: translateY(3px);
+}
+.dm-afk-btn:focus-visible {
+  outline: 2px solid var(--dm-gold);
+  outline-offset: 3px;
+}
+.dm-afk-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--dm-ink-soft);
+}
+.dm-afk-hint .dm-kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--dm-border-soft);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: var(--dm-panel-light);
+  color: var(--dm-ink);
+  font-size: 11px;
+}
+
+@keyframes dm-afk-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dm-afk-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+@keyframes dm-afk-z {
+  0% {
+    opacity: 0;
+    transform: translate(0, 6px);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(54px, -52px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-afk,
+  .dm-afk-card {
+    animation: none;
+  }
+  .dm-afk-z {
+    animation: none;
+    opacity: 1;
+  }
+  .dm-afk-z2 {
+    transform: translate(20px, -18px);
+  }
+  .dm-afk-z3 {
+    transform: translate(40px, -36px);
+  }
+}
+
+/* No keyboard to press Enter on. */
+@media (pointer: coarse) {
+  .dm-afk-hint {
+    display: none;
+  }
+}

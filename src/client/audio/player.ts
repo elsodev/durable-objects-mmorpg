@@ -32,6 +32,8 @@ export interface AudioOptions {
 export interface AudioController {
   playSfx(key: string): void;
   setMusicZone(zone: ZoneId | null): void;
+  /** AFK: suspend all sound, music paused where it was, until unpaused. */
+  setPaused(paused: boolean): void;
   footstep(groundKind: string): void;
   setMuted(muted: boolean): void;
   isMuted(): boolean;
@@ -82,6 +84,7 @@ function writeSettings(s: AudioSettings): void {
 const silent: AudioController = {
   playSfx() {},
   setMusicZone() {},
+  setPaused() {},
   footstep() {},
   setMuted() {},
   isMuted: () => true,
@@ -107,7 +110,11 @@ export function installAudio(opts: AudioOptions = {}): AudioController {
   }
   active = createPlayer(ctx, opts);
   const player = active;
-  setAudioHooks({ playSfx: (k) => player.playSfx(k), setMusicZone: (z) => player.setMusicZone(z) });
+  setAudioHooks({
+    playSfx: (k) => player.playSfx(k),
+    setMusicZone: (z) => player.setMusicZone(z),
+    setPaused: (p) => player.setPaused(p),
+  });
   setUiSoundPlayer((k) => player.playSfx(k));
   return player;
 }
@@ -147,6 +154,8 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
   let wantedMusic: string | null = null;
   let track: MusicTrack | null = null;
   let unlocked = false;
+  /** AFK: everything held until unpaused, whatever the tab does meanwhile. */
+  let paused = false;
 
   const manifestReady: Promise<void> = fetch(assetUrl(base, "audio.json"))
     .then((r) => (r.ok ? (r.json() as Promise<AudioManifest>) : Promise.reject(new Error(`audio.json ${r.status}`))))
@@ -160,6 +169,8 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
   // --- unlock: browsers keep the context suspended until a user gesture
   const unlockEvents = ["pointerdown", "keydown", "touchend"] as const;
   const unlock = () => {
+    // The AFK screen's own click comes first; the next gesture unlocks.
+    if (paused) return;
     ctx
       .resume()
       .then(() => {
@@ -174,7 +185,7 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
   for (const e of unlockEvents) window.addEventListener(e, unlock, true);
 
   document.addEventListener("visibilitychange", () => {
-    if (!unlocked) return;
+    if (!unlocked || paused) return;
     if (document.hidden) void ctx.suspend().catch(() => {});
     else void ctx.resume().catch(() => {});
   });
@@ -317,9 +328,23 @@ function createPlayer(ctx: AudioContext, opts: AudioOptions): AudioController {
     applyMusic();
   }
 
+  function setPaused(p: boolean) {
+    if (p === paused) return;
+    paused = p;
+    if (p) {
+      track?.el.pause();
+      void ctx.suspend().catch(() => {});
+      return;
+    }
+    if (!unlocked || document.hidden) return;
+    void ctx.resume().catch(() => {});
+    track?.el.play().catch(() => {});
+  }
+
   const controller: AudioController = {
     playSfx,
     setMusicZone,
+    setPaused,
     footstep(groundKind) {
       const now = performance.now();
       if (now - lastStep < FOOTSTEP_INTERVAL_MS) return;

@@ -20,6 +20,7 @@ import { createVisitsUi } from "../ui/visits";
 import { createMailboxUi } from "../ui/mailbox";
 import { createNoticeBoardUi } from "../ui/notice-board";
 import { createDoorFade } from "../ui/door-fade";
+import { createAfkScreen } from "../ui/afk";
 import { exitAt } from "../../shared/engine/geometry";
 import { MAILBOX_TAKE } from "../../shared/mail";
 import { visitsApi } from "../ui/visits-api";
@@ -52,7 +53,9 @@ import {
 } from "./actions";
 import { createGameApp } from "./app";
 import { appearanceOf, applyAppearance } from "./appearance";
-import { playSfx, setAudioHooks, setMusicZone, type AudioHooks } from "./audio";
+import { playSfx, setAudioHooks, setAudioPaused, setMusicZone, type AudioHooks } from "./audio";
+import { createAfkWatch } from "./afk";
+import { afkTimesFromQuery } from "./afk-logic";
 import { installDebug } from "./debug";
 import { createCombatSfx } from "./combat-sfx";
 import { createCombatFx } from "./combat-fx";
@@ -105,6 +108,11 @@ import { createEnergy } from "./energy";
 const HOTBAR_SLOTS = 8;
 /** Stats panel refresh while in a shared zone. */
 const STATS_MS = 10_000;
+/**
+ * Going AFK keeps drawing this long, so your character visibly lies down to sleep behind the AFK
+ * screen, then the render loop stops until you come back.
+ */
+const AFK_NAP_DRAW_MS = 1500;
 const GUEST_CHAT = "Create an account to chat with everyone.";
 
 export interface SessionOptions {
@@ -207,6 +215,8 @@ export async function startSession(
   /** Worn out or not: prediction speed, the dash notice and the farm lock. */
   const energy = createEnergy({ predictor, notice: (text, kind) => notice(text, kind) });
   const input: Input = createInput(game.app.canvas, (sx, sy) => camera.screenToTile(sx, sy));
+  /** Set while AFK: your character lies asleep on screen (local only; the server no longer has you). */
+  let afkAct: EntityState["act"] | null = null;
 
   /** Your entity: authoritative fields + predicted position, with the creator's look applied locally. */
   function you(): EntityState | null {
@@ -215,7 +225,7 @@ export async function startSession(
     const base = store.latest(id);
     if (!base) return null;
     // Seated: the server places you on the chair; nothing to predict.
-    if (base.act?.k === "sit") return applyAppearance({ ...base, moving: false }, appearance);
+    if (base.act?.k === "sit" && !afkAct) return applyAppearance({ ...base, moving: false }, appearance);
     // Your own hand shows the selected tool at once; the server's copy is for everyone else.
     const held = visiting ? undefined : heldItemAt(store.inventory, selectedSlot);
     const p = predictor.state();
@@ -229,6 +239,12 @@ export async function startSession(
     // Your own run shows from your keys at once; the server's copy is for everyone else.
     if (p.pace) me.pace = p.pace;
     else delete me.pace;
+    if (afkAct) {
+      me.act = afkAct;
+      me.moving = false;
+      delete me.pace;
+      delete me.held;
+    }
     return applyAppearance(me, appearance);
   }
 
@@ -653,17 +669,74 @@ export async function startSession(
       }
       void askForAccount("Create an account to explore the valley.", zone, true);
     },
-    onIdle: (zone) => {
-      notice("You were idle — press any key or click to reconnect.", "error");
-      const back = () => {
-        removeEventListener("keydown", back, true);
-        removeEventListener("pointerdown", back, true);
-        if (!destroyed) joinZone(zone);
-      };
-      addEventListener("keydown", back, true);
-      addEventListener("pointerdown", back, true);
-    },
+    // The server closed a socket that sent no input for a long while: same screen as going AFK here.
+    onIdle: () => goAfk(),
   });
+
+  // ------------------------------------------------------------ AFK
+  // Away (no input for a while, or the tab hidden): close every socket and stop drawing, so the
+  // browser stops waking Durable Objects and the zone can hibernate. "Go back online" rejoins.
+  /** Where to rejoin; set while AFK. */
+  let afk: { zone: ZoneId; visit: string | null } | null = null;
+  let napTimer: ReturnType<typeof setTimeout> | null = null;
+  const afkScreen = createAfkScreen(mount.ui, { onResume: () => backOnline() });
+  const afkWatch = createAfkWatch({
+    onAway: () => goAfk(),
+    // Choosing a look or filling in the account form is not being away.
+    blocked: () => creator !== null || promptOpen,
+  });
+
+  /** Draws for a moment (the character settles into its nap), then stops the render loop. */
+  function napDraw(): void {
+    if (napTimer !== null) clearTimeout(napTimer);
+    game.app.ticker.start();
+    napTimer = setTimeout(() => {
+      napTimer = null;
+      if (afk && !destroyed) game.app.ticker.stop();
+    }, AFK_NAP_DRAW_MS);
+  }
+
+  function goAfk(): void {
+    if (afk || destroyed) return;
+    const zone = pendingZone ?? store.zone;
+    if (!zone) return;
+    // Mid-way to another home, the visit being joined; otherwise the one you're in, if any.
+    const visit = pendingZone ? (visitTarget?.ownerId ?? null) : (visiting?.ownerId ?? null);
+    afk = { zone, visit };
+    hud.closeAll?.();
+    storageUi.close();
+    world?.build.exit();
+    syncBuildBanner();
+    conn.close();
+    social.close();
+    setAudioPaused(true);
+    afkAct = { k: "lie", at: serverNow() };
+    afkScreen.show();
+    napDraw();
+  }
+
+  function backOnline(): void {
+    if (!afk || destroyed) return;
+    const to = afk;
+    afk = null;
+    afkAct = null;
+    if (napTimer !== null) clearTimeout(napTimer);
+    napTimer = null;
+    afkScreen.hide();
+    game.app.ticker.start();
+    setAudioPaused(false);
+    social.start();
+    // A visit whose invite ran out meanwhile is refused, and onForbidden takes you back.
+    if (to.visit) joinVisit(to.visit);
+    else joinZone(to.zone);
+    afkWatch.resume();
+  }
+
+  // A hidden tab draws nothing, so the nap is drawn again when the tab comes back.
+  const onAfkVisibility = () => {
+    if (afk && document.visibilityState === "visible") napDraw();
+  };
+  document.addEventListener("visibilitychange", onAfkVisibility);
 
   function joinZone(zone: ZoneId, spawn?: string): void {
     if (!hasMap(zone)) return pageOutdated(zone);
@@ -997,6 +1070,9 @@ export async function startSession(
     homeMapNow = nextHomeMap;
     pendingZone = null;
     devTools = msg.devTools === true;
+    const afkTimes = afkTimesFromQuery(location.search, devTools);
+    if (afkTimes) afkWatch.setTimes(afkTimes);
+    afkWatch.start();
     loading?.done("world");
     loading?.zoneStep?.("arrived");
     afterFrame(() => {
@@ -1707,6 +1783,10 @@ export async function startSession(
       tutorial.destroy();
       stopLoop();
       stopDir();
+      afkWatch.destroy();
+      afkScreen.destroy();
+      if (napTimer !== null) clearTimeout(napTimer);
+      document.removeEventListener("visibilitychange", onAfkVisibility);
       window.removeEventListener("keydown", onEatKey);
       homeUi.destroy();
       storageUi.destroy();

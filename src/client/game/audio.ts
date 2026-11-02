@@ -6,9 +6,11 @@ import type { ZoneId } from "../../shared/types";
 export interface AudioHooks {
   playSfx(key: string): void;
   setMusicZone(zone: ZoneId | null): void;
+  /** AFK: hold all sound (music keeps its place) until unpaused. */
+  setPaused(paused: boolean): void;
 }
 
-const noop: AudioHooks = { playSfx() {}, setMusicZone() {} };
+const noop: AudioHooks = { playSfx() {}, setMusicZone() {}, setPaused() {} };
 let hooks: AudioHooks = noop;
 
 export function setAudioHooks(h: Partial<AudioHooks> | null): void {
@@ -28,5 +30,13 @@ export function setMusicZone(zone: ZoneId | null): void {
     hooks.setMusicZone(zone);
   } catch (err) {
     console.warn("setMusicZone failed", err);
+  }
+}
+
+export function setAudioPaused(paused: boolean): void {
+  try {
+    hooks.setPaused(paused);
+  } catch (err) {
+    console.warn("setAudioPaused failed", err);
   }
 }

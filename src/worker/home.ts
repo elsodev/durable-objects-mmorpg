@@ -1304,6 +1304,8 @@ export class HomeRoom extends DurableObject<Env> {
       this.persist({ invites: true });
       if (this.player) send(this.player.ws, { t: "notice", text: `${v.name} left.`, kind: "info" });
       this.sendVisitorList();
+      // A still home has stopped ticking; the next tick is what takes them off everyone's screen.
+      this.startTick();
       return;
     }
     const p = this.player;

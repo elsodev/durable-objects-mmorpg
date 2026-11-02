@@ -14,7 +14,7 @@ import {
   useTarget,
 } from "../src/client/game/actions";
 import { applyAppearance, appearanceOf } from "../src/client/game/appearance";
-import { playSfx, setAudioHooks, setMusicZone } from "../src/client/game/audio";
+import { playSfx, setAudioHooks, setAudioPaused, setMusicZone } from "../src/client/game/audio";
 import { clampDt, every, MAX_FRAME_MS, startLoop } from "../src/client/game/loop";
 import { getMap } from "../src/shared/maps";
 import type { EntityState, Inventory } from "../src/shared/types";
@@ -141,6 +141,16 @@ describe("misc helpers", () => {
     playSfx("loot");
     expect(sfx).toHaveBeenCalledWith("loot");
     expect(() => setMusicZone("village")).not.toThrow();
+    setAudioHooks(null);
+  });
+
+  it("passes the AFK pause to the audio module (a no-op without one)", () => {
+    expect(() => setAudioPaused(true)).not.toThrow();
+    const paused = vi.fn();
+    setAudioHooks({ setPaused: paused });
+    setAudioPaused(true);
+    setAudioPaused(false);
+    expect(paused.mock.calls).toEqual([[true], [false]]);
     setAudioHooks(null);
   });
 });

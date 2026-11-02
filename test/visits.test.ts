@@ -600,6 +600,18 @@ describe("visit endings send the visitor back", () => {
     expect(tab2.last("welcome").entities).toHaveLength(2);
   });
 
+  it("a visitor who disconnects (AFK) vanishes for the owner even while the home is still", async () => {
+    const { owner, guest } = await aliceHostsBasil();
+    const room = r.room("alice") as any;
+    // Nobody moves: the home stops ticking.
+    vi.advanceTimersByTime(2000);
+    expect(room.timer).toBeNull();
+    await r.room("alice").webSocketClose(guest as any);
+    vi.advanceTimersByTime(250);
+    const dels = owner.of("tick").flatMap((m: any) => m.del);
+    expect(dels).toContain(guest.last("welcome").you);
+  });
+
   it("a visitor whose socket dropped may reconnect within the grace period", async () => {
     const { guest } = await aliceHostsBasil();
     await r.room("alice").webSocketClose(guest as any);

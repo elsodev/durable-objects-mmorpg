@@ -817,6 +817,13 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       connEl.title = state === "online" ? "Online" : state === "offline" ? "Offline — reconnecting" : "Connecting";
       hud.classList.toggle("offline", state === "offline");
     },
+    closeAll() {
+      menu.close();
+      shop.close();
+      convo.close();
+      animalCard.close();
+      slotMenu.close();
+    },
     showAccountPrompt,
     setBonds(list) {
       bonds.setList(list);
