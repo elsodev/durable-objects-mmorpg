@@ -13,6 +13,7 @@ import { createPlayerCard } from "./player-card";
 import { createMuteStore, type MuteStore } from "./mutes";
 import { parseMuteCommand } from "../../shared/players";
 import { createBondsUi, type BondsUi } from "./bonds";
+import { createConvo, type ConvoUi } from "./convo";
 import { badgeText, whisperPrefill } from "./friends-logic";
 import { FRIEND_NAME_HINT, parseFriendCommand } from "../../shared/friends";
 import { parseHomeCommand } from "../../shared/visits";
@@ -332,18 +333,32 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   const goalsLayer = layer("goals");
   const friendsLayer = layer("friends");
   const bondsLayer = layer("bonds");
+  const convoLayer = layer("convo");
   const noticesLayer = layer("notices");
   const accountLayer = layer("account");
-  for (const l of [invLayer, goalsLayer, friendsLayer, bondsLayer, chatLayer, shopLayer, noticesLayer, accountLayer]) hud.appendChild(l);
+  for (const l of [invLayer, goalsLayer, friendsLayer, bondsLayer, chatLayer, convoLayer, shopLayer, noticesLayer, accountLayer]) hud.appendChild(l);
 
   const bonds: BondsUi = safe("bonds", () => createBondsUi(bondsLayer), {
     setList() {},
     bond() {},
-    said() {},
     toggle() {},
     close() {},
     isOpen: () => false,
   });
+  const convo: ConvoUi = safe(
+    "conversation",
+    () =>
+      createConvo(convoLayer, {
+        say: (npc, text) => game.send({ t: "npcSay", npc, text }),
+        setTyping: (t) => {
+          typing = t;
+          game.setTyping(t);
+        },
+        distance: (id) => (game.playerDistance ? game.playerDistance(id) : 0),
+        portrait: (id) => game.npcPortrait?.(id) ?? null,
+      }),
+    { bond() {}, said() {}, failed() {}, close() {}, isOpen: () => false },
+  );
   const notices: Notices = safe("notices", () => createNotices(noticesLayer), { notice() {} });
   const inventory = safe(
     "inventory",
@@ -738,10 +753,14 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       bonds.setList(list);
     },
     bond(view, delta, talk, entityId, gifts) {
-      bonds.bond(view, delta, talk, entityId, gifts);
+      bonds.bond(view);
+      convo.bond(view, delta, talk, entityId, gifts);
     },
     npcSaid(entityId, text) {
-      bonds.said(entityId, text);
+      convo.said(entityId, text);
+    },
+    npcSayFailed(reason) {
+      convo.failed(reason);
     },
     setIconSource(src: (item: ItemId) => string) {
       safe("icons", () => setIconSource(src), undefined);

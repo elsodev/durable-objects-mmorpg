@@ -19,6 +19,7 @@ import {
   type GiftRefusal,
   type GiftTaste,
 } from "../../shared/hearts";
+import { chatGain, type ChatVerdict } from "../../shared/npcChat";
 import { formatBirthday, isBirthday, worldDate } from "../../shared/calendar";
 import type { Inventory, ItemId } from "../../shared/types";
 import { isNpcId, NPC_BIRTHDAYS, type NpcId } from "../npc/bible";
@@ -158,6 +159,26 @@ export function bondTalk(
   const b = bondOf(bonds, npcId, now);
   const before = heartsFor(npcId, b.pts).hearts;
   const delta = talkGain(npcId, b, now);
+  return settle(npcId, b, inv, before, delta, now, rand, rates);
+}
+
+/**
+ * A reply typed in the conversation window, already judged. Null for non-villagers. Milestones
+ * reached this way roll their gifts like any other gain.
+ */
+export function bondChat(
+  bonds: Bonds,
+  npcId: string,
+  verdict: ChatVerdict,
+  inv: Inventory,
+  now: number,
+  rand: () => number,
+  rates: Readonly<DropRates> = DEFAULT_DROP_RATES,
+): BondOutcome | null {
+  if (!isNpcId(npcId)) return null;
+  const b = bondOf(bonds, npcId, now);
+  const before = heartsFor(npcId, b.pts).hearts;
+  const delta = chatGain(npcId, b, verdict, now);
   return settle(npcId, b, inv, before, delta, now, rand, rates);
 }
 

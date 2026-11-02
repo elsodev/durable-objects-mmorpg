@@ -64,6 +64,8 @@ export interface GameApi {
   playerDistance?(entityId: string): number | null;
   /** Small portrait of a player entity (their composited look), or null. */
   playerPortrait?(entityId: string): HTMLCanvasElement | null;
+  /** Small portrait of a villager entity (their sprite, facing you), or null. */
+  npcPortrait?(entityId: string): HTMLCanvasElement | null;
   /** Typed chat line from the given tab (handles /w, /r, /world, /emote...). Without it the HUD sends zone chat. */
   chat?(text: string, tab: ChatTab): void;
   /** Emote picker choice. */
@@ -101,10 +103,13 @@ export interface Hud {
   setIconSource(src: (item: ItemId) => string): void;
   /** Who you muted: the game hides their zone chat, bubbles, world chat and emotes. */
   readonly mutes?: MuteSet;
-  /** Friendship (ui/bonds.ts): every villager met, one villager's change, and their lines. */
+  /** Friendship (ui/bonds.ts, ui/convo.ts): every villager met, one villager's change, and their lines. */
   setBonds?(list: BondView[]): void;
   bond?(view: BondView, delta: number, talk: boolean, entityId?: string, gifts?: ItemId[]): void;
+  /** A villager's line answering you (the conversation window shows it). */
   npcSaid?(entityId: string, text: string): void;
+  /** The server refused a conversation-window reply. */
+  npcSayFailed?(reason: string): void;
 }
 
 /**

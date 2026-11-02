@@ -1,4 +1,4 @@
-// Pure helpers for the friendship UI (talk card and relationships panel).
+// Pure helpers for the friendship UI (relationships panel and conversation window hearts).
 import { MAX_HEARTS, type BondView } from "../../shared/hearts";
 
 export type HeartState = "full" | "empty";
@@ -18,10 +18,6 @@ export function heartProgress(v: Pick<BondView, "into" | "need">): number {
 export function progressText(v: BondView): string {
   if (v.need <= 0) return "Best friends!";
   return `${v.into} / ${v.need} to the next heart`;
-}
-
-export function todayText(v: BondView): string {
-  return v.talkLeft > 0 ? `Chat more today: up to +${v.talkLeft}` : "You've chatted plenty today";
 }
 
 /** Floating text over the villager when points change ("+25 ♥", "-25 ♥"). Null for no change. */

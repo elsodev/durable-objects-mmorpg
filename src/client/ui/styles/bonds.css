@@ -1,66 +1,10 @@
-/* Friendship: talk card (bottom centre, above the hotbar) and the Relationships panel. */
+/* Friendship: the Relationships panel, and heart rows shared with the conversation window. */
 
-#bond-card,
 #bonds-panel {
   pointer-events: auto;
 }
-#bond-card[hidden],
 #bonds-panel[hidden] {
   display: none;
-}
-
-/* Bottom-right, clear of the chat (left), the hotbar (centre) and a villager's shop (middle). */
-.bond-card {
-  position: absolute;
-  right: 16px;
-  bottom: calc(var(--dm-slot-size, 48px) + 40px);
-  width: min(340px, calc(100vw - 32px));
-  z-index: 31;
-  animation: bond-card-in 0.18s ease-out;
-}
-@keyframes bond-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-@media (max-width: 760px) {
-  .bond-card {
-    right: 50%;
-    transform: translateX(50%);
-    bottom: auto;
-    top: 96px;
-    animation: none;
-  }
-}
-.bond-card-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.bond-card-name {
-  flex: 1;
-  margin: 0;
-  font-family: var(--dm-font-heading, inherit);
-  font-size: 1.05rem;
-}
-.bond-card-hearts {
-  position: relative;
-  margin: 4px 0 6px;
-}
-.bond-card-line {
-  margin: 8px 0 2px;
-  min-height: 1.3em;
-  font-style: italic;
-  color: var(--dm-ink, #3a2a1c);
-  overflow-wrap: anywhere;
-}
-.bond-card-line.is-waiting {
-  color: var(--dm-ink-soft, #6b5640);
-}
-.bond-card-today {
-  margin: 4px 0 0;
-  font-size: 0.8rem;
 }
 
 .bond-hearts {
@@ -106,27 +50,6 @@
   color: var(--dm-ink, #3a2a1c);
 }
 
-.bond-pop {
-  position: absolute;
-  right: 4px;
-  top: -4px;
-  font-weight: 800;
-  font-size: 1.05rem;
-  color: #d9467f;
-  text-shadow: 0 1px 0 #fff;
-  pointer-events: none;
-  animation: bond-pop 1.4s ease-out forwards;
-}
-.bond-pop.down {
-  color: var(--dm-ink-soft, #6b5640);
-}
-@keyframes bond-pop {
-  to {
-    opacity: 0;
-    transform: translateY(-22px);
-  }
-}
-
 .bond-panel {
   position: absolute;
   right: 16px;
@@ -163,25 +86,6 @@
   font-weight: 700;
 }
 
-.bond-card-gift {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 6px;
-  margin: 6px 0 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: #fde6f0;
-  border: 1px solid #f0a6c6;
-  font-size: 0.8rem;
-}
-.bond-card-gift[hidden] {
-  display: none;
-}
-.bond-card-gift-label {
-  font-weight: 700;
-  color: #b23a6e;
-}
 .bond-gift-chip {
   display: inline-flex;
   align-items: center;
@@ -219,11 +123,3 @@
   background: rgba(245, 200, 76, 0.28);
 }
 .bond-mark-birthday.is-on { background: rgba(240, 120, 160, 0.4); }
-
-/* Below this width the centred shop and the talk card cover each other: while a shop is open the
-   card steps aside (its line is in the chat log too). */
-@media (max-width: 1240px) {
-  .dm-hud:has(#shop-dialog:not([hidden])) .bond-card {
-    display: none;
-  }
-}

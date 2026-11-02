@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gainText, heartProgress, heartRow, progressText, todayText } from "../src/client/ui/bonds-logic";
+import { gainText, heartProgress, heartRow, progressText } from "../src/client/ui/bonds-logic";
 import { chestFor, lidFrame, LID_FRAME_MS } from "../src/client/render/chests";
 import type { BondView } from "../src/shared/hearts";
 
@@ -17,7 +17,6 @@ describe("friendship UI helpers", () => {
     expect(heartProgress(view({ hearts: 10, into: 0, need: 0 }))).toBe(1);
     expect(progressText(view())).toBe("20 / 80 to the next heart");
     expect(progressText(view({ need: 0 }))).toBe("Best friends!");
-    expect(todayText(view({ talkLeft: 0 }))).toMatch(/plenty/);
   });
 
   it("floats the gain", () => {

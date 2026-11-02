@@ -19,6 +19,7 @@ A cozy multiplayer farming game set in the valley of Mossbrook, with light monst
 - Mining in the caves: stone, copper, iron, silver, gold, gem crystal and diamond rocks. Gold and diamond rocks are very rare (about 3% and 0.6% of cave rocks), sit mostly on the deepest floor, need the iron pickaxe and take 6 and 8 hits. Ship any stone, ore, gem, forage, fish or material in your shipping bin at its full value, or sell ore to the smith on the spot for 60% of it. Ore tiers live in `src/shared/engine/rockOres.ts`
 - Mining, tree chopping and light combat against slimes, bats and rock crabs: rocks and trees take several hits, trees fall to stumps and regrow, and every tool can hit monsters (swords hit hardest). Tool rules live in `src/shared/engine/toolRules.ts`
 - Ten villagers who chat and react. Their decisions come from rules, optionally TypeSafe Jev, with lines from Workers AI
+- Click a villager (or press F next to one) to open the conversation window and type replies. Each reply is judged good, neutral or bad for that villager (TypeSafe Jev when available, word lists otherwise) and moves your hearts with them: a liked reply adds a little (at most once every 20 s, capped per day), a rude one takes some away (also capped per day). The rules live in `src/shared/npcChat.ts`
 - Character creator, guest play with an upgrade to a full account later, music and sound effects
 
 ## Requirements
@@ -64,7 +65,7 @@ A cozy multiplayer farming game set in the valley of Mossbrook, with light monst
 `npm run dev:local` runs `wrangler dev --env local`, which:
 
 - turns the Turnstile captcha off (empty keys and `DMMO_ENV=local`)
-- has no Workers AI binding, so NPCs use scripted lines (`NPC_AI_MODE=off`). They still remember you: each NPC keeps a private memory per player (your name, gifts, things you told it). Outside your home, press Q next to a villager to give them the selected hotbar item (at home Q eats).
+- has no Workers AI binding, so NPCs use scripted lines (`NPC_AI_MODE=off`) and replies in the conversation window are judged by word lists instead of Jev. They still remember you: each NPC keeps a private memory per player (your name, gifts, things you told it). Outside your home, press Q next to a villager to give them the selected hotbar item (at home Q eats).
 - turns on dev tools (`DEV_TOOLS=on`): at home, `/day` ends the day (like sleeping) and `/time 21` sets the clock
 
 `npm run dev` uses the default environment with the real Workers AI binding. It needs `npx wrangler login`, plus `CAPTCHA_DISABLED=1` in `.dev.vars` unless you set up Turnstile keys.

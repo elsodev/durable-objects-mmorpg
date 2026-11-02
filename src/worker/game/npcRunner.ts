@@ -21,6 +21,9 @@ import { NpcGate, AGENT_UNITS, JEV_UNITS, SPEAK_UNITS, staleGiftKeys, TalkQueue,
 import { EMOTE_STATUS, sanitizeActions, type ActionScope } from "./npcActions";
 import type { NpcMind } from "./npcMind";
 import { placeTarget } from "./npcPlaces";
+import { judgeReply } from "../npc/judge";
+import { jevClient } from "../npc/jev";
+import type { ChatVerdict } from "../../shared/npcChat";
 
 const MEMORY_LEN = 10;
 const THINKING = "...";
@@ -73,7 +76,8 @@ export interface NpcHost {
   /** Players currently in the zone (entity state, live objects). */
   players(): EntityState[];
   others(): EntityState[];
-  chat(from: EntityState, text: string): void;
+  /** A line said aloud; `to` is the player entity it answers, when it answers someone. */
+  chat(from: EntityState, text: string, to?: string): void;
   openShop(playerEntityId: string, npcId: string): void;
   /** Adds the gift to the player's inventory; false if it doesn't fit. */
   give(playerEntityId: string, item: string, qty: number): boolean;
@@ -83,6 +87,13 @@ export interface NpcHost {
   notice?(playerEntityId: string, text: string): void;
   /** Hearts this player has with this villager (0..10), for the NPC's situation. */
   hearts?(userId: string, npcId: string): number;
+  /** A conversation-window reply was judged (just before the villager answers it). */
+  judged?(playerEntityId: string, npcId: string, verdict: ChatVerdict): void;
+}
+
+export interface TalkOpts {
+  /** Typed in the conversation window: judge it good, neutral or bad for hearts. */
+  judge?: boolean;
 }
 
 export interface Speaker {
@@ -637,21 +648,21 @@ export class NpcRunner {
    * Starts a conversation (fire and forget). Returns false when the NPC is already busy; the
    * line then waits in the NPC's short queue (or is dropped when that is full).
    */
-  talk(npc: NpcState, speaker: Speaker, text: string, now: number): boolean {
+  talk(npc: NpcState, speaker: Speaker, text: string, now: number, opts: TalkOpts = {}): boolean {
     // Someone wants a word: a seated NPC gets up (beside the chair, on the speaker's side) first.
     if (isSitting(npc.entity)) {
       const who = this.host.players().find((e) => e.id === speaker.entityId);
       this.getUp(npc, now, who);
     }
     if (!this.gate.begin(npc.id)) {
-      this.waiting.offer(npc.id, { speaker, text, at: now });
+      this.waiting.offer(npc.id, { speaker, text, at: now, ...(opts.judge ? { judge: true } : {}) });
       return false;
     }
     npc.entity.status = THINKING;
     npc.entity.moving = false;
     npc.target = null;
     if (npc.path) this.abandon(npc, now);
-    const done = this.converse(npc, speaker, text, now);
+    const done = this.converse(npc, speaker, text, now, opts);
     void withTimeout(done, CONVERSATION_TIMEOUT_MS, undefined).finally(() => {
       if (npc.entity.status === THINKING) this.showEmote(npc);
       this.gate.end(npc.id);
@@ -667,7 +678,7 @@ export class NpcRunner {
       const next = this.waiting.next(npc.id, lastUserId, now);
       if (!next) return;
       if (!this.host.players().some((e) => e.id === next.speaker.entityId)) continue;
-      this.talk(npc, next.speaker, next.text, now);
+      this.talk(npc, next.speaker, next.text, now, { judge: next.judge });
       return;
     }
   }
@@ -683,11 +694,12 @@ export class NpcRunner {
   }
 
   /** All spend checks, cheapest first; the global budget DO is consulted last. */
-  private async mayUseAi(npcId: string, userId: string, now: number): Promise<boolean> {
+  private async mayUseAi(npcId: string, userId: string, now: number, judge = false): Promise<boolean> {
     if (this.env.NPC_AI_MODE === "off" || !this.env.AI) return false;
     if (!this.gate.allowAi(userId, npcId, now)) return false;
     try {
-      const units = (this.mind ? AGENT_UNITS : SPEAK_UNITS) + (this.env.TYPESAFE_API_KEY ? JEV_UNITS : 0);
+      const jevCalls = this.env.TYPESAFE_API_KEY ? (judge ? 2 : 1) : 0;
+      const units = (this.mind ? AGENT_UNITS : SPEAK_UNITS) + jevCalls * JEV_UNITS;
       const stub = this.env.AI_BUDGET.get(this.env.AI_BUDGET.idFromName("global"));
       return (await stub.tryConsume({ userId, units, day: utcDay(now) })) === true;
     } catch {
@@ -712,7 +724,7 @@ export class NpcRunner {
     };
   }
 
-  private async converse(npc: NpcState, speaker: Speaker, text: string, now: number): Promise<void> {
+  private async converse(npc: NpcState, speaker: Speaker, text: string, now: number, opts: TalkOpts = {}): Promise<void> {
     const ctx = this.context(npc, speaker, text);
     this.faceSpeaker(npc, speaker.entityId, now);
     if (!ctx) return; // no catalog entry: nothing to say
@@ -720,8 +732,10 @@ export class NpcRunner {
     // Replies are personal (names, gifts), so the cache is per (NPC, player), never shared.
     const pair = this.pairKey(npc.id, speaker.userId);
     const cached = this.gate.cached(pair, text, now);
-    const useAi = !cached && (await this.mayUseAi(npc.id, speaker.userId, now));
+    const useAi = !cached && (await this.mayUseAi(npc.id, speaker.userId, now, opts.judge));
     const benv = this.brainEnv(useAi);
+    // Runs beside the decision and the line; the verdict is applied just before the answer.
+    const verdict = opts.judge ? this.judge(ctx, speaker, useAi) : null;
 
     const decision = await withTimeout(decide(ctx, benv), 3000, FALLBACK);
     const giftKey = `gift:${npc.id}:${speaker.userId}`;
@@ -762,6 +776,7 @@ export class NpcRunner {
       const env = this.mind ? this.brainEnv(false) : benv;
       line = await withTimeout(speak(ctx, decision, env), MIND_TIMEOUT_MS, scripted);
     }
+    if (verdict) this.host.judged?.(speaker.entityId, npc.id, await verdict);
     const clean = cleanChat(line);
     if (!clean) return;
     if (useAi && (source === "agent" || source === "speak")) this.gate.remember(pair, text, { line: clean, intent: decision.intent, at: now });
@@ -772,7 +787,22 @@ export class NpcRunner {
     // Turn back to them when actually replying (they may have moved while the NPC was thinking),
     // unless the decision just sent the NPC walking somewhere.
     if (!npc.target && !npc.follow) this.faceSpeaker(npc, speaker.entityId, Date.now());
-    this.host.chat(npc.entity, clean);
+    this.host.chat(npc.entity, clean, speaker.entityId);
+  }
+
+  /** Good, neutral or bad for this villager: Jev when AI was granted for this turn, else word lists. */
+  private judge(ctx: NpcContext, speaker: Speaker, useAi: boolean): Promise<ChatVerdict> {
+    const key = useAi ? this.env.TYPESAFE_API_KEY : undefined;
+    const subject = {
+      npcId: ctx.npc.id,
+      npcName: ctx.npc.name,
+      role: ctx.npc.role,
+      personality: ctx.npc.personality,
+      playerName: speaker.name,
+      text: ctx.text,
+      memory: ctx.memory,
+    };
+    return judgeReply(subject, key ? jevClient(key) : null).catch((): ChatVerdict => "neutral");
   }
 
   /** The pair's NpcAgent: memory-aware reply, model-written only when `ai` (budget already reserved). */
@@ -859,7 +889,7 @@ export class NpcRunner {
     npc.pendingEmote = EMOTE_STATUS[GIFT_EMOTE[out.taste] ?? "happy"] ?? "!";
     this.showEmote(npc);
     this.rememberLines(npc.id, speaker.userId, [`${speaker.name} gave ${npc.def.name} a gift.`, `${npc.def.name}: ${clean}`]);
-    this.host.chat(npc.entity, clean);
+    this.host.chat(npc.entity, clean, speaker.entityId);
   }
 
   /** True when this player gave this NPC something less than `ms` ago (gift spam guard). */

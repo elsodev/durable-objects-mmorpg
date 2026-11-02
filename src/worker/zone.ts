@@ -77,7 +77,8 @@ import { SEAT_FACING } from "../shared/maps/interiors/props";
 import { RockField } from "./game/rockField";
 import { ChestField, isRareLoot, rollChestLoot } from "./game/chestField";
 import { CHEST_REACH, CHEST_TARGET_PREFIX } from "../shared/chests";
-import { bondGift, bondGiftRefusal, bondHearts, bondList, bondReset, bondTalk, npcName, type BondOutcome } from "./game/bonds";
+import { bondChat, bondGift, bondGiftRefusal, bondHearts, bondList, bondReset, bondTalk, npcName, type BondOutcome } from "./game/bonds";
+import { CONVO_RANGE, type ChatVerdict } from "../shared/npcChat";
 import { giftLine } from "./npc/giftTables";
 import { giftTaste, isNpcId } from "./npc/bible";
 import { heartCurve, MAX_HEARTS, newBond, sanitizeBonds, type Bonds } from "../shared/hearts";
@@ -266,7 +267,7 @@ export class ZoneRoom extends DurableObject<Env> {
     const host: NpcHost = {
       players: () => this.playerEntities(),
       others: () => [...this.world!.monsters.alive()],
-      chat: (from, text) => this.broadcast({ t: "chat", from: from.id, name: from.name, text, at: Date.now() }),
+      chat: (from, text, to) => this.broadcast({ t: "chat", from: from.id, name: from.name, text, at: Date.now(), ...(to ? { to } : {}) }),
       openShop: (entityId, npcId) => {
         const p = this.playerByEntity(entityId);
         if (p) this.sendShop(p, npcId);
@@ -287,6 +288,7 @@ export class ZoneRoom extends DurableObject<Env> {
         for (const p of this.players.values()) if (p.userId === userId) return bondHearts(p.bonds, npcId, Date.now());
         return 0;
       },
+      judged: (entityId, npcId, verdict) => this.onJudged(entityId, npcId, verdict),
     };
     const seats = new SeatBook(map.seats ?? []);
     const chestCount = CHESTS_PER_ZONE[zone] ?? 0;
@@ -844,6 +846,8 @@ export class ZoneRoom extends DurableObject<Env> {
         return;
       case "chat":
         return this.onChat(p, msg.text, now);
+      case "npcSay":
+        return this.onNpcSay(p, msg, now);
       case "use":
         this.getUp(p);
         return this.onUse(p, msg, now);
@@ -929,8 +933,38 @@ export class ZoneRoom extends DurableObject<Env> {
     const npc = this.world!.npcs.nearest(p.entity, NPC_CHAT_RANGE);
     if (npc) {
       this.world!.npcs.talk(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, text, now);
-      this.bondChanged(p, npc.entity, bondTalk(p.bonds, npc.id, p.inv, now, Math.random, this.rates), true);
+      // Overheard zone chat: hearts move, but the conversation window opens only on interact.
+      this.bondChanged(p, npc.entity, bondTalk(p.bonds, npc.id, p.inv, now, Math.random, this.rates), false);
     }
+  }
+
+  /**
+   * A reply typed in the conversation window: said aloud like chat (same spam guard), answered
+   * by that villager, and judged for hearts (onJudged) just before the answer.
+   */
+  private onNpcSay(p: ZPlayer, msg: Extract<ClientMsg, { t: "npcSay" }>, now: number): void {
+    const text = cleanChat(stripControls(msg.text));
+    if (!text) return;
+    // Commands belong in the chat box; never say one aloud (home commands carry names).
+    if (text.startsWith("/")) return this.reject(p, msg, "Type commands in the chat box.");
+    const npc = this.world!.npcs.byEntityId(msg.npc);
+    if (!npc || !npc.def) return this.reject(p, msg, "They aren't here any more.");
+    if (dist(npc.entity, p.entity) > CONVO_RANGE) return this.reject(p, msg, "Walk a little closer.");
+    const guard = this.chatGuards.get(p.userId, now);
+    const verdict = guard.check(text, now);
+    if (verdict === "tooFast") return this.reject(p, msg, "Slow down a little.");
+    if (verdict === "muted") return this.reject(p, msg, `You are muted for ${Math.ceil(guard.mutedFor(now) / 1000)}s (repeating yourself).`);
+    this.broadcast({ t: "chat", from: p.entity.id, name: p.name, text, at: now });
+    this.world!.npcs.talk(npc, { userId: p.userId, entityId: p.entity.id, name: p.name }, text, now, { judge: true });
+  }
+
+  /** The villager made up their mind about a reply: move this player's hearts (if still here). */
+  private onJudged(entityId: string, npcId: string, verdict: ChatVerdict): void {
+    const p = this.playerByEntity(entityId);
+    const npc = this.world?.npcs.byEntityId(npcId);
+    if (!p || !npc) return;
+    const now = Date.now();
+    this.bondChanged(p, npc.entity, bondChat(p.bonds, npc.id, verdict, p.inv, now, Math.random, this.rates), false);
   }
 
   private onUse(p: ZPlayer, msg: Extract<ClientMsg, { t: "use" }>, now: number): void {
@@ -1278,7 +1312,7 @@ export class ZoneRoom extends DurableObject<Env> {
     send(p.ws, { t: "bonds", list: bondList(p.bonds, Date.now()) });
     const who = npcName(out.npc);
     for (const item of out.delivered) {
-      send(p.ws, { t: "chat", from: npc.id, name: npc.name, text: giftLine(item, Math.random), at: Date.now() });
+      send(p.ws, { t: "chat", from: npc.id, name: npc.name, text: giftLine(item, Math.random), at: Date.now(), to: p.entity.id });
     }
     if (out.delivered.length > 0) {
       this.holdUp(p, out.delivered[0]!);

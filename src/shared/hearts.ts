@@ -80,6 +80,18 @@ export interface Bond {
   given: ItemId[];
   /** Gifts owed while your bag was full (furniture or rare seeds); handed over next time you talk. */
   pending: ItemId[];
+  /** Today's points from replies in the conversation window (rules in shared/npcChat.ts). */
+  chat?: ChatDay;
+}
+
+/** One villager's conversation-window counters for a world day. */
+export interface ChatDay {
+  /** World day the counters belong to. */
+  day: number;
+  gain: number;
+  loss: number;
+  /** When a liked reply last counted (ms epoch). */
+  last: number;
 }
 
 export type Bonds = Record<string, Bond>;
@@ -320,6 +332,14 @@ function storedDay(v: unknown): number {
 const num = (v: unknown, lo: number, hi: number): number =>
   typeof v === "number" && Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.floor(v))) : lo;
 
+function chatDayOf(raw: unknown): ChatDay | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const o = raw as Record<string, unknown>;
+  const day = num(o.day, 0, 10_000_000);
+  if (day <= 0) return undefined;
+  return { day, gain: num(o.gain, 0, 1000), loss: num(o.loss, 0, 1000), last: num(o.last, 0, Number.MAX_SAFE_INTEGER) };
+}
+
 /** Validates bonds from storage or another Durable Object; anything odd is dropped or clamped. */
 export function sanitizeBonds(raw: unknown): Bonds {
   const out: Bonds = {};
@@ -353,6 +373,8 @@ export function sanitizeBonds(raw: unknown): Bonds {
       // Milestone gifts owed: furniture, plus the rare seeds villagers sometimes add.
       pending: items(o.pending, MAX_PENDING, true),
     };
+    const chat = chatDayOf(o.chat);
+    if (chat) out[npc]!.chat = chat;
     n++;
   }
   return out;

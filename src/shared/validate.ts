@@ -71,6 +71,10 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       const text = cleanChat(o.text);
       return text ? { t: "chat", text } : null;
     }
+    case "npcSay": {
+      const text = cleanChat(o.text);
+      return text && isId(o.npc) ? { t: "npcSay", npc: o.npc, text } : null;
+    }
     case "use":
       return isSlot(o.slot) && isCoord(o.x) && isCoord(o.y) ? { t: "use", slot: o.slot, x: o.x, y: o.y, ...req } : null;
     case "interact":

@@ -26,6 +26,7 @@ export const VISITOR_RULES: { readonly [K in ClientMsg["t"]]: VisitorVerdict } =
   sell: { deny: "Visit the village for that." },
   donate: { deny: "Visit the village for that." },
   giftNpc: { deny: "Visit the village for that." },
+  npcSay: { deny: "Visit the village for that." },
   setLook: { deny: "Change clothes at your own home." },
   eat: { deny: "That isn't yours to eat." },
   sleep: { deny: "You can't sleep in someone else's bed." },

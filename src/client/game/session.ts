@@ -56,6 +56,7 @@ import { every, startLoop } from "./loop";
 import { chestFor } from "../render/chests";
 import { CHEST_REACH, CHEST_TARGET_PREFIX } from "../../shared/chests";
 import { gainText } from "../ui/bonds-logic";
+import { npcPortrait } from "./npc-portrait";
 import { createPredictor } from "./prediction";
 import { createFarmFx } from "./farm-fx";
 import { isWaterSource } from "../../shared/engine";
@@ -315,6 +316,7 @@ export async function startSession(
       return me && them ? tileDistance(me, them) : null;
     },
     playerPortrait: (entityId) => portraitOf(entityId),
+    npcPortrait: (entityId) => npcPortrait(art, store.latest(entityId)?.sprite),
     chat: (text, tab) => onChatInput(text, tab),
     emote: (code) => sendEmote(code),
     slashContext: () => ({
@@ -778,7 +780,8 @@ export async function startSession(
         if (kind !== "system") world?.overlays.say(msg.from, msg.text);
         if (kind === "npc") {
           playSfx("chat");
-          hud.npcSaid?.(msg.from, msg.text);
+          // Only lines answering you belong in your conversation window.
+          if (msg.to && msg.to === store.youId) hud.npcSaid?.(msg.from, msg.text);
         }
         break;
       }
@@ -1001,7 +1004,8 @@ export async function startSession(
       world?.farm.setObjects(store.objects.values(), map());
       syncBuildBanner();
     }
-    if (msg.reason) notice(msg.reason, "error");
+    if (msg.action === "npcSay" && hud.npcSayFailed) hud.npcSayFailed(msg.reason);
+    else if (msg.reason) notice(msg.reason, "error");
     playSfx("error");
   }
 

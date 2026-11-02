@@ -1,0 +1,343 @@
+/* Conversation window: centred over the world while you talk to a villager. */
+
+#convo {
+  pointer-events: auto;
+}
+#convo[hidden] {
+  display: none;
+}
+
+.convo {
+  position: absolute;
+  left: 50%;
+  /* A little above centre, clear of the hotbar along the bottom. */
+  top: calc(50% - 24px);
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px));
+  height: min(450px, calc(100vh - 220px));
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  z-index: 32;
+  animation: convo-in 0.16s ease-out;
+}
+@keyframes convo-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px));
+  }
+}
+
+/* The shop, the menu and the goals board take the middle of the screen: the conversation steps
+   aside while one is open and comes back when it closes. */
+.dm-hud:has(#shop-dialog:not([hidden])) .convo,
+.dm-hud:has(#game-menu:not([hidden])) .convo,
+.dm-hud:has(#goals-panel:not([hidden])) .convo {
+  display: none;
+}
+
+.convo-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px dashed var(--dm-border-soft, #a8865a);
+}
+.convo-portrait {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, #fff6dd 0%, var(--dm-parchment, #e3d3a8) 75%);
+  border: 2px solid var(--dm-wood-dark, #5a3920);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px var(--dm-wood-light, #b07a48);
+}
+.convo-portrait-img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+.convo-portrait-letter {
+  font-family: var(--dm-font-pixel);
+  font-size: 28px;
+  color: var(--dm-wood-dark, #5a3920);
+}
+.convo-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.convo-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dm-panel .convo-name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.convo-close {
+  flex: none;
+}
+.convo-hearts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+.convo-hearts-row .bond-heart {
+  width: 20px;
+  height: 20px;
+}
+.convo-hearts-row.bump-up {
+  animation: convo-bump 0.5s ease-out;
+}
+.convo-hearts-row.bump-down {
+  animation: convo-shake 0.45s ease-in-out;
+}
+@keyframes convo-bump {
+  40% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 4px rgba(236, 95, 155, 0.8));
+  }
+}
+@keyframes convo-shake {
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
+}
+.convo-bar {
+  height: 14px;
+}
+.convo-bar .bond-bar-text {
+  font-size: 0.68rem;
+  line-height: 10px;
+}
+
+/* Sits just after the hearts for a moment, then floats off. */
+.convo-pop {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-family: var(--dm-font-pixel);
+  font-size: 15px;
+  line-height: 20px;
+  pointer-events: none;
+  animation: convo-pop 1.5s ease-out forwards;
+}
+.convo-pop.up {
+  color: #fff;
+  background: #e2588f;
+  box-shadow: 0 2px 0 #a8305f;
+}
+.convo-pop.down {
+  color: var(--dm-cream, #f6eed8);
+  background: var(--dm-ink-soft, #6b5640);
+  box-shadow: 0 2px 0 var(--dm-ink, #3a2a1c);
+}
+@keyframes convo-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  30% {
+    transform: translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+.convo-log {
+  flex: 1;
+  min-height: 0;
+  margin: -6px 0 0;
+  padding: 10px 4px 4px 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Older lines fade out under the header as they scroll away. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 10px);
+}
+.convo-line {
+  display: flex;
+}
+.convo-bubble {
+  max-width: 82%;
+  padding: 7px 11px;
+  border-radius: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.convo-npc .convo-bubble {
+  background: var(--dm-panel-light, #fbf3dc);
+  border: 2px solid var(--dm-border-soft, #a8865a);
+  border-bottom-left-radius: 2px;
+  color: var(--dm-ink, #3a2a1c);
+}
+.convo-you {
+  justify-content: flex-end;
+}
+.convo-you .convo-bubble {
+  background: #dcebc6;
+  border: 2px solid var(--dm-moss, #5d8a3c);
+  border-bottom-right-radius: 2px;
+  color: var(--dm-ink, #3a2a1c);
+}
+.convo-note {
+  justify-content: center;
+}
+.convo-note .convo-bubble {
+  max-width: 92%;
+  padding: 3px 10px;
+  font-size: var(--dm-fs-sm, 13px);
+  color: var(--dm-ink-soft, #6b5640);
+  background: rgba(90, 60, 30, 0.08);
+  text-align: center;
+}
+.convo-gift .convo-bubble {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  background: #fde6f0;
+  border: 1px solid #f0a6c6;
+  color: #b23a6e;
+  font-weight: 700;
+}
+
+.convo-waiting .convo-bubble {
+  display: inline-flex;
+  gap: 4px;
+  padding: 10px 12px;
+}
+.convo-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dm-ink-soft, #6b5640);
+  animation: convo-dot 1s infinite ease-in-out;
+}
+.convo-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.convo-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes convo-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.convo-form {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+.convo-input {
+  flex: 1;
+  min-width: 0;
+}
+.convo-send {
+  flex: none;
+}
+.convo-hint {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--dm-ink-soft, #6b5640);
+}
+@media (pointer: coarse) {
+  .convo-hint {
+    display: none;
+  }
+}
+
+/* Narrower screens: the chat box would sit under the window, so it steps aside while you talk
+   (the conversation is in the window, and it comes back when the window closes). */
+@media (max-width: 1247px) {
+  .dm-hud:has(#convo:not([hidden])):not(:has(#shop-dialog:not([hidden]))) .chat {
+    display: none;
+  }
+}
+
+/* Phones: fill the space between the status panel at the top and the menu bar and hotbar. */
+@media (max-width: 480px) {
+  .convo {
+    top: 146px;
+    bottom: 124px;
+    height: auto;
+    min-height: 0;
+    transform: translateX(-50%);
+    padding: 10px 12px;
+    gap: 8px;
+    animation-name: convo-in-phone;
+  }
+  .convo-portrait,
+  .convo-portrait-img {
+    width: 52px;
+    height: 52px;
+  }
+  .convo-hearts-row .bond-heart {
+    width: 18px;
+    height: 18px;
+  }
+  .convo-head {
+    gap: 10px;
+  }
+}
+@keyframes convo-in-phone {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .convo,
+  .convo-hearts-row.bump-up,
+  .convo-hearts-row.bump-down,
+  .convo-dot {
+    animation: none;
+  }
+}

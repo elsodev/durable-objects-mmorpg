@@ -39,6 +39,8 @@ export interface QueuedTalk<S extends { userId: string }> {
   speaker: S;
   text: string;
   at: number;
+  /** A reply from the conversation window: judged for hearts when it is answered. */
+  judge?: boolean;
 }
 
 /**

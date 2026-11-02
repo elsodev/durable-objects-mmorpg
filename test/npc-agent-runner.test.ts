@@ -88,6 +88,24 @@ function setup(o: Setup = {}) {
 }
 
 describe("NpcRunner + NpcAgent mind", () => {
+  it("judges conversation-window replies before answering, and addresses the answer", async () => {
+    const s = setup({ aiMode: "off" });
+    const host = (s.runner as unknown as { host: NpcHost }).host;
+    const judged: string[] = [];
+    const said: { text: string; to?: string }[] = [];
+    host.judged = (entityId, npcId, verdict) => void judged.push(`${entityId}:${npcId}:${verdict}`);
+    host.chat = (_from, text, to) => void said.push({ text, to });
+    s.runner.talk(s.npc, s.speakers.A, "thank you, mayor, the oak looks wonderful", Date.now(), { judge: true });
+    await vi.waitFor(() => expect(said).toHaveLength(1));
+    expect(judged).toEqual(["p:A:bram:good"]);
+    expect(said[0]!.to).toBe("p:A");
+    // Plain talk (walking up, overheard chat) is never judged.
+    await new Promise((r) => setTimeout(r, 0));
+    s.runner.talk(s.npc, s.speakers.B, INTERACT_TEXT, Date.now());
+    await vi.waitFor(() => expect(said).toHaveLength(2));
+    expect(judged).toHaveLength(1);
+  });
+
   it("reserves AiBudget before the agent's model turn", async () => {
     const s = setup({ budget: true });
     expect(await s.talk("A", "tell me about the old days")).toBe("Hello Alice");

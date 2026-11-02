@@ -33,6 +33,11 @@ export type ClientMsg =
   /** Click-to-move target in tile coords. */
   | { t: "moveTo"; x: number; y: number; seq?: number }
   | { t: "chat"; text: string }
+  /**
+   * A reply typed in the conversation window to the villager with entity id `npc`. Said aloud like
+   * chat; the server judges it good, neutral or bad and moves your hearts (answered with `bond`).
+   */
+  | { t: "npcSay"; npc: string; text: string }
   /** Use the item in the given hotbar slot on a tile (hoe, watering can, seed, pickaxe, sword). */
   | { t: "use"; slot: number; x: number; y: number; req?: string }
   /** Talk/interact with an entity (NPC) or prop (shipping bin, shop stall). */
@@ -153,7 +158,8 @@ export type ServerMsg =
       /** How long (ms) the server has applied the acked input; the client replays only the rest. */
       ackMs?: number;
     }
-  | { t: "chat"; from: string; name: string; text: string; at: number }
+  /** `to`: a villager's line that answers this player entity (the conversation window shows it). */
+  | { t: "chat"; from: string; name: string; text: string; at: number; to?: string }
   | { t: "inventory"; inventory: Inventory }
   | ({ t: "farm"; tiles: FarmTile[] } & ImpactStamp) // changed farm tiles (home)
   | { t: "objects"; upd: PlacedObject[]; del: string[] } // home

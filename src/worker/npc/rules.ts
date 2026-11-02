@@ -7,7 +7,7 @@ export interface RuleMatch {
   confident: boolean;
 }
 
-const RUDE = ["idiot", "stupid", "dumb", "shut up", "hate you", "ugly", "loser", "moron", "useless", "go away", "jerk"];
+export const RUDE = ["idiot", "stupid", "dumb", "shut up", "hate you", "ugly", "loser", "moron", "useless", "go away", "jerk"];
 const GOODBYE = ["bye", "goodbye", "good bye", "farewell", "see you", "see ya", "cya", "later", "good night", "gotta go", "take care"];
 const BUY = ["buy", "purchase", "shop", "store", "wares", "sell me", "for sale", "how much", "price", "prices", "stock", "what do you have", "what do you sell", "browse"];
 const SELL = ["sell", "selling", "trade", "buy my", "buy this", "want my"];
@@ -21,7 +21,7 @@ export function normalize(text: string): string {
   return ` ${text.toLowerCase().replace(/[^a-z0-9']+/g, " ").trim()} `;
 }
 
-function has(norm: string, words: string[]): boolean {
+export function has(norm: string, words: readonly string[]): boolean {
   return words.some((w) => norm.includes(` ${w} `));
 }
 
