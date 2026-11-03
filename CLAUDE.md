@@ -19,6 +19,9 @@ Cozy multiplayer farming game with light monster hunting and mining, running on 
 - Identity inside Durable Objects comes only from the `x-dmmo-*` headers the Worker sets after checking the session. The Worker strips client-supplied copies.
 - Only the owner may connect to or change their `HomeRoom`.
 - Use the WebSocket Hibernation API (`ctx.acceptWebSocket`, `serializeAttachment`). Rebuild in-memory state from `ctx.getWebSockets()` in the constructor. Run the tick timer only while sockets are connected, so empty zones hibernate.
+- Never block the tick on network calls (NPC AI, RPC). Run them async and apply results when they arrive.
+- Crops grow from timestamps (`plantedAt`, watered days), never from a running timer.
+- Keep inventory reads and writes synchronous once loaded; don't `await` between reading and writing a player's inventory.
 
 ## Durable Object billing: alarms and timers (never cause a runaway bill)
 
@@ -35,9 +38,6 @@ A Durable Object is billed for every second it stays awake and for every request
 - **Know the limits.** Workers AI spend is capped by `AI_DAILY_NEURONS` and per-player limits (see docs/guides/deployment.md). Keep zone caps (`ZONE_CAP`, `MAX_COPIES`) and message size caps in place. Don't raise a cap without saying why and what it costs.
 
 If you're unsure whether a change could keep an object awake, stop and ask instead of shipping it.
-- Never block the tick on network calls (NPC AI, RPC). Run them async and apply results when they arrive.
-- Crops grow from timestamps (`plantedAt`, watered days), never from a running timer.
-- Keep inventory reads and writes synchronous once loaded; don't `await` between reading and writing a player's inventory.
 
 ## Coding standards
 
