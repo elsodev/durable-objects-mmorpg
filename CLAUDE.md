@@ -53,4 +53,4 @@ Read these before adding or changing art:
 ## Repo hygiene
 
 - This repo is public: commit code, config, tests, the README and the guides in `docs/guides`. Plans, research notes and design docs stay out of the repo.
-- Commits are authored by the repo owner; don't add AI attribution trailers.
+- Commits are authored by the repo owner. AI co-author trailers (`Co-Authored-By:`) are allowed.
