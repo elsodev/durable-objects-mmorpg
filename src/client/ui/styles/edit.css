@@ -190,7 +190,7 @@
   display: none;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 500px) {
   .edit-open {
     /* Top-right, under the level panel: the bottom of a phone is the menu, chat and hotbar. */
     top: 120px;
@@ -247,7 +247,7 @@
 .dm-editing .dlg-notices {
   top: 140px;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 500px) {
   .dm-editing .dlg-notices {
     top: 104px;
   }

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Layers } from "../src/client/contracts";
 import { TILE } from "../src/client/contracts";
-import { approach, clampAxis, createCamera, offsetFor, pixelLocked, viewRect } from "../src/client/render/camera";
+import { approach, clampAxis, createCamera, offsetFor, pixelLocked, viewRect, viewZoom, zoomedOffset } from "../src/client/render/camera";
 
 function fakeLayers() {
   const pos = () => ({ x: 0, y: 0, set(x: number, y: number) { this.x = x; this.y = y; } });
-  const world = { position: pos() };
-  const overlay = { position: pos() };
+  const world = { position: pos(), scale: pos() };
+  const overlay = { position: pos(), scale: pos() };
   return { world, overlay } as unknown as Layers & { world: { position: { x: number; y: number } }; overlay: { position: { x: number; y: number } } };
 }
 
@@ -113,5 +113,39 @@ describe("createCamera", () => {
     cam.resize(20 * TILE, 10 * TILE);
     expect(layers.world.position.x).toBe((20 * TILE - 12 * TILE) / 2);
     expect(layers.world.position.y).toBe((10 * TILE - 8 * TILE) / 2);
+  });
+});
+
+describe("phone zoom", () => {
+  it("leaves roomy screens alone", () => {
+    expect(viewZoom(1280, 800, 2, 2)).toBe(1);
+    expect(viewZoom(800, 600, 1, 2)).toBe(1);
+  });
+  it("zooms out on phones, keeping whole device pixels per source pixel", () => {
+    expect(viewZoom(390, 844, 3, 2)).toBeCloseTo(4 / 6);
+    expect(viewZoom(390, 844, 2, 2)).toBe(0.75);
+    expect(viewZoom(844, 390, 3, 2)).toBeCloseTo(4 / 6);
+    // No whole-pixel choice near 0.7 at DPR 1: fall back to 0.75.
+    expect(viewZoom(390, 700, 1, 2)).toBe(0.75);
+  });
+  it("puts the zoomed world offset on a device pixel", () => {
+    expect(zoomedOffset(-101, 2 / 3, 3)).toBeCloseTo(Math.round(-101 * 2) / 3);
+    expect(zoomedOffset(-101, 0.75, 2)).toBe(-75.5);
+  });
+  it("round-trips screen and tile at a zoom, and sees more tiles", () => {
+    const layers = fakeLayers();
+    const vp = { w: 390, h: 844 };
+    const cam = createCamera(layers, vp);
+    cam.setBounds(100, 100);
+    cam.follow(50, 50, true);
+    const before = cam.view();
+    cam.setZoom!(0.75, 2);
+    const s = cam.tileToScreen(50, 50);
+    expect(s.x).toBeCloseTo(vp.w / 2, 0);
+    const t = cam.screenToTile(s.x, s.y);
+    expect(t.x).toBeCloseTo(50);
+    expect(t.y).toBeCloseTo(50);
+    expect(cam.view().w).toBeGreaterThan(before.w);
+    expect(cam.zoom!()).toBe(0.75);
   });
 });

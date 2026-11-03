@@ -215,7 +215,7 @@
 
 /* Mid widths: the key badges move into the tooltips and the sliders shrink, so the bar stays one
    row clear of the status panel. */
-@media (min-width: 761px) and (max-width: 1200px) {
+@media (min-width: 761px) and (max-width: 1200px) and (min-height: 501px) {
   .hud-menu {
     gap: 4px;
   }
@@ -345,7 +345,7 @@
 
 /* Mid-size screens: the centred hotbar reaches under the bottom-left chat, so the chat sits above
    the hotbar's row instead. */
-@media (min-width: 761px) and (max-width: 1220px) {
+@media (min-width: 761px) and (max-width: 1220px) and (min-height: 501px) {
   .hud-layer-chat {
     bottom: calc(var(--dm-slot-size) + 36px);
   }
@@ -359,7 +359,7 @@
 
 /* Narrow screens, bottom up: the hotbar, the menu as one row that scrolls sideways, then the
    chat. (A wrapped menu grew upwards over the chat, and both took the same spot.) */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 500px) {
   .dm-hud {
     /* --dm-slot is resolved on :root, so it has to be set again here for the slots to shrink. */
     --dm-slot-size: 40px;
@@ -472,7 +472,7 @@
 .hud-stat-today .hud-stat-icon {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 5' shape-rendering='crispEdges'%3E%3Cpath fill='%23e8b33a' d='M2 0h1v3H2zM0 1h1v1h1v1H1V2H0zM4 1h1v1H4v1H3V2h1z'/%3E%3Cpath fill='%235d8a3c' d='M2 3h1v2H2z'/%3E%3C/svg%3E");
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 500px) {
   .hud-stats {
     top: 64px;
     right: 12px;

@@ -30,6 +30,7 @@ import { openCredits } from "./credits";
 import { mountAudioControls } from "../audio/player";
 import { menuIcon, type MenuIconName } from "./menu-icons";
 import { HOTBAR_SIZE, heartStates, hotbarSlots, pingLevel, shortcutFor } from "./hud-logic";
+import { CHAT_HIDDEN_KEY, initialChatHidden, lineWakesDot } from "./chat-toggle-logic";
 import type { SocialStats } from "../../shared/social";
 import { statRows, statsVisible } from "./stats-logic";
 import { itemTip } from "./item-tip";
@@ -45,6 +46,7 @@ import { createJailTimer, type JailTimer } from "./jail-timer";
 import { createLevelBadge, type LevelBadge } from "./level-badge";
 import { createFeedback, type FeedbackUi } from "./feedback";
 import "./styles/hud.css";
+import "./styles/phone.css";
 
 export { HOTBAR_SIZE };
 
@@ -91,6 +93,16 @@ function menuButton(label: string, icon: MenuIconName, id: string, key: string |
   }
   b.setAttribute("aria-label", label);
   b.title = key ? `${label} (${key})` : label;
+  return b;
+}
+
+/** The guest's "Create account": words on a wide screen, an icon on a phone (the label hides there). */
+function accountButton(onClick: () => void): HTMLButtonElement {
+  const b = button("", "dm-btn dm-btn-primary dm-btn-small hud-create-account", "hud-create-account", onClick);
+  b.appendChild(menuIcon("account", "dm-btn-icon hud-account-icon"));
+  b.appendChild(el("span", { className: "dm-btn-label", text: "Create account" }));
+  b.setAttribute("aria-label", "Create account");
+  b.title = "Create account";
   return b;
 }
 
@@ -223,12 +235,32 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     "div",
     { id: "hud-guest", className: "hud-guest" },
     el("span", { className: "hud-guest-label", text: "Guest", title: "Guest progress stays on this device only" }),
-    button("Create account", "dm-btn dm-btn-primary dm-btn-small", "hud-create-account", () => {
+    accountButton(() => {
       uiSound("click");
       void showAccountPrompt("Create an account to keep your farm and explore Mossbrook.");
     }),
   );
-  const topMenu = el("div", { id: "hud-menu", className: "dm-panel hud-menu" }, guestBadge, inventoryBtn, goalsBtn, friendsBtn, bondsBtn, mapBtn, optionsBtn);
+  // Phones only (CSS hides it elsewhere): folds the chat away so the world isn't covered.
+  let chatHidden = initialChatHidden(() => localStorage.getItem(CHAT_HIDDEN_KEY));
+  const chatBtn = menuButton("Chat", "chat", "hud-btn-chat", null, () => {
+    uiSound("click");
+    setChatHidden(!chatHidden);
+  });
+  chatBtn.classList.add("hud-chat-toggle");
+  chatBtn.appendChild(el("span", { className: "hud-chat-dot" }));
+  function setChatHidden(hidden: boolean): void {
+    chatHidden = hidden;
+    hud.classList.toggle("is-chat-hidden", hidden);
+    chatBtn.setAttribute("aria-pressed", String(!hidden));
+    if (!hidden) chatBtn.classList.remove("has-unread");
+    try {
+      localStorage.setItem(CHAT_HIDDEN_KEY, hidden ? "1" : "0");
+    } catch {
+      // Private mode: the choice just isn't remembered.
+    }
+  }
+  setChatHidden(chatHidden);
+  const topMenu = el("div", { id: "hud-menu", className: "dm-panel hud-menu" }, chatBtn, guestBadge, inventoryBtn, goalsBtn, friendsBtn, bondsBtn, mapBtn, optionsBtn);
   topMenu.appendChild(signOutBtn);
   hud.appendChild(topMenu);
   safe("audio controls", () => mountAudioControls(topMenu), null);
@@ -492,7 +524,10 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
   const send = (msg: Parameters<GameApi["send"]>[0]): void => game.send(msg);
   const shop = safe("shop", () => createShop(shopLayer, { send }), noopShop);
   const goals = safe("goals", () => createGoals(goalsLayer, { send }), noopGoals);
-  const prefillChat = (text: string): void => chat.prefill?.(text);
+  const prefillChat = (text: string): void => {
+    setChatHidden(false);
+    chat.prefill?.(text);
+  };
   const mutes: MuteStore = createMuteStore({ isGuest: () => safe("isGuest", () => game.isGuest(), false) });
   const friends: FriendsPanel = safe(
     "friends",
@@ -860,12 +895,14 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     },
     addChat(name, text, kind = "player", opts) {
       chat.add(name, text, kind, opts);
+      if (chatHidden && lineWakesDot(kind)) chatBtn.classList.add("has-unread");
     },
     whisper(name: string) {
       if (safe("isGuest", () => game.isGuest(), false)) {
         chat.add("", GUEST_CHAT, "system");
         return;
       }
+      setChatHidden(false);
       chat.whisper?.(name);
     },
     setStats(next: SocialStats | null) {

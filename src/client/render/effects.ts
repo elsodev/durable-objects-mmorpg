@@ -161,7 +161,7 @@ class AmbientLayer {
     // Even size + integer centre puts every edge of the light square on a whole pixel, so the
     // covers can butt against it exactly. (Overlapping them multiplied the darkness twice and
     // drew a 1 px black line around the square.)
-    const half = Math.round(look.light * TILE * flicker(this.time));
+    const half = Math.round(look.light * TILE * this.layers.world.scale.x * flicker(this.time));
     const size = half * 2;
     const left = Math.round(cx) - half;
     const top = Math.round(cy) - half;

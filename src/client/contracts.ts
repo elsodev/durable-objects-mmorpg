@@ -306,6 +306,10 @@ export interface Camera {
   follow(x: number, y: number, snap?: boolean): void;
   update(dtMs: number): void; // moves layers.world
   resize(w: number, h: number): void;
+  /** Draw the world at this scale (below 1 zooms out); dpr keeps the offset on device pixels. */
+  setZoom?(zoom: number, devicePixelRatio: number): void;
+  /** The current world scale (1 unless zoomed). */
+  zoom?(): number;
   screenToTile(sx: number, sy: number): Vec2;
   tileToScreen(x: number, y: number): Vec2;
   /** Visible tile rect for culling. */

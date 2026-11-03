@@ -233,7 +233,7 @@
     animation: none;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 500px) {
   .trade-panel {
     right: 50%;
     transform: translate(50%, -50%);

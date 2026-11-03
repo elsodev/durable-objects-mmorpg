@@ -402,7 +402,7 @@
 }
 
 /* ---- phones: the menu row sits at the bottom; the button takes its right end */
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 500px) {
   .hud-feedback-btn {
     right: 12px;
     bottom: calc(var(--dm-slot-size) + 30px + (var(--dm-menu-row) - 36px) / 2);

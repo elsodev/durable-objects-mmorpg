@@ -449,7 +449,7 @@ export function createEditMode(d: EditModeDeps): EditMode {
       }
       case "pan": {
         focusAt = clampFocus(
-          { x: g.from.x - (screen.x - g.screen.x) / TILE, y: g.from.y - (screen.y - g.screen.y) / TILE },
+          { x: g.from.x - (screen.x - g.screen.x) / tilePx(), y: g.from.y - (screen.y - g.screen.y) / tilePx() },
           d.map() ?? { width: 0, height: 0 },
           viewTiles(),
         );
@@ -561,7 +561,12 @@ export function createEditMode(d: EditModeDeps): EditMode {
 
   function viewTiles(): { w: number; h: number } {
     const v = d.viewport();
-    return { w: v.w / TILE, h: v.h / TILE };
+    return { w: v.w / tilePx(), h: v.h / tilePx() };
+  }
+
+  /** Screen px per tile (smaller when the view is zoomed out). */
+  function tilePx(): number {
+    return d.tileToScreen(1, 0).x - d.tileToScreen(0, 0).x || TILE;
   }
 
   function ghosts(): EditGhost[] {

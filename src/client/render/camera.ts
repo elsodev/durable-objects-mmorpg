@@ -77,27 +77,55 @@ export function viewRect(
   return { x: x0, y: y0, w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0) };
 }
 
+/**
+ * How far to zoom out on a small screen. 1 on anything roomy; on a phone about 0.7, picked so a
+ * source pixel still covers a whole number of device pixels (crisp pixel art) where it can.
+ */
+export function viewZoom(cssW: number, cssH: number, dpr: number, scale: number): number {
+  if (Math.min(cssW, cssH) >= 600) return 1;
+  const devicePerSource = Math.round(scale * dpr * 0.7);
+  const z = devicePerSource / (scale * dpr);
+  return z >= 0.6 && z <= 0.85 ? z : 0.75;
+}
+
+/** Screen position of the world container: the world offset zoomed, on a whole device pixel. */
+export function zoomedOffset(offset: number, zoom: number, dpr: number): number {
+  const d = Math.max(1, dpr);
+  return Math.round(offset * zoom * d) / d;
+}
+
 export const createCamera: CreateCamera = (layers, initialViewport) => {
+  // Screen px. The world is drawn at `zoom`, so the camera works on a view of viewport / zoom.
   const viewport = { w: initialViewport.w, h: initialViewport.h };
+  let zoom = 1;
+  let dpr = 1;
+  const worldView = () => ({ w: viewport.w / zoom, h: viewport.h / zoom });
   let bounds: { w: number; h: number } | null = null;
   const target: Vec2 = { x: 0, y: 0 }; // world px, unclamped
   const center: Vec2 = { x: 0, y: 0 }; // world px, clamped
   let offset: Vec2 = { x: 0, y: 0 };
   const quake = { t: 0, ms: 0, amp: 0 };
 
-  const clamped = (p: Vec2): Vec2 => ({
-    x: clampAxis(p.x, viewport.w, bounds ? bounds.w * TILE : null),
-    y: clampAxis(p.y, viewport.h, bounds ? bounds.h * TILE : null),
-  });
+  const clamped = (p: Vec2): Vec2 => {
+    const v = worldView();
+    return {
+      x: clampAxis(p.x, v.w, bounds ? bounds.w * TILE : null),
+      y: clampAxis(p.y, v.h, bounds ? bounds.h * TILE : null),
+    };
+  };
 
   const apply = (): void => {
     const c = clamped(target);
-    offset = offsetFor({ x: pixelLocked(center.x, c.x), y: pixelLocked(center.y, c.y) }, viewport);
+    offset = offsetFor({ x: pixelLocked(center.x, c.x), y: pixelLocked(center.y, c.y) }, worldView());
     // The shake moves only what is drawn, never the tile maths (clicks still land true).
     const sx = Math.round(shakeOffset(quake.t, quake.ms, quake.amp));
     const sy = Math.round(shakeOffset(quake.t + 37, quake.ms + 37, quake.amp * 0.6));
-    layers.world.position.set(offset.x + sx, offset.y + sy);
-    layers.overlay.position.set(offset.x + sx, offset.y + sy);
+    const px = zoomedOffset(offset.x, zoom, dpr) + sx;
+    const py = zoomedOffset(offset.y, zoom, dpr) + sy;
+    for (const layer of [layers.world, layers.overlay]) {
+      layer.scale.set(zoom);
+      layer.position.set(px, py);
+    }
   };
 
   const snapToTarget = (): void => {
@@ -133,9 +161,22 @@ export const createCamera: CreateCamera = (layers, initialViewport) => {
       center.y = c.y;
       apply();
     },
-    screenToTile: (sx, sy) => screenToTileAt(offset, sx, sy),
-    tileToScreen: (x, y) => tileToScreenAt(offset, x, y),
-    view: () => viewRect(offset, viewport, bounds),
+    setZoom(z, devicePixelRatio) {
+      if (z === zoom && devicePixelRatio === dpr) return;
+      zoom = z > 0 ? z : 1;
+      dpr = devicePixelRatio;
+      const c = clamped(target);
+      center.x = c.x;
+      center.y = c.y;
+      apply();
+    },
+    zoom: () => zoom,
+    screenToTile: (sx, sy) => screenToTileAt(offset, sx / zoom, sy / zoom),
+    tileToScreen: (x, y) => {
+      const p = tileToScreenAt(offset, x, y);
+      return { x: p.x * zoom, y: p.y * zoom };
+    },
+    view: () => viewRect(offset, worldView(), bounds),
     shake(ms, amp) {
       // A bigger or fresher hit replaces a dying one.
       if (quake.t < quake.ms && quake.amp > amp && quake.ms - quake.t > ms) return;

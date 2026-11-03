@@ -10,8 +10,9 @@ import { openCreator, type CreatorHandle } from "../ui/creator";
 import { DEFAULT_LOOK, validateLook } from "../../shared/look";
 import { heldItemAt } from "../../shared/held";
 import type { Camera, GameSession, Input, Predictor } from "../contracts";
+import { SCALE } from "../contracts";
 import { createConnection } from "../net/connection";
-import { createCamera } from "../render/camera";
+import { createCamera, viewZoom } from "../render/camera";
 import { createStore } from "../state/store";
 import { mountHud, showRemoved, type GameApi, type Hud, type SessionUser } from "../ui";
 import { readShout } from "../../shared/admin";
@@ -1958,6 +1959,8 @@ export async function startSession(
     viewW = w;
     viewH = h;
     camera.resize(w, h);
+    // Phones see more of the world (CSS px, so the canvas size is the layout size).
+    camera.setZoom?.(viewZoom(w, h, globalThis.devicePixelRatio || 1, SCALE), globalThis.devicePixelRatio || 1);
   }
 
   function frame(dt: number): void {

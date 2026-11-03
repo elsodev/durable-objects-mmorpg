@@ -211,7 +211,7 @@
 .options-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .options-keys { font-size: 13px; line-height: 1.5; margin: 0; }
 
-@media (max-width: 760px) {
+@media (max-width: 760px), (max-height: 500px) {
   #game-menu { --menu-top: 70px; max-height: calc(100vh - 190px); }
   .game-menu-tab { font-size: 12px; padding: 5px 7px 4px; }
   .game-menu-key { display: none; }

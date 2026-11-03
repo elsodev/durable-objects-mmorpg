@@ -1,0 +1,176 @@
+/* Phone layout tweaks that span several HUD modules: the chat toggle, a compact status panel and
+   icon-only buttons. Selectors carry the #ui root so they win over each module's own sheet
+   whatever order the bundle puts them in. */
+
+/* The chat toggle and the account icon only exist on phones. */
+#ui .hud-menu .hud-chat-toggle,
+#ui .hud-account-icon {
+  display: none;
+}
+
+/* The home indicator and rounded corners: keep the HUD inside the safe area. */
+#ui {
+  top: env(safe-area-inset-top, 0px);
+  right: env(safe-area-inset-right, 0px);
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: env(safe-area-inset-left, 0px);
+}
+
+@media (max-width: 760px), (max-height: 500px) {
+  /* Eight slots plus the bar's padding fit any phone width; 40 px is the most they get. */
+  #ui .dm-hud {
+    --dm-slot-size: min(40px, calc((100vw - 60px) / 8));
+    --dm-slot: min(40px, calc((100vw - 60px) / 8));
+  }
+
+  /* ---- chat toggle */
+  #ui .hud-menu .hud-chat-toggle {
+    display: inline-flex;
+    position: relative;
+  }
+  #ui .hud-chat-toggle[aria-pressed="true"] {
+    background: var(--dm-wood-light);
+    box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.18);
+  }
+  .hud-chat-dot {
+    display: none;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dm-berry);
+    box-shadow: 0 0 0 2px var(--dm-cream);
+  }
+  .hud-chat-toggle.has-unread .hud-chat-dot {
+    display: block;
+  }
+  #ui .dm-hud.is-chat-hidden .hud-layer-chat {
+    display: none;
+  }
+
+  /* ---- guest: one icon button instead of "Guest" + "Create account" */
+  #ui .hud-guest-label {
+    display: none;
+  }
+  #ui .hud-guest {
+    gap: 0;
+    padding-right: 4px;
+  }
+  #ui .hud-create-account {
+    height: 32px;
+    min-width: 36px;
+    padding: 0 8px;
+    justify-content: center;
+  }
+  #ui .hud-account-icon {
+    display: block;
+  }
+
+  /* ---- compact status panel (top-left) */
+  #ui .hud-status {
+    top: 8px;
+    left: 8px;
+    gap: 3px;
+    padding: 5px 8px;
+    min-width: 0;
+  }
+  #ui .hud-status-row {
+    gap: 5px;
+  }
+  #ui .hud-zone {
+    font-size: 12px;
+  }
+  #ui .hud-conn {
+    width: 8px;
+    height: 8px;
+  }
+  #ui .hud-hp {
+    gap: 1px;
+    min-height: 12px;
+  }
+  #ui .hud-heart {
+    width: 12px;
+    height: 12px;
+    background-size: 12px 12px;
+  }
+  #ui .hud-status-small {
+    font-size: 11px;
+  }
+  #ui .hud-coin-icon {
+    width: 11px;
+    height: 11px;
+    background: radial-gradient(circle at 50% 50%, #f7d774 0 2px, #e0b43c 2px 3px, #f2c94c 3px);
+  }
+  #ui .home-rows {
+    gap: 2px;
+    padding-top: 3px;
+  }
+  #ui .home-clock {
+    gap: 5px;
+    font-size: 11px;
+  }
+  #ui .home-time {
+    font-size: 12px;
+  }
+  #ui .home-sun {
+    width: 9px;
+    height: 9px;
+  }
+  #ui .home-bar {
+    gap: 4px;
+    font-size: 11px;
+  }
+  #ui .home-bar-track {
+    height: 6px;
+    min-width: 48px;
+    border-width: 1px;
+  }
+
+  /* ---- top right: a smaller level chip and an icon-only Edit button */
+  #ui .hud-right {
+    top: 8px;
+    right: 8px;
+  }
+  #ui .hud-level {
+    gap: 5px;
+    padding: 3px 6px 3px 4px;
+  }
+  #ui .hud-level-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+  }
+  #ui .hud-level-lv {
+    font-size: 7px;
+  }
+  #ui .hud-level-num {
+    font-size: 11px;
+  }
+  #ui .hud-level-track {
+    height: 8px;
+    min-width: 44px;
+  }
+  #ui .edit-open {
+    top: 46px;
+    right: 8px;
+    height: 34px;
+    padding: 0 8px;
+  }
+  #ui .edit-open .edit-open-label {
+    display: none;
+  }
+}
+
+/* The menu row: a little tighter, so more of it shows before it scrolls. */
+@media (max-width: 760px), (max-height: 500px) {
+  #ui .hud-menu {
+    gap: 4px;
+  }
+  #ui .hud-menu-btn,
+  #ui .hud-create-account {
+    min-width: 32px;
+    padding: 0 6px;
+  }
+}
