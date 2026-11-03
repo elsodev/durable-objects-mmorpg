@@ -10,7 +10,7 @@ Thanks for helping make Mossbrook better. Bug reports, ideas, fixes, art and new
 
 ## Getting set up
 
-Follow [Run locally](README.md#run-locally) in the README. In short:
+Follow the [development guide](docs/guides/development.md#run-locally). In short:
 
 ```sh
 npm install
@@ -37,7 +37,7 @@ Keep each PR to one change, and explain why it's needed, not just what it does.
 
 ## How the game is built
 
-The [README](README.md#how-it-runs-on-cloudflare) explains the architecture. The rules that keep the game correct:
+The [README](README.md#architecture) explains the architecture. The rules that keep the game correct:
 
 - **The server is authoritative.** Clients send intents; the Worker and Durable Objects check range, ownership, quantities, slots and speed for every message, and may answer with `reject`. Never trust a number the client sends.
 - **Identity comes from the Worker.** Durable Objects read who a player is only from the headers the Worker sets after checking the session. Only the owner may change their home.
