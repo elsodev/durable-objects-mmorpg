@@ -19,6 +19,22 @@ Cozy multiplayer farming game with light monster hunting and mining, running on 
 - Identity inside Durable Objects comes only from the `x-dmmo-*` headers the Worker sets after checking the session. The Worker strips client-supplied copies.
 - Only the owner may connect to or change their `HomeRoom`.
 - Use the WebSocket Hibernation API (`ctx.acceptWebSocket`, `serializeAttachment`). Rebuild in-memory state from `ctx.getWebSockets()` in the constructor. Run the tick timer only while sockets are connected, so empty zones hibernate.
+
+## Durable Object billing: alarms and timers (never cause a runaway bill)
+
+A Durable Object is billed for every second it stays awake and for every request, including each alarm. One alarm that keeps rescheduling itself, or a timer that never stops, keeps an object awake forever and can run up a huge bill. Before adding or changing any alarm, timer or wake-up:
+
+- **No alarm loops.** An alarm handler must not unconditionally call `setAlarm` again. Schedule the next alarm only when there is real pending work (a rock or tree to regrow, the day end for a player who is present), at a time in the future (never `<= Date.now()`), and stop scheduling when that work is done. Clear alarms (`deleteAlarm`) when nothing is pending.
+- **No new alarms without a reason.** Today only `HomeRoom` uses an alarm (yard regrowth and day end). Prefer timestamps (`plantedAt`, `respawnAt`) checked when a player is present or inside the existing tick over a new alarm.
+- **Timers only while players are connected.** `setInterval`/`setTimeout` ticks start on the first socket and stop when the last socket closes. Never start a timer from the constructor, an alarm or an RPC without a connected player, and never let a timer reschedule itself while no one is connected.
+- **Idle sockets must not keep objects awake.** Pings don't count as activity; idle players are disconnected (zones after 20 min, homes via `kickIdle`).
+- **Bound retries.** Any retry (RPC, storage, AI) has a fixed cap and backoff, and never runs from an alarm on its own.
+- **No per-object fan-out loops.** Don't have one object wake many others on a schedule (for example, a cron or alarm that calls every HomeRoom). The daily cron only touches idle guest accounts.
+- **Respawns and regrowth run inside an existing tick or on player presence**, never on their own timer.
+- **Add a test** for any new alarm or timer showing it stops: it is not rescheduled when there is no pending work and no connected player.
+- **Know the limits.** Workers AI spend is capped by `AI_DAILY_NEURONS` and per-player limits (see docs/guides/deployment.md). Keep zone caps (`ZONE_CAP`, `MAX_COPIES`) and message size caps in place. Don't raise a cap without saying why and what it costs.
+
+If you're unsure whether a change could keep an object awake, stop and ask instead of shipping it.
 - Never block the tick on network calls (NPC AI, RPC). Run them async and apply results when they arrive.
 - Crops grow from timestamps (`plantedAt`, watered days), never from a running timer.
 - Keep inventory reads and writes synchronous once loaded; don't `await` between reading and writing a player's inventory.
