@@ -10,7 +10,7 @@ import { snapshotEntity } from "../src/worker/game/diff";
 import type { EntityState, Inventory, Look } from "../src/shared/types";
 import { DEFAULT_LOOK } from "../src/shared/look";
 
-const inv = (): Inventory => starterInventory(); // hoe, watering_can, pickaxe, axe, sword_wood, seeds, chair
+const inv = (): Inventory => starterInventory(); // hoe, watering_can, pickaxe, axe, sword_wood, seeds, chair, scythe
 const player = (over: Partial<EntityState> = {}): EntityState => ({
   id: "p:a",
   kind: "player",
@@ -25,7 +25,7 @@ const player = (over: Partial<EntityState> = {}): EntityState => ({
 
 describe("held item selection", () => {
   it("holds tools and weapons only", () => {
-    for (const t of ["hoe", "watering_can", "pickaxe", "pickaxe_iron", "axe", "sword_wood", "sword_copper"]) expect(isHoldable(t), t).toBe(true);
+    for (const t of ["hoe", "watering_can", "pickaxe", "pickaxe_iron", "axe", "sword_wood", "sword_copper", "scythe"]) expect(isHoldable(t), t).toBe(true);
     for (const t of ["seed_turnip", "chair_wood", "turnip", "copper_ore", "nope", "", null, undefined]) expect(isHoldable(t), String(t)).toBe(false);
     // Prepared food rides in the hand, ready to eat.
     for (const t of ["bread_roll", "coffee"]) expect(isHoldable(t), t).toBe(true);
@@ -36,7 +36,8 @@ describe("held item selection", () => {
     expect(heldItemAt(i, 0)).toBe("hoe");
     expect(heldItemAt(i, 4)).toBe("sword_wood");
     expect(heldItemAt(i, 5)).toBeUndefined(); // seeds aren't drawn in the hand
-    expect(heldItemAt(i, 7)).toBeUndefined(); // empty slot
+    expect(heldItemAt(i, 7)).toBe("scythe");
+    expect(heldItemAt(i, 6)).toBeUndefined(); // furniture isn't drawn in the hand
     expect(heldItemAt(i, null)).toBeUndefined();
   });
 
@@ -98,7 +99,7 @@ describe("hold through a real HomeRoom", () => {
     const axe = slots.findIndex((s: any) => s?.item === "axe");
     await sendMsg(r, "alice", ws, { t: "hold", slot: axe });
     expect(p.entity.held).toBe("axe");
-    await sendMsg(r, "alice", ws, { t: "hold", slot: 7 }); // empty slot
+    await sendMsg(r, "alice", ws, { t: "hold", slot: 6 }); // the chair: not held
     expect(p.entity.held).toBeUndefined();
     await sendMsg(r, "alice", ws, { t: "hold", slot: axe });
     await sendMsg(r, "alice", ws, { t: "moveSlot", from: axe, to: 20 }); // into the bag

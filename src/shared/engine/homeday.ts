@@ -30,7 +30,7 @@ export const MAX_STAMINA = 100;
 /** Passing out at 2:00 leaves you more tired the next morning. */
 export const PASS_OUT_STAMINA = 50;
 // Pickaxe and axe cost per hit (rocks and trees take several, see toolRules.ts).
-export const TOOL_STAMINA: Record<ToolKind, number> = { hoe: 2, water: 2, pickaxe: 2, axe: 2, sword: 3 };
+export const TOOL_STAMINA: Record<ToolKind, number> = { hoe: 2, water: 2, pickaxe: 2, axe: 2, sword: 3, scythe: 2 };
 export const MAX_WATER = 20;
 
 export interface CropLoss {

@@ -32,7 +32,7 @@ const FADE_OUT_MS = 250;
 const FLASH_MS = 100;
 const POOL_MAX = 32;
 const MAX_DT = 100;
-const PRELOAD_ACTIONS = ["eat", "hold_up"] as const;
+const PRELOAD_ACTIONS = ["eat", "hold_up", "harvest"] as const;
 
 type WithLook = EntityState & { look?: unknown };
 
@@ -134,7 +134,7 @@ export const createEntityLayer = ((
     rec.body.anchor.set(rec.char.anchor.x, rec.char.anchor.y);
     rec.actAnchored = false;
     rec.shadow.scale.set(rec.profile.shadow);
-    // Eating and holding up a gift come from the server without warning: start loading those
+    // Eating, holding up a gift and picking a crop come from the server without warning: start loading those
     // frames now so the first one isn't drawn as a plain idle pose.
     if (s.kind === "player") for (const name of PRELOAD_ACTIONS) rec.char.action?.(name);
   }

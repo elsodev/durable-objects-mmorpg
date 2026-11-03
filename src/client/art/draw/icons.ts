@@ -51,6 +51,18 @@ function axe(g: PixelGrid): void {
   g.rect(19, 7, 4, 4, P.woodDark);
 }
 
+/** Fallback scythe (the catalog icon is used when it loads): upright shaft, grip peg, a long blade curving down. */
+function scythe(g: PixelGrid): void {
+  g.rect(9, 3, 2, 27, P.woodLight);
+  g.vline(10, 3, 27, P.bark);
+  g.rect(5, 17, 4, 2, P.woodLight);
+  g.poly([[11, 3], [20, 4], [27, 8], [30, 14], [25, 10], [18, 8], [11, 7]], 0x86807f);
+  g.line(12, 4, 21, 5, 0xc4b59f);
+  g.line(21, 5, 28, 9, 0xffffff);
+  g.line(11, 7, 18, 8, 0x4d4a5d);
+  g.outline();
+}
+
 function sword(g: PixelGrid, blade: Rgb): void {
   g.poly([[8, 22], [24, 6], [27, 5], [26, 8], [10, 24]], blade);
   g.line(9, 22, 25, 6, shade(blade, 0.4));
@@ -323,6 +335,7 @@ const ICONS: Record<string, (g: PixelGrid) => void> = {
   axe,
   sword_wood: (g) => sword(g, P.woodLight),
   sword_copper: (g) => sword(g, P.copper),
+  scythe,
   turnip,
   carrot,
   strawberry,

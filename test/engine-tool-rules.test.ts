@@ -34,7 +34,7 @@ const TARGETS: Record<string, ToolTarget> = {
   bin: { kind: "bin" },
   none: { kind: "none" },
 };
-const KEYS: ToolKey[] = ["hoe", "water", "pickaxe", "axe", "sword", "seed", "other"];
+const KEYS: ToolKey[] = ["hoe", "water", "pickaxe", "axe", "sword", "scythe", "seed", "other"];
 
 /** Expected effect (or "-" for nothing) on the home farm, with a basic (power 1) pickaxe. */
 const HOME: Record<ToolKey, Record<keyof typeof TARGETS, string>> = {
@@ -43,6 +43,7 @@ const HOME: Record<ToolKey, Record<keyof typeof TARGETS, string>> = {
   pickaxe: { monster: "hitMonster", stone: "hitRock", iron: "-", tree: "-", stump: "-", water: "-", soilEmpty: "-", soilGrowing: "-", soilReady: "harvest", grass: "-", bin: "-", none: "-" },
   axe: { monster: "hitMonster", stone: "-", iron: "-", tree: "hitTree", stump: "hitStump", water: "-", soilEmpty: "-", soilGrowing: "-", soilReady: "harvest", grass: "-", bin: "-", none: "-" },
   sword: { monster: "hitMonster", stone: "-", iron: "-", tree: "-", stump: "-", water: "-", soilEmpty: "-", soilGrowing: "-", soilReady: "harvest", grass: "-", bin: "-", none: "-" },
+  scythe: { monster: "hitMonster", stone: "-", iron: "-", tree: "-", stump: "-", water: "-", soilEmpty: "-", soilGrowing: "-", soilReady: "harvest", grass: "-", bin: "-", none: "-" },
   seed: { monster: "-", stone: "-", iron: "-", tree: "-", stump: "-", water: "-", soilEmpty: "plant", soilGrowing: "-", soilReady: "harvest", grass: "-", bin: "ship", none: "-" },
   other: { monster: "-", stone: "-", iron: "-", tree: "-", stump: "-", water: "-", soilEmpty: "-", soilGrowing: "-", soilReady: "harvest", grass: "-", bin: "ship", none: "-" },
 };
@@ -64,7 +65,7 @@ describe("tool rules matrix", () => {
         const out = resolveToolUse(key, target, { farm: false, power: 2 });
         const want = HOME[key][name] === "harvest" ? "-" : HOME[key][name];
         const zoneWant =
-          key === "hoe" || key === "water" || key === "seed"
+          key === "hoe" || key === "water" || key === "seed" || key === "scythe"
             ? want === "hitMonster"
               ? "hitMonster"
               : "-"
@@ -96,6 +97,20 @@ describe("tool rules matrix", () => {
     expect(reason("axe", TARGETS.grass)).toBe("");
     expect(reason("sword", TARGETS.none)).toBe("");
     expect(resolveToolUse("pickaxe", TARGETS.iron, { farm: true, power: 2 })).toEqual({ ok: true, effect: "hitRock" });
+    expect(reason("scythe", TARGETS.stone)).toBe("Your scythe bounces off the rock. You need a pickaxe for that.");
+    expect(reason("scythe", TARGETS.tree)).toMatch(/scythe bounces off the tree.*axe/);
+    // A swish through unripe plants or grass needs no notice (and no clunk).
+    expect(reason("scythe", TARGETS.soilGrowing)).toBe("");
+    expect(reason("scythe", TARGETS.grass)).toBe("");
+  });
+
+  it("the scythe is a swinging farm tool that harvests ripe crops and works only at home", () => {
+    expect(toolKeyOf("scythe")).toBe("scythe");
+    expect(isSwingTool("scythe")).toBe(true);
+    expect(resolveToolUse("scythe", TARGETS.soilReady, { farm: true })).toEqual({ ok: true, effect: "harvest" });
+    expect(resolveToolUse("scythe", { kind: "soil", crop: "dead" }, { farm: true })).toEqual({ ok: true, effect: "clear" });
+    expect(resolveToolUse("scythe", TARGETS.soilReady, { farm: false })).toEqual({ ok: false, swing: true, reason: "That's for your farm at home." });
+    expect(toolDamage("scythe")).toBe(2);
   });
 });
 

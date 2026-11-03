@@ -170,3 +170,4 @@ export {
   type Quality,
 } from "./harvest";
 export { SWING_TOTAL_MS, TOOL_TIMING, impactDelayMs, toolTiming, type ToolTiming } from "./toolTiming";
+export { scytheSweep } from "./scythe";

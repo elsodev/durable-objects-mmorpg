@@ -10297,6 +10297,16 @@
    ],
    "note": "items1 short sword recoloured to the copper sword held/swing ramp"
   },
+  "scythe": {
+   "file": "icons/tool_icons.png",
+   "rect": [
+    128,
+    0,
+    32,
+    32
+   ],
+   "note": "the generator scythe's upright held frame (same pixels and palette as tools/scythe.*), hand gap filled, shaft shortened, grip peg added"
+  },
   "seed_turnip": {
    "file": "icons/grains_grasses.png",
    "rect": [

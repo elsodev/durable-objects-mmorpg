@@ -757,6 +757,19 @@
    "ms": 60,
    "source": "generator 'slash_128' custom animation"
   },
+  "scythe": {
+   "frameSize": 192,
+   "frames": [
+    "slash,0",
+    "slash,1",
+    "slash,2",
+    "slash,3",
+    "slash,4",
+    "slash,5"
+   ],
+   "ms": 75,
+   "source": "generator 'slash_oversize' custom animation (the scythe's own swing)"
+  },
   "fishing": {
    "frameSize": 128,
    "frames": [
@@ -807,6 +820,19 @@
   "harvest": {
    "frameSize": 64,
    "frames": [
+    "slash,0",
+    "slash,1",
+    "slash,2",
+    "slash,3",
+    "slash,3",
+    "slash,4"
+   ],
+   "ms": 75,
+   "source": "generator slash frames 0-4 standing: wind up, the hand sweeps down to the crop (frame 3, held a beat) and lifts it out (frame 4); the scythe plays the full slash with its blade"
+  },
+  "plant": {
+   "frameSize": 64,
+   "frames": [
     "walk,0",
     "sit,1",
     "sit,1",
@@ -814,7 +840,7 @@
     "walk,0"
    ],
    "ms": 110,
-   "source": "walk stand + generator sit kneel frame"
+   "source": "walk stand + generator sit kneel frame (pressing a seed into the soil)"
   },
   "hurt": {
    "frameSize": 64,
@@ -907,6 +933,15 @@
    "held": {
     "bg": "tools/hoe.held.bg.png",
     "fg": "tools/hoe.held.fg.png"
+   }
+  },
+  "scythe": {
+   "action": "scythe",
+   "bg": "tools/scythe.bg.png",
+   "fg": "tools/scythe.fg.png",
+   "held": {
+    "bg": "tools/scythe.held.bg.png",
+    "fg": "tools/scythe.held.fg.png"
    }
   },
   "watering_can": {

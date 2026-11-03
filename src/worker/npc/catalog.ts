@@ -207,6 +207,7 @@ export const NPCS: Record<string, NpcDef> = {
       "A big, soft-spoken blacksmith who measures words like iron, takes pride in sturdy work, and secretly carves tiny wooden animals.",
     knowledge: [
       "An iron pickaxe breaks iron, silver, gold, gem and diamond rocks; the starter pickaxe only handles stone and copper.",
+      "Fenwick forges scythes: one swing cuts the ripe crop you aim at and the ripe crops either side of it.",
       "Fenwick buys stone, ores, gems and crab shells, but pays less for ore than the shipping bin does.",
       "Gold and diamond rocks are very rare, and turn up mostly on the deepest cave floor.",
       "Fenwick's workshop stocks the Furniture Stall, the east stall on the market lane: chairs, beds, rugs, lamps, a sofa, a fridge, a TV and more. His apprentice Jory minds it by day; after hours you pay into the honour box.",
@@ -215,6 +216,7 @@ export const NPCS: Record<string, NpcDef> = {
     ],
     shop: {
       sells: offers([
+        "scythe",
         "pickaxe_iron",
         "axe",
         "sword_copper",

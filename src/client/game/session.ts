@@ -35,7 +35,7 @@ import { getMap, hasMap } from "../../shared/maps";
 import type { LoadingScreen } from "../ui/loading";
 import { createTutorial } from "../ui/tutorial";
 import type { ClientMsg, ServerMsg } from "../../shared/protocol";
-import { Ground, TICK_MS, type EntityState, type HomeMapId, type MapData, type Vec2, type ZoneId } from "../../shared/types";
+import { Ground, TICK_MS, type EntityState, type FarmTile, type HomeMapId, type MapData, type Vec2, type ZoneId } from "../../shared/types";
 import {
   chatKind,
   createReqIds,
@@ -73,7 +73,7 @@ import { gainText } from "../ui/bonds-logic";
 import { npcPortrait } from "./npc-portrait";
 import { createPredictor } from "./prediction";
 import { createFarmFx } from "./farm-fx";
-import { isWaterSource } from "../../shared/engine";
+import { harvestable, isWaterSource } from "../../shared/engine";
 import { EAT_COOLDOWN_MS } from "../../shared/engine/eating";
 import { createWorld, type World } from "./world";
 import {
@@ -81,6 +81,7 @@ import {
   effectiveAct,
   pendingImpactMs,
   predictUse,
+  startHarvest,
   startSwing,
   swingLocked,
   takeImpact,
@@ -993,6 +994,16 @@ export async function startSession(
     }
   }
 
+  /** Picked crops pop with a little sparkle where they stood (applied at the sweep's impact). */
+  function harvestFx(tiles: readonly FarmTile[]): void {
+    const w = world;
+    if (!w) return;
+    for (const t of tiles) {
+      const was = store.farm.get(`${t.x},${t.y}`);
+      if (t.crop === null && was?.crop && !was.dead) w.effects.burst({ x: t.x + 0.5, y: t.y + 0.5 }, "sparkle");
+    }
+  }
+
   /** Holds a tool swing's result until its impact frame; everything else applies at once. */
   function handleMessage(msg: ServerMsg): void {
     if (msg.t === "farm" || msg.t === "rock" || msg.t === "tree" || msg.t === "farmAll") {
@@ -1022,6 +1033,7 @@ export async function startSession(
   function applyMessage(msg: ServerMsg): void {
     if (msg.t === "welcome" && !hasMap(msg.homeMap ?? msg.zone)) return pageOutdated(msg.homeMap ?? msg.zone);
     sfxBefore(msg);
+    if (msg.t === "farm") harvestFx(msg.tiles);
     store.apply(msg, performance.now());
     switch (msg.t) {
       case "welcome":
@@ -1460,8 +1472,11 @@ export async function startSession(
       return;
     }
     const me = you();
+    // Picking a ripe crop by hand (a visitor, or anything but the scythe in hand) is a standing
+    // sweep the server will echo; start it now so the crop pops when the hand lands.
+    const byHand = visiting ? ripeAt(tile) : !!outcome?.ok && outcome.effect === "harvest" && toolKeyOf(item) !== "scythe";
     // Swing right away (even at nothing): the server's answer only adds the results.
-    const s = me ? startSwing(item, me, tile, now, serverNow()) : null;
+    const s = !me ? null : byHand ? startHarvest(me, tile, now, serverNow()) : startSwing(item, me, tile, now, serverNow());
     if (s) {
       swing = s;
       localAct = s.act;
@@ -1477,13 +1492,20 @@ export async function startSession(
     const land = (): void => {
       farmFx.used(used, tile, req, water, atHome);
       if (clunk) playSfx("tool_clunk");
-      else if (sfx !== "tool_sword") playSfx(sfx);
+      // Picking by hand sounds when the crop comes up (the farm message), not like the tool in hand.
+      else if (sfx !== "tool_sword" && !byHand) playSfx(sfx);
       if (outcome?.ok) impactFx(tile, outcome.effect, used);
       else if (outcome?.bounce && store.youId) reboundFx(tile, store.youId, item);
     };
     // Seeds and other non-swings land at once; a swing lands at its impact frame (see frame()).
     if (s) onImpact = land;
     else land();
+  }
+
+  /** A ripe, living crop on `tile` (what a hand can pick). */
+  function ripeAt(tile: Vec2): boolean {
+    const t = store.farm.get(`${tile.x},${tile.y}`);
+    return !!t && !t.dead && !!harvestable(t, farmTime());
   }
 
   function isBinAt(tile: Vec2): boolean {

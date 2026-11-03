@@ -110,11 +110,11 @@ describe("look manifest", () => {
 });
 
 describe("look actions", () => {
-  const TOOL_ITEMS = ["hoe", "watering_can", "pickaxe", "pickaxe_iron", "sword_wood", "sword_copper", "axe", "fishing_rod"];
+  const TOOL_ITEMS = ["hoe", "watering_can", "pickaxe", "pickaxe_iron", "sword_wood", "sword_copper", "axe", "fishing_rod", "scythe"];
 
   it("lists the actions and maps every farming/combat tool item to one", async () => {
     const m = parseLookManifest(await customJson())!;
-    expect(Object.keys(m.actions).sort()).toEqual(["eat", "faint", "fishing", "harvest", "hoe", "hold_up", "hurt", "meditate", "sit", "sit_ground", "smash", "sword", "think", "watering", "wave"]);
+    expect(Object.keys(m.actions).sort()).toEqual(["eat", "faint", "fishing", "harvest", "hoe", "hold_up", "hurt", "meditate", "plant", "scythe", "sit", "sit_ground", "smash", "sword", "think", "watering", "wave"]);
     expect(Object.keys(m.tools).sort()).toEqual([...TOOL_ITEMS].sort());
     expect(m.tools.hoe!.action).toBe("hoe");
     expect(m.tools.watering_can!.action).toBe("watering");
@@ -152,8 +152,11 @@ describe("look actions", () => {
     // hurt has one generator row (row 8 of the action sheet) used for every facing
     expect(new Set(hurt.draws.map((d) => d.sy))).toEqual(new Set([8 * 64]));
     expect(hurt.files.every((f) => f.endsWith(".act.png"))).toBe(true);
+    // Planting kneels (walk stand + the action sheet's kneel); harvesting is a standing slash.
+    const plant = actionPlan(m, { ...PICKED, body: "female" }, "plant")!;
+    expect(plant.files.some((f) => f.endsWith(".act.png")) && plant.files.some((f) => !f.endsWith(".act.png"))).toBe(true);
     const harvest = actionPlan(m, { ...PICKED, body: "female" }, "harvest")!;
-    expect(harvest.files.some((f) => f.endsWith(".act.png")) && harvest.files.some((f) => !f.endsWith(".act.png"))).toBe(true);
+    expect(harvest.files.every((f) => !f.endsWith(".act.png"))).toBe(true);
     expect(actionPlan(m, PICKED, "dance")).toBeNull();
   });
 

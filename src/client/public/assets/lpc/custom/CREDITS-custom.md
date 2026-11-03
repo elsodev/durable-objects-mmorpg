@@ -353,6 +353,10 @@ Most files are multi-licensed: you may use any ONE of the licenses listed for th
 | `tools/sword_copper.held.bg.png`, `tools/sword_wood.held.bg.png` | tools | weapons/sword/weapon_sword_arming (copper variant) | `spritesheets/weapon/sword/arming/universal/bg/walk/copper.png` | copper (generator variant); blade recoloured copper -> wood (oak) for the wooden sword; up and down rows moved from the left hand to the right hand (frames re-phased and shifted, not flipped) | ElizaWy; walk and down by JaidynReiman | OGA-BY 3.0 | https://github.com/ElizaWy/LPC/tree/main/Characters/Props/Sword%2001%20-%20Arming%20Sword https://opengameart.org/content/lpc-expanded-sit-run-jump-more |
 | `tools/sword_copper.held.fg.png`, `tools/sword_wood.held.fg.png` | tools | weapons/sword/weapon_sword_arming (copper variant) | `spritesheets/weapon/sword/arming/universal/fg/walk/copper.png` | copper (generator variant); blade recoloured copper -> wood (oak) for the wooden sword; up and down rows moved from the left hand to the right hand (frames re-phased and shifted, not flipped) | ElizaWy; walk and down by JaidynReiman | OGA-BY 3.0 | https://github.com/ElizaWy/LPC/tree/main/Characters/Props/Sword%2001%20-%20Arming%20Sword https://opengameart.org/content/lpc-expanded-sit-run-jump-more |
 | `tools/fishing_rod.held.bg.png`, `tools/fishing_rod.held.fg.png` | tools | tools/tool_hoe (derived) | `spritesheets/tools/hoe/bg/walk.png`, `spritesheets/tools/hoe/fg/walk.png` | derived by script from the hoe walk layers: blade removed, handle recoloured to the fishing rod palette (oak grip, tan rod), reel and hanging line pixels added | bluecarrot16,JaidynReiman,Pierre Vigier (pvigier),Johannes Sjölund (wulax),Inboxninja,DurableMMO edits CC0 | CC-BY-SA 3.0 | https://opengameart.org/content/lpc-hand-tools |
+| `tools/scythe.bg.png` | tools | weapons/polearm/weapon_polearm_scythe | `spritesheets/weapon/polearm/scythe/attack_slash/behind/scythe.png` | generator default (steel blade, oak shaft); unchanged, the slash_oversize layout (4 facing rows x 6 frames of 192 px) is the `scythe` action as is | bluecarrot16 | CC-BY-SA 3.0 | https://opengameart.org/content/lpc-extended-weapon-animations |
+| `tools/scythe.fg.png` | tools | weapons/polearm/weapon_polearm_scythe | `spritesheets/weapon/polearm/scythe/attack_slash/scythe.png` | generator default (steel blade, oak shaft); unchanged | bluecarrot16 | CC-BY-SA 3.0 | https://opengameart.org/content/lpc-extended-weapon-animations |
+| `tools/scythe.held.bg.png` | tools | weapons/polearm/weapon_polearm_scythe | `spritesheets/weapon/polearm/scythe/universal_behind/walk/scythe.png` | generator default; unchanged | bluecarrot16 | CC-BY-SA 3.0 | https://opengameart.org/content/lpc-extended-weapon-animations |
+| `tools/scythe.held.fg.png` | tools | weapons/polearm/weapon_polearm_scythe | `spritesheets/weapon/polearm/scythe/walk/scythe.png` | generator default; unchanged | bluecarrot16 | CC-BY-SA 3.0 | https://opengameart.org/content/lpc-extended-weapon-animations |
 
 ## License options per output file
 
@@ -554,6 +558,10 @@ Licenses every source of the file allows (pick one of these for the whole file).
 | `tools/axe.held.thin.fg.png` | CC-BY 4.0, CC-BY-SA 3.0+, GPL 2.0+, OGA-BY-3.0 | no |
 | `tools/fishing_rod.held.bg.png` | CC-BY-SA 3.0 | **yes** |
 | `tools/fishing_rod.held.fg.png` | CC-BY-SA 3.0 | **yes** |
+| `tools/scythe.bg.png` | CC-BY-SA 3.0 | **yes** |
+| `tools/scythe.fg.png` | CC-BY-SA 3.0 | **yes** |
+| `tools/scythe.held.bg.png` | CC-BY-SA 3.0 | **yes** |
+| `tools/scythe.held.fg.png` | CC-BY-SA 3.0 | **yes** |
 | `tools/hoe.held.bg.png` | CC-BY-SA 3.0 | **yes** |
 | `tools/hoe.held.fg.png` | CC-BY-SA 3.0 | **yes** |
 | `tools/pickaxe.held.fg.png` | CC-BY 4.0, CC-BY-SA 3.0+, GPL 2.0+, OGA-BY-3.0 | no |
@@ -603,6 +611,7 @@ Licenses every source of the file allows (pick one of these for the whole file).
 - **tools/tool_hoe**: original by bluecarrot16, color reduced by JaidynReiman
 - **tools/tool_pickaxe**: original by bluecarrot16, color reduced by JaidynReiman
 - **tools/tool_rod**: original by bluecarrot16, color reduced by JaidynReiman
+- **weapons/polearm/weapon_polearm_scythe**: original by bluecarrot16 (LPC extended weapon animations)
 - **torso/aprons/torso_aprons_apron_full**: original apron by ElizaWy, extended to all animation frames and edited for v3 bases by bluecarrot16
 - **torso/aprons/torso_aprons_apron_full (sit frames derived from walk)**: original apron by ElizaWy, extended to all animation frames and edited for v3 bases by bluecarrot16
 - **torso/aprons/torso_aprons_suspenders**: original by ElizaWy; spellcast/thrust/shoot/hurt/combat adapted from original by JaidynReiman

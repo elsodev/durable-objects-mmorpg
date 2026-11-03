@@ -20,7 +20,10 @@ import { Ground, type EntityState, type Facing, type FarmTile, type ItemId, type
 type Act = NonNullable<EntityState["act"]>;
 
 /** Act kinds that only ever come from a tool swing (see home.ts / zone.ts onUse). */
-const TOOL_ACT_KINDS: ReadonlySet<string> = new Set(["hoe", "water", "pickaxe", "axe", "sword", "fish"]);
+const TOOL_ACT_KINDS: ReadonlySet<string> = new Set(["hoe", "water", "pickaxe", "axe", "sword", "scythe", "fish"]);
+
+/** A server act this soon after your own local act of the same kind is its echo (about one round trip). */
+const ECHO_WINDOW_MS = 1500;
 
 export interface LocalSwing {
   act: Act;
@@ -61,6 +64,25 @@ export function startSwing(
   };
 }
 
+/**
+ * Starts your own hand-picking sweep at `tile` (a ripe crop picked by hand, or with any tool but
+ * the scythe): the same standing sweep the server will echo, timed so the crop pops when the hand
+ * lands (toolTiming "harvest").
+ */
+export function startHarvest(me: Vec2 & { facing: Facing }, tile: Vec2, nowMs: number, serverAt: number): LocalSwing {
+  const facing = facingToward(me, tile, me.facing);
+  const timing = toolTiming("harvest", facing) ?? { impactMs: 0, totalMs: SWING_TOTAL_MS };
+  return {
+    act: { k: "harvest", at: serverAt },
+    facing,
+    startMs: nowMs,
+    impactMs: nowMs + timing.impactMs,
+    endMs: nowMs + timing.totalMs,
+    lockUntil: nowMs + timing.totalMs,
+    impacted: false,
+  };
+}
+
 /** True exactly once per swing: the first call at or after its impact. */
 export function takeImpact(s: LocalSwing | null, nowMs: number): boolean {
   if (!s || s.impacted || nowMs < s.impactMs) return false;
@@ -87,7 +109,10 @@ export function swingPlaying(s: LocalSwing | null, nowMs: number): boolean {
  * dropped; keeping the last local act afterwards stops an old server act from replaying.
  */
 export function effectiveAct(server: Act | undefined, local: Act | null): Act | undefined {
-  const s = server && !TOOL_ACT_KINDS.has(server.k) ? server : undefined;
+  // The server's echo of a sweep you already started locally (same kind, stamped a moment later)
+  // must not restart it mid-swing.
+  const echo = !!server && !!local && server.k === local.k && server.at >= local.at && server.at - local.at < ECHO_WINDOW_MS;
+  const s = server && !TOOL_ACT_KINDS.has(server.k) && !echo ? server : undefined;
   if (!local) return s;
   if (!s) return local;
   return s.at > local.at ? s : local;

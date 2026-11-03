@@ -82,6 +82,7 @@ import {
   clearDeadCrop,
   harvestRand,
   impactDelayMs,
+  scytheSweep,
   isFarmable,
   isWaterSource,
   MAX_STAMINA,
@@ -186,6 +187,7 @@ import {
 } from "./visit/invites";
 import { TRADE_ELSEWHERE, visitorVerdict } from "./visit/permissions";
 import { canCredit, creditHarvest, harvestText, HarvestTally } from "./visit/harvest";
+import { planHarvest } from "./game/sweep";
 import { sleepCountdownFor, VisitorSet, type VisitAttachment, type Visitor } from "./visit/visitors";
 import { HOME_COMMAND_NOTICE, INVITE_TTL_MS, MAX_VISITORS, parseHomeCommand, type InviteCheck, type InviteNotice, type VisitorEntry } from "../shared/visits";
 import {
@@ -2010,7 +2012,7 @@ export class HomeRoom extends DurableObject<Env> {
     }
     v.entity.facing = facingToTile(v.entity, msg.x, msg.y);
     v.entity.act = { k: "harvest", at: now };
-    this.toMap("home", { t: "farm", tiles: [tile] });
+    this.toMap("home", { t: "farm", tiles: [tile], by: v.entity.id, impactAt: now + impactDelayMs("harvest", v.entity.facing) });
     if (toBag) send(this.player.ws, { t: "inventory", inventory: save.inventory });
     if (toBin) this.sendBin(this.player);
     this.persist({ farm: true, save: true, day: toBin });
@@ -2368,20 +2370,8 @@ export class HomeRoom extends DurableObject<Env> {
     const stamp = { by: p.entity.id, impactAt: now + impactDelayMs(key, p.entity.facing) };
     const tile = this.farm.find((t) => t.x === msg.x && t.y === msg.y);
     switch (out.effect) {
-      case "harvest": {
-        const roll = tile ? this.rollHarvestAt(tile, fnow) : null;
-        if (!tile || !roll) return this.reject(p, msg, "Nothing to harvest.");
-        const trial = cloneInventory(inv);
-        if (!roll.items.every((it) => addItem(trial, it.item, it.qty))) return this.reject(p, msg, "Your bag is full.");
-        harvestCrop(tile, fnow);
-        save.inventory = trial;
-        this.act(p, "harvest", now);
-        reportStat(this.env, "crops_harvested", roll.count);
-        this.bumpStat("cropsHarvested");
-        this.toMap("home", { t: "farm", tiles: [tile] });
-        this.persist({ farm: true, save: true });
-        return this.inventoryChanged(p, harvestText(roll.items));
-      }
+      case "harvest":
+        return this.harvest(p, msg, key, def, fnow, now);
       case "clear":
         if (!tile || !clearDeadCrop(tile)) return this.reject(p, msg, "Nothing to clear.");
         if (!isSwingTool(key)) this.act(p, "harvest", now);
@@ -2430,6 +2420,33 @@ export class HomeRoom extends DurableObject<Env> {
       case "hitMonster":
         return; // no monsters at home
     }
+  }
+
+  /**
+   * Picks a ripe crop. By hand (or with any tool but the scythe) it takes the aimed tile and plays
+   * the standing sweep; the scythe also cuts the ripe crops on the two tiles beside it across the
+   * facing (each must be in reach), keeps its own swing and costs tool stamina like any swing.
+   */
+  private harvest(p: HPlayer, msg: Extract<ClientMsg, { t: "use" }>, key: ToolKey, def: ItemDef, fnow: number, now: number): void {
+    const save = this.save!;
+    const scythe = key === "scythe";
+    const spots = scythe ? scytheSweep(msg, p.entity.facing).filter((t, i) => i === 0 || inToolReach(p.entity, t.x, t.y)) : [msg];
+    const plan = planHarvest(spots, this.farm, save.inventory, (t) => this.rollHarvestAt(t, fnow));
+    if (!plan.ok) return this.reject(p, msg, plan.reason);
+    if (scythe && !this.spendStamina(p, msg, def)) return;
+    for (const t of plan.tiles) {
+      harvestCrop(t, fnow);
+      this.bumpStat("cropsHarvested");
+    }
+    save.inventory = plan.inventory;
+    if (!scythe) this.act(p, "harvest", now);
+    reportStat(this.env, "crops_harvested", plan.count);
+    // The crops pop when the blade (or the hand) sweeps through them, not on press.
+    const impactAt = now + impactDelayMs(scythe ? "scythe" : "harvest", p.entity.facing);
+    this.toMap("home", { t: "farm", tiles: plan.tiles, by: p.entity.id, impactAt });
+    if (scythe) this.sendHomeState(p);
+    this.persist({ farm: true, save: true });
+    return this.inventoryChanged(p, harvestText(plan.items));
   }
 
   /** The tool rebounded: tire the owner (more for each wrong hit in a row) and let visitors see it. */

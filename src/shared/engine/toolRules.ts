@@ -29,7 +29,7 @@ export type ToolTarget =
   | { kind: "none" };
 
 /** How the selected item is used: a tool kind, a seed, or anything else. */
-export type ToolKey = "hoe" | "water" | "pickaxe" | "axe" | "sword" | "seed" | "other";
+export type ToolKey = "hoe" | "water" | "pickaxe" | "axe" | "sword" | "scythe" | "seed" | "other";
 
 export type ToolEffect =
   | "till"
@@ -165,6 +165,7 @@ export const TOOL_DAMAGE: Record<Exclude<ToolKey, "seed" | "other" | "sword">, n
   axe: 3,
   hoe: 2,
   water: 1,
+  scythe: 2,
 };
 
 /** One weapon's hit: damage range, crits and how far it pushes (tiles). */
@@ -230,6 +231,7 @@ const TOOL_NAME: Record<ToolKey, string> = {
   pickaxe: "pickaxe",
   axe: "axe",
   sword: "sword",
+  scythe: "scythe",
   seed: "seed",
   other: "item",
 };
@@ -237,7 +239,7 @@ const TOOL_NAME: Record<ToolKey, string> = {
 const ok = (effect: ToolEffect): ToolOutcome => ({ ok: true, effect });
 const no = (reason: string, swing = true): ToolOutcome => ({ ok: false, swing, reason });
 const rebound = (reason: string): ToolOutcome => ({ ok: false, swing: true, reason, bounce: true });
-const SWINGS: ReadonlySet<ToolKey> = new Set(["hoe", "water", "pickaxe", "axe", "sword"]);
+const SWINGS: ReadonlySet<ToolKey> = new Set(["hoe", "water", "pickaxe", "axe", "sword", "scythe"]);
 
 /** True for items that swing (play a tool animation) whatever they hit. */
 export function isSwingTool(key: ToolKey): boolean {
@@ -270,7 +272,7 @@ function bounceText(key: ToolKey, target: Solid): string {
  */
 export function resolveToolUse(key: ToolKey, target: ToolTarget, opts: { farm: boolean; power?: number }): ToolOutcome {
   const swings = isSwingTool(key);
-  // A ripe crop is picked by hand whatever is selected.
+  // A ripe crop is picked by hand whatever is selected (the scythe sweeps it, and its neighbours).
   if (target.kind === "soil" && target.crop === "ready" && opts.farm) return ok("harvest");
   // So is a dead one pulled up: by hand, or by the hoe if that's what you hold.
   if (target.kind === "soil" && target.crop === "dead" && opts.farm) return ok("clear");
@@ -278,7 +280,7 @@ export function resolveToolUse(key: ToolKey, target: ToolTarget, opts: { farm: b
   // A hoe striking something solid rebounds anywhere, not only on the farm.
   const solid = target.kind === "rock" || target.kind === "tree" || target.kind === "stump" || target.kind === "boulder";
   if (key === "hoe" && solid) return bounce(key, target.kind);
-  if (!opts.farm && (key === "hoe" || key === "water" || key === "seed")) {
+  if (!opts.farm && (key === "hoe" || key === "water" || key === "seed" || key === "scythe")) {
     if (key === "water" && target.kind === "water") return no("", true);
     return no("That's for your farm at home.", swings);
   }
@@ -314,6 +316,10 @@ export function resolveToolUse(key: ToolKey, target: ToolTarget, opts: { farm: b
       return no("");
     case "sword":
       if (target.kind === "rock" || target.kind === "tree" || target.kind === "stump" || target.kind === "boulder") return bounce(key, target.kind);
+      return no("");
+    case "scythe":
+      if (target.kind === "rock" || target.kind === "tree" || target.kind === "stump" || target.kind === "boulder") return bounce(key, target.kind);
+      // A swish through unripe plants or air does nothing (and needs no notice).
       return no("");
     case "other":
       if (target.kind === "bin" && opts.farm) return ok("ship");

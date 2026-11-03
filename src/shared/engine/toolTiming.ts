@@ -17,6 +17,14 @@ const OVERHEAD_SIDE_MS = 180;
 /** The watering can tips almost at once, whatever the facing. */
 const POUR_MS = 175;
 export const SWING_TOTAL_MS = 475;
+/**
+ * The scythe's blade sweeps low through the crops on slash frame 4 of 6, the same whatever the
+ * facing (it is a sideways sweep, never an overhead blow).
+ */
+const SWEEP_MS = 260;
+/** Picking by hand plays the same standing sweep without a blade; the hand meets the crop on frame 3. */
+const HAND_HARVEST_MS = 210;
+const HAND_HARVEST_TOTAL_MS = 450;
 
 type Row = { down: number; side: number; total: number };
 
@@ -26,12 +34,19 @@ export const TOOL_TIMING: Readonly<Record<ToolKind, Row>> = {
   axe: { down: OVERHEAD_DOWN_MS, side: OVERHEAD_SIDE_MS, total: SWING_TOTAL_MS },
   sword: { down: OVERHEAD_DOWN_MS, side: OVERHEAD_SIDE_MS, total: SWING_TOTAL_MS },
   water: { down: POUR_MS, side: POUR_MS, total: SWING_TOTAL_MS },
+  scythe: { down: SWEEP_MS, side: SWEEP_MS, total: SWING_TOTAL_MS },
 };
 
-/** Timing of a swing with `tool` facing `facing`; null for things that don't swing. */
+/** Acts that aren't a tool kind but are timed like a swing (the crop pops when the hand lands). */
+export const ACT_TIMING: Readonly<Record<string, Row>> = {
+  harvest: { down: HAND_HARVEST_MS, side: HAND_HARVEST_MS, total: HAND_HARVEST_TOTAL_MS },
+};
+
+/** Timing of a swing with `tool` (or a timed act such as "harvest") facing `facing`; null for things that don't swing. */
 export function toolTiming(tool: string | null | undefined, facing: Facing): ToolTiming | null {
-  if (!tool || !Object.hasOwn(TOOL_TIMING, tool)) return null;
-  const row = TOOL_TIMING[tool as ToolKind];
+  if (!tool) return null;
+  const row = Object.hasOwn(TOOL_TIMING, tool) ? TOOL_TIMING[tool as ToolKind] : Object.hasOwn(ACT_TIMING, tool) ? ACT_TIMING[tool]! : null;
+  if (!row) return null;
   return { impactMs: facing === "down" ? row.down : row.side, totalMs: row.total };
 }
 

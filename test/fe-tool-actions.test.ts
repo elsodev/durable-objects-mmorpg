@@ -7,7 +7,10 @@ describe("actionNameFor", () => {
   });
   it("maps tool kinds to a default item", () => {
     expect(actionNameFor({ k: "water", at: 0 })).toBe("watering_can");
-    expect(actionNameFor({ k: "plant", at: 0 })).toBe("harvest");
+    expect(actionNameFor({ k: "plant", at: 0 })).toBe("plant");
+    expect(actionNameFor({ k: "harvest", at: 0 })).toBe("harvest");
+    expect(actionNameFor({ k: "scythe", at: 0, item: "scythe" })).toBe("scythe");
+    expect(actionNameFor({ k: "scythe", at: 0 })).toBe("scythe");
   });
   it("returns null for actions without art", () => {
     expect(actionNameFor({ k: "dance", at: 0 })).toBeNull();

@@ -7,8 +7,10 @@ const BY_KIND: Record<string, string> = {
   water: "watering_can",
   pickaxe: "pickaxe",
   sword: "sword_wood",
+  scythe: "scythe",
+  // Picking (and pulling up a dead crop) is a standing sweep; planting kneels to press the seed in.
   harvest: "harvest",
-  plant: "harvest",
+  plant: "plant",
   fish: "fishing_rod",
   hurt: "hurt",
   eat: "eat",
@@ -42,6 +44,9 @@ export const IMPACT_FRAME: Readonly<Record<string, { frame: number; of: number }
   pickaxe: { frame: 6, of: 10 },
   axe: { frame: 6, of: 10 },
   sword: { frame: 3, of: 6 },
+  // The scythe's blade sweeps low through the crops on slash frame 4; a bare hand meets the crop on 3.
+  scythe: { frame: 4, of: 6 },
+  harvest: { frame: 3, of: 6 },
 };
 
 /** Index of the impact frame in a `count`-frame sheet for tool kind `k`. */

@@ -6,7 +6,7 @@ import { FOOD_SELL_SHARE, FOODS, type FoodType } from "./foods";
 export type Rotation = 0 | 1 | 2 | 3;
 
 export type ItemKind = "seed" | "crop" | "ore" | "gem" | "tool" | "furniture" | "material" | "fish" | "forage" | "produce" | "food";
-export type ToolKind = "hoe" | "water" | "pickaxe" | "axe" | "sword";
+export type ToolKind = "hoe" | "water" | "pickaxe" | "axe" | "sword" | "scythe";
 
 export interface ItemDef {
   id: ItemId;
@@ -293,6 +293,7 @@ const ALL: ItemDef[] = [
   // Tools (pickaxe power: 1 = stone/copper, 2 = iron and everything rarer)
   tool("hoe", "Hoe", "hoe", 1, { desc: "Tills grass into farmland." }),
   tool("watering_can", "Watering Can", "water", 1, { desc: "Water tilled soil once a day." }),
+  tool("scythe", "Scythe", "scythe", 1, { buy: 100, desc: "Sweeps ripe crops in one swing: the tile you aim at and the two beside it." }),
   tool("pickaxe", "Pickaxe", "pickaxe", 1, { desc: "Breaks stone and copper rocks." }),
   tool("pickaxe_iron", "Iron Pickaxe", "pickaxe", 2, { buy: 500, desc: "Breaks iron, silver, gold, gem and diamond rocks too." }),
   tool("axe", "Axe", "axe", 1, { buy: 150, desc: "Chops trees and clears stumps for wood." }),
@@ -421,7 +422,7 @@ export function qualityItem(cropId: ItemId, quality: 0 | 1 | 2): ItemId {
   return getItem(id) ? id : cropId;
 }
 
-/** New player's inventory: hoe, watering can, pickaxe, axe, wooden sword, 10 turnip seeds, a chair, 50 coins. */
+/** New player's inventory: hoe, watering can, pickaxe, axe, wooden sword, 10 turnip seeds, a chair, a scythe, 50 coins. */
 export function starterInventory(): Inventory {
   return {
     coins: 50,
@@ -433,7 +434,9 @@ export function starterInventory(): Inventory {
       { item: "sword_wood", qty: 1 },
       { item: "seed_turnip", qty: 10 },
       { item: "chair_wood", qty: 1 },
-      ...Array.from({ length: MAX_SLOTS - 7 }, () => null),
+      // Last, so the older kit keeps its slots (and still sits in the hotbar).
+      { item: "scythe", qty: 1 },
+      ...Array.from({ length: MAX_SLOTS - 8 }, () => null),
     ],
   };
 }
