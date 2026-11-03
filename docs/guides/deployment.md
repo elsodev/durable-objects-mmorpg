@@ -45,6 +45,62 @@ Bans live in `SocialRoom` storage (`ban:<userId>`, plus `banip:<ip>` for the add
 - **Typed NPC decisions** use `JEV_MODEL` (default `@cf/cloudflare/clef-flash`, billed as normal Workers AI: $0.038 per million input tokens, output free; `@cf/cloudflare/clef` is $0.24, and then raise `JEV_UNITS` in `src/worker/game/npcGate.ts` to about 12). `typesafe/jev` also works but is a third-party model billed through Unified Billing credits. Set `JEV_MODEL` to `""` for rule-based decisions only. Failed or slow decision calls (1.5 s) fall back to rules.
 - **Turnstile** captcha on sign-up and sign-in: the site key and secret above. Without a secret, production sign-up and sign-in answer 503. Set `CAPTCHA_DISABLED=1` to run without a captcha on purpose.
 
+## AI spend limits (neurons)
+
+Workers AI bills in **neurons**, its unit of compute. Every villager AI call is counted against a daily budget before it runs, so a busy day can't run up an unexpected bill. When a limit is reached, villagers keep talking with scripted lines and rule-based decisions until the next UTC day; nothing breaks.
+
+### What counts
+
+The `AiBudget` Durable Object (one global instance) adds up estimated neurons per UTC day. The estimates live in `src/worker/game/npcGate.ts`:
+
+| Call | Estimated neurons | Constant |
+|---|---|---|
+| One villager reply in a shared map (an agent turn on `NPC_AGENT_MODEL`) | 50 | `AGENT_UNITS` |
+| One spoken line on `NPC_MODEL`, when no agent is used | 30 | `SPEAK_UNITS` |
+| One decision call on `JEV_MODEL` (Clef Flash) | 2 | `JEV_UNITS` |
+
+A normal reply costs about 52 neurons (an agent turn plus one decision). A reply that is also judged for hearts makes two decision calls, so about 54. The sheriff's insult check is one decision call (2).
+
+### The limits
+
+| Limit | Default | Where to change it |
+|---|---|---|
+| Neurons per UTC day, all players together | 9,000 (about 170 villager replies) | `AI_DAILY_NEURONS` var |
+| AI replies per player per UTC day | 40 | `PER_USER_DAILY_REPLIES` in `src/worker/npc/budget-logic.ts` |
+| Largest single request | 200 neurons | `MAX_UNITS_PER_REQUEST` in `src/worker/npc/budget-logic.ts` |
+| AI replies per player per villager | 1 every 10 s | `AI_REPLY_INTERVAL_MS` in `src/worker/game/npcGate.ts` |
+| Same text to the same villager | reuses the cached reply for 10 min | `REPLY_CACHE_MS` in `src/worker/game/npcGate.ts` |
+| Conversations per villager at once | 1, with up to 2 players queued | `TALK_QUEUE_MAX` in `src/worker/game/npcGate.ts` |
+
+The default of 9,000 keeps the game inside Workers AI's daily free allocation (10,000 neurons a day at the time of writing). Above that, Workers AI on the paid plan charges per 1,000 neurons; check [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/) for current rates.
+
+### Changing the daily budget
+
+`AI_DAILY_NEURONS` is a whole number of neurons. Empty, negative or non-numeric values fall back to 9,000, and `0` stops all villager AI calls.
+
+- In `wrangler.jsonc`, change `"AI_DAILY_NEURONS"` under `vars` (production) or under `env.local.vars` (local), then deploy.
+- Or override it for one deploy: `npx wrangler deploy --var AI_DAILY_NEURONS:30000`.
+- Or edit it in the Cloudflare dashboard (Workers → your Worker → Settings → Variables). The next `wrangler deploy` replaces it with the value in `wrangler.jsonc`, so change that too.
+- Locally: `npx wrangler dev --env local --var AI_DAILY_NEURONS:30000`. Local dev has no Workers AI binding by default, so this only matters with `npm run dev`.
+
+The new value applies to the next AI call; spend already recorded today still counts.
+
+Rough sizing: each player who chats a lot uses up to 40 replies × 52 neurons, about 2,100 neurons a day. So 9,000 covers about 4 heavy talkers, 30,000 about 14, and 100,000 about 48. Most players use far fewer.
+
+### Changing what each call costs
+
+The estimates are deliberately rounded up. If you switch models, update the constants in `src/worker/game/npcGate.ts` to match:
+
+- A bigger `NPC_AGENT_MODEL` or `NPC_MODEL` costs more per token, so raise `AGENT_UNITS` or `SPEAK_UNITS`.
+- For `JEV_MODEL = "@cf/cloudflare/clef"` (about six times the price of Clef Flash), raise `JEV_UNITS` to about 12.
+- With `JEV_MODEL` empty, decisions use rules and cost nothing.
+
+To see real usage, open the AI Gateway named in `AI_GATEWAY_ID` in the Cloudflare dashboard (AI → AI Gateway); it logs every villager model call with its tokens and cost. Compare that with the budget's estimates and adjust the constants if they drift.
+
+### Turning villager AI off
+
+Set `NPC_AI_MODE` to `off` (as `npm run dev:local` does). Villagers then use scripted lines and word lists only, and no neurons are spent.
+
 ## Drop rates
 
 Every random drop in the game goes through one helper (`src/shared/engine/dropRate.ts`), so you can turn drops up or down with Worker vars. Defaults are in `wrangler.jsonc` → `vars`; locally you can also set them in `.dev.vars` or with `--var DROP_RATE:2`.

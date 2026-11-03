@@ -63,6 +63,10 @@ The whole game is one Worker plus a few Durable Objects. There is no separate ga
 
 Clef Flash (`@cf/cloudflare/clef-flash`, a fast 9B Workers AI decision model) makes fast typed villager decisions and judges replies in the conversation window. `JEV_MODEL` picks the model: `@cf/cloudflare/clef-flash`, the larger `@cf/cloudflare/clef`, or TypeSafe's `typesafe/jev` (which needs Unified Billing credits). With `JEV_MODEL` empty, rules and word lists do the same job. Every NPC model call (lines, Think agent turns, decisions) goes through the AI Gateway named in `AI_GATEWAY_ID`.
 
+### AI spend limits
+
+Every villager AI call is counted in Workers AI neurons against a daily budget, `AI_DAILY_NEURONS` (9,000 by default, about 170 villager replies a day), with at most 40 AI replies per player a day. When the budget runs out, villagers fall back to scripted lines until the next UTC day. The [deployment guide](docs/guides/deployment.md#ai-spend-limits-neurons) explains what each call costs and how to raise or lower the limits.
+
 ### How the load is kept down
 
 - **Updates go to nearby players first.** Each player gets every tick for things within 24 tiles. Things farther away are batched to 2 updates a second (`src/worker/game/interest.ts`).
