@@ -234,6 +234,10 @@ scripts/      e2e.mjs (Playwright)
 - **Feedback**: the small ladybird button at the bottom right opens a form (Bug, Idea or Other, up to 1000 characters, plain text) with an optional screenshot: the view freezes under a dim veil and you drag over the part to show. The game canvas is read through the renderer's extract API and the HUD is drawn with `html-to-image`, cropped, scaled to at most 1600 px and sent as WebP (or JPEG) under 1.5 MB. `POST /api/feedback` (signed in, guests too, same origin only) checks the image by its bytes (complete PNG, JPEG or WebP with nothing after the end marker, no embedded markup, at most 2048 px a side), stores it in R2 under a server-made `feedback/<uuid>` key and records the report in D1 (`migrations/0008_feedback.sql`). Each player may send 5 an hour and 20 a day. Admins see a Review button in the form: newest first, filter by status, view the screenshot (`/api/feedback/:id/screenshot`, admins only, served as an inert image) and mark reports seen or resolved.
 - Names are 3-16 letters, numbers or `_`, unique ignoring case (`migrations/0006_unique_names.sql`); the forms check `GET /api/name-check` before submitting. Guests start as `Guest_xxxxxx` and then take the name they typed if it is free. An account may claim a name a guest holds; that guest goes back to a `Guest_xxxxxx` name. Names from before this rule are shown with other characters replaced by `_`.
 
+## Contributing
+
+Contributions are welcome. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for setup, the checks to run before a pull request, the rules that keep the game correct, and how to credit art and sound.
+
 ## Credits
 
 DurableMMO stands on the work of many generous artists, musicians and open-source projects. Thank you all. See **[CREDITS.md](CREDITS.md)** for the music, sound effects, art and libraries the game uses, with links to the per-file credits for every asset. The in-game **Credits** button, on the start screen and in the HUD menu, lists them too.
