@@ -1120,7 +1120,7 @@ export class ZoneRoom extends DurableObject<Env> {
     switch (msg.t) {
       case "move":
         if (msg.dx !== 0 || msg.dy !== 0) this.getUp(p);
-        p.motion.onMove(p.entity, world.grid, msg.dx, msg.dy, msg.seq, now, msg.dash === true);
+        p.motion.onMove(p.entity, world.grid, msg.dx, msg.dy, msg.seq, now, msg.dash === true, msg.ms);
         return;
       case "moveTo":
         this.getUp(p);

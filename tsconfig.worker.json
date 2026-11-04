@@ -7,6 +7,7 @@
   },
   "include": ["src/worker", "src/shared", "test"],
   // Client-module tests import DOM code; they are checked by tsconfig.client.json. The
-  // prediction sim runs client and server code together, so only the merged tsconfig.json checks it.
-  "exclude": ["test/fe-*.test.ts", "test/prediction-sim.test.ts"]
+  // prediction sim and the network harness run client and server code together, so only the
+  // merged tsconfig.json checks them.
+  "exclude": ["test/fe-*.test.ts", "test/prediction-sim.test.ts", "test/netsim.ts", "test/netsmooth*.test.ts"]
 }

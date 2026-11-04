@@ -8,8 +8,11 @@ export const INTERP_DELAY_MS = 100;
 export const MAX_EXTRAPOLATE_MS = 100;
 /** Jumps longer than this (tiles) are teleports/respawns: snap instead of sliding. */
 export const SNAP_DIST = 3;
-/** Snapshot history kept per entity. */
-export const HISTORY_MS = 1000;
+/**
+ * Snapshot history kept per entity: enough to draw a 2 Hz batched entity (snapshots 500 ms
+ * apart, drawn about that much further back) between two of them.
+ */
+export const HISTORY_MS = 2000;
 
 export interface Snapshot {
   at: number; // recv-clock ms

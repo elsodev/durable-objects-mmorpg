@@ -15,7 +15,7 @@ export const BODY_HALF_W = 0.3;
 export const BODY_UP = 0.3; // how far the body reaches above the feet
 export const BODY_DOWN = 0.1; // how far below
 /** Keeps the right/bottom body edge from touching the next cell when flush against it. */
-const EDGE_EPS = 1e-6;
+export const EDGE_EPS = 1e-6;
 
 /**
  * Builds the collision grid for a map. Ground kinds in BLOCKING_GROUND, every prop footprint
@@ -66,9 +66,11 @@ export function isBlocked(grid: CollisionGrid, tx: number, ty: number): boolean 
 /** True if an entity with a ~0.6 tile wide body centred at (x,y) (feet position) fits. */
 export function canStand(grid: CollisionGrid, x: number, y: number): boolean {
   if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-  const x0 = Math.floor(x - BODY_HALF_W);
+  // Touching an edge is not overlapping, on either side: x = 32.3 has 32.3 - 0.3 = 31.999...
+  // in floats, which would otherwise count as standing in column 31.
+  const x0 = Math.floor(x - BODY_HALF_W + EDGE_EPS);
   const x1 = Math.floor(x + BODY_HALF_W - EDGE_EPS);
-  const y0 = Math.floor(y - BODY_UP);
+  const y0 = Math.floor(y - BODY_UP + EDGE_EPS);
   const y1 = Math.floor(y + BODY_DOWN - EDGE_EPS);
   for (let ty = y0; ty <= y1; ty++) {
     for (let tx = x0; tx <= x1; tx++) if (isBlocked(grid, tx, ty)) return false;

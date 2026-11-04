@@ -1,7 +1,7 @@
 // Prediction against the real server Motion, with network latency and 10 Hz ticks: the shown
 // position must never be corrected by more than float noise, and must stop where the key was let go.
 import { describe, expect, it } from "vitest";
-import { createPredictor, unsimulated, type InputFrame } from "../src/client/game/prediction";
+import { createPredictor, unsimulated, walkedAhead, type InputFrame } from "../src/client/game/prediction";
 import { Motion } from "../src/worker/game/motion";
 import { buildCollision, DASH_SPEED } from "../src/shared/engine";
 import type { ClientMsg } from "../src/shared/protocol";
@@ -90,6 +90,15 @@ describe("unsimulated", () => {
     expect(unsimulated(frames, 2, 15)).toEqual([f(2, 5), f(2, 10), f(3, 10)]);
     expect(unsimulated(frames, 2, 0)).toEqual([f(2, 10), f(2, 10), f(2, 10), f(3, 10)]);
     expect(unsimulated(frames, 2, 100)).toEqual([f(3, 10)]);
+  });
+  it("reports how far the server walked an acked move past its length here", () => {
+    // The server walked seq 2 for 100 ms but it lasted 30 ms here (seq 3 has started).
+    const frames = [f(1, 10), f(2, 10), f(2, 10), f(2, 10), f(3, 10)];
+    expect(walkedAhead(frames, 2, 100, 3)).toBe(70);
+    expect(walkedAhead(frames, 2, 25, 3)).toBe(0);
+    // Still the current move: the server is simply ahead of nothing, it has not been replaced.
+    expect(walkedAhead(frames, 3, 100, 3)).toBe(0);
+    expect(walkedAhead(frames, 2, undefined, 3)).toBe(0);
   });
   it("without ackMs treats the whole acked seq as done (older servers)", () => {
     expect(unsimulated([f(1, 10), f(2, 10), f(3, 10)], 2, undefined)).toEqual([f(3, 10)]);

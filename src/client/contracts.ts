@@ -235,6 +235,8 @@ export interface WorldStore {
   latest(id: string): EntityState | undefined;
   /** Remote entities interpolated at renderTime (recv-clock ms); excludes you. ~100 ms behind. */
   sample(renderTime: number): EntityState[];
+  /** How far (ms) behind the fastest packets others are drawn: tick interval plus measured jitter. */
+  renderDelay?(): number;
   on(ev: StoreEvent, cb: (payload?: unknown) => void): () => void;
   reset(): void;
 }
@@ -259,15 +261,25 @@ export interface Predictor {
   setLimits?(limits: { tired: boolean; canDash: boolean }): void;
   /**
    * Server state for you + last acked seq (+ how long the server has applied it): replay the
-   * inputs the server has not simulated yet; snap if error > 1.5 tiles else ease.
+   * inputs the server has not simulated yet; snap if error > 1.5 tiles else ease. `now`
+   * (performance.now() clock) integrates the held input up to the moment the tick arrived.
    */
-  reconcile(server: EntityState, ack: number | undefined, ackMs?: number): void;
+  reconcile(server: EntityState, ack: number | undefined, ackMs?: number, now?: number): void;
   /** Click-to-move: client also walks the path locally. */
   moveTo(target: Vec2): ClientMsg;
   state(): { x: number; y: number; facing: Facing; moving: boolean; pace?: "dash" | "tired" };
   reset(at: Vec2, facing: Facing): void;
   /** Turn on the spot (a tool swing faces its tile); ignored while walking. */
   face?(facing: Facing): void;
+  /** Corrections so far (debug hook and network tests). */
+  stats?(): PredictorStats;
+}
+/** How often reconcile moved you: all corrections, the visible ones, the hard snaps, the largest (tiles). */
+export interface PredictorStats {
+  corrections: number;
+  visible: number;
+  snaps: number;
+  maxErr: number;
 }
 export type CreatePredictor = (getMap: () => MapData | null, getBlockedExtras: () => { objects: PlacedObject[]; rocks: Vec2[]; cleared?: Vec2[] }) => Predictor;
 

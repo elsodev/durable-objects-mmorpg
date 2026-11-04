@@ -1783,7 +1783,7 @@ export class HomeRoom extends DurableObject<Env> {
     if ((msg.t === "move" && (msg.dx !== 0 || msg.dy !== 0)) || msg.t === "moveTo" || msg.t === "use") endPose(p.entity);
     switch (msg.t) {
       case "move":
-        p.motion.onMove(p.entity, this.maps.grids[p.map], msg.dx, msg.dy, msg.seq, now, msg.dash === true);
+        p.motion.onMove(p.entity, this.maps.grids[p.map], msg.dx, msg.dy, msg.seq, now, msg.dash === true, msg.ms);
         this.startTick();
         return;
       case "moveTo":
@@ -1943,7 +1943,7 @@ export class HomeRoom extends DurableObject<Env> {
     if ((msg.t === "move" && (msg.dx !== 0 || msg.dy !== 0)) || msg.t === "moveTo" || msg.t === "use") endPose(v.entity);
     switch (msg.t) {
       case "move":
-        v.motion.onMove(v.entity, this.maps.grids[v.map], msg.dx, msg.dy, msg.seq, now);
+        v.motion.onMove(v.entity, this.maps.grids[v.map], msg.dx, msg.dy, msg.seq, now, false, msg.ms);
         this.startTick();
         return;
       case "moveTo":

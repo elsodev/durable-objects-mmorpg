@@ -16,6 +16,16 @@ export interface DebugSource {
   rocks?(): { id: string; x: number; y: number; ore: string }[];
   /** Props of the current map (trees, wells, beds...) for tests that aim tools at them. */
   props?(): { id?: string; type: string; x: number; y: number; w: number; h: number }[];
+  /** Movement netcode: your corrections so far and how far behind others are drawn (ms). */
+  net?(): NetDebug;
+}
+
+export interface NetDebug {
+  corrections: number;
+  visible: number;
+  snaps: number;
+  maxErr: number;
+  renderDelay: number;
 }
 
 export interface DmmoDebug {
@@ -30,6 +40,7 @@ export interface DmmoDebug {
   tileToScreen?(x: number, y: number): { x: number; y: number };
   rocks?(): { id: string; x: number; y: number; ore: string }[];
   props?(): { id?: string; type: string; x: number; y: number; w: number; h: number }[];
+  net?(): NetDebug;
 }
 
 declare global {
@@ -54,6 +65,7 @@ export function installDebug(src: DebugSource | null): void {
     tileToScreen: src.tileToScreen,
     rocks: src.rocks,
     props: src.props,
+    net: src.net,
   } as DmmoDebug;
   Object.defineProperty(api, "zone", { get: src.zone, enumerable: true });
   window.__dmmo = api;

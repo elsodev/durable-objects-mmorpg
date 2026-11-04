@@ -1,7 +1,7 @@
 // Client-side prediction for your own player: moves locally with the same engine the server runs,
 // numbers move intents with `seq`, and reconciles against authoritative ticks by rewinding to the
 // server position and replaying the inputs the server has not acked yet.
-import type { CreatePredictor, Predictor } from "../contracts";
+import type { CreatePredictor, Predictor, PredictorStats } from "../contracts";
 import type { ClientMsg } from "../../shared/protocol";
 import type { Facing, MapData, PlacedObject, Vec2 } from "../../shared/types";
 import {
@@ -28,6 +28,8 @@ export const SNAP_DIST = 1.5;
 export const CORRECT_MS = 150;
 /** Errors smaller than this are ignored, so float noise doesn't start a correction. */
 const EPS_DIST = 0.01;
+/** A correction at least this big (tiles, about 2 px) can be seen; counted in stats(). */
+export const VISIBLE_ERR = 0.06;
 /** Integration step cap: a long stall (tab in background) must not produce a huge local jump. */
 const MAX_DT_MS = 250;
 /** Input history cap, in case the server never acks (old server, dropped socket). */
@@ -115,6 +117,19 @@ export function unsimulated(inputs: readonly InputFrame[], ack: number, ackMs: n
   return out;
 }
 
+/**
+ * How far (ms) the server has walked the acked move past the length it had here, when this
+ * client has already moved on from it. The server walks a held move ahead until the next move
+ * arrives, so a late packet shows it a little too far; it takes that back once the next move
+ * says how long this one lasted (Motion.settle). Such a position is a guess, not a correction.
+ */
+export function walkedAhead(inputs: readonly InputFrame[], ack: number, ackMs: number | undefined, current: number): number {
+  if (ackMs === undefined || ack >= current) return 0;
+  let had = 0;
+  for (const f of inputs) if (f.seq === ack) had += f.dtMs;
+  return Math.max(0, ackMs - had);
+}
+
 const sign = (v: number) => (v > 0 ? 1 : v < 0 ? -1 : 0);
 /** Frames at walking speed leave `speed` out, so the history stays as small as before. */
 const speedOf = (speed: number): { speed?: number } => (speed === PLAYER_SPEED ? {} : { speed });
@@ -142,9 +157,14 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
   let path: Vec2[] | null = null;
   /** Clock time (ms) the predicted position is integrated up to; null until the first step. */
   let simAt: number | null = null;
+  const stats: PredictorStats = { corrections: 0, visible: 0, snaps: 0, maxErr: 0 };
+
+  /** Ms of input recorded under the current seq: sent with the next move as its `ms`. */
+  let seqMs = 0;
 
   function nextSeq(): number {
     seq += 1;
+    seqMs = 0;
     return seq;
   }
 
@@ -154,11 +174,14 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
   }
 
   function moveMsg(dx: number, dy: number): ClientMsg {
+    // How long the move being replaced lasted here, so the server walks it exactly that long.
+    const ms = Math.round(seqMs * 10) / 10;
     // The server decides whether a dash is allowed; asking is all the client does.
-    return dash && (dx !== 0 || dy !== 0) ? { t: "move", dx, dy, seq: nextSeq(), dash: true } : { t: "move", dx, dy, seq: nextSeq() };
+    return dash && (dx !== 0 || dy !== 0) ? { t: "move", dx, dy, seq: nextSeq(), dash: true, ms } : { t: "move", dx, dy, seq: nextSeq(), ms };
   }
 
   function record(frame: InputFrame): void {
+    if (frame.seq === seq) seqMs += frame.dtMs;
     inputs.push(frame);
     if (inputs.length > MAX_INPUTS) inputs.splice(0, inputs.length - MAX_INPUTS);
   }
@@ -208,6 +231,9 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
   function advance(t: number): void {
     const from = simAt ?? t;
     simAt = Math.max(from, t);
+    // Counted here, not per frame: a tick that lands between frames integrates part of the
+    // frame early (reconcile), and that time must still count toward the next resend.
+    sinceSendMs += simAt - from;
     const dtMs = Math.min(Math.max(0, t - from), MAX_DT_MS);
     const grid = collision.get();
     if (!grid) {
@@ -260,9 +286,7 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       // A change that setDir() did not already see (no key event, e.g. typing started): treat it
       // as starting with this frame, so the player still moves on this very frame.
       if (dx !== lastDir.dx || dy !== lastDir.dy || dashChanged(dx, dy, wantDash)) send = changeDir(dx, dy, simAt, wantDash);
-      const before = simAt;
       advance(t);
-      sinceSendMs += Math.max(0, t - before);
       if (!send && (dx !== 0 || dy !== 0) && sinceSendMs >= RESEND_MS) {
         send = moveMsg(dx, dy);
         sinceSendMs = 0;
@@ -285,7 +309,12 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       canDash = l.canDash;
     },
 
-    reconcile(server, ack, ackMs) {
+    reconcile(server, ack, ackMs, now) {
+      // A tick can land between two frames (or during a long one). The server's ackMs counts
+      // walking we have not integrated yet, so bring the prediction up to the present first:
+      // otherwise the replay comes up short, we are pulled forward, and the next frame then
+      // walks that stretch a second time and gets pulled back on the following tick.
+      if (now !== undefined && simAt !== null && now > simAt) advance(now);
       const shown = { x: x + corr.x, y: y + corr.y };
       const grid = collision.get();
       let px = server.x;
@@ -306,6 +335,9 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       if (ack > acked) acked = ack;
       // ackMs describes `ack`; for a stale ack (from before a reset) it says nothing useful.
       const ms = ack === acked ? ackMs : undefined;
+      // Past the end of a move we already replaced: the server will settle back. Keep our own
+      // position until it has (the next tick), instead of being pulled forward and then back.
+      const guess = walkedAhead(inputs, acked, ms, seq) > 0;
       const replay = unsimulated(inputs, acked, ms);
       inputs = inputs.filter((f) => (ms === undefined ? f.seq > acked : f.seq >= acked));
       if (grid) {
@@ -318,6 +350,7 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       }
       if (inputs.length > 0 || path || lastDir.dx !== 0 || lastDir.dy !== 0) pf = facing;
       facing = pf;
+      if (guess) return;
       const err = dist(shown, { x: px, y: py });
       if (err <= EPS_DIST) return;
       applyCorrection(px, py, err > SNAP_DIST);
@@ -360,6 +393,8 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
       if (!moving && !path && lastDir.dx === 0 && lastDir.dy === 0) facing = f;
     },
 
+    stats: () => ({ ...stats }),
+
     reset(at, f) {
       // seq stays monotonic so a late ack from before the reset can't drop newer inputs.
       x = at.x;
@@ -380,6 +415,11 @@ export const createPredictor: CreatePredictor = (getMap, getBlockedExtras) => {
 
   function applyCorrection(nx: number, ny: number, snap: boolean): void {
     const shown = { x: x + corr.x, y: y + corr.y };
+    const err = dist(shown, { x: nx, y: ny });
+    stats.corrections += 1;
+    if (err >= VISIBLE_ERR) stats.visible += 1;
+    if (snap) stats.snaps += 1;
+    stats.maxErr = Math.max(stats.maxErr, err);
     x = nx;
     y = ny;
     if (snap) {

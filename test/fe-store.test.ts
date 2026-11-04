@@ -94,11 +94,12 @@ describe("store", () => {
     expect(s.brokenRocks.size).toBe(0);
   });
 
-  it("sample excludes you and interpolates ~100 ms behind", () => {
+  it("sample excludes you and interpolates a tick or so behind, on the server's clock", () => {
     const s = createStore();
     s.apply(welcome([ent("p:me", 0, 0), ent("p:o", 0, 0)]), 0);
-    s.apply(tick([ent("p:o", 1, 0), ent("p:me", 9, 9)]), 100);
-    const out = s.sample(50 + INTERP_DELAY_MS);
+    s.apply({ ...tick([ent("p:o", 1, 0), ent("p:me", 9, 9)]), at: 100 } as ServerMsg, 100);
+    expect(s.renderDelay!()).toBeGreaterThanOrEqual(INTERP_DELAY_MS);
+    const out = s.sample(50 + s.renderDelay!());
     expect(out.map((e) => e.id)).toEqual(["p:o"]);
     expect(out[0]!.x).toBeCloseTo(0.5);
     expect(s.latest("p:o")?.x).toBe(1);
@@ -120,12 +121,13 @@ describe("store", () => {
     expect(s.latest("m:1")).toBeUndefined();
   });
 
-  it("keeps about 1 s of history", () => {
+  it("keeps about 2 s of history", () => {
     const s = createStore();
     s.apply(welcome([ent("p:me", 0, 0), ent("p:o", 0, 0)]), 0);
-    for (let t = 100; t <= 3000; t += 100) s.apply(tick([ent("p:o", t / 1000, 0)]), t);
-    // Older than the window: clamps to the oldest kept snapshot (>= 2.0 tiles at t=2000).
-    expect(s.sample(0)[0]!.x).toBeGreaterThanOrEqual(1.9);
+    for (let t = 100; t <= 3000; t += 100) s.apply({ ...tick([ent("p:o", t / 1000, 0)]), at: t } as ServerMsg, t);
+    // Older than the window: clamps to the oldest kept snapshot (>= 1.0 tiles at t=1000).
+    expect(s.sample(0)[0]!.x).toBeGreaterThanOrEqual(0.9);
+    expect(s.sample(0)[0]!.x).toBeLessThan(1.2);
   });
 
   it("applies farm, objects, rock, goals, chat and unsubscribes", () => {

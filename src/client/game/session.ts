@@ -1016,7 +1016,7 @@ export async function startSession(
           serverNow: serverNow(),
           localImpactMs: pendingImpactMs(swing),
           // Others' swings are drawn behind: interpolation, the tick they ride in, half the trip.
-          remoteLagMs: INTERP_DELAY_MS + TICK_MS / 2 + conn.rtt() / 2,
+          remoteLagMs: (store.renderDelay?.() ?? INTERP_DELAY_MS) + TICK_MS / 2 + conn.rtt() / 2,
         });
         impacts.push(due, msg);
         return applyDueImpacts(now);
@@ -1406,12 +1406,12 @@ export async function startSession(
       predictor.reset({ x: mine.x, y: mine.y }, mine.facing);
       if (mine.hp !== undefined) hud.setHp(mine.hp, mine.maxHp ?? mine.hp);
     } else if (mine) {
-      predictor.reconcile(mine, msg.ack, msg.ackMs);
+      predictor.reconcile(mine, msg.ack, msg.ackMs, performance.now());
       if (mine.hp !== undefined) hud.setHp(mine.hp, mine.maxHp ?? mine.hp);
     } else if (msg.ack !== undefined && store.youId) {
       // Ack without a position change (e.g. blocked move): still let the predictor drop acked inputs.
       const latest = store.latest(store.youId);
-      if (latest) predictor.reconcile(latest, msg.ack, msg.ackMs);
+      if (latest) predictor.reconcile(latest, msg.ack, msg.ackMs, performance.now());
     }
   }
 
@@ -1582,7 +1582,7 @@ export async function startSession(
       nowMs: now,
       serverNow: serverNow(),
       localImpactMs: null,
-      remoteLagMs: INTERP_DELAY_MS + TICK_MS / 2 + conn.rtt() / 2,
+      remoteLagMs: (store.renderDelay?.() ?? INTERP_DELAY_MS) + TICK_MS / 2 + conn.rtt() / 2,
     });
     const w = world;
     const by = msg.by;
@@ -2042,6 +2042,7 @@ export async function startSession(
       tileToScreen: (x, y) => camera.tileToScreen(x, y),
       rocks: () => (map()?.rocks ?? []).filter((r) => !store.brokenRocks.has(r.id)).map((r) => ({ ...r, ore: store.rockOres.get(r.id) ?? r.ore })),
       props: () => (map()?.props ?? []).map((p) => ({ id: p.id, type: p.type, x: p.x, y: p.y, w: p.w, h: p.h })),
+      net: () => ({ corrections: 0, visible: 0, snaps: 0, maxErr: 0, ...predictor.stats?.(), renderDelay: store.renderDelay?.() ?? INTERP_DELAY_MS }),
     });
   }
   exposeDebug();

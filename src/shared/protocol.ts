@@ -38,8 +38,11 @@ export type ClientMsg =
   /**
    * Held-direction movement. dx/dy in {-1,0,1}. Sent on change, and at most every 100 ms.
    * `dash`: Shift is held, asking to run (the server ignores it while worn out or visiting).
+   * `ms`: how long (ms, client clock) the previous move was applied before this one. The server
+   * walks the previous move for that long instead of for the gap between the two arrivals, so
+   * network jitter doesn't change how far you went; a budget keeps the total within real time.
    */
-  | { t: "move"; dx: number; dy: number; seq?: number; dash?: boolean }
+  | { t: "move"; dx: number; dy: number; seq?: number; dash?: boolean; ms?: number }
   /** Click-to-move target in tile coords. */
   | { t: "moveTo"; x: number; y: number; seq?: number }
   | { t: "chat"; text: string }

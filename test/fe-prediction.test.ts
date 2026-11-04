@@ -35,7 +35,8 @@ describe("predictor input & sending", () => {
   it("sends a move on direction change, resends every 100 ms while held, and sends stop", () => {
     const { p } = setup();
     const first = p.step(1, 0, FRAME).send;
-    expect(first).toEqual({ t: "move", dx: 1, dy: 0, seq: 1 });
+    // ms: how long the previous move (standing) lasted, which the server ignores.
+    expect(first).toEqual({ t: "move", dx: 1, dy: 0, seq: 1, ms: 0 });
     expect(p.step(1, 0, FRAME).send).toBeNull();
     const resent = hold(p, 1, 0, 1000);
     // ~10 resends per second while held.
@@ -44,6 +45,8 @@ describe("predictor input & sending", () => {
     const seqs = resent.map((m) => (m as { seq: number }).seq);
     expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
     expect(new Set(seqs).size).toBe(seqs.length);
+    // Each resend says how long the move before it lasted: the ~100 ms between them.
+    for (const m of resent) expect((m as { ms: number }).ms).toBeGreaterThanOrEqual(RESEND_MS);
     const turn = p.step(0, 1, FRAME).send as { t: string; dx: number; dy: number; seq: number };
     expect(turn).toMatchObject({ t: "move", dx: 0, dy: 1 });
     expect(turn.seq).toBeGreaterThan(seqs[seqs.length - 1]);

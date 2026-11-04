@@ -33,6 +33,8 @@ const isFiniteCoord = (v: unknown): v is number =>
 const isSlot = (v: unknown): v is number => isInt(v, 0, MAX_SLOT_INDEX);
 const isQty = (v: unknown): v is number => isInt(v, 1, MAX_QTY);
 const isDir = (v: unknown): v is number => v === -1 || v === 0 || v === 1;
+/** A move's `ms` (how long the previous move lasted): the server caps and budgets it further. */
+const isMoveMs = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 60_000;
 const isRot = (v: unknown): v is 0 | 1 | 2 | 3 => v === 0 || v === 1 || v === 2 || v === 3;
 const isId = (v: unknown): v is string => typeof v === "string" && v.length > 0 && v.length <= MAX_ID_LEN;
 
@@ -93,7 +95,9 @@ export function validateClientMsg(m: unknown): ClientMsg | null {
       if (!seq || !isDir(o.dx) || !isDir(o.dy) || (o.dash !== undefined && typeof o.dash !== "boolean")) return null;
       // Only a held direction can dash; the server still decides whether it may (worn out, visiting).
       const dash = o.dash === true && (o.dx !== 0 || o.dy !== 0);
-      return { t: "move", dx: o.dx, dy: o.dy, ...seq, ...(dash ? { dash: true } : {}) };
+      if (o.ms !== undefined && !isMoveMs(o.ms)) return null;
+      const ms = o.ms === undefined ? {} : { ms: o.ms };
+      return { t: "move", dx: o.dx, dy: o.dy, ...seq, ...(dash ? { dash: true } : {}), ...ms };
     }
     case "moveTo": {
       const seq = optSeq(o);
