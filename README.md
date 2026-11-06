@@ -6,9 +6,12 @@ A cozy multiplayer farming game set in the valley of Mossbrook, with light monst
 
 | | |
 |---|---|
-| ![Players chatting by the village fountain](.github/screenshots/village.png) | ![A home farm with crops at different stages](.github/screenshots/farm.png) |
-| ![A furnished house interior](.github/screenshots/house.png) | ![Talking to a villager, with hearts and gifts](.github/screenshots/npc.png) |
-| ![Fighting slimes in the caves](.github/screenshots/combat.png) | ![The player card with friends and chat](.github/screenshots/social.png) |
+| ![Friends waving and sending hearts in the village square](.github/screenshots/village.webp) | ![Sweeping a row of ripe crops with the scythe](.github/screenshots/farm.webp) |
+| ![A home farm full of strawberries, beets and greens](.github/screenshots/crops.webp) | ![Moving the barn in yard edit mode](.github/screenshots/yard.webp) |
+| ![A furnished, lamp-lit house interior](.github/screenshots/house.webp) | ![Dusk on the farm as the lamps come on](.github/screenshots/night.webp) |
+| ![Talking to a villager who remembers you, with the heart meter](.github/screenshots/npc.webp) | ![Sitting at the bar counter in the Mossy Mug](.github/screenshots/bar.webp) |
+| ![Fighting rock crabs in the caves with a friend](.github/screenshots/combat.webp) | ![A level-up burst after a cave fight](.github/screenshots/levelup.webp) |
+| ![Trading face to face in the caves](.github/screenshots/trade.webp) | ![The world map with fast travel](.github/screenshots/map.webp) |
 
 ## Features
 
