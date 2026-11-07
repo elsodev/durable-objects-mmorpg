@@ -7,15 +7,9 @@
 #ui .hud-menu .hud-chat-toggle,
 #ui .hud-menu .hud-more-toggle,
 #ui .hud-menu .hud-eye-toggle,
-#ui .hud-menu .hud-pad-toggle,
+#ui .hud-pad-btn,
 #ui .hud-account-icon {
   display: none;
-}
-/* The controller toggle shows on any touch screen, tablets included. */
-@media (pointer: coarse) {
-  #ui .hud-menu .hud-pad-toggle:not([hidden]) {
-    display: inline-flex;
-  }
 }
 
 /* The home indicator and rounded corners: keep the HUD inside the safe area. */
@@ -54,7 +48,7 @@
     position: relative;
   }
   #ui .hud-chat-toggle[aria-pressed="true"],
-  #ui .hud-pad-toggle[aria-pressed="true"],
+  #ui .hud-pad-btn[aria-pressed="true"],
   #ui .hud-more-toggle[aria-expanded="true"],
   #ui .hud-eye-toggle[aria-pressed="true"] {
     background: var(--dm-wood-light);
@@ -198,7 +192,7 @@
     gap: 5px;
     padding: 5px 6px;
     right: auto;
-    max-width: calc(100vw - 80px);
+    max-width: calc(100vw - 120px);
   }
   #ui .hud-menu-btn,
   #ui .hud-create-account {
@@ -211,10 +205,28 @@
     height: 24px;
   }
   #ui .hud-menu .hud-more-toggle,
-  #ui .hud-menu .hud-eye-toggle,
-  #ui .hud-menu .hud-pad-toggle:not([hidden]) {
+  #ui .hud-menu .hud-eye-toggle {
     display: inline-flex;
     position: relative;
+  }
+  /* The controller button: the bug button's twin, just left of it. */
+  #ui .hud-pad-btn:not([hidden]) {
+    position: absolute;
+    right: 54px;
+    bottom: calc(var(--dm-slot-size) + 30px + (var(--dm-menu-row) - 36px) / 2);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dm-cream);
+    border-color: var(--dm-wood-dark);
+    box-shadow: inset 0 0 0 2px var(--dm-cream-2), 0 2px 0 var(--dm-wood-dark);
+  }
+  #ui .hud-pad-btn .dm-btn-icon {
+    width: 22px;
+    height: 22px;
   }
   /* Everyday buttons first, then More and Hide HUD; the folded ones go last. */
   #ui .hud-menu .hud-more-toggle {
@@ -237,7 +249,7 @@
     height: auto;
     flex-wrap: wrap;
     overflow: visible;
-    max-width: calc(100vw - 80px);
+    max-width: calc(100vw - 120px);
   }
   #ui .hud-menu.is-more-open .hud-menu-extra {
     display: inline-flex;
@@ -259,7 +271,7 @@
   }
 
   /* ---- Hide HUD: only the button that brings it back stays (the controller stays too). */
-  #ui .dm-hud.is-ui-hidden :is(.hud-status, .hud-right, .hud-stats, .hud-hotbar, .hud-item-flash, .hud-layer-chat, .hud-feedback-btn, .edit-open) {
+  #ui .dm-hud.is-ui-hidden :is(.hud-status, .hud-right, .hud-stats, .hud-hotbar, .hud-item-flash, .hud-layer-chat, .hud-feedback-btn, .hud-pad-btn, .edit-open) {
     display: none !important;
   }
   #ui .dm-hud.is-ui-hidden .hud-menu {
@@ -288,10 +300,14 @@
 }
 
 /* The face buttons take the bottom-right corner, so the bug button moves to the top middle. */
-#app.pad-sides #ui .hud-feedback-btn {
+#app.pad-sides #ui .hud-feedback-btn,
+#app.pad-sides #ui .hud-pad-btn:not([hidden]) {
   top: 8px;
   bottom: auto;
   right: auto;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(50% + 3px);
+  transform: none;
+}
+#app.pad-sides #ui .hud-pad-btn:not([hidden]) {
+  left: calc(50% - 39px);
 }

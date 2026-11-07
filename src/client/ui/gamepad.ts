@@ -25,6 +25,17 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
   return e;
 }
 
+/** The phone layout's own breakpoint (styles/phone.css): the only place the pad is offered. */
+export const PHONE_QUERY = "(max-width: 760px), (max-height: 500px)";
+
+function phoneScreen(): boolean {
+  try {
+    return globalThis.matchMedia?.(PHONE_QUERY).matches ?? false;
+  } catch {
+    return false;
+  }
+}
+
 /** A short buzz on phones that support it, so a press is felt as well as seen. */
 function buzz(): void {
   try {
@@ -178,10 +189,18 @@ export function createGamepad(host: HTMLElement, opts: GamepadOpts): Gamepad {
 
   const place = () => {
     const where = padPlacement(window.innerWidth, window.innerHeight);
+    // Phones only: on a wider screen the pad stays away even if it was left on.
+    const shown = on && phoneScreen();
     root.dataset.place = where;
-    host.classList.toggle("has-pad", on);
-    host.classList.toggle("pad-below", on && where === "below");
-    host.classList.toggle("pad-sides", on && where === "sides");
+    root.hidden = !shown;
+    host.classList.toggle("has-pad", shown);
+    host.classList.toggle("pad-below", shown && where === "below");
+    host.classList.toggle("pad-sides", shown && where === "sides");
+    if (!shown && (dir.dx !== 0 || dir.dy !== 0 || run)) {
+      dpadPointer = null;
+      run = false;
+      setDir({ dx: 0, dy: 0 });
+    }
   };
   window.addEventListener("resize", place);
 
@@ -198,7 +217,6 @@ export function createGamepad(host: HTMLElement, opts: GamepadOpts): Gamepad {
     setOn(next) {
       if (next === on) return;
       on = next;
-      root.hidden = !on;
       if (!on) {
         dpadPointer = null;
         run = false;

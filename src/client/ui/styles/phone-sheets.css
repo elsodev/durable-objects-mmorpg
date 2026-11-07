@@ -43,8 +43,8 @@
   }
 
   /* The bug button would float over a sheet (and over the full-screen chat). */
-  #ui:has(:is(#game-menu, #shop-dialog, #goals-panel, .trade-panel, .store-panel, .mb-panel, .nb-panel, #convo):not([hidden])) .hud-feedback-btn,
-  #ui .dm-hud:not(.is-chat-hidden) .hud-feedback-btn {
+  #ui:has(:is(#game-menu, #shop-dialog, #goals-panel, .trade-panel, .store-panel, .mb-panel, .nb-panel, #convo):not([hidden])) :is(.hud-feedback-btn, .hud-pad-btn),
+  #ui .dm-hud:not(.is-chat-hidden) :is(.hud-feedback-btn, .hud-pad-btn) {
     display: none;
   }
 

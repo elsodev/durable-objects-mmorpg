@@ -281,11 +281,14 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         null,
       )
     : null;
-  const padBtn = menuButton("Controller", "gamepad", "hud-btn-pad", null, () => {
+  // Phones only (CSS hides it elsewhere): a round button beside the bug button, not in the menu bar.
+  const padBtn = button("", "dm-btn hud-pad-btn", "hud-btn-pad", () => {
     uiSound("click");
     pad?.toggle();
   });
-  padBtn.classList.add("hud-pad-toggle");
+  padBtn.appendChild(menuIcon("gamepad"));
+  padBtn.setAttribute("aria-label", "Controller");
+  padBtn.title = "Controller";
   padBtn.hidden = !pad;
   const syncPadBtn = (on: boolean) => padBtn.setAttribute("aria-pressed", String(on));
   syncPadBtn(pad?.isOn() ?? false);
@@ -329,12 +332,12 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     bondsBtn,
     mapBtn,
     optionsBtn,
-    padBtn,
     moreBtn,
     eyeBtn,
   );
   setMoreOpen(false);
   topMenu.appendChild(signOutBtn);
+  hud.appendChild(padBtn);
   hud.appendChild(topMenu);
   safe("audio controls", () => mountAudioControls(topMenu), null);
   // Wardrobe, controls and credits live in the menu's Options tab.

@@ -65,7 +65,7 @@ export const TOUCH_CONTROL_GROUPS: readonly ControlGroup[] = [
     title: "Getting around",
     rows: [
       { keys: ["tap"], text: "Walk to a spot" },
-      { keys: ["pad"], text: "Or turn on the controller (the gamepad button) for a D-pad" },
+      { keys: ["pad"], text: "On a phone, the gamepad button by the bug button brings up a D-pad" },
       { keys: ["»"], text: "Hold Run on the controller to dash" },
     ],
   },
@@ -89,7 +89,7 @@ export const TOUCH_CONTROL_GROUPS: readonly ControlGroup[] = [
   {
     title: "Menus",
     rows: [
-      { keys: ["tap"], text: "The buttons along the bottom: chat, bag, map and the controller" },
+      { keys: ["tap"], text: "The buttons along the bottom: chat, bag and map" },
       { keys: ["tap"], text: "The dots button opens the rest; the eye hides the HUD" },
     ],
   },
