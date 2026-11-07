@@ -354,6 +354,13 @@ export async function startSession(
     send,
     selectSlot,
     setBuildItem,
+    padDir: (dx, dy, dash) => input.setPadDir?.(dx, dy, dash),
+    padAction: (a) => {
+      if (typing || editMode.active()) return;
+      // Q eats at home (onEatKey); the pad's Q does the same.
+      if (a === "gift" && store.zone === "home") return eatSelected();
+      onAction(a);
+    },
     setTyping: (t) => {
       typing = t;
       input.setTyping(t);

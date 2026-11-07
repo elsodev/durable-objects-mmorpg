@@ -1,0 +1,264 @@
+/* On-screen controller (ui/gamepad.ts). "below": a Game Boy style panel under the world on portrait
+   screens. "sides": the D-pad and buttons float in the bottom corners of a wide screen. */
+:root {
+  --dm-pad-h: min(45vh, 320px);
+  --dm-pad-ink: #2f2620;
+  --dm-pad-body: #d9cfb6;
+  --dm-pad-body-2: #c7bb9c;
+  --dm-pad-ab: #b23a5c;
+  --dm-pad-ab-dark: #7c2140;
+}
+
+/* The world and the HUD make room for the panel. Full-screen dialogs are fixed, so they still cover it. */
+#app.pad-below #game,
+#app.pad-below #ui {
+  bottom: var(--dm-pad-h);
+}
+
+.dm-pad {
+  position: fixed;
+  z-index: 5;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  font-family: var(--dm-font-pixel);
+}
+.dm-pad[hidden] {
+  display: none !important;
+}
+
+/* ---------- Game Boy panel ---------- */
+.dm-pad[data-place="below"] {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--dm-pad-h);
+  box-sizing: border-box;
+  padding: 14px max(18px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 14px, rgba(0, 0, 0, 0.025) 14px 16px),
+    linear-gradient(var(--dm-pad-body), var(--dm-pad-body-2));
+  border-top: 4px solid var(--dm-wood-dark);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35);
+}
+.dm-pad[data-place="below"] .dm-pad-dpad {
+  justify-self: start;
+}
+.dm-pad[data-place="below"] .dm-pad-face {
+  justify-self: end;
+  /* The slant pushes B out to the right: keep it on screen. */
+  margin-right: 14px;
+}
+.dm-pad-pills {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  padding-top: 4px;
+}
+
+/* ---------- floating in the corners ---------- */
+.dm-pad[data-place="sides"] {
+  inset: 0;
+  pointer-events: none;
+}
+.dm-pad[data-place="sides"] .dm-pad-dpad,
+.dm-pad[data-place="sides"] .dm-pad-face {
+  position: absolute;
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  pointer-events: auto;
+  opacity: 0.86;
+}
+.dm-pad[data-place="sides"] .dm-pad-dpad {
+  --size: min(150px, 42vh);
+  left: max(14px, env(safe-area-inset-left, 0px));
+}
+.dm-pad[data-place="sides"] .dm-pad-face {
+  right: max(28px, calc(env(safe-area-inset-right, 0px) + 14px));
+}
+/* Map and Bag are in the menu bar on a wide screen. */
+.dm-pad[data-place="sides"] .dm-pad-pills {
+  display: none;
+}
+
+/* ---------- D-pad ---------- */
+.dm-pad-dpad {
+  --size: min(150px, 38vw, 34vh);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: rgba(47, 38, 32, 0.12);
+  display: grid;
+  place-items: center;
+  touch-action: none;
+}
+.dm-pad-cross {
+  position: relative;
+  width: 82%;
+  height: 82%;
+}
+.dm-pad-arm,
+.dm-pad-hub {
+  position: absolute;
+  background: var(--dm-pad-ink);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.12);
+}
+.dm-pad-arm-up,
+.dm-pad-arm-down {
+  left: 34%;
+  width: 32%;
+  height: 36%;
+}
+.dm-pad-arm-up {
+  top: 0;
+  border-radius: 6px 6px 0 0;
+}
+.dm-pad-arm-down {
+  bottom: 0;
+  border-radius: 0 0 6px 6px;
+}
+.dm-pad-arm-left,
+.dm-pad-arm-right {
+  top: 34%;
+  height: 32%;
+  width: 36%;
+}
+.dm-pad-arm-left {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+.dm-pad-arm-right {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+.dm-pad-hub {
+  left: 33%;
+  top: 33%;
+  width: 34%;
+  height: 34%;
+  box-shadow: none;
+}
+.dm-pad-hub::after {
+  content: "";
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+/* The pressed arm(s) sink. */
+.dm-pad-cross[data-dir$=",-1"] .dm-pad-arm-up,
+.dm-pad-cross[data-dir$=",1"] .dm-pad-arm-down,
+.dm-pad-cross[data-dir^="-1,"] .dm-pad-arm-left,
+.dm-pad-cross[data-dir^="1,"] .dm-pad-arm-right {
+  background: #4a3c31;
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- face buttons: Q and A on top, Run and B below, set at a slant like a Game Boy ---------- */
+.dm-pad-face {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  gap: 10px 14px;
+  align-items: center;
+  justify-items: center;
+  transform: rotate(-18deg);
+}
+.dm-pad-btn {
+  --b: 66px;
+  width: var(--b);
+  height: var(--b);
+  padding: 0;
+  border-radius: 50%;
+  border: 3px solid var(--dm-pad-ab-dark);
+  background: radial-gradient(circle at 40% 35%, #d65a7c, var(--dm-pad-ab) 60%);
+  color: #fff3f0;
+  box-shadow: 0 4px 0 var(--dm-pad-ab-dark), 0 6px 10px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.dm-pad-btn.is-down {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--dm-pad-ab-dark);
+  filter: brightness(0.92);
+}
+.dm-pad-letter {
+  font-size: 24px;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+.dm-pad-label {
+  font-family: var(--dm-font-body);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  transform: rotate(18deg);
+}
+.dm-pad-small {
+  --b: 50px;
+  border-color: #3b2f27;
+  background: radial-gradient(circle at 40% 35%, #6d5d50, #463830 60%);
+  box-shadow: 0 4px 0 #2a211b, 0 6px 10px rgba(0, 0, 0, 0.25);
+}
+.dm-pad-small.is-down {
+  box-shadow: 0 1px 0 #2a211b;
+}
+.dm-pad-small .dm-pad-letter {
+  font-size: 18px;
+}
+.dm-pad-small .dm-pad-label {
+  font-size: 10px;
+}
+/* The slant: A sits higher than Q, B higher than Run. */
+.dm-pad-x,
+.dm-pad-run {
+  margin-top: 26px;
+}
+
+/* ---------- Map / Bag pills (Select and Start) ---------- */
+.dm-pad-pill {
+  min-width: 74px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 15px;
+  border: 2px solid #5f564b;
+  background: linear-gradient(#8e8577, #6f675b);
+  color: #f6eed8;
+  font-family: var(--dm-font-pixel);
+  font-size: 14px;
+  letter-spacing: 1px;
+  box-shadow: 0 3px 0 #4a433a;
+  transform: rotate(-18deg);
+  touch-action: none;
+  cursor: pointer;
+}
+.dm-pad-pill.is-down {
+  transform: rotate(-18deg) translateY(2px);
+  box-shadow: 0 1px 0 #4a433a;
+}
+
+/* Short panels (small phones): tighter buttons so everything fits. */
+@media (max-height: 640px) {
+  .dm-pad-btn {
+    --b: 58px;
+  }
+  .dm-pad-small {
+    --b: 44px;
+  }
+  .dm-pad-x,
+  .dm-pad-run {
+    margin-top: 20px;
+  }
+}

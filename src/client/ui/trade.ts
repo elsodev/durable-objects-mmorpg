@@ -202,7 +202,7 @@ export function createTradeUi(root: HTMLElement, opts: TradeUiOpts): TradeUi {
   add(theirCoinRow, el("span", "dm-coin trade-coin-icon"), theirCoins);
   theirs.coins.appendChild(theirCoinRow);
 
-  const bagTitle = el("div", "trade-sub", "Your bag · click to add, right-click to pick how many");
+  const bagTitle = el("div", "trade-sub", "Your bag · tap to add, long-press or right-click to pick how many");
   const bag = el("div", "trade-bag");
   bag.id = "trade-bag";
   const status = el("p", "trade-status");

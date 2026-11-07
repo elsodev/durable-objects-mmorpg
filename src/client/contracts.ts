@@ -299,6 +299,8 @@ export interface Input {
   /** Fires as soon as the held direction (or dash) changes, with the event's timeStamp (performance.now() clock). */
   onDir(cb: (dir: { dx: number; dy: number; dash?: boolean }, at: number) => void): () => void;
   setTyping(typing: boolean): void;
+  /** The on-screen controller's held direction (each axis -1..1); keys held at the same time win. */
+  setPadDir?(dx: number, dy: number, dash: boolean): void;
   onAction(cb: (a: InputAction) => void): () => void;
   onSlot(cb: (slot: number) => void): () => void; // keys 1-8, mouse wheel
   /** Tell input the slot chosen elsewhere (HUD click), so the wheel steps from it. */

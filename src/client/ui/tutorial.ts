@@ -2,7 +2,7 @@
 // "Controls" button any time after.
 import "./styles/tutorial.css";
 import { uiSound } from "./sound";
-import { CONTROL_GROUPS, markTutorialSeen, tutorialSeen, type KeyValueStore } from "./tutorial-logic";
+import { CONTROL_GROUPS, GESTURE_KEYS, TOUCH_CONTROL_GROUPS, markTutorialSeen, tutorialSeen, type KeyValueStore } from "./tutorial-logic";
 
 export interface Tutorial {
   open(): void;
@@ -18,6 +18,15 @@ function storage(): KeyValueStore | null {
     return window.localStorage;
   } catch {
     return null;
+  }
+}
+
+/** A finger is the main pointer: show taps and the controller instead of keys. */
+function touchScreen(): boolean {
+  try {
+    return globalThis.matchMedia?.("(pointer: coarse)").matches ?? false;
+  } catch {
+    return false;
   }
 }
 
@@ -40,7 +49,7 @@ export function createTutorial(parent: HTMLElement, opts: { userId: string; setT
   title.id = "tutorial-title";
   const intro = el("p", "dm-tutorial-intro", "Here's how to get around. You can open this again from Controls in the menu.");
   const grid = el("div", "dm-tutorial-grid");
-  for (const g of CONTROL_GROUPS) {
+  for (const g of touchScreen() ? TOUCH_CONTROL_GROUPS : CONTROL_GROUPS) {
     const section = el("section", "dm-tutorial-group");
     section.appendChild(el("h3", "dm-tutorial-group-title", g.title));
     for (const r of g.rows) {
@@ -48,7 +57,7 @@ export function createTutorial(parent: HTMLElement, opts: { userId: string; setT
       const keys = el("span", "dm-tutorial-keys");
       for (const k of r.keys) {
         if (k === "–") keys.appendChild(el("span", "dm-tutorial-sep", "–"));
-        else keys.appendChild(el("kbd", k === "click" || k === "wheel" ? "dm-kbd dm-kbd-mouse" : "dm-kbd", k));
+        else keys.appendChild(el("kbd", GESTURE_KEYS.has(k) ? "dm-kbd dm-kbd-mouse" : "dm-kbd", k));
       }
       row.appendChild(keys);
       row.appendChild(el("span", "dm-tutorial-text", r.text));

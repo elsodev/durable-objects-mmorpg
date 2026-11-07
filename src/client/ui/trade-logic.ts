@@ -24,7 +24,7 @@ export function tradeStatus(v: TradeView): TradeStatus {
     let line: string;
     if (v.ready.mine) line = `Waiting for ${them} to press Ready…`;
     else if (v.ready.theirs) line = `${them} is ready. Check their side, then press Ready.`;
-    else if (!something) line = "Right-click items in your bag to add them, then press Ready.";
+    else if (!something) line = "Right-click (or long-press) items in your bag to add them, then press Ready.";
     else line = "When you're happy with both sides, press Ready.";
     return { line, tone: "", readyLabel, tradeEnabled: false };
   }

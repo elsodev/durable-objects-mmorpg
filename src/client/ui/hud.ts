@@ -45,8 +45,11 @@ import { createShoutBanner, type ShoutBanner } from "./shout-banner";
 import { createJailTimer, type JailTimer } from "./jail-timer";
 import { createLevelBadge, type LevelBadge } from "./level-badge";
 import { createFeedback, type FeedbackUi } from "./feedback";
+import { createGamepad, type Gamepad } from "./gamepad";
 import "./styles/hud.css";
 import "./styles/phone.css";
+import "./styles/phone-sheets.css";
+import { trackVisualViewport } from "./viewport";
 
 export { HOTBAR_SIZE };
 
@@ -160,6 +163,7 @@ const noopFriends: FriendsPanel = {
 // ---------- mountHud ----------
 
 export function mountHud(root: HTMLElement, game: GameApi): Hud {
+  trackVisualViewport();
   const hud = el("div", { id: "hud", className: "dm-hud" });
   root.appendChild(hud);
 
@@ -260,8 +264,80 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
     }
   }
   setChatHidden(chatHidden);
-  const topMenu = el("div", { id: "hud-menu", className: "dm-panel hud-menu" }, chatBtn, guestBadge, inventoryBtn, goalsBtn, friendsBtn, bondsBtn, mapBtn, optionsBtn);
+
+  // Phones and touch screens: the on-screen controller and its toggle.
+  const pad: Gamepad | null = game.padDir
+    ? safe(
+        "gamepad",
+        () =>
+          createGamepad(root.parentElement ?? root, {
+            dir: (dx, dy, dash) => game.padDir?.(dx, dy, dash),
+            press: (b) => {
+              if (b === "bag") return toggleInventory();
+              if (b === "map") return menu.toggle("map");
+              game.padAction?.(b);
+            },
+          }),
+        null,
+      )
+    : null;
+  // Phones only (CSS hides it elsewhere): a round button beside the bug button, not in the menu bar.
+  const padBtn = button("", "dm-btn hud-pad-btn", "hud-btn-pad", () => {
+    uiSound("click");
+    pad?.toggle();
+  });
+  padBtn.appendChild(menuIcon("gamepad"));
+  padBtn.setAttribute("aria-label", "Controller");
+  padBtn.title = "Controller";
+  padBtn.hidden = !pad;
+  const syncPadBtn = (on: boolean) => padBtn.setAttribute("aria-pressed", String(on));
+  syncPadBtn(pad?.isOn() ?? false);
+  pad?.onChange(syncPadBtn);
+
+  // Phones: the bar shows the everyday buttons; "More" unfolds the rest.
+  const moreBtn = menuButton("More", "more", "hud-btn-more", null, () => {
+    uiSound("click");
+    setMoreOpen(!topMenu.classList.contains("is-more-open"));
+  });
+  moreBtn.classList.add("hud-more-toggle");
+  function setMoreOpen(open: boolean): void {
+    topMenu.classList.toggle("is-more-open", open);
+    moreBtn.setAttribute("aria-expanded", String(open));
+  }
+  // Phones: hide the whole HUD for a clear view of the world (this button stays to bring it back).
+  const eyeBtn = menuButton("Hide HUD", "eye", "hud-btn-eye", null, () => {
+    uiSound("click");
+    setHudHidden(!hud.classList.contains("is-ui-hidden"));
+  });
+  eyeBtn.classList.add("hud-eye-toggle");
+  function setHudHidden(hidden: boolean): void {
+    hud.classList.toggle("is-ui-hidden", hidden);
+    eyeBtn.setAttribute("aria-pressed", String(hidden));
+    setMenuLabel(eyeBtn, hidden ? "Show HUD" : "Hide HUD");
+    eyeBtn.title = hidden ? "Show HUD" : "Hide HUD";
+    if (hidden) setMoreOpen(false);
+  }
+  for (const b of [goalsBtn, friendsBtn, bondsBtn, optionsBtn, signOutBtn]) b.classList.add("hud-menu-extra");
+  // Picking something from the unfolded menu folds it again.
+  for (const b of [goalsBtn, friendsBtn, bondsBtn, optionsBtn, inventoryBtn, mapBtn, chatBtn]) b.addEventListener("click", () => setMoreOpen(false));
+
+  const topMenu = el(
+    "div",
+    { id: "hud-menu", className: "dm-panel hud-menu" },
+    chatBtn,
+    guestBadge,
+    inventoryBtn,
+    goalsBtn,
+    friendsBtn,
+    bondsBtn,
+    mapBtn,
+    optionsBtn,
+    moreBtn,
+    eyeBtn,
+  );
+  setMoreOpen(false);
   topMenu.appendChild(signOutBtn);
+  hud.appendChild(padBtn);
   hud.appendChild(topMenu);
   safe("audio controls", () => mountAudioControls(topMenu), null);
   // Wardrobe, controls and credits live in the menu's Options tab.
@@ -518,6 +594,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
         emote: (code) => (game.emote ? game.emote(code) : game.send({ t: "emote", code })),
         guest: () => game.isGuest(),
         slashContext: game.slashContext ? () => game.slashContext!() : undefined,
+        close: () => setChatHidden(true),
       }),
     noopChat,
   );
@@ -941,6 +1018,7 @@ export function mountHud(root: HTMLElement, game: GameApi): Hud {
       hud.classList.toggle("offline", state === "offline");
     },
     closeAll() {
+      setMoreOpen(false);
       menu.close();
       shop.close();
       convo.close();

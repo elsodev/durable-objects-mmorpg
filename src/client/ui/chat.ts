@@ -30,6 +30,15 @@ function isEditable(el: Element | null): boolean {
   return el instanceof HTMLElement && el.isContentEditable;
 }
 
+/** A finger is the main pointer: there is no Enter key to mention. */
+function touchScreen(): boolean {
+  try {
+    return globalThis.matchMedia?.("(pointer: coarse)").matches ?? false;
+  } catch {
+    return false;
+  }
+}
+
 export const createChat: CreateChat = (root, opts) => {
   const box = document.createElement("div");
   box.className = "chat";
@@ -59,6 +68,24 @@ export const createChat: CreateChat = (root, opts) => {
     });
     tabEls.set(t, b);
     tabs.appendChild(b);
+  }
+
+  // Phones show the chat full screen; this closes it (CSS hides it on wider screens).
+  if (opts.close) {
+    const close = document.createElement("button");
+    close.type = "button";
+    close.id = "chat-close";
+    close.className = "dm-close chat-close";
+    close.textContent = "×";
+    close.title = "Close chat";
+    close.setAttribute("aria-label", "Close chat");
+    close.addEventListener("click", (e) => {
+      e.stopPropagation();
+      input.blur();
+      uiSound("close");
+      opts.close?.();
+    });
+    tabs.appendChild(close);
   }
 
   const log = document.createElement("div");
@@ -147,7 +174,7 @@ export const createChat: CreateChat = (root, opts) => {
     }
   };
   const refreshPlaceholder = () => {
-    input.placeholder = placeholderFor(tab, isGuest());
+    input.placeholder = placeholderFor(tab, isGuest(), touchScreen());
   };
 
   const toBottom = (): void => {

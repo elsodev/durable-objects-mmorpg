@@ -60,6 +60,18 @@ export function dirFromKeys(held: Iterable<string>): { dx: number; dy: number } 
   return { dx: Math.sign(dx), dy: Math.sign(dy) };
 }
 
+/** Keys win over the on-screen pad; with no key held the pad's direction (and its Run) counts. */
+export function combineDir(
+  keys: { dx: number; dy: number; dash?: boolean },
+  pad: { dx: number; dy: number; dash?: boolean },
+): { dx: number; dy: number; dash?: boolean } {
+  if (keys.dx !== 0 || keys.dy !== 0) return keys;
+  const dx = Math.sign(pad.dx);
+  const dy = Math.sign(pad.dy);
+  if (dx === 0 && dy === 0) return { dx: 0, dy: 0 };
+  return pad.dash ? { dx, dy, dash: true } : { dx, dy };
+}
+
 export function actionForCode(code: string): InputAction | null {
   return ACTIONS[code] ?? null;
 }
@@ -145,13 +157,15 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
   let lastDir: { dx: number; dy: number; dash?: boolean } = { dx: 0, dy: 0 };
   /** Shift held (dash). Tracked like the move keys, so typing a capital letter in chat never counts. */
   let shift = false;
+  /** The on-screen controller's held direction (ui/gamepad.ts). */
+  let pad: { dx: number; dy: number; dash?: boolean } = { dx: 0, dy: 0 };
 
   const focusBlocked = () => isEditable(doc.activeElement);
   const blocked = () => typing || focusBlocked();
 
   /** Reports a held-direction change right away, so movement doesn't wait for the next frame. */
   const dirChanged = (at: number) => {
-    const d = blocked() ? { dx: 0, dy: 0 } : dashDir(held, shift);
+    const d = blocked() ? { dx: 0, dy: 0 } : combineDir(dashDir(held, shift), pad);
     if (d.dx === lastDir.dx && d.dy === lastDir.dy && !!d.dash === !!lastDir.dash) return;
     lastDir = d;
     dirs.emit({ dir: d, at });
@@ -253,7 +267,11 @@ export const createInput: CreateInput = (canvas, screenToTile) => {
   const input: Input = {
     dir() {
       if (blocked()) return { dx: 0, dy: 0 };
-      return dashDir(held, shift);
+      return combineDir(dashDir(held, shift), pad);
+    },
+    setPadDir(dx, dy, dash) {
+      pad = { dx: Math.sign(dx), dy: Math.sign(dy), dash };
+      dirChanged(performance.now());
     },
     setTyping(t) {
       typing = t;

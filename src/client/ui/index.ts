@@ -51,6 +51,10 @@ export interface GameApi {
   selectSlot(slot: number): void;
   /** Enter build mode with the furniture in inventory slot, or null to leave it. Home only. */
   setBuildItem(slot: number | null): void;
+  /** On-screen controller (ui/gamepad.ts): held direction, each axis -1..1, and Run. No pad without it. */
+  padDir?(dx: number, dy: number, dash: boolean): void;
+  /** On-screen controller buttons: A uses the tool, B talks or opens, Q gives or eats. */
+  padAction?(a: "use" | "interact" | "gift"): void;
   /** Chat box focused -> game must ignore WASD. */
   setTyping(typing: boolean): void;
   signOut(): Promise<void>;
@@ -208,6 +212,8 @@ export type CreateChat = (
     guest?(): boolean;
     /** Where the player is, for the "/" command suggestions. Without it every non-dev command is offered. */
     slashContext?(): SlashContext;
+    /** Phones: the full-screen chat's close button. Without it there is no close button. */
+    close?(): void;
   },
 ) => Chat;
 

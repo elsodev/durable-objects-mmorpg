@@ -1,9 +1,13 @@
-/* Phone layout tweaks that span several HUD modules: the chat toggle, a compact status panel and
-   icon-only buttons. Selectors carry the #ui root so they win over each module's own sheet
-   whatever order the bundle puts them in. */
+/* Phone layout tweaks that span several HUD modules: the chat toggle, the folded menu, hiding the
+   HUD, a readable status panel and icon-only buttons sized for a thumb. Selectors carry the #ui
+   root so they win over each module's own sheet whatever order the bundle puts them in.
+   Full-screen dialogs on phones are in phone-sheets.css. */
 
-/* The chat toggle and the account icon only exist on phones. */
+/* The chat toggle, More, Hide HUD and the account icon only exist on phones. */
 #ui .hud-menu .hud-chat-toggle,
+#ui .hud-menu .hud-more-toggle,
+#ui .hud-menu .hud-eye-toggle,
+#ui .hud-pad-btn,
 #ui .hud-account-icon {
   display: none;
 }
@@ -17,10 +21,25 @@
 }
 
 @media (max-width: 760px), (max-height: 500px) {
-  /* Eight slots plus the bar's padding fit any phone width; 40 px is the most they get. */
+  /* Bigger type everywhere in the HUD and its panels: phone screens are small and held further away. */
   #ui .dm-hud {
-    --dm-slot-size: min(40px, calc((100vw - 60px) / 8));
-    --dm-slot: min(40px, calc((100vw - 60px) / 8));
+    --dm-fs-sm: 14px;
+    --dm-fs: 16px;
+    --dm-fs-lg: 18px;
+    --dm-menu-row: 54px;
+    /* Eight slots plus the bar's padding fit any phone width; 48 px is the most they get. */
+    --dm-slot-size: min(48px, calc((100vw - 62px) / 8));
+    --dm-slot: min(48px, calc((100vw - 62px) / 8));
+  }
+  #ui .dm-btn-small {
+    font-size: 14px;
+    padding: 7px 11px;
+  }
+  #ui .dm-close {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    line-height: 34px;
   }
 
   /* ---- chat toggle */
@@ -28,17 +47,20 @@
     display: inline-flex;
     position: relative;
   }
-  #ui .hud-chat-toggle[aria-pressed="true"] {
+  #ui .hud-chat-toggle[aria-pressed="true"],
+  #ui .hud-pad-btn[aria-pressed="true"],
+  #ui .hud-more-toggle[aria-expanded="true"],
+  #ui .hud-eye-toggle[aria-pressed="true"] {
     background: var(--dm-wood-light);
     box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.18);
   }
   .hud-chat-dot {
     display: none;
     position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 7px;
-    height: 7px;
+    top: 3px;
+    right: 3px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     background: var(--dm-berry);
     box-shadow: 0 0 0 2px var(--dm-cream);
@@ -59,8 +81,8 @@
     padding-right: 4px;
   }
   #ui .hud-create-account {
-    height: 32px;
-    min-width: 36px;
+    height: 42px;
+    min-width: 44px;
     padding: 0 8px;
     justify-content: center;
   }
@@ -68,63 +90,62 @@
     display: block;
   }
 
-  /* ---- compact status panel (top-left) */
+  /* ---- status panel (top-left): tight padding, but type you can read at arm's length */
   #ui .hud-status {
     top: 8px;
     left: 8px;
-    gap: 3px;
-    padding: 5px 8px;
+    gap: 4px;
+    padding: 6px 9px;
     min-width: 0;
   }
   #ui .hud-status-row {
-    gap: 5px;
+    gap: 6px;
   }
   #ui .hud-zone {
-    font-size: 12px;
+    font-size: 15px;
   }
   #ui .hud-conn {
-    width: 8px;
-    height: 8px;
-  }
-  #ui .hud-hp {
-    gap: 1px;
-    min-height: 12px;
-  }
-  #ui .hud-heart {
-    width: 12px;
-    height: 12px;
-    background-size: 12px 12px;
-  }
-  #ui .hud-status-small {
-    font-size: 11px;
-  }
-  #ui .hud-coin-icon {
-    width: 11px;
-    height: 11px;
-    background: radial-gradient(circle at 50% 50%, #f7d774 0 2px, #e0b43c 2px 3px, #f2c94c 3px);
-  }
-  #ui .home-rows {
-    gap: 2px;
-    padding-top: 3px;
-  }
-  #ui .home-clock {
-    gap: 5px;
-    font-size: 11px;
-  }
-  #ui .home-time {
-    font-size: 12px;
-  }
-  #ui .home-sun {
     width: 9px;
     height: 9px;
   }
+  #ui .hud-hp {
+    gap: 1px;
+    min-height: 14px;
+  }
+  #ui .hud-heart {
+    width: 14px;
+    height: 14px;
+    background-size: 14px 14px;
+  }
+  #ui .hud-status-small {
+    font-size: 14px;
+  }
+  #ui .hud-coin-icon {
+    width: 14px;
+    height: 14px;
+  }
+  #ui .home-rows {
+    gap: 3px;
+    padding-top: 3px;
+  }
+  #ui .home-clock {
+    gap: 6px;
+    font-size: 14px;
+  }
+  #ui .home-time {
+    font-size: 15px;
+  }
+  #ui .home-sun {
+    width: 12px;
+    height: 12px;
+  }
   #ui .home-bar {
-    gap: 4px;
-    font-size: 11px;
+    gap: 5px;
+    font-size: 13px;
   }
   #ui .home-bar-track {
-    height: 6px;
-    min-width: 48px;
+    height: 8px;
+    min-width: 56px;
     border-width: 1px;
   }
 
@@ -134,43 +155,159 @@
     right: 8px;
   }
   #ui .hud-level {
-    gap: 5px;
-    padding: 3px 6px 3px 4px;
+    gap: 6px;
+    padding: 4px 7px 4px 5px;
   }
   #ui .hud-level-badge {
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
   }
   #ui .hud-level-lv {
-    font-size: 7px;
+    font-size: 9px;
   }
   #ui .hud-level-num {
-    font-size: 11px;
+    font-size: 14px;
   }
   #ui .hud-level-track {
-    height: 8px;
-    min-width: 44px;
+    height: 10px;
+    min-width: 48px;
   }
   #ui .edit-open {
-    top: 46px;
+    top: 54px;
     right: 8px;
-    height: 34px;
-    padding: 0 8px;
+    height: 42px;
+    min-width: 44px;
+    padding: 0 9px;
   }
   #ui .edit-open .edit-open-label {
     display: none;
   }
 }
 
-/* The menu row: a little tighter, so more of it shows before it scrolls. */
+/* The menu row: thumb-sized buttons with 24 px icons. The everyday ones (chat, bag, map, controller)
+   stay; More unfolds the rest above them; Hide HUD clears the screen. */
 @media (max-width: 760px), (max-height: 500px) {
   #ui .hud-menu {
-    gap: 4px;
+    gap: 5px;
+    padding: 5px 6px;
+    right: auto;
+    max-width: calc(100vw - 120px);
   }
   #ui .hud-menu-btn,
   #ui .hud-create-account {
-    min-width: 32px;
-    padding: 0 6px;
+    height: 42px;
+    min-width: 44px;
+    padding: 0 9px;
   }
+  #ui .hud-menu .dm-btn-icon {
+    width: 24px;
+    height: 24px;
+  }
+  #ui .hud-menu .hud-more-toggle,
+  #ui .hud-menu .hud-eye-toggle {
+    display: inline-flex;
+    position: relative;
+  }
+  /* The controller button: the bug button's twin, just left of it. */
+  #ui .hud-pad-btn:not([hidden]) {
+    position: absolute;
+    right: 54px;
+    bottom: calc(var(--dm-slot-size) + 30px + (var(--dm-menu-row) - 36px) / 2);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dm-cream);
+    border-color: var(--dm-wood-dark);
+    box-shadow: inset 0 0 0 2px var(--dm-cream-2), 0 2px 0 var(--dm-wood-dark);
+  }
+  #ui .hud-pad-btn .dm-btn-icon {
+    width: 22px;
+    height: 22px;
+  }
+  /* Everyday buttons first, then More and Hide HUD; the folded ones go last. */
+  #ui .hud-menu .hud-more-toggle {
+    order: 3;
+  }
+  #ui .hud-menu .hud-eye-toggle {
+    order: 4;
+  }
+  #ui .hud-menu .hud-menu-extra,
+  #ui .hud-menu .dm-audio {
+    order: 5;
+    display: none;
+  }
+  #ui .hud-menu .dm-audio button {
+    height: 42px;
+    min-width: 44px;
+  }
+  /* Unfolded: a panel of every button, growing up from the bar. */
+  #ui .hud-menu.is-more-open {
+    height: auto;
+    flex-wrap: wrap;
+    overflow: visible;
+    max-width: calc(100vw - 120px);
+  }
+  #ui .hud-menu.is-more-open .hud-menu-extra {
+    display: inline-flex;
+  }
+  #ui .hud-menu.is-more-open .dm-audio {
+    display: flex;
+  }
+  /* A friend request waits behind More: a dot on it, like the chat's. */
+  #ui .hud-menu:not(.is-more-open):has(#hud-btn-friends[data-badge]) .hud-more-toggle::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--dm-berry);
+    box-shadow: 0 0 0 2px var(--dm-cream);
+  }
+
+  /* ---- Hide HUD: only the button that brings it back stays (the controller stays too). */
+  #ui .dm-hud.is-ui-hidden :is(.hud-status, .hud-right, .hud-stats, .hud-hotbar, .hud-item-flash, .hud-layer-chat, .hud-feedback-btn, .hud-pad-btn, .edit-open) {
+    display: none !important;
+  }
+  #ui .dm-hud.is-ui-hidden .hud-menu {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  #ui .dm-hud.is-ui-hidden .hud-menu > :not(.hud-eye-toggle) {
+    display: none !important;
+  }
+  #ui .dm-hud.is-ui-hidden .hud-eye-toggle {
+    opacity: 0.8;
+  }
+}
+
+/* The controller in the corners (wide phones): the menu bar and hotbar keep to the middle. */
+@media (max-width: 760px), (max-height: 500px) {
+  #app.pad-sides #ui .hud-menu {
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 2 * min(170px, 40vw));
+  }
+  #app.pad-sides #ui .hud-menu.is-more-open {
+    max-width: calc(100vw - 2 * min(170px, 40vw));
+  }
+}
+
+/* The face buttons take the bottom-right corner, so the bug button moves to the top middle. */
+#app.pad-sides #ui .hud-feedback-btn,
+#app.pad-sides #ui .hud-pad-btn:not([hidden]) {
+  top: 8px;
+  bottom: auto;
+  right: auto;
+  left: calc(50% + 3px);
+  transform: none;
+}
+#app.pad-sides #ui .hud-pad-btn:not([hidden]) {
+  left: calc(50% - 39px);
 }
