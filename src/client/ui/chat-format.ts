@@ -63,8 +63,8 @@ export function channelTag(channel: ChatChannel, pm?: "in" | "out"): string {
   return "";
 }
 
-export function placeholderFor(tab: ChatTab, guest: boolean): string {
-  if (tab === "world") return guest ? "Create an account to chat with everyone" : "Say to the world (Enter)";
+export function placeholderFor(tab: ChatTab, guest: boolean, touch = false): string {
+  if (tab === "world") return guest ? "Create an account to chat with everyone" : touch ? "Say to the world" : "Say to the world (Enter)";
   if (tab === "pm") return guest ? "Create an account to whisper" : "/w name message, or /r to reply";
-  return "Press Enter to chat · /w name · /emote";
+  return touch ? "Tap to chat · /w name · /emote" : "Press Enter to chat · /w name · /emote";
 }

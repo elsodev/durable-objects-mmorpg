@@ -1,0 +1,235 @@
+/* Phones: dialogs become sheets along the bottom of the screen. A centred box on a phone left a
+   sliver of world around it and squeezed its text. Menus grow only as tall as their content (the
+   world stays in view above them); talking, to players or villagers, takes the whole screen.
+   They are fixed to the viewport, so they also cover the on-screen controller's panel. The safe-area
+   insets keep their edges clear of notches and the home indicator. */
+@media (max-width: 760px), (max-height: 500px) {
+  /* ---- the shared sheet frame */
+  #ui :is(#game-menu, #shop-dialog, #goals-panel, .trade-panel, .store-panel, .mb-panel, .nb-panel, .convo) {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    height: var(--dm-vvh, 100dvh);
+    max-width: none;
+    max-height: none;
+    min-height: 0;
+    margin: 0;
+    transform: none;
+    box-sizing: border-box;
+    border-width: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding-top: max(12px, env(safe-area-inset-top, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    animation: dm-sheet-in 0.16s ease-out;
+  }
+  #ui :is(#game-menu, #shop-dialog, #goals-panel, .trade-panel, .store-panel, .mb-panel, .nb-panel, .convo)[hidden] {
+    display: none;
+  }
+
+  /* ---- menus: a bottom sheet, as tall as its content and never past the top of the screen */
+  #ui :is(#game-menu, #shop-dialog, #goals-panel, .trade-panel, .store-panel, .mb-panel, .nb-panel) {
+    top: auto;
+    height: auto;
+    max-height: min(76%, calc(var(--dm-vvh, 100dvh) - max(40px, env(safe-area-inset-top, 0px) + 24px)));
+    padding-top: 12px;
+    border-top: 3px solid var(--dm-panel-border);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  /* The bug button would float over a sheet (and over the full-screen chat). */
+  #ui:has(:is(#game-menu, #shop-dialog, #goals-panel, .trade-panel, .store-panel, .mb-panel, .nb-panel, #convo):not([hidden])) .hud-feedback-btn,
+  #ui .dm-hud:not(.is-chat-hidden) .hud-feedback-btn {
+    display: none;
+  }
+
+  /* ---- the tabbed menu (bag, hearts, friends, map, options) */
+  #ui #game-menu {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #ui .game-menu-tabs {
+    flex: none;
+    gap: 4px;
+    padding: 8px max(8px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px));
+    border-radius: 12px 12px 0 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #ui .game-menu-tab {
+    flex: none;
+    font-size: 14px;
+    padding: 10px 8px 8px;
+  }
+  #ui .game-menu-tab.is-active {
+    padding-bottom: 11px;
+  }
+  #ui .game-menu-close {
+    position: sticky;
+    right: 0;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+  #ui .game-menu-body {
+    min-height: 0;
+    padding: 14px max(14px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    font-size: 16px;
+  }
+  /* The bag fills the width: six roomy slots a row. */
+  #ui #game-menu #inventory-panel {
+    --dm-slot-size: min(60px, calc((100vw - 60px) / 6), calc((100dvh - 130px) / 4));
+  }
+  #ui #game-menu .inv-icon {
+    width: 40px;
+    height: 40px;
+  }
+  #ui #game-menu .inv-grid {
+    gap: 6px;
+    justify-content: center;
+  }
+  #ui .options-buttons .dm-btn {
+    min-height: 44px;
+  }
+  #ui .options-keys {
+    display: none;
+  }
+
+  /* ---- sheets with a list inside: the list scrolls, the header and footer stay put */
+  #ui :is(#shop-dialog, #goals-panel, .mb-panel, .nb-panel) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #ui :is(#shop-dialog, #goals-panel, .mb-panel, .nb-panel) > :is(.dlg-list, .dlg-goal-list, .mb-body, .nb-list) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  #ui .dlg-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* ---- trade and storage: bigger slots now there's room */
+  #ui .trade-panel {
+    --dm-slot: min(48px, calc((100vw - 80px) / 6));
+  }
+  #ui .trade-slot img {
+    width: 32px;
+    height: 32px;
+  }
+  #ui .store-panel {
+    --dm-slot: min(52px, calc((100vw - 64px) / 6));
+  }
+
+  /* ---- talking to a villager: the whole screen, the reply box above the keyboard */
+  #ui .convo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  #ui .convo-log {
+    flex: 1 1 auto;
+    min-height: 0;
+    font-size: 16px;
+  }
+  #ui .convo-input {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  #ui .convo-send {
+    min-height: 44px;
+  }
+
+  /* ---- chat: a full-screen sheet while it's shown (the chat button or the X folds it away) */
+  #ui .hud-layer-chat {
+    position: fixed;
+    inset: 0;
+    bottom: auto;
+    width: auto;
+    height: var(--dm-vvh, 100dvh);
+    z-index: var(--dm-z-dialog);
+    pointer-events: auto;
+    background: var(--dm-chat-solid);
+  }
+  #ui .chat {
+    --chat-line: 22px;
+    position: absolute;
+    inset: 0;
+    width: auto;
+    padding: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+    gap: 8px;
+    font-size: 16px;
+    pointer-events: auto;
+  }
+  #ui .chat-tabs {
+    opacity: 1;
+    align-items: center;
+    gap: 5px;
+  }
+  #ui .chat-tab {
+    font-size: 15px;
+    line-height: 20px;
+    padding: 8px 12px;
+    border-radius: var(--dm-radius);
+  }
+  #ui .chat-dot {
+    width: 8px;
+    height: 8px;
+  }
+  #ui .chat-close {
+    display: inline-block;
+    margin-left: auto;
+    flex: none;
+  }
+  #ui .chat .chat-log,
+  #ui .chat:hover .chat-log,
+  #ui .chat:focus-within .chat-log,
+  #ui .chat.chat-open .chat-log {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    overflow-y: auto;
+    border-radius: var(--dm-radius);
+    background: rgba(0, 0, 0, 0.25);
+    box-shadow: none;
+    opacity: 1;
+  }
+  #ui .chat-input {
+    /* 16 px or more, or iOS zooms the page when the field takes focus. */
+    font-size: 16px;
+    min-height: 44px;
+  }
+  #ui .chat-emote-btn {
+    width: 44px;
+    height: 44px;
+  }
+  #ui .chat-tag,
+  #ui .chat-slash-desc,
+  #ui .chat-slash-item {
+    font-size: 14px;
+  }
+}
+
+@keyframes dm-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ui :is(#game-menu, #shop-dialog, #goals-panel, .trade-panel, .store-panel, .mb-panel, .nb-panel, .convo) {
+    animation: none;
+  }
+}

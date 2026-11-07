@@ -338,7 +338,7 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
       const muted = opts.mutes?.list() ?? [];
       tabMuted.textContent = muted.length ? `Muted ${muted.length}` : "Muted";
       if (muted.length === 0) {
-        body.replaceChildren(empty("Nobody is muted. Right-click a player and pick Mute, or type /mute name."));
+        body.replaceChildren(empty("Nobody is muted. Right-click or long-press a player and pick Mute, or type /mute name."));
         return;
       }
       const ul = el("ul", "fr-list");
@@ -349,7 +349,7 @@ export function createFriendsPanel(root: HTMLElement, opts: FriendsPanelOpts): F
     }
     if (tab === "friends") {
       if (friends.length === 0) {
-        body.replaceChildren(empty("No friends yet. Add someone by name above, or right-click a player."));
+        body.replaceChildren(empty("No friends yet. Add someone by name above, or right-click (long-press) a player."));
         return;
       }
       const ul = el("ul", "fr-list");
